@@ -1,0 +1,107 @@
+---
+layout: ../../layouts/BookLayout.astro
+title: "13.5 Advanced Quantization (TurboQuant & Extreme Compression)"
+lang: "en"
+---
+
+# 13.5 Advanced Quantization: TurboQuant & Extreme Compression
+
+As models scale to trillions of parameters, standard 8-bit or 4-bit quantization methods (like PTQ, GPTQ, and AWQ) begin to hit a theoretical floor. The fundamental bottleneck preventing further compression—down to 3 bits, 2 bits, or even 1 bit—is the presence of **massive outliers** in the activation and weight distributions.
+
+In this section, we explore the cutting-edge frontier of model compression: dealing with these outliers through rotation-based quantization (TurboQuant) and abandoning traditional Matrix Multiplication entirely (1-bit LLMs).
+
+---
+
+## 1. The Outlier Problem
+
+In large language models, a small fraction of features (often less than 0.1%) exhibit extremely large magnitudes. These "outliers" are crucial for the model's performance. If you clip them, the model's accuracy collapses. If you expand your quantization grid to include them, the resolution for the other 99.9% of normal weights becomes too coarse.
+
+Methods like AWQ (Activation-aware Weight Quantization) protect these outliers by scaling them, but this still limits compression to around 4 bits. To go sub-4-bit, we need a paradigm shift.
+
+---
+
+## 2. Extreme Compression: BitNet b1.58 (The 1-bit Era)
+
+While TurboQuant optimizes the bit-width of standard arithmetic, what if we eliminate traditional arithmetic altogether? 
+
+Introduced by Microsoft Research, **BitNet b1.58** [[2]](#ref-2) represents the frontier of extreme compression. In a 1.58-bit LLM, every weight in the network is constrained to exactly three values: **{-1, 0, 1}**.
+
+### The End of MatMul
+In standard neural networks, the core operation is Matrix Multiplication (MatMul), which requires expensive Floating Point Multiply-Accumulate (MAC) operations. 
+In BitNet b1.58, because weights are only -1, 0, or 1, the multiplication step is completely bypassed. The entire forward pass consists solely of **integer addition and subtraction**.
+
+$$y = \sum_{i} (w_i \times x_i) \implies \sum_{w_i=1} x_i - \sum_{w_i=-1} x_i$$
+
+This theoretical shift promises to reduce energy consumption and memory bandwidth by over an order of magnitude, paving the way for running massive foundation models directly on edge devices and smartphones.
+
+---
+
+## PyTorch Simulation: The Power of Rotation
+
+Let's simulate how an orthogonal rotation (like a simple Hadamard matrix) spreads out an outlier, making the vector easier to quantize.
+
+```python
+import torch
+import math
+
+# 1. Create a vector with a massive outlier
+x = torch.tensor([0.1, 0.2, 100.0, -0.1])
+print(f"Original vector: {x}")
+print(f"Max absolute value (Outlier): {x.abs().max().item():.2f}")
+
+# 2. Define a simple 4x4 Orthogonal Rotation Matrix (Hadamard-like)
+# In practice, TurboQuant uses efficient Fast Walsh-Hadamard Transforms (FWHT) for dimension D
+H = torch.tensor([
+    [1,  1,  1,  1],
+    [1, -1,  1, -1],
+    [1,  1, -1, -1],
+    [1, -1, -1,  1]
+], dtype=torch.float32) / math.sqrt(4)
+
+# 3. Rotate the vector
+x_rotated = torch.matmul(H, x)
+
+# 4. Observe the smoothed distribution
+print(f"\nRotated vector: {x_rotated}")
+print(f"Max absolute value after rotation: {x_rotated.abs().max().item():.2f}")
+
+# The energy of the 100.0 outlier is now evenly distributed (approx 50.0 across all dimensions).
+# The rotated vector fits perfectly into a tight, uniform quantization grid!
+```
+
+---
+
+## Next Steps
+
+This concludes **Chapter 13: Model Compression & Quantization**. We have journeyed from basic post-training quantization to the mathematical elegance of rotation-domain smoothing and 1-bit architectures. As models become smaller and faster, they become ready to process vast amounts of external knowledge. In **Chapter 14: Retrieval Augmented Generation (RAG)**, we will explore how to connect these efficient models to external databases, turning them from static text generators into real-time reasoning engines.
+
+---
+
+## Quizzes
+
+<details>
+<summary>Quiz 1: What is the fundamental bottleneck preventing standard quantization methods from achieving high accuracy at 3 bits or lower?</summary>
+*The presence of extreme outliers in the weight and activation distributions. If the quantization grid expands to include the outliers, it loses precision for the majority of normal values. If it clips the outliers, the model loses critical information and its performance collapses.*
+</details>
+
+<details>
+<summary>Quiz 2: How does TurboQuant solve the outlier problem without simply scaling or clipping them?</summary>
+*TurboQuant applies an orthogonal rotation (like the Fast Walsh-Hadamard Transform) to the vector space before quantization. This rotation preserves the inner product (the geometric relationships) but spreads the energy of the outliers across all dimensions, resulting in a near-Gaussian distribution that is highly amenable to uniform, low-bit quantization.*
+</details>
+
+<details>
+<summary>Quiz 3: Why is BitNet b1.58 considered a paradigm shift in neural network hardware execution?</summary>
+*Because it restricts all weights to {-1, 0, 1}, it completely eliminates the need for Floating Point Multiplication. The core operation of the network transitions from Matrix Multiplication (Multiply-Accumulate, or MAC) to pure integer addition and subtraction, drastically reducing energy consumption and chip area requirements.*
+</details>
+
+<details>
+<summary>Quiz 4: Mathematically formalize the $L_2$ distortion loss optimization problem in AWQ (Activation-aware Weight Quantization) that determines the optimal scaling factor for protecting outliers.</summary>
+*AWQ formulates the quantization search as finding a diagonal scaling matrix $S$ that minimizes the $L_2$ error between the dense outputs and the quantized outputs: $\arg\min_S || WX - Q(WS)S^{-1}X ||_2^2$. The scaling factor $s_j$ for each input channel $j$ is typically formulated as $s_j = s_X(j)^\alpha$, where $s_X(j)$ is the average activation magnitude of channel $j$. The algorithm searches for the optimal parameter $\alpha \in [0, 1]$ that minimizes the $L_2$ distortion loss, establishing a direct mathematical relationship between activation outlier magnitudes and the precision grid of weight quantization bounds.*
+</details>
+
+---
+
+## References
+
+1. <a id="ref-1"></a>Zandieh, A., et al. (2025). *TurboQuant: Online Vector Quantization with Near-optimal Distortion Rate*. [arXiv:2504.19874](https://arxiv.org/abs/2504.19874).
+2. <a id="ref-2"></a>Ma, S., et al. (2024). *The Era of 1-bit LLMs: All Large Language Models are in 1.58 Bits*. [arXiv:2402.17764](https://arxiv.org/abs/2402.17764).

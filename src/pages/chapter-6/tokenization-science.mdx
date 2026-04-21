@@ -1,0 +1,148 @@
+---
+layout: ../../layouts/BookLayout.astro
+title: "6.2 Tokenization Science"
+lang: "en"
+---
+
+# 6.2 Tokenization Science
+
+Before a Foundation Model can process human language, code, or pixels, it must convert the raw continuous stream of data into a sequence of discrete integers. This process is **Tokenization**. 
+
+While often treated as a trivial pre-processing step, tokenization is actually a critical component of model architecture. A poorly designed tokenizer can artificially cripple a model's reasoning capabilities, inflate compute costs, and introduce severe biases against non-English languages.
+
+In this section, we explore the science of tokenization, comparing the dominant algorithms—**Byte-level BPE**, **WordPiece**, and **SentencePiece**—and analyzing the engineering trade-offs of vocabulary size and compression.
+
+---
+
+## 1. The Subword Evolution
+
+Early NLP models relied on **Word-level tokenization** (splitting by spaces and punctuation). This led to massive vocabularies and the dreaded `[UNK]` (Unknown) token problem whenever the model encountered a word not in its dictionary (e.g., "AI-driven").
+
+**Character-level tokenization** solved the unknown token problem but resulted in extremely long sequence lengths, making it impossible for models with quadratic attention complexity to process long documents.
+
+The breakthrough was **Subword Tokenization**. The goal is to break rare words into meaningful subwords (e.g., `["token", "ization"]`) while keeping frequent words intact. This balances vocabulary size and sequence length.
+
+---
+
+## 2. Core Algorithms
+
+Three algorithms dominate the modern foundation model landscape.
+
+### 2.1 Byte-Pair Encoding (BPE)
+Originally a data compression algorithm introduced by Philip Gage in 1994, BPE was adapted for NLP by Sennrich et al. (2015) [[1]](#ref-1). 
+- **Mechanism**: It starts with a vocabulary of individual characters. It iteratively counts all symbol pairs and replaces the most frequent pair with a new symbol (e.g., merging `e` and `s` to `es`).
+- **Byte-level BPE**: Introduced in GPT-2 [[2]](#ref-2), this variant operates on **raw bytes** rather than Unicode characters. Since there are only 256 possible byte values, the base vocabulary is tiny, and *any* text (including emojis and complex scripts) can be represented without ever producing an unknown token.
+
+### 2.2 WordPiece
+Used in BERT [[3]](#ref-3) and developed by Google, WordPiece is similar to BPE but differs in the merge criteria.
+- **Mechanism**: Instead of merging the most *frequent* pair, WordPiece chooses the merge that maximizes the likelihood of the training data. It evaluates whether merging `u` and `g` is better than merging `u` and `n` based on a language model score.
+
+### 2.3 SentencePiece
+Developed by Kudo & Richardson (2018) [[4]](#ref-4), SentencePiece is the default choice for modern open models like LLaMA and T5.
+- **Mechanism**: Traditional BPE and WordPiece require *pre-tokenization* (splitting text by spaces) before learning subwords. SentencePiece treats the input as a raw stream, treating spaces as a normal character (usually replaced by a special symbol like `_`). This makes it truly language-agnostic, as many languages (like Chinese or Japanese) do not use spaces to separate words.
+
+---
+
+## 3. The Frontier: Token-Free and Byte-Level Models
+
+While subword tokenization is the standard, it introduces a "tokenization tax"—information loss, language bias, and vulnerability to typos. Recent research has focused on eliminating tokenizers entirely or making them more robust.
+
+### 3.1 MEGABYTE (Multi-Scale Byte-Level Modeling)
+Developed by Meta AI, this architecture processes raw bytes directly, removing the need for a fixed tokenizer vocabulary. It employs a multi-scale decoder where a "global" model handles patches of bytes and a "local" model processes individual bytes within those patches, allowing it to handle extremely long sequences efficiently.
+
+### 3.2 Byte-Level State Space Models (e.g., Mamba)
+The emergence of architectures like Mamba (State Space Models) has made byte-level modeling practical. Because these models scale linearly ($O(n)$) with sequence length, they can handle the $5\times$ to $10\times$ increase in sequence length that occurs when switching from tokens to bytes, avoiding the quadratic bottleneck of attention.
+
+### 3.3 Stochastic Tokenization (BPE-Dropout)
+This technique introduces randomness into the subword merging process during training. Instead of always selecting the most frequent merge, the model is trained on multiple valid tokenization paths for the same text, significantly improving robustness against typos and misspellings.
+
+---
+
+## 4. The Vocabulary Size Trade-off & Glitch Tokens
+
+Choosing the vocabulary size ($V$) is a critical hyperparameter.
+
+*   **Small Vocabulary ($V \approx 30k$)**: Results in smaller embedding matrices (saving memory) but produces longer sequence lengths for the same text, increasing the cost of self-attention ($O(L^2)$).
+*   **Large Vocabulary ($V \approx 100k+$)**: Compresses text into fewer tokens (saving attention compute) but results in massive embedding layers. If $V$ is too large, rare tokens will not be trained sufficiently.
+
+**💡 Behind the Scenes: The "SolidGoldMagikarp" Anomaly**
+In early 2023, researchers discovered bizarre behavior in GPT models: when prompted to repeat certain nonsensical words like "SolidGoldMagikarp", the model would completely break down, hallucinating strange responses or evading the prompt entirely. 
+
+This was a pure tokenization artifact known as a **Glitch Token**. OpenAI had trained their tokenizer on a massive dataset that included Reddit usernames and Twitch emotes (where "SolidGoldMagikarp" was a prominent user). Thus, it was assigned its own single token. However, this token never appeared in the *actual language model training corpus*. The token embedding was initialized randomly and never updated via gradient descent. When forced to process this "untrained" token, the model's neural network effectively received garbage noise, resulting in catastrophic hallucinations.
+
+To mitigate such issues, modern architectures (like Llama 3 with its 128k `tiktoken`-based vocabulary) carefully align their tokenizer training data with their pre-training data, ensuring all tokens receive adequate gradient updates.
+
+---
+
+## 5. PyTorch & Transformers Integration
+
+Let's see how tokenization maps to PyTorch embeddings. We will use the `transformers` library to load a tokenizer and pass the generated token IDs to a PyTorch `nn.Embedding` layer.
+
+```python
+import torch
+import torch.nn as nn
+from transformers import AutoTokenizer
+
+# 1. Load a pre-trained tokenizer (e.g., Llama style or GPT style)
+# We use BERT's WordPiece tokenizer for this example
+tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
+
+text = "Tokenization science is fascinating!"
+
+# 2. Tokenize the text
+# This returns token IDs, attention masks, etc.
+encoded_input = tokenizer(text, return_tensors="pt")
+token_ids = encoded_input["input_ids"]
+
+print(f"Original Text: {text}")
+print(f"Token IDs: {token_ids}")
+print(f"Decoded Tokens: {tokenizer.convert_ids_to_tokens(token_ids[0])}\n")
+
+# 3. Map Token IDs to Continuous Embeddings in PyTorch
+vocab_size = tokenizer.vocab_size
+embedding_dim = 768
+
+# Create a random embedding layer (usually loaded from pre-trained weights)
+embedding_layer = nn.Embedding(vocab_size, embedding_dim)
+
+# Pass token IDs through the embedding layer
+with torch.no_grad():
+    embedded_vectors = embedding_layer(token_ids)
+
+print(f"Input Shape (Batch, Seq_Len): {token_ids.shape}")
+print(f"Output Shape (Batch, Seq_Len, Hidden_Dim): {embedded_vectors.shape}")
+```
+
+---
+
+## Next Steps
+
+Now that we understand how text is efficiently compressed and transformed into numerical representations, we must explore how to keep the model stable when processing these massive sequences across thousands of GPUs. In **Chapter 6.3**, we will dive into **Large-scale Training Stability**, examining why models suddenly diverge and how techniques like z-loss keep training runs alive.
+
+---
+
+## Quizzes
+
+<details>
+<summary>Quiz 1: A model with untied embedding and output layers has a hidden dimension $D = 8192$. The developers consider increasing the vocabulary size $V$ from 32,000 to 128,000. Calculate the increase in total parameters (in millions) for these layers. Furthermore, calculate the additional VRAM (in GB) required to store these parameters in float16 precision (2 bytes).</summary>
+*Total parameter count for untied embeddings and output layer is $2 \times V \times D$. The increase in vocabulary size is $\Delta V = 128,000 - 32,000 = 96,000$. The parameter increase is $2 \times 96,000 \times 8192 = 1,572,864,000$ parameters $\approx 1,573\text{ Million}$ parameters. In float16 precision (2 bytes/parameter), the additional VRAM is $1,572,864,000 \times 2\text{ bytes} = 3,145,728,000\text{ bytes} \approx 3.15\text{ GB}$ (or $2.93\text{ GiB}$).*
+</details>
+
+<details>
+<summary>Quiz 2: What is the main difference between BPE and WordPiece in how they decide which tokens to merge?</summary>
+*BPE is purely frequency-based; it merges the most frequently occurring pair of symbols in the corpus. WordPiece is likelihood-based; it chooses the merge that increases the likelihood of the training data the most according to a probabilistic model. It asks: "How much more likely is the pair compared to the individual symbols appearing independently?"*
+</details>
+
+<details>
+<summary>Quiz 3: Why is SentencePiece particularly beneficial for languages like Chinese or Japanese compared to traditional BPE?</summary>
+*Traditional BPE requires pre-tokenization, usually splitting by spaces, to identify word boundaries before learning subwords. Languages like Chinese and Japanese do not use spaces to separate words, making pre-tokenization difficult and often requiring complex language-specific heuristic rules. SentencePiece treats the entire text as a raw stream of characters including spaces, bypassing the need for space-based pre-tokenization and making it natively applicable to any language.*
+</details>
+
+---
+
+## References
+
+1. <a id="ref-1"></a>Sennrich, R., Haddow, B., & Birch, A. (2015). *Neural machine translation of rare words with subword units*. [arXiv:1508.07909](https://arxiv.org/abs/1508.07909).
+2. <a id="ref-2"></a>Radford, A., et al. (2019). *Language models are unsupervised multitask learners*. OpenAI blog.
+3. <a id="ref-3"></a>Devlin, J., et al. (2018). *BERT: Pre-training of deep bidirectional transformers for language understanding*. [arXiv:1810.04805](https://arxiv.org/abs/1810.04805).
+4. <a id="ref-4"></a>Kudo, T., & Richardson, J. (2018). *SentencePiece: A simple and language independent subword tokenizer and detokenizer for neural text processing*. [arXiv:1808.06226](https://arxiv.org/abs/1808.06226).

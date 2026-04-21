@@ -1,0 +1,333 @@
+.attention-visualizer-container {
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin: 2rem 0;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.attention-header {
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.attention-header h3 {
+  margin: 0 0 0.5rem 0;
+  color: #212529;
+}
+
+.attention-header p {
+  margin: 0 0 1rem 0;
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+.attention-controls {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.attention-controls button {
+  padding: 0.5rem 1rem;
+  border: 1px solid #ced4da;
+  background-color: white;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+}
+
+.attention-controls button:hover {
+  background-color: #e9ecef;
+}
+
+.attention-controls button.active {
+  background-color: #0d6efd;
+  color: white;
+  border-color: #0d6efd;
+}
+
+.frames-container {
+  display: flex;
+  justify-content: space-around;
+  gap: 1rem;
+  perspective: 1000px;
+  margin-bottom: 1.5rem;
+}
+
+.video-frame {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: rotateY(-15deg) rotateX(5deg);
+  transition: transform 0.3s ease;
+}
+
+.video-frame:hover {
+  transform: rotateY(0deg) rotateX(0deg);
+}
+
+.frame-label {
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #495057;
+}
+
+.patch-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2px;
+  background-color: #dee2e6;
+  padding: 2px;
+  border-radius: 4px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.patch {
+  width: 30px;
+  height: 30px;
+  background-color: white;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.patch:hover {
+  transform: scale(1.1);
+  z-index: 10;
+}
+
+.patch.attended {
+  background-color: #cfe2ff;
+  box-shadow: inset 0 0 0 1px #0d6efd;
+}
+
+.patch.self {
+  background-color: #0d6efd;
+  box-shadow: 0 0 8px rgba(13, 110, 253, 0.6);
+  z-index: 5;
+}
+
+.attention-description {
+  text-align: center;
+  font-size: 0.9rem;
+  color: #495057;
+  min-height: 2.5rem;
+  background-color: #e9ecef;
+  padding: 0.75rem;
+  border-radius: 4px;
+}
+
+.attention-description p {
+  margin: 0;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .attention-visualizer-container {
+    background-color: #212529;
+    border-color: #343a40;
+  }
+  .attention-header h3 { color: #f8f9fa; }
+  .attention-header p { color: #adb5bd; }
+  .attention-controls button {
+    background-color: #343a40;
+    color: #f8f9fa;
+    border-color: #495057;
+  }
+  .attention-controls button:hover { background-color: #495057; }
+  .attention-controls button.active {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+  }
+  .frame-label { color: #ced4da; }
+  .patch-grid { background-color: #495057; }
+  .patch { background-color: #212529; }
+  .patch.attended { 
+    background-color: rgba(13, 110, 253, 0.3); 
+    box-shadow: inset 0 0 0 1px #0d6efd;
+  }
+  .patch.self { background-color: #0d6efd; }
+  .attention-description {
+    background-color: #343a40;
+    color: #ced4da;
+  }
+}
+
+/* OmniAttentionVisualizer Styles */
+.omni-visualizer-container {
+  background: #1e1e2e;
+  border-radius: 12px;
+  padding: 1.5rem;
+  color: #cdd6f4;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  margin: 2rem 0;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.omni-title {
+  margin-top: 0;
+  color: #f8fafc;
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.omni-subtitle {
+  color: #a6adc8;
+  font-size: 0.9rem;
+  margin-bottom: 1.5rem;
+}
+
+.omni-sequence {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+  overflow-x: auto;
+  padding-bottom: 1rem;
+}
+
+.omni-token {
+  padding: 0.75rem;
+  border-radius: 8px;
+  background: #313244;
+  color: #cdd6f4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 80px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  border: 1px solid transparent;
+}
+
+.omni-token:hover {
+  transform: translateY(-5px);
+}
+
+.omni-token.hovered {
+  border-color: #f9e2af;
+}
+
+.token-id {
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.token-label {
+  font-size: 0.7rem;
+  color: #a6adc8;
+  text-align: center;
+}
+
+.omni-text { border-left: 4px solid #89b4fa; }
+.omni-image { border-left: 4px solid #a6e3a1; }
+.omni-audio { border-left: 4px solid #cba6f7; }
+
+.attention-highlight {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(249, 226, 175, 0.2);
+  border-radius: 8px;
+  pointer-events: none;
+}
+
+.omni-legend {
+  display: flex;
+  gap: 1.5rem;
+  font-size: 0.85rem;
+  color: #a6adc8;
+  justify-content: center;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.legend-box {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.legend-box.omni-text { background: #89b4fa; }
+.legend-box.omni-image { background: #a6e3a1; }
+.legend-box.omni-audio { background: #cba6f7; }
+
+/* RVQVisualizer Styles */
+.rvq-container {
+  background: #1e1e2e;
+  border-radius: 12px;
+  padding: 1.5rem;
+  color: #cdd6f4;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  margin: 2rem 0;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.rvq-header h3 {
+  margin-top: 0;
+  color: #f8fafc;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.rvq-header p {
+  color: #a6adc8;
+  font-size: 0.9rem;
+  margin-bottom: 1.5rem;
+}
+
+.rvq-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.rvq-controls label {
+  font-size: 0.9rem;
+  color: #cdd6f4;
+}
+
+.rvq-controls label strong {
+  color: #f9e2af;
+}
+
+.rvq-controls input[type="range"] {
+  width: 100%;
+  accent-color: #89b4fa;
+}
+
+.rvq-graphs {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.rvq-graph-box h4 {
+  margin-top: 0;
+  color: #f8fafc;
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.rvq-svg {
+  background: #181825;
+  border: 1px solid #313244;
+  border-radius: 8px;
+  padding: 0.5rem;
+}

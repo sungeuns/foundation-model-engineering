@@ -1,0 +1,178 @@
+---
+layout: ../../../layouts/BookLayout.astro
+title: 17.5 Production Evaluation and Release Gates
+lang: ko
+---
+
+# 17.5 프로덕션 평가와 릴리스 게이트
+
+랩에서는 judge 기반 비교에서 이겼는데, 막상 롤아웃 후에는 거절 응답이 덜 예측 가능해지고 핵심 워크플로우의 tool call이 느려져 지원 티켓이 증가하는 모델을 생각해 봅시다. "벤치에서 더 좋아졌다"와 "실제로 배포하기 좋아졌다" 사이의 이 간극 때문에 release gate가 필요합니다.
+
+프로덕션 평가는 단순한 점수판이 아닙니다. 연구용 지표를 실제 릴리스 의사결정으로 연결하는 결정 시스템입니다. 무엇은 반드시 좋아져야 하고, 무엇은 유지되어도 되며, 어떤 회귀는 즉시 릴리스를 막아야 하고, 어떤 신호는 롤아웃 이후에만 보이는지를 정하는 일입니다.
+
+---
+
+## 1. Offline evaluation은 게이트이지 전부가 아니다
+
+offline evaluation은 여전히 필수입니다. 큰 회귀를 빠르고 싸게 찾는 데 가장 효율적이기 때문입니다.
+
+보통 아래 항목들을 봅니다.
+
+- benchmark suite
+- task-specific regression set
+- safety test
+- tool-use 또는 workflow test
+- judge 기반 pairwise 비교
+
+하지만 offline score만으로는 충분하지 않습니다. 실제 사용자 행동, 최신성 요구, 지연 시간에 대한 인내심, live traffic에서의 failure pattern은 잘 드러나지 않기 때문입니다.
+
+### 단일 점수가 아니라 release packet을 봐야 한다
+
+실무의 릴리스 리뷰는 보통 네 가지 묶음을 함께 봅니다.
+
+- **benchmark regression:** 넓은 범위의 능력 변화
+- **private workflow eval:** 실제 제품에서 중요한 과업
+- **judge packet:** calibration이 포함된 pairwise 또는 rubric 기반 비교
+- **systems packet:** latency, cost, tool-use reliability
+
+이렇게 봐야 어떤 인상적인 leaderboard 숫자 하나가 판단 전체를 지배하지 않게 됩니다.
+
+---
+
+## 2. Judge calibration과 benchmark hygiene
+
+LLM-as-a-Judge를 release decision에 쓰려면 judge 자체도 관리해야 합니다.
+
+### 실무 규칙
+
+- human label이 있는 calibration set 유지
+- 시간에 따른 agreement drift 추적
+- 관련된 모델 family 하나만 judge로 쓰지 않기
+- position bias와 verbosity bias 정기 점검
+
+benchmark hygiene도 중요합니다.
+
+- eval set version 관리
+- model training cutoff date 기록
+- 가능한 경우 holdout set은 비공개 유지
+- 성능 향상을 선언하기 전에 contamination 점검
+
+LiveBench 같은 freshness-aware, contamination-aware benchmark는 오프라인 성능 향상이 단순 암기에 가깝지 않은지 보는 데 유용합니다 [[3]](#ref-3). 하지만 이런 벤치마크도 제품 특화 private regression set을 대체하는 것이 아니라 보완하는 역할에 가깝습니다.
+
+또 하나의 최신 경고는 **Preference Leakage** 입니다. judge와 synthetic-data pipeline이 너무 가깝게 연결되어 있으면, release decision이 실제로 더 좋은 모델이 아니라 익숙한 모델 계열을 조용히 편애할 수 있습니다 [[2]](#ref-2).
+
+---
+
+## 3. Release gate에는 명확한 blocking criteria가 있어야 한다
+
+release gate는 명시적일 때만 쓸모가 있습니다.
+
+### 예시 게이트
+
+1. critical safety regression이 없을 것
+2. 핵심 workflow에서 통계적으로 의미 있는 회귀가 없을 것
+3. 대상 과업에서 judge 기반 승률이 threshold 이상일 것
+4. latency와 cost가 예산 안에 있을 것
+5. canary rollout 지표가 안정적일 것
+
+이렇게 해야 “새 모델이 왠지 더 좋아 보인다”가 아니라 운영 계약처럼 판단할 수 있습니다.
+
+### Gate는 metric이 아니라 의사결정 규칙이다
+
+좋은 release gate는 아래처럼 “측정값”과 “행동”이 함께 정의되어 있습니다.
+
+| 신호 | 예시 기준 | 실패 시 행동 |
+| :--- | :--- | :--- |
+| Critical safety | high-severity policy violation이 0건 | 릴리스 중단, red-team case 재학습 |
+| Core workflow | private eval에서 기존 모델 대비 -1%p 이상 회귀 없음 | 해당 workflow owner 리뷰 |
+| RAG faithfulness | claim-level unsupported rate가 예산 이하 | retrieval/prompt/verifier 원인 분리 |
+| Tool reliability | tool-call JSON schema 오류율과 retry율이 증가하지 않음 | tool schema 또는 planner prompt 롤백 |
+| Cost/latency | p95 latency와 cost/token이 예산 안 | 라우팅 또는 batch 설정 조정 |
+| User-visible quality | canary complaint rate가 baseline 대비 상승하지 않음 | rollout pause, 샘플 분석 |
+
+이 표의 핵심은 평균 점수가 아니라 **막아야 할 실패를 미리 합의** 하는 데 있습니다. 특히 엔터프라이즈 AI에서는 한두 개의 치명적인 샘플이 평균 개선보다 더 중요할 때가 많습니다.
+
+---
+
+## 4. Canary release가 마지막 고리를 닫는다
+
+offline evaluation은 위험을 줄여 주지만, canary release는 현실을 보여 줍니다.
+
+보통 아래 지표를 같이 봅니다.
+
+- refusal rate drift
+- answer-quality complaint
+- latency regression
+- tool-call failure rate
+- 해당 workflow의 retention 또는 conversion
+
+많은 팀은 사용자에게 노출되는 canary 전에 **shadow traffic** 단계도 둡니다. 이렇게 하면 실제 사용자에게 영향을 주지 않고도 latency, tool behavior, refusal 패턴 변화를 먼저 점검할 수 있습니다.
+
+핵심은 간단합니다. live traffic에서 새 모델이 버티는지 보기 전에는 전체 사용자에게 바로 열지 않는 것입니다.
+
+### Shadow, canary, ramp-up의 차이
+
+- **Shadow traffic:** 실제 요청을 새 모델에도 복제해서 보내지만, 사용자에게는 기존 모델 답변만 보여 줍니다. latency, tool call, safety classifier drift를 안전하게 봅니다.
+- **Canary:** 작은 사용자 집단이나 낮은 위험 workflow에 새 모델을 실제 노출합니다. complaint, conversion, human escalation, retry behavior를 봅니다.
+- **Ramp-up:** 1%, 5%, 25%, 50%, 100%처럼 단계적으로 확대합니다. 각 단계마다 자동 rollback 조건이 있어야 합니다.
+
+운영에서 자주 하는 실수는 canary를 “작게 배포했으니 안전하다”고 여기는 것입니다. canary도 rollback 기준이 없으면 그냥 느린 전체 배포일 뿐입니다.
+
+---
+
+## 5. 모델 교체보다 어려운 것은 평가셋 유지보수다
+
+프로덕션 평가셋은 한 번 만들고 끝나는 산출물이 아닙니다. 제품이 바뀌고, 고객 질문이 바뀌고, 모델이 새로운 실패 방식을 배우면서 평가셋도 낡습니다.
+
+실무에서는 다음 루프가 필요합니다.
+
+1. production incident와 support ticket에서 새 eval case를 추출합니다.
+2. 중복, 개인정보, 저작권, 보안 정보를 제거합니다.
+3. expected behavior와 grading rubric을 사람이 작성합니다.
+4. 새 모델뿐 아니라 현재 production baseline에도 다시 실행합니다.
+5. 너무 쉬워져 변별력이 사라진 case는 regression set으로 남기고, 프론티어 비교용 set은 더 어렵게 갱신합니다.
+
+이렇게 하면 평가셋이 논문 벤치마크처럼 고정된 시험지가 아니라, 제품의 실제 실패를 계속 흡수하는 운영 자산이 됩니다.
+
+---
+
+## 6. Practical Takeaway
+
+프로덕션 평가는 benchmark 문화와 제품 엔지니어링을 이어 주는 다리입니다. offline test는 큰 회귀를 걸러내고, judge는 정성 평가를 확장하며, canary는 실제 사용자 환경의 반응을 드러냅니다. 릴리스 판단은 이 셋을 함께 봐야지, leaderboard의 이동만으로 내려서는 안 됩니다.
+
+---
+
+## Quizzes
+
+<details>
+<summary>Quiz 1: 모델 릴리스 판단에서 offline evaluation만으로는 부족한 이유는 무엇인가요?</summary>
+*offline 데이터셋은 실제 사용자 행동, 최신성 요구, 지연 시간 허용 범위, live failure pattern 같은 프로덕션 조건을 모두 담지 못하기 때문입니다.*
+</details>
+
+<details>
+<summary>Quiz 2: release gate에 LLM-as-a-Judge를 쓸 때 judge calibration이 중요한 이유는 무엇인가요?</summary>
+*judge 자체가 drift 하거나 편향을 가질 수 있고, 관련된 모델 family를 편애할 수도 있기 때문입니다. human label 기준 보정 없이 judge score만 믿으면 잘못된 자신감이 생길 수 있습니다.*
+</details>
+
+<details>
+<summary>Quiz 3: release gate가 운영적으로 유용하려면 무엇이 필요하나요?</summary>
+*안전성, 핵심 workflow 회귀, judge threshold, latency budget, canary health check처럼 릴리스를 실제로 막을 수 있는 명확한 기준이 필요합니다.*
+</details>
+
+<details>
+<summary>Quiz 4: offline 결과가 좋아도 canary release가 중요한 이유는 무엇인가요?</summary>
+*실제 트래픽과 실제 workflow에서는 latency, tool use, safety, 사용자 만족도에서 숨어 있던 회귀가 처음 드러나는 경우가 많기 때문입니다.*
+</details>
+
+<details>
+<summary>Quiz 5: release gate에서 평균 judge 승률이 높아졌는데도 릴리스를 막아야 하는 대표적인 경우는 무엇인가요?</summary>
+*평균 품질은 좋아졌지만 critical safety, 결제, 의료/법률, 보안, 핵심 tool workflow 같은 high-severity 영역에서 회귀가 발견된 경우입니다. 프로덕션 릴리스에서는 평균 개선보다 치명적 실패의 존재 여부가 더 우선합니다.*
+</details>
+
+---
+
+## References
+
+1. <a id="ref-1"></a>Liu, Y., et al. (2023). *G-Eval: NLG Evaluation using GPT-4 with Better Human Alignment.* [arXiv:2303.16634](https://arxiv.org/abs/2303.16634).
+2. <a id="ref-2"></a>Li, D., et al. (2025). *Preference Leakage: A Contamination Problem in LLM-as-a-Judge.* [arXiv:2502.01534](https://arxiv.org/abs/2502.01534).
+3. <a id="ref-3"></a>Gu, A., et al. (2024). *LiveBench: A Challenging, Contamination-Free LLM Benchmark.* [arXiv:2406.19314](https://arxiv.org/abs/2406.19314).

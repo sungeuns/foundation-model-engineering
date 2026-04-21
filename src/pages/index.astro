@@ -1,0 +1,82 @@
+---
+import BookLayout from '../layouts/BookLayout.astro';
+
+import { chapters } from '../data/chapters.js';
+import { withBasePath } from '../utils/paths.js';
+---
+
+<BookLayout title="Home" lang="en">
+  <div style="text-align: right; color: var(--secondary-color); font-size: 0.9rem; margin-bottom: 1rem;">Last update: 2026-04-20</div>
+  <p><strong>Foundation Model Engineering</strong> is a technical textbook for readers who want to understand how modern foundation models actually work, why the stack evolved the way it did, and what engineering trade-offs appear when those ideas meet real systems.</p>
+
+  <p>This project is written primarily for <strong>AI engineers</strong> and <strong>research-oriented readers</strong> who want to move past surface-level API usage and build a deeper mental model of architectures, training pipelines, inference systems, retrieval stacks, evaluation loops, and agentic workflows.</p>
+
+  <p>The goal is not to provide scattered tips or isolated definitions. The goal is to explain the <strong>historical flow, mathematical ideas, and systems constraints</strong> that connect topics like attention, MoE, RLHF, multimodality, long-context serving, RAG, and agents into one engineering narrative.</p>
+
+  <h3>Why read this</h3>
+
+  <p>If you have ever wondered why the field moved from RNNs to Transformers, why some models are dense while others are sparse, why inference systems care so much about KV cache and batching, or why evaluation and alignment are product problems rather than just research topics, this book is meant to help you connect those dots.</p>
+
+  <p>Instead of treating each topic as an isolated trend, the book tries to show how modeling ideas, systems constraints, and product requirements shape one another. The payoff is not just more terminology. It is better engineering judgment.</p>
+
+  <h3>Who this is for</h3>
+
+  <p><strong>AI Engineers</strong><br />Readers building or evaluating LLM systems, inference stacks, RAG systems, or agentic products.</p>
+
+  <p><strong>Research-Oriented Readers</strong><br />Readers who want a broad but technically grounded understanding of the foundation model landscape, including current architecture and systems trends.</p>
+
+  <h3>What to expect</h3>
+
+  <p>You will find rigorous conceptual explanations, concept-focused PyTorch examples, short quizzes for consolidation, and interactive visualizers for topics that are easier to understand by manipulating them directly. The material is designed to help you reason about <strong>quality, memory, throughput, latency, scaling, and alignment trade-offs</strong>, not just memorize terminology.</p>
+
+  <p>This is <strong>not</strong> a lightweight beginner introduction. If you are looking for a first overview of AI or a prompt-engineering-only guide, this book will probably feel denser than necessary. It is intentionally written for readers who want depth.</p>
+
+  <h3>A Living Document</h3>
+
+  <p>AI changes extremely quickly, so some details in a project like this may need revision as new papers, systems, and products appear. If you spot an outdated section, an awkward explanation, a typo, or a better reference, contributions are always welcome.</p>
+
+  <p>Pull requests that improve accuracy, pedagogy, examples, localization, or overall clarity are appreciated. The goal is for this to remain a useful long-term resource, not a frozen snapshot.</p>
+  
+  <h2>Table of Contents</h2>
+  <div class="toc">
+    {chapters.map(ch => (
+      <div class="toc-chapter">
+        <h3>{ch.title.en}</h3>
+        <ul>
+          {ch.subs.map(sub => (
+            <li><a href={withBasePath(sub.path)}>{sub.title.en}</a></li>
+          ))}
+        </ul>
+      </div>
+    ))}
+  </div>
+
+</BookLayout>
+
+<style>
+  .toc {
+    margin-top: 2rem;
+  }
+  .toc-chapter {
+    margin-bottom: 1.5rem;
+  }
+  .toc h3 {
+    font-size: 1.3rem;
+    margin-bottom: 0.5rem;
+    color: #111;
+  }
+  .toc ul {
+    list-style: none;
+    padding-left: 1rem;
+  }
+  .toc li {
+    margin-bottom: 0.25rem;
+  }
+  .toc a {
+    text-decoration: none;
+    color: var(--accent-color);
+  }
+  .toc a:hover {
+    text-decoration: underline;
+  }
+</style>

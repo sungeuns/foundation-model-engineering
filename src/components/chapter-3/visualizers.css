@@ -1,0 +1,122 @@
+/* Styles for Chapter 3 Visualizers */
+
+.sav-container {
+  padding: 1.5rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  background-color: #f8fafc;
+  color: #1e293b;
+  font-family: sans-serif;
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.sav-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  color: #0f172a;
+}
+
+.sav-description {
+  font-size: 0.875rem;
+  color: #475569;
+  margin-bottom: 1.5rem;
+}
+
+.sav-words {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+.sav-word {
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+  border: 1px solid #cbd5e1;
+  background-color: #ffffff;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+  color: #334155;
+}
+
+.sav-word:hover {
+  background-color: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.sav-word-active {
+  background-color: #2563eb;
+  color: #ffffff;
+  border-color: #1d4ed8;
+}
+
+.sav-display {
+  background-color: #ffffff;
+  padding: 1.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 1.5rem;
+}
+
+.sav-display-title {
+  font-size: 0.875rem;
+  color: #64748b;
+  margin-bottom: 1rem;
+}
+
+.sav-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sav-cell {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.sav-cell-word {
+  width: 3rem;
+  font-weight: 600;
+  color: #334155;
+  text-align: right;
+}
+
+.sav-bar-container {
+  flex: 1;
+  height: 1rem;
+  background-color: #f1f5f9;
+  border-radius: 0.25rem;
+  overflow: hidden;
+}
+
+.sav-bar {
+  height: 100%;
+  background-color: #3b82f6;
+  transition: width 0.3s, opacity 0.3s;
+}
+
+.sav-cell-score {
+  width: 2.5rem;
+  font-size: 0.75rem;
+  font-family: monospace;
+  color: #64748b;
+  text-align: right;
+}
+
+.sav-explanation {
+  padding: 1rem;
+  background-color: #f1f5f9;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  color: #334155;
+}
+
+.sav-explanation p {
+  margin: 0.25rem 0;
+}

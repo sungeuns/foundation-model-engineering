@@ -1,0 +1,273 @@
+---
+import { chapters } from '../data/chapters.js';
+import { getBasePath, normalizePathname, stripBasePath, withBasePath } from '../utils/paths.js';
+import '../styles/book.css';
+
+const { title, lang = 'en' } = Astro.props.frontmatter || Astro.props;
+const basePath = getBasePath();
+const chapterRoutes = chapters.flatMap((chapter) =>
+  chapter.subs.flatMap((sub) => [
+    normalizePathname(sub.path),
+    normalizePathname(`/ko${sub.path}`),
+  ])
+);
+const existingRoutes = new Set(['/', '/ko', ...chapterRoutes]);
+
+// Helper to check active link
+const currentPath = stripBasePath(Astro.url.pathname, basePath);
+const isActive = (pagePath) => currentPath === normalizePathname(pagePath);
+
+const isKo = lang === 'ko';
+const enPath = isKo ? currentPath.replace(/^\/ko/, '') || '/' : currentPath;
+const koPath = isKo ? currentPath : `/ko${currentPath === '/' ? '' : currentPath}`;
+const hasRoute = (pathname) => existingRoutes.has(normalizePathname(pathname));
+const getLocalePath = (basePath, locale) => {
+  if (locale === 'ko') {
+    const localizedPath = normalizePathname(`/ko${basePath === '/' ? '' : basePath}`);
+    return hasRoute(localizedPath) ? localizedPath : normalizePathname(basePath);
+  }
+
+  return normalizePathname(basePath);
+};
+
+const enTarget = hasRoute(enPath) ? normalizePathname(enPath) : normalizePathname(koPath);
+const koTarget = hasRoute(koPath) ? normalizePathname(koPath) : normalizePathname(enPath);
+const homePath = getLocalePath('/', lang);
+const toHref = (pagePath) => withBasePath(pagePath, basePath);
+const githubUrl = 'https://github.com/sungeuns/founation-model-engineering';
+
+// Navigation logic
+const allPages = chapters.flatMap(ch => 
+  ch.subs.map(sub => ({
+    title: sub.title[lang],
+    path: getLocalePath(sub.path, lang)
+  }))
+);
+
+const currentIndex = allPages.findIndex(page => 
+  currentPath === normalizePathname(page.path)
+);
+
+let prevPage = null;
+let nextPage = null;
+
+if (currentIndex !== -1) {
+  prevPage = currentIndex > 0 ? allPages[currentIndex - 1] : { title: isKo ? "홈" : "Home", path: homePath };
+  nextPage = currentIndex < allPages.length - 1 ? allPages[currentIndex + 1] : null;
+} else if (currentPath === '/' || currentPath === '/ko') {
+  nextPage = allPages[0];
+}
+---
+
+<html lang={lang}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title} | Foundation Model Engineering</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Noto+Sans+JP:wght@300;400;500;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+
+  </head>
+  <body>
+    <button class="menu-toggle" id="menuToggle">Menu</button>
+    
+    <nav class="sidebar" id="sidebar">
+      <h1><a href={toHref(homePath)} style="text-decoration: none; color: inherit;">Table of Contents</a></h1>
+      {chapters.map(ch => (
+        <div>
+          <h2>{ch.title[lang]}</h2>
+          <ul>
+            {ch.subs.map(sub => (
+              <li>
+                {(() => {
+                  const pagePath = getLocalePath(sub.path, lang);
+                  return (
+                <a 
+                  href={toHref(pagePath)} 
+                  class={isActive(pagePath) ? 'active' : ''}
+                >
+                  {sub.title[lang]}
+                </a>
+                  );
+                })()}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </nav>
+    
+    <div class="content-wrapper">
+      <div class="container">
+        <header>
+          <h1><a href={toHref(homePath)} style="text-decoration: none; color: inherit;">Foundation Model Engineering</a></h1>
+          <div class="header-actions">
+            <a class="github-link" href={githubUrl} target="_blank" rel="noopener noreferrer" aria-label="Open GitHub repository">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 2C6.48 2 2 6.58 2 12.26c0 4.53 2.87 8.37 6.84 9.73.5.1.68-.22.68-.49 0-.24-.01-.88-.01-1.73-2.78.62-3.37-1.37-3.37-1.37-.45-1.19-1.11-1.51-1.11-1.51-.91-.64.07-.63.07-.63 1 .07 1.53 1.06 1.53 1.06.9 1.57 2.36 1.12 2.94.85.09-.67.35-1.12.63-1.38-2.22-.26-4.56-1.14-4.56-5.07 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.31.1-2.71 0 0 .84-.28 2.75 1.05A9.34 9.34 0 0 1 12 6.97c.85 0 1.7.12 2.5.35 1.9-1.33 2.74-1.05 2.74-1.05.55 1.4.2 2.45.1 2.71.64.72 1.03 1.63 1.03 2.75 0 3.94-2.34 4.8-4.57 5.06.36.32.68.94.68 1.9 0 1.37-.01 2.47-.01 2.81 0 .27.18.59.69.49A10.15 10.15 0 0 0 22 12.26C22 6.58 17.52 2 12 2Z"></path>
+              </svg>
+            </a>
+            <div class="dropdown" id="localeDropdown">
+              <button class="dropbtn" id="localeButton" type="button" aria-haspopup="true" aria-expanded="false">{lang.toUpperCase()}</button>
+              <div class="dropdown-content" id="localeMenu">
+                <a href={toHref(enTarget)}>English (EN)</a>
+                <a href={toHref(koTarget)}>Korean (KO)</a>
+              </div>
+            </div>
+          </div>
+        </header>
+        <main>
+          <slot />
+        </main>
+        <div class="navigation-links">
+          {prevPage && (
+            <a href={toHref(prevPage.path)} class="nav-link prev">
+              <span class="nav-label">{isKo ? "← 이전" : "← Previous"}</span>
+              <span class="nav-title">{prevPage.title}</span>
+            </a>
+          )}
+          {!prevPage && <div class="nav-spacer"></div>}
+          {nextPage && (
+            <a href={toHref(nextPage.path)} class="nav-link next">
+              <span class="nav-label">{isKo ? "다음 →" : "Next →"}</span>
+              <span class="nav-title">{nextPage.title}</span>
+            </a>
+          )}
+        </div>
+        <footer class="site-footer">
+          <p>Created by <strong><a href="https://www.linkedin.com/in/sungeuns2" target="_blank">Seongeun So</a></strong></p>
+          <small>Assisted by <strong>Gemini</strong></small>
+        </footer>
+      </div>
+    </div>
+    
+    <script>
+      const toggle = document.getElementById('menuToggle');
+      const sidebar = document.getElementById('sidebar');
+      const localeDropdown = document.getElementById('localeDropdown');
+      const localeButton = document.getElementById('localeButton');
+      
+      if (toggle && sidebar) {
+        toggle.addEventListener('click', () => {
+          sidebar.classList.toggle('open');
+        });
+      }
+
+      if (localeDropdown && localeButton) {
+        localeButton.addEventListener('click', () => {
+          const isOpen = localeDropdown.classList.toggle('open');
+          localeButton.setAttribute('aria-expanded', String(isOpen));
+        });
+
+        document.addEventListener('click', (event) => {
+          if (!localeDropdown.contains(event.target)) {
+            localeDropdown.classList.remove('open');
+            localeButton.setAttribute('aria-expanded', 'false');
+          }
+        });
+
+        localeButton.addEventListener('keydown', (event) => {
+          if (event.key === 'Escape') {
+            localeDropdown.classList.remove('open');
+            localeButton.setAttribute('aria-expanded', 'false');
+            localeButton.focus();
+          }
+        });
+      }
+
+      // Scroll active link into view
+      const activeLink = document.querySelector('.sidebar a.active');
+      if (activeLink) {
+        activeLink.scrollIntoView({ block: 'center' });
+      }
+    </script>
+<style>
+  .navigation-links {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-color);
+    gap: 1rem;
+  }
+  
+  .nav-link {
+    display: flex;
+    flex-direction: column;
+    text-decoration: none;
+    color: var(--text-color);
+    flex: 1;
+    max-width: 48%;
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    transition: all 0.2s ease;
+    background-color: white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  }
+  
+  .nav-link:hover {
+    border-color: var(--accent-color);
+    background-color: #f8fafc;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  }
+  
+  .nav-link.next {
+    text-align: right;
+    align-items: flex-end;
+  }
+  
+  .nav-label {
+    font-size: 0.85rem;
+    color: var(--secondary-color);
+    margin-bottom: 0.25rem;
+    font-weight: 500;
+  }
+  
+  .nav-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1e293b;
+  }
+  
+  .nav-link:hover .nav-title {
+    color: var(--accent-color);
+  }
+  
+  .nav-spacer {
+    flex: 1;
+  }
+  
+  .site-footer {
+    text-align: center;
+    margin-top: 3rem;
+    padding: 1.5rem 0;
+    border-top: 1px solid var(--border-color);
+    color: var(--secondary-color);
+  }
+  
+  .site-footer p {
+    margin-bottom: 0.25rem;
+    font-size: 1rem;
+  }
+  
+  .site-footer a {
+    color: var(--accent-color);
+    text-decoration: none;
+  }
+  
+  .site-footer a:hover {
+    text-decoration: underline;
+  }
+  
+  .site-footer small {
+    display: block;
+    font-size: 0.85rem;
+  }
+</style>
+  </body>
+</html>

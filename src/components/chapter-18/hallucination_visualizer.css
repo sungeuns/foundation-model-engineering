@@ -1,0 +1,174 @@
+.hallucination-visualizer {
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  padding: 20px;
+  color: #c9d1d9;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  margin: 20px 0;
+}
+
+.hallucination-visualizer .controls {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #30363d;
+  padding-bottom: 15px;
+}
+
+.hallucination-visualizer .controls button {
+  background: #21262d;
+  border: 1px solid #30363d;
+  color: #c9d1d9;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.hallucination-visualizer .controls button:hover {
+  background: #30363d;
+}
+
+.hallucination-visualizer .controls button.active {
+  background: #1f6feb;
+  border-color: #1f6feb;
+  color: #ffffff;
+}
+
+.step-box {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 15px;
+  margin-bottom: 15px;
+}
+
+.step-box h4 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  color: #58a6ff;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.samples-box ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.samples-box li {
+  margin-bottom: 5px;
+  font-style: italic;
+}
+
+.cluster {
+  background: #21262d;
+  border-left: 3px solid #8957e5;
+  padding: 10px;
+  margin-bottom: 10px;
+  border-radius: 0 4px 4px 0;
+}
+
+.cluster-label {
+  font-weight: bold;
+  color: #d2a8ff;
+}
+
+.cluster-items {
+  font-size: 0.9em;
+  color: #8b949e;
+  margin-top: 5px;
+}
+
+.result-box {
+  border-left: 4px solid;
+}
+
+.result-box.factual {
+  border-color: #238636;
+  background: rgba(35, 134, 54, 0.1);
+}
+
+.result-box.hallucination {
+  border-color: #da3633;
+  background: rgba(218, 54, 51, 0.1);
+}
+
+.result-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.metric {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(0,0,0,0.2);
+  padding: 10px;
+  border-radius: 4px;
+}
+
+.metric .label {
+  font-weight: bold;
+}
+
+.metric .value {
+  font-family: monospace;
+  font-size: 1.1em;
+}
+
+.result-box.factual .verdict {
+  color: #3fb950;
+  font-weight: bold;
+}
+
+.result-box.hallucination .verdict {
+  color: #ff7b72;
+  font-weight: bold;
+}
+
+.action-buttons {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.primary-btn {
+  background: #238636;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.primary-btn:hover {
+  background: #2ea043;
+}
+
+.secondary-btn {
+  background: transparent;
+  color: #8b949e;
+  border: 1px solid #30363d;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.secondary-btn:hover {
+  background: #30363d;
+  color: #c9d1d9;
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}

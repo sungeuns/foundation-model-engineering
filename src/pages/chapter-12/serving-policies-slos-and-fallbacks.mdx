@@ -1,0 +1,218 @@
+---
+layout: ../../layouts/BookLayout.astro
+title: 12.6 Serving Policies, SLOs, and Fallbacks
+lang: en
+---
+
+# 12.6 Serving Policies, SLOs, and Fallbacks
+
+Imagine a restaurant with one kitchen. A table ordering two coffees and a table ordering a 12-course tasting menu both arrive at the same time. If the kitchen follows a naive first-come, first-served policy, the coffee table waits behind the tasting menu even though its order is cheap and urgent. Production LLM serving has the same failure mode.
+
+An LLM service can look perfect in staging and still collapse under real traffic. One enterprise user pastes a 50k-token contract, a batch workflow launches hundreds of long rewrites, and suddenly every chat user waits seconds for the first token. The model weights are fine. The kernels are fine. The system failed because it treated radically different jobs as if they belonged in the same queue.
+
+That is why serving policy matters. Kernel-level optimizations make inference possible, but policies determine whether the product remains reliable under mixed traffic, bursty tenants, and partial failures. This section moves one layer above kernels and memory layouts to the operational rules that decide who gets admitted, which SLOs matter most, how fairness is enforced, and how the system degrades before users experience a hard outage.
+
+---
+
+## 1. Start with SLOs, Not Raw Throughput
+
+Continuous batching, PagedAttention, and chunked prefill improve efficiency, but production teams are usually judged by a small set of user-facing objectives:
+
+- **TTFT (Time To First Token):** how long the user waits before anything appears.
+- **TPOT or TBT:** how smooth generation feels once it starts. `TPOT` is the system-facing metric, while `TBT` is the user-facing experience of the same phenomenon.
+- **Success Rate:** whether the request finishes without timeout, OOM, or cancellation.
+- **Cost per Successful Request:** whether the latency target is being met economically.
+
+These goals frequently conflict. A scheduler can maximize aggregate tokens per second and still create a terrible product if large prefills monopolize the GPU and interactive users wait too long for the first token. Orca already showed that iteration-level scheduling matters for transformer serving [[1]](#ref-1), and newer systems such as DistServe make the point even more explicit: the metric that matters in production is often not raw throughput, but how many requests finish while staying inside latency objectives [[5]](#ref-5).
+
+### Goodput Is the Right Mental Model
+
+For a production system, a useful objective is:
+
+$$
+\text{Goodput} = \text{Request rate that meets TTFT, TPOT, and success constraints}
+$$
+
+This is more useful than plain throughput because it reflects what the product actually promises. A cluster that serves more total tokens but violates p95 TTFT is not healthier for an interactive application.
+
+### SLOs Should Be Lane-Specific
+
+An IDE copilot, a batch summarizer, and a tool-calling agent should not share identical thresholds.
+
+- **Interactive products** care most about p95 or p99 TTFT, jitter, and completion reliability.
+- **Batch workflows** care more about throughput, queue drain time, and cost efficiency.
+- **Agentic workflows** care about end-to-end task completion rate, because one slow or failed turn can break the whole loop.
+
+### Budget the Latency Explicitly
+
+It helps to decompose the first-token budget into visible parts:
+
+$$
+\text{TTFT} \approx t_{\text{queue}} + t_{\text{prefill}} + t_{\text{schedule}} + t_{\text{transfer}}
+$$
+
+The exact terms vary by architecture, but the idea is stable: if you miss the p95 TTFT target, you should know whether the problem came from queueing, prefill interference, cross-node KV transfer, or scheduler delay. A useful policy is not just "be fast." It is "spend the latency budget deliberately."
+
+---
+
+## 2. Admission Control Means Cost-Aware Queueing
+
+The most common production mistake is acting as if every request should enter the same queue. In reality, a 200-token chat prompt and a 40k-token document rewrite impose very different costs on both prefill compute and decode memory.
+
+### Recommended Queue Split
+
+1. **Interactive lane:** short prompts, tight TTFT budget, aggressive output caps.
+2. **Heavy lane:** long prompts, long outputs, or expensive tools.
+3. **Background lane:** offline or low-priority batch jobs.
+
+This does not require separate model weights. It often means different scheduler thresholds on top of the same model, with prefill and decode treated as separate sources of pressure. SARATHI shows why chunked prefills help decode-heavy traffic coexist with prompt-heavy traffic [[3]](#ref-3), while Splitwise and DistServe push the idea further by physically separating or disaggregating prefill and decode so the two phases stop interfering as much [[4]](#ref-4)[[5]](#ref-5).
+
+### Classify Requests Before They Enter
+
+A practical admission controller usually looks at:
+
+- prompt length
+- predicted output length or `max_new_tokens`
+- whether tools or retrieval are expected
+- tenant priority
+- current queue depth and KV memory pressure
+
+The exact scoring rule varies, but the goal is always the same: estimate cost before the request starts hurting everyone else.
+
+### A Simple Cost Proxy
+
+An admission controller often uses a proxy such as:
+
+$$
+\text{CostScore} = \alpha \cdot \text{prompt\_tokens} + \beta \cdot \text{max\_new\_tokens} + \gamma \cdot \text{tool\_risk}
+$$
+
+This is not a physics law. It is a practical heuristic that helps decide whether a request belongs in the interactive lane, should be deferred, or must be rejected.
+
+### Admission Rules
+
+- Reject or defer requests that exceed a configured prompt budget.
+- Cap `max_new_tokens` more aggressively for the interactive lane.
+- Move very long prompts into a lower-priority queue rather than letting them starve active decodes.
+- Reserve a fraction of KV memory for interactive traffic so large jobs cannot consume the entire PagedAttention block pool [[2]](#ref-2).
+- Pause or throttle background work when interactive p95 TTFT drifts toward its SLO.
+
+The important point is that admission control is not a binary "allow or deny" gate. It is a policy layer that routes requests into the least dangerous operating mode.
+
+---
+
+## 3. Fairness and Isolation Prevent Noisy-Neighbor Failures
+
+Multi-tenant serving introduces another policy layer. A single customer running long prompts or bursty traffic can destabilize everyone else if the scheduler has no tenant-aware limits.
+
+### Minimum Guardrails
+
+- per-tenant rate limits
+- per-tenant concurrency caps
+- a hard ceiling on prompt length for shared clusters
+- separate quotas for interactive and background traffic
+- clear overload states such as `degraded`, `interactive_only`, or `batch_paused`
+
+### Fairness Is Not the Same as Equality
+
+Fairness does not mean every request gets identical treatment. A premium interactive product may intentionally receive better latency than an offline export job. The real question is whether the policy is explicit, predictable, and safe.
+
+One useful pattern is weighted fairness: keep a minimum share of scheduler slots or KV capacity for interactive work, then let batch traffic opportunistically use the rest. Without this, the system will often look efficient right up until one tenant consumes the entire queue and everyone else sees a latency cliff.
+
+### Isolate the Right Resource
+
+Different incidents are caused by different scarce resources:
+
+- prefill-heavy traffic saturates compute
+- decode-heavy traffic saturates KV memory bandwidth and capacity
+- tool-heavy traffic creates tail latency outside the model server
+
+Good isolation policies map limits to the actual bottleneck rather than using one global request counter for everything.
+
+## 4. Fallbacks Should Trigger Before Hard Failure
+
+Production systems should not wait for a crash before changing behavior. Good systems degrade gracefully as soon as the SLO budget starts to disappear.
+
+### Common Trigger Signals
+
+- queue wait time rising sharply
+- p95 TTFT approaching or exceeding the target
+- KV block pool utilization becoming dangerously high
+- decode TPS dropping while request count stays high
+- tool or retriever timeouts increasing
+
+### A Practical Fallback Ladder
+
+1. **Disable optional expensive features** such as `best_of`, extra samples, or long reasoning traces.
+2. **Lower `max_new_tokens`** for the interactive lane.
+3. **Compress or summarize the prompt** before full generation.
+4. **Route to a smaller or cheaper model** for low-priority traffic.
+5. **Pause background lanes** to protect interactive SLOs.
+6. **Return a partial answer or an explicit retry response** instead of timing out silently.
+
+If the KV block pool becomes tight, the system should prefer reducing the effective context budget or shedding low-priority load before triggering an OOM. From the user's perspective, a short but honest fallback response is often better than a perfect response that times out.
+
+---
+
+## 5. Incident Response Starts with the Right Counters
+
+When latency spikes, the postmortem should include not only kernel traces and GPU metrics, but also the queue policy that allowed the problem to spread. The most useful counters are often embarrassingly operational:
+
+- queue wait time by lane
+- prompt-length distribution
+- generated-token distribution
+- per-tenant concurrency
+- KV block utilization
+- prefill versus decode occupancy
+- fallback activation rate
+
+### A Simple Diagnostic Table
+
+The symptoms below help localize the problem quickly:
+
+- **TTFT is bad, TPOT is fine:** queueing or prefill interference is usually the first suspect.
+- **TTFT is fine, TPOT is bad:** decode contention, KV pressure, or downstream tool latency is more likely.
+- **Both TTFT and TPOT are bad:** the cluster is overloaded or the fairness policy has failed.
+- **Only one tenant is affected:** look for per-tenant quotas, routing bugs, or a malformed workload.
+
+Operationally, this is the real lesson of serving policy: the scheduler is part of the product surface. If it behaves badly under mixed traffic, users experience that as model failure even when the model itself is correct.
+
+---
+
+## 6. Practical Takeaway
+
+Inference optimization is not complete when kernels are fast. It is complete when the service remains predictable under messy workloads: mixed prompt lengths, bursty traffic, partial failures, and competing tenants. The serving stack needs technical optimizations, but it also needs policy, explicit SLO budgets, fairness rules, and a fallback plan that activates before the system falls over.
+
+---
+
+## Quizzes
+
+<details>
+<summary>Quiz 1: Why is goodput a more useful production metric than raw throughput for an interactive LLM product?</summary>
+*Because goodput counts only the request rate that still meets latency and reliability targets. Raw throughput can rise even while p95 TTFT or TPOT becomes unacceptable for users.*
+</details>
+
+<details>
+<summary>Quiz 2: A service has acceptable average latency, but chat users see large p99 TTFT spikes whenever long document rewrites arrive. What policy mistake is the most likely cause?</summary>
+*The system is probably letting short interactive requests and long prefill-heavy requests compete under the same queueing policy. Average latency hides the tail problem, but lane separation or stricter admission control would expose and reduce it.*
+</details>
+
+<details>
+<summary>Quiz 3: Why should fairness policies in shared inference clusters be tied to actual bottlenecks such as prefill compute or KV memory, instead of only request count?</summary>
+*Because requests with the same count can have radically different costs. A single long-context request can be far more damaging than many short chats, so limits must reflect compute, memory, and tool usage rather than just the number of requests.*
+</details>
+
+<details>
+<summary>Quiz 4: A system is approaching KV memory exhaustion. Why is an explicit fallback ladder preferable to waiting for OOM and letting retries handle recovery?</summary>
+*Because an explicit fallback ladder preserves control over user experience and cluster stability. The service can shrink context, cap outputs, pause low-priority work, or return a degraded response before the cluster enters a chaotic failure mode.*
+</details>
+
+---
+
+## References
+
+1. <a id="ref-1"></a>Yu, G.-I., Jeong, J. S., Kim, G.-W., Kim, S., & Chun, B.-G. (2022). *Orca: A Distributed Serving System for Transformer-Based Generative Models.* [arXiv:2203.10842](https://arxiv.org/abs/2203.10842).
+2. <a id="ref-2"></a>Kwon, W., et al. (2023). *Efficient Memory Management for Large Language Model Serving with PagedAttention.* [arXiv:2309.06180](https://arxiv.org/abs/2309.06180).
+3. <a id="ref-3"></a>Agrawal, A., et al. (2023). *SARATHI: Efficient LLM Inference by Piggybacking Decodes with Chunked Prefills.* [arXiv:2308.16369](https://arxiv.org/abs/2308.16369).
+4. <a id="ref-4"></a>Patel, P., Choukse, E., Zhang, C., Shah, A., Goiri, I., Maleki, S., & Bianchini, R. (2024). *Splitwise: Efficient Generative LLM Inference Using Phase Splitting.* [arXiv:2311.18677](https://arxiv.org/abs/2311.18677).
+5. <a id="ref-5"></a>Zhong, Y., Liu, S., Chen, J., Hu, J., Zhu, Y., Liu, X., Jin, X., & Zhang, H. (2024). *DistServe: Disaggregating Prefill and Decoding for Goodput-optimized Large Language Model Serving.* [arXiv:2401.09670](https://arxiv.org/abs/2401.09670).

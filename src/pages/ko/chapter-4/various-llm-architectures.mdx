@@ -1,0 +1,166 @@
+---
+layout: ../../../layouts/BookLayout.astro
+title: "4.5 다양한 LLM 아키텍처"
+lang: "ko"
+---
+
+import AttentionMaskVisualizer from '../../../components/chapter-4/AttentionMaskVisualizer';
+
+# 4.5 다양한 LLM 아키텍처
+
+이쯤 오면 아키텍처 논쟁은 끝났다고 느끼기 쉽습니다. decoder-only가 이겼고, 모두가 GPT를 조금씩 변형하는 정도라고 생각하기 쉽죠. 하지만 실제 엔지니어링은 그 지점에서 시작됩니다. 컨텍스트를 더 길게 가져가야 하고, 서빙 비용은 낮춰야 하고, 처리량은 높여야 하며, tool use나 reasoning 같은 능력도 챙겨야 하기 때문입니다.
+
+교통수단에 비유하면 이해가 쉽습니다. 화물선, 경주용 자동차, 통근 열차는 모두 무언가를 이동시키지만 최적화 대상이 완전히 다릅니다. 현대 LLM도 비슷합니다. 모두 자기회귀적으로 텍스트를 생성하지만, KV cache 성장, attention 복잡도, routing 효율, 학습 안정성 중 무엇이 더 아픈 병목인지에 따라 내부 설계가 달라집니다.
+
+이 절에서는 최신 모델 이름을 외우는 대신, 어떤 압력이 어떤 설계를 낳았는지를 먼저 보겠습니다.
+
+---
+
+## 아키텍처가 계속 갈라지는 이유
+
+Chapter 3에서 본 표준 Transformer는 출발점입니다. 실제 시스템은 다음과 같은 압박을 반복해서 받습니다.
+
+1. 긴 컨텍스트에서는 full attention 비용이 급격히 커집니다.
+2. 자기회귀 서빙에서는 KV cache가 메모리와 대역폭을 압박합니다.
+3. dense FFN은 모델이 커질수록 비용이 빠르게 증가합니다.
+4. next-token prediction 하나만으로는 처리량이나 reasoning을 최적화하기 어려운 경우가 있습니다.
+
+최근 아키텍처 변화의 대부분은 이 네 가지 병목에 대한 대응으로 이해할 수 있습니다.
+
+### 1. 하이브리드 및 선형 어텐션 (Hybrid & Linear Attention)
+표준 self-attention은 시퀀스 길이에 대해 제곱 비용이 들기 때문에, 컨텍스트가 길어질수록 부담이 커집니다. 그래서 최근에는 **Hybrid Attention** 스택이 자주 등장합니다.
+
+핵심 아이디어는 간단합니다. 모든 레이어에 똑같이 비싼 full attention을 쓰지 말고, 일부 레이어만 강한 전역 상호작용을 담당하게 하고 나머지는 linear attention, local attention, state-space 계열 업데이트처럼 더 저렴한 메커니즘으로 대체하는 것입니다.
+
+즉, 모든 레이어가 동일한 수준으로 “멀리 보고 정확하게 찾는” 일을 할 필요는 없다는 판단입니다.
+
+### 2. KV Cache 압축과 메모리 친화적 어텐션
+자기회귀 모델의 서빙 비용은 계산량만으로 설명되지 않습니다. 생성이 길어질수록 KV cache가 커지고, 이 캐시를 계속 읽고 쓰는 메모리 이동 비용이 매우 중요해집니다.
+
+그래서 **Multi-head Latent Attention (MLA)** 같은 설계가 중요합니다. 큰 key/value 텐서를 그대로 저장하는 대신, 더 작은 latent representation으로 저장했다가 attention 계산 시 필요한 형태로 복원하는 방식입니다 [[1]](#ref-1). 여기에 sparse 또는 local attention 패턴을 결합하면 메모리 사용량과 attention 연산량을 동시에 줄일 수 있습니다.
+
+### 3. 피드포워드 스택의 MoE
+또 다른 큰 레버는 feed-forward block입니다. dense FFN은 전체 파라미터를 항상 활성화하지만, **Mixture of Experts (MoE)** 는 토큰마다 일부 expert만 활성화합니다.
+
+MoE의 매력은 분명합니다. dense 모델과 같은 비용을 모두 치르지 않으면서 총 용량은 크게 늘릴 수 있습니다. 다만 그 대가로 routing, load balancing, expert parallelism, 통신 오버헤드 같은 시스템 문제가 핵심 이슈로 올라옵니다. 다시 말해, 계산 비용 일부를 시스템 복잡도로 바꾸는 선택이라고 볼 수 있습니다.
+
+### 4. 멀티 토큰 예측 (Multi-Token Prediction, MTP)
+보통 언어 모델은 다음 토큰 하나만 예측하도록 학습됩니다. **Multi-Token Prediction (MTP)** 은 이 목표를 바꾸어, 여러 미래 위치를 한 번에 예측하게 합니다.
+
+이 방식은 학습 효율을 높일 수 있고, 이후 추측 해독(speculative decoding) 같은 빠른 서빙 경로와도 잘 연결됩니다. 아키텍처는 레이어 구조만이 아니라 학습 목표까지 포함한다는 점을 보여주는 좋은 예입니다.
+
+---
+
+## 최신 아키텍처를 비교하는 더 좋은 방법
+
+개별 제품명을 외우기보다, 어떤 병목을 겨냥한 설계인지로 비교하는 편이 훨씬 오래 갑니다.
+
+| 설계 압력 | 자주 쓰이는 대응 | 얻는 것 | 치르는 대가 |
+| :--- | :--- | :--- | :--- |
+| 긴 컨텍스트 | hybrid, local, linear, sparse attention | 낮은 attention 비용 | 레이어별 동작이 덜 균일해짐 |
+| KV cache 증가 | GQA, MQA, MLA, sliding windows | 서빙 메모리와 대역폭 절감 | 구현이 더 특수해짐 |
+| 거대한 파라미터 수 | MoE 레이어 | 추론 비용 대비 더 큰 용량 | routing과 load balancing 복잡도 |
+| 디코딩 처리량 | MTP, speculative-friendly objective | 더 빠른 생성 경로 | 학습/서빙 협업 설계 필요 |
+| 장문 학습 안정성 | QK-Norm, RoPE 변형, windowing | 더 안정적인 최적화 | 추가 튜닝과 검증 필요 |
+
+이 관점에서 보면 “최고의 현대 아키텍처 하나”를 찾기보다, 어떤 서비스 조건에 어떤 타협이 맞는지를 보는 편이 현실적입니다.
+
+### 병목이 바뀌면 설계도 바뀐다
+초기 Transformer 논의는 주로 파라미터 수와 benchmark 점수에 초점이 맞춰져 있었습니다. 하지만 production 환경은 다른 질문을 던졌습니다. “모델이 얼마나 똑똑한가?”만큼이나 “이 모델을 메모리 압박 없이, 지연 시간 안에, 예측 가능한 비용으로 돌릴 수 있는가?”가 중요해진 것입니다.
+
+그래서 최신 아키텍처 연구는 보편적 승자를 찾는 경쟁이라기보다, 어떤 병목을 어떤 방식으로 우회할지에 대한 설계 탐색에 가깝습니다.
+
+---
+
+## PyTorch 구현: 간략화된 MLA
+
+하이브리드 어텐션이 주목받고 있어도, **Multi-head Latent Attention (MLA)** 는 서빙 병목을 아주 직관적으로 보여주는 예시입니다. 아래 간략화된 구현은 “저장할 것은 압축하고, 계산할 때만 복원한다”는 핵심 아이디어를 드러냅니다.
+
+```python
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+class SimpleLatentAttention(nn.Module):
+    def __init__(self, d_model, n_heads, d_head, d_latent):
+        super().__init__()
+        self.d_model = d_model
+        self.n_heads = n_heads
+        self.d_head = d_head
+        self.d_latent = d_latent # 압축된 KV의 차원
+        
+        # 표준 Query 투영
+        self.q_proj = nn.Linear(d_model, n_heads * d_head)
+        
+        # KV 압축: 입력을 더 작은 잠재 공간으로 투영
+        self.kv_compress = nn.Linear(d_model, d_latent)
+        
+        # KV 복원: 잠재 공간에서 K와 V를 재구성
+        self.kv_decompress = nn.Linear(d_latent, n_heads * d_head * 2) 
+        
+        self.o_proj = nn.Linear(n_heads * d_head, d_model)
+        
+    def forward(self, x):
+        batch_size, seq_len, _ = x.size()
+        
+        # 1. Query 투영
+        q = self.q_proj(x).view(batch_size, seq_len, self.n_heads, self.d_head)
+        q = q.transpose(1, 2) # (B, H, S, d_head)
+        
+        # 2. KV 압축
+        # 이 'latent' 벡터가 바로 KV Cache에 저장되는 대상입니다!
+        latent = self.kv_compress(x) # (B, S, d_latent)
+        
+        # 3. 어텐션 연산을 위한 KV 복원
+        kv = self.kv_decompress(latent).view(batch_size, seq_len, self.n_heads, self.d_head, 2)
+        k = kv[..., 0].transpose(1, 2) # (B, H, S, d_head)
+        v = kv[..., 1].transpose(1, 2) # (B, H, S, d_head)
+        
+        # 4. Scaled Dot-Product Attention
+        scores = torch.matmul(q, k.transpose(-2, -1)) / (self.d_head ** 0.5)
+        
+        # 인과적 마스크 적용 (간략화)
+        mask = torch.tril(torch.ones(seq_len, seq_len, device=x.device))
+        scores = scores.masked_fill(mask == 0, float('-inf'))
+        
+        attn = F.softmax(scores, dim=-1)
+        
+        context = torch.matmul(attn, v) # (B, H, S, d_head)
+        context = context.transpose(1, 2).contiguous().view(batch_size, seq_len, -1)
+        
+        return self.o_proj(context)
+```
+
+---
+
+## 인터랙티브 시각화: 어텐션 마스크
+
+이러한 다양한 아키텍처가 정보 흐름을 어떻게 제어하는지 더 잘 이해하기 위해 어텐션 마스크를 시각화해 보겠습니다. AI 전문가들은 마스크가 모델이 인코더(양방향), 디코더(인과적) 또는 Prefix-LM으로 작동하는지를 진정으로 정의하는 요소임을 알고 있습니다.
+
+<AttentionMaskVisualizer client:load lang="ko" />
+
+---
+
+## Quizzes
+
+<details>
+<summary>Quiz 1: 왜 일부 모델은 모든 레이어에 full self-attention을 쓰지 않고 hybrid attention stack을 선택할까요?</summary>
+*full self-attention은 강력한 토큰 간 상호작용을 제공하지만, 긴 시퀀스에서는 비용이 큽니다. hybrid stack은 일부 레이어만 강한 전역 검색을 담당하게 하고, 나머지는 local, linear, state-space 계열처럼 더 저렴한 메커니즘으로 대체합니다. 즉, 표현력은 어느 정도 유지하면서 비용을 줄이기 위한 설계입니다.*
+</details>
+
+<details>
+<summary>Quiz 2: KV cache 압축과 sparse/local attention을 함께 쓰면 어떤 이점이 있나요?</summary>
+*두 기법이 줄이는 비용이 다르기 때문입니다. KV cache 압축은 메모리 사용량과 대역폭 압박을 낮추고, sparse/local attention은 긴 시퀀스에서 실제 attention 연산량을 줄입니다. 함께 쓰면 장문 컨텍스트 서빙에서 더 큰 효과를 얻을 수 있습니다.*
+</details>
+
+<details>
+<summary>Quiz 3: 장문 컨텍스트 모델이 QK-Norm이나 attention windowing 같은 안정화 장치를 도입하는 이유는 무엇인가요?</summary>
+*시퀀스가 길어질수록 attention score의 수치적 안정성과 메모리 사용을 동시에 관리하기 어려워집니다. QK-Norm은 attention 값을 더 안정적으로 유지하도록 돕고, windowing은 한 번에 처리해야 할 범위를 줄여줍니다. 둘 다 장문 학습과 서빙을 더 현실적으로 만들어 주는 장치입니다.*
+</details>
+
+---
+
+## References
+
+1. <a id="ref-1"></a>DeepSeek-AI. (2024). *DeepSeek-V3 Technical Report*. [arXiv:2412.19437](https://arxiv.org/abs/2412.19437).
+2. <a id="ref-2"></a>Ainslie, J., et al. (2023). *GQA: Training Generalized Multi-Query Transformer Models from Multi-Head Checkpoints*. [arXiv:2305.13245](https://arxiv.org/abs/2305.13245).

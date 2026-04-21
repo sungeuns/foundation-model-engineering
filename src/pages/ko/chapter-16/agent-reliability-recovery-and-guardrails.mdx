@@ -1,0 +1,138 @@
+---
+layout: ../../../layouts/BookLayout.astro
+title: 16.5 Agent Reliability, Recovery, and Guardrails
+lang: ko
+---
+
+# 16.5 에이전트 신뢰성, 복구, 그리고 가드레일
+
+에이전트 신뢰성의 어려운 지점은 한 번 인상적인 실행을 보여 주는 데 있지 않습니다. 툴이 느려지거나 권한이 바뀌거나 환경이 부분적으로 깨졌을 때도 반복 실행이 상식적으로 동작하게 만드는 데 있습니다. 바로 그 순간에 에이전트는 "프로덕션 시스템"이 되거나, 반대로 "운영 부채"가 됩니다.
+
+실제 사고의 상당수는 화려하지 않습니다. 중복 쓰기, non-idempotent 툴에 대한 재시도, 부분 상태 업데이트, validator 실패 이후의 무한 루프처럼 운영적으로는 평범하지만 비용은 큰 문제들입니다. 신뢰성 작업은 바로 이런 실패가 비싼 사고로 커지지 않게 막아 주는 일입니다.
+
+최근의 $τ$-bench 같은 벤치마크는 이 점을 더 분명히 보여 줍니다. 강한 function-calling agent조차 반복 실행 간 일관성이 낮고, 도메인 규칙을 안정적으로 따르는 데 자주 실패합니다 [[4]](#ref-4). 그래서 runtime guardrail은 모델 능력이 부족해서가 아니라, 능력만으로는 충분하지 않기 때문에 필요합니다.
+
+---
+
+## 1. 루프에는 반드시 상한을 둬야 한다
+
+가장 기본적인 가드레일은 에이전트를 무한정 돌리지 않는 것입니다.
+
+### 최소 실행 제한
+
+- 최대 step 수
+- wall-clock timeout
+- tool-call budget
+- tool별 retry budget
+- confidence가 무너질 때 들어가는 명확한 abort state
+
+이런 제한은 성능이 부족해서가 아니라, 잘못된 trajectory가 비용과 부작용을 끝없이 키우지 못하게 하려는 시스템 설계입니다.
+
+---
+
+## 2. 위험한 작업 전에는 checkpoint가 필요하다
+
+에이전트는 파일, 티켓, 데이터베이스, 클라우드 리소스처럼 바뀌는 상태를 다룹니다. 그래서 추론만큼 복구가 중요합니다.
+
+### 권장 패턴
+
+1. 상태를 checkpoint 한다
+2. 위험한 작업을 수행한다
+3. 결과를 검증한다
+4. 검증에 실패하면 rollback 하거나 사람에게 넘긴다
+
+특히 데이터 삭제, 코드 merge, 외부 메시지 발송처럼 되돌리기 어려운 작업은 사람 승인 없이 실행하지 않는 편이 안전합니다.
+
+---
+
+## 3. Tool Execution Policy
+
+툴 인터페이스가 있다고 해서 자동으로 안전해지는 것은 아닙니다. 런타임 정책이 따로 필요합니다.
+
+### 유용한 기본 정책
+
+- schema 기준 argument validation
+- 모든 tool call에 timeout 부여
+- idempotent operation만 자동 retry
+- destructive action에는 confirmation 요구
+- tool output은 신뢰하지 말고 untrusted input으로 취급
+
+### 영향 반경(blast radius) 기준으로 툴을 분류하라
+
+실무에서 유용한 패턴 중 하나는 에이전트에게 툴을 보여 주기 전에 먼저 분류해 두는 것입니다.
+
+- **읽기 전용 툴:** search, inspect, status 조회
+- **되돌릴 수 있는 쓰기:** draft 변경, checkpoint 생성, stage update
+- **되돌리기 어려운 외부 부작용:** 결제, 삭제, merge, 외부 메시지 발송
+
+영향 반경이 클수록 모델의 의도와 실제 실행 사이에 더 많은 검증과 사람 승인을 넣는 편이 안전합니다.
+
+여기서 idempotency는 매우 중요합니다. `fetch_status()`를 다시 호출하는 것과 `charge_credit_card()`를 다시 호출하는 것은 전혀 다른 문제입니다.
+
+---
+
+## 4. Human-in-the-Loop는 모든 단계를 막는 뜻이 아니다
+
+실무에서는 사람 개입을 모든 step마다 넣기보다, 위험이 집중된 의사결정 지점에 넣는 편이 더 잘 작동합니다.
+
+### 승인 경계 예시
+
+- 권한 상승
+- 외부 시스템에 side effect를 남기는 작업
+- blast radius가 큰 저신뢰 계획
+- recovery 실패가 반복되는 경우
+
+목표는 에이전트를 일일이 관리하는 것이 아니라, 사고 비용이 큰 순간에만 개입하는 것입니다.
+
+---
+
+## 5. 관련 연구가 실제로 보여 주는 것
+
+에이전트 신뢰성 연구가 중요한 이유는, 각각의 기법이 해결하는 문제가 서로 다르다는 점을 분명히 보여 주기 때문입니다.
+
+- **ReAct** 는 추론과 툴 사용을 번갈아 수행하게 하여 action grounding을 개선하지만, 잘못된 행동 이후의 복구까지 자동으로 해결해 주지는 않습니다 [[1]](#ref-1).
+- **Reflexion** 은 언어적 피드백이 다음 시도를 개선할 수 있음을 보여 주지만, 이것 역시 전면적인 reliability 보장이라기보다 국소적 적응에 가깝습니다 [[2]](#ref-2).
+- **AgentBench** 는 단발성 tool use가 그럴듯해 보여도, 긴 호흡의 의사결정과 instruction following은 여전히 약한 지점임을 보여 줍니다 [[5]](#ref-5).
+- **SWE-bench** 는 소프트웨어 엔지니어링에서도 같은 사실을 확인시켜 줍니다. 현실의 작업은 코드 한 번 생성하는 문제가 아니라, 환경 상호작용, 여러 파일에 걸친 조정, 그리고 검증을 요구합니다 [[6]](#ref-6).
+- **$τ$-bench** 는 특히 프로덕션 관점에서 중요한 교훈을 줍니다. 한 번 잘 되는 것과 여러 번 반복해도 안정적으로 되는 것 사이에는 큰 차이가 있다는 점입니다 [[4]](#ref-4).
+
+---
+
+## 6. 핵심 정리
+
+에이전트 신뢰성은 대개 모델의 영웅적인 추론보다 시스템 설계에서 나옵니다. step budget, checkpoint, rollback rule, approval boundary 같은 요소는 planning 알고리즘보다 덜 화려하지만, 실제로는 에이전트를 운영 가능한 시스템으로 만드는 핵심입니다.
+
+---
+
+## Quizzes
+
+<details>
+<summary>Quiz 1: maximum step count가 에이전트 신뢰성에서 핵심 제어 장치인 이유는 무엇인가요?</summary>
+*잘못된 trajectory가 무한 루프, 과도한 tool call, 비용 증가, side effect 확대로 이어지는 것을 막아 주기 때문입니다.*
+</details>
+
+<details>
+<summary>Quiz 2: 위험한 작업 앞뒤에 checkpoint와 validation이 필요한 이유는 무엇인가요?</summary>
+*추론이 그럴듯해 보여도 실행 결과가 의도와 다를 수 있기 때문입니다. checkpoint와 validation이 있어야 실패 시 rollback이 가능합니다.*
+</details>
+
+<details>
+<summary>Quiz 3: tool retry policy에서 idempotency가 중요한 이유는 무엇인가요?</summary>
+*같은 작업을 다시 실행해도 세상이 다시 바뀌지 않는지 여부가 안전한 자동 retry를 결정하기 때문입니다. status 조회는 대체로 괜찮지만 결제나 삭제는 그렇지 않습니다.*
+</details>
+
+<details>
+<summary>Quiz 4: effective human-in-the-loop 설계는 무엇을 최적화하나요?</summary>
+*모든 step을 사람이 승인하게 만드는 대신, 위험이 큰 의사결정 경계에만 사람 개입을 두어 자동화의 이점과 안전성을 함께 확보하는 것을 목표로 합니다.*
+</details>
+
+---
+
+## References
+
+1. <a id="ref-1"></a>Yao, S., et al. (2022). *ReAct: Synergizing Reasoning and Acting in Language Models.* [arXiv:2210.03629](https://arxiv.org/abs/2210.03629).
+2. <a id="ref-2"></a>Shinn, N., et al. (2023). *Reflexion: Language Agents with Verbal Reinforcement Learning.* [arXiv:2303.11366](https://arxiv.org/abs/2303.11366).
+3. <a id="ref-3"></a>Schick, T., et al. (2023). *Toolformer: Language Models Can Teach Themselves to Use Tools.* [arXiv:2302.04761](https://arxiv.org/abs/2302.04761).
+4. <a id="ref-4"></a>Yao, S., Shinn, N., Razavi, P., & Narasimhan, K. (2024). *$τ$-bench: A Benchmark for Tool-Agent-User Interaction in Real-World Domains.* [arXiv:2406.12045](https://arxiv.org/abs/2406.12045).
+5. <a id="ref-5"></a>Liu, X., et al. (2024). *AgentBench: Evaluating LLMs as Agents.* [arXiv:2308.03688](https://arxiv.org/abs/2308.03688).
+6. <a id="ref-6"></a>Jimenez, C. E., et al. (2024). *SWE-bench: Can Language Models Resolve Real-World GitHub Issues?* [arXiv:2310.06770](https://arxiv.org/abs/2310.06770).

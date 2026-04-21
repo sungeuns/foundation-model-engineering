@@ -1,0 +1,197 @@
+---
+layout: ../../../layouts/BookLayout.astro
+title: 12.4 투기적 디코딩 (Speculative Decoding)
+lang: ko
+---
+
+# 12.4 투기적 디코딩 (Speculative Decoding)
+
+대규모 언어 모델(LLM)의 추론(Inference)은 느리고 많은 컴퓨팅 자원을 소모하는 것으로 악명이 높습니다. 모델이 이전의 모든 토큰에 의존하여 토큰을 하나씩 예측해야 하는 자기회귀(Autoregressive) 특성상, 추론은 메모리 대역폭에 의해 병목이 발생하는 **메모리 대역폭 제한 (Memory-Bandwidth Bound)** 문제입니다.
+
+Leviathan 등 [[1]](#ref-1) 과 Chen 등 [[2]](#ref-2) 이 각각 독립적으로 제안한 **투기적 디코딩 (Speculative Decoding)** 은 모델의 출력 분포를 변경하지 않고도 추론을 가속화할 수 있는 강력한 기술입니다. 이는 메모리 대역폭을 절약하기 위해 추가적인 연산을 활용하는 트레이드오프를 기반으로 합니다.
+
+## 병목 현상: 메모리 대역폭 vs. 컴퓨팅
+
+LLM 추론 중에는 거대한 모델 가중치(Weights)를 GPU 메모리(VRAM)에서 연산 코어(ALUs)로 로드하는 데 걸리는 시간이 실제 행렬 곱셈을 수행하는 시간보다 수십 배 더 걸립니다. 이를 **메모리 대역폭 제한** 문제라고 합니다.
+
+토큰을 하나씩 생성할 때, 우리는 *모든 단일 토큰*에 대해 전체 모델을 로드해야 합니다. 이는 GPU 활용도를 낮추는 결과를 초래합니다. 그러나 한 번에 여러 토큰을 처리할 수 있다면, 가중치를 로드하는 비용이 여러 토큰에 분산되어 효율성이 훨씬 높아질 것입니다.
+
+## 핵심 개념: 초안 작성 및 검증 (Draft and Verify)
+
+투기적 디코딩은 두 가지 모델을 사용하여 자기회귀 병목을 깹니다:
+1.  **초안 모델 ($M_q$)**: 작고 빠르며 가벼운 모델 (예: 수억 개의 파라미터).
+2.  **타겟 모델 ($M_p$)**: 우리가 실제로 사용하고자 하는 고품질의 거대 모델 (예: 수백억 또는 수천억 개의 파라미터).
+
+프로세스는 다음과 같은 주기로 작동합니다:
+1.  **초안 작성 (Drafting)**: 작은 초안 모델 $M_q$ 가 $K$ 개의 후보 토큰을 자기회귀적으로 생성합니다. 모델이 작기 때문에 이 과정은 매우 빠릅니다.
+2.  **검증 (Verification)**: 거대한 타겟 모델 $M_p$ 가 **단 한 번의 순방향 패스 (Forward Pass)** 로 $K$ 개의 후보 토큰을 한 번에 처리합니다 (병렬 디코딩). 이 모델은 $K$ 개 위치 모두에 대한 로짓(Logits)을 동시에 계산합니다.
+3.  **수정 (Correction)**: 두 모델의 예측을 비교합니다. 초안 모델의 토큰이 타겟 모델의 분포와 일치하는 한 이를 수용합니다. 첫 번째로 거부된 토큰이 발생하면 그 위치에서 검증을 중단하고, 해당 위치에는 타겟 모델의 예측을 사용합니다. 그 후 프로세스를 반복합니다.
+
+초안 모델의 정확도가 $50\%$ 에 불과하더라도, 거대 모델의 한 번의 순방향 패스당 여러 토큰을 생성할 수 있으므로 상당한 속도 향상(종종 $2\times$ 에서 $3\times$)을 얻을 수 있습니다.
+
+## 거절 샘플링 (Rejection Sampling)의 수학
+
+투기적 디코딩의 출력 분포가 타겟 모델 $M_p$ 에서 직접 샘플링하는 것과 **완전히 동일** 하도록 보장하기 위해, 우리는 특수한 거절 샘플링 스키마를 사용합니다.
+
+$q(x)$ 를 초안 모델 $M_q$ 가 예측한 다음 토큰의 확률 분포라 하고, $p(x)$ 를 타겟 모델 $M_p$ 가 예측한 분포라고 가정해 봅시다.
+
+초안 모델이 토큰 $x$ 를 제안하면, 우리는 다음 확률로 $x$ 를 수락합니다:
+$$
+P_{accept} = \min\left(1, \frac{p(x)}{q(x)}\right)
+$$
+
+-   $p(x) \ge q(x)$ 인 경우, 타겟 모델이 동의하거나 더 확신하므로 항상 수락합니다 ($P_{accept} = 1$).
+-   $p(x) < q(x)$ 인 경우, $\frac{p(x)}{q(x)}$ 의 확률로 수락합니다.
+
+토큰 $x$ 가 **거부** 되면 해당 주기의 검증을 중단합니다. 타겟 모델의 정확한 분포를 유지하기 위해, 우리는 수정된 분포 $p'(x)$ 에서 대체 토큰을 샘플링해야 합니다:
+$$
+p'(x) = \frac{\max(0, p(x) - q(x))}{\sum_y \max(0, p(y) - q(y))}
+$$
+
+이를 통해 최종 샘플링된 토큰이 거대 모델의 정확한 분포 $p(x)$ 를 따르게 되므로, 투기적 디코딩은 수학적으로 정보 손실이 없습니다(Lossless).
+
+## 실제로 언제 잘 작동하는가
+
+투기적 디코딩의 속도 향상은 수식의 우아함보다도, 실제 워크로드에서 **수용률(acceptance rate)** 이 얼마나 나오느냐에 더 크게 좌우됩니다.
+
+- 초안 모델이 타겟 모델과 충분히 비슷하면, 쉬운 continuation에서는 긴 토큰 구간이 통째로 수용되는 경우가 많습니다.
+- 프롬프트가 모호하거나, temperature가 높거나, 코드처럼 문법이 조금만 어긋나도 깨지는 작업에서는 수용률이 쉽게 떨어집니다.
+- 타겟 모델이 매우 커서 메모리 대역폭 병목이 심하다면, 수용률이 아주 높지 않아도 여전히 의미 있는 가속이 나올 수 있습니다.
+
+그래서 프로덕션 환경에서는 speculative decoding을 "무조건 켜는 옵션"처럼 다루지 않고, 워크로드별로 따로 튜닝합니다. 가장 좋은 초안 모델은 가장 작은 모델이 아니라, 추가 비용 대비 가장 많은 수용 토큰을 만들어 내는 모델입니다.
+
+## 서빙 관점의 트레이드오프와 실패 모드
+
+투기적 디코딩은 서빙 스택 자체도 바꿉니다.
+
+### 룩어헤드 길이 $K$ 선택
+
+$K$ 를 크게 잡으면 더 많이 가속할 여지가 생기지만, 초안 모델이 그 길이만큼 정확해야 의미가 있습니다. 대부분의 거절이 한두 위치에서 발생한다면, $K$ 를 키우는 것은 초안 계산과 검증 텐서만 불필요하게 키우는 결과가 됩니다.
+
+### KV 캐시 동기화
+
+초안 모델과 타겟 모델은 서로 다른 KV 캐시를 유지하고, 시퀀스를 전진하는 속도도 다를 수 있습니다. 어떤 초안 토큰은 수용되고 어떤 토큰은 교체되기 때문에, 실제 프로덕션 구현에서는 이 두 캐시를 매우 조심스럽게 동기화해야 합니다. 아이디어 자체는 단순하지만, 구현 난이도가 일반적인 배치 디코딩보다 높은 이유가 여기에 있습니다.
+
+### 처리량과 꼬리 지연 시간
+
+투기적 디코딩은 평균 처리량을 개선하는 경우가 많지만, 꼬리 지연 시간(tail latency)은 오히려 더 복잡해질 수 있습니다. 요청마다 작업 유형, 프롬프트 엔트로피, temperature에 따라 수용률이 크게 달라지기 때문입니다. 그래서 멀티테넌트 서빙에서는 tokens-per-second뿐 아니라, 요청군별 수용률 분포와 latency variance까지 함께 모니터링하는 편이 좋습니다.
+
+## PyTorch 구현 (검증 로직)
+
+다음은 투기적 디코딩의 핵심 검증 및 거절 샘플링 로직을 보여주는 PyTorch 코드입니다.
+
+```python
+import torch
+import torch.nn.functional as F
+
+def verify_draft_tokens(draft_logits, target_logits, draft_tokens, temperature=1.0):
+    """
+    초안 토큰을 검증하고 거절 샘플링을 적용합니다.
+    
+    Args:
+        draft_logits: 초안 모델의 로짓. 형태: (batch_size, K, vocab_size)
+        target_logits: 타겟 모델의 로짓. 형태: (batch_size, K + 1, vocab_size)
+        draft_tokens: 초안 모델이 제안한 토큰. 형태: (batch_size, K)
+        temperature: 샘플링 온도.
+        
+    Returns:
+        accepted_tokens: 수락된 토큰 목록.
+        num_accepted: 수락된 토큰 수.
+    """
+    batch_size, K = draft_tokens.shape
+    
+    # 온도 적용
+    draft_probs = F.softmax(draft_logits / temperature, dim=-1)
+    target_probs = F.softmax(target_logits[:, :K, :] / temperature, dim=-1)
+    
+    accepted_tokens = []
+    
+    for i in range(K):
+        # 특정 초안 토큰에 대한 확률 가져오기
+        q = draft_probs[:, i, draft_tokens[:, i]]
+        p = target_probs[:, i, draft_tokens[:, i]]
+        
+        # 수락 확률
+        p_accept = torch.min(torch.ones_like(p), p / q)
+        
+        # 주사위 굴리기
+        rand_val = torch.rand_like(p_accept)
+        accepted = rand_val < p_accept
+        
+        if accepted.all():
+            accepted_tokens.append(draft_tokens[:, i])
+        else:
+            # 거절! 수정된 분포에서 샘플링
+            # 참고: 이 다중 배치 시뮬레이션의 단순화를 위해 batch_size=1을 가정합니다.
+            # 전체 구현에서는 배치 항목당 마스크를 처리합니다.
+            diff = target_probs[:, i, :] - draft_probs[:, i, :]
+            adjusted_probs = torch.clamp(diff, min=0.0)
+            
+            if adjusted_probs.sum() > 0:
+                adjusted_probs = adjusted_probs / adjusted_probs.sum(dim=-1, keepdim=True)
+                next_token = torch.multinomial(adjusted_probs, 1)
+            else:
+                # 차이가 0인 경우 타겟 모델의 원래 분포로 폴백
+                next_token = torch.multinomial(target_probs[:, i, :], 1)
+                
+            accepted_tokens.append(next_token.squeeze(-1))
+            break
+            
+    # K개 토큰이 모두 수락되면, 공짜로 계산된 (K+1)번째 위치의 타겟 모델 예측도 가져올 수 있습니다!
+    if len(accepted_tokens) == K:
+        last_probs = F.softmax(target_logits[:, K, :] / temperature, dim=-1)
+        next_token = torch.multinomial(last_probs, 1)
+        accepted_tokens.append(next_token.squeeze(-1))
+        
+    return torch.cat(accepted_tokens, dim=-1), len(accepted_tokens)
+
+# 예제 사용법 (배치 크기 1)
+K = 4 # 초안 룩어헤드
+vocab_size = 1000
+
+draft_logits = torch.randn(1, K, vocab_size)
+target_logits = torch.randn(1, K + 1, vocab_size)
+# 초안 모델이 토큰을 선택하는 시뮬레이션
+draft_tokens = torch.argmax(draft_logits, dim=-1)
+
+accepted, count = verify_draft_tokens(draft_logits, target_logits, draft_tokens)
+print(f"수락된 토큰 수: {count}")
+print(f"수락된 토큰 시퀀스: {accepted}")
+```
+
+## Quizzes
+
+<details>
+<summary>Quiz 1: 투기적 디코딩에서 타겟 모델이 더 많은 토큰을 처리함에도 불구하고 자기회귀적으로 토큰을 생성하는 것보다 순방향 패스가 더 빠른 이유는 무엇인가요?</summary>
+*타겟 모델은 병렬 행렬 곱셈을 사용하여 한 번의 순방향 패스로 $K$ 개의 초안 토큰을 모두 처리합니다. 추론은 메모리 대역폭에 의해 제한되기 때문에 모델 가중치를 로드하는 데 걸리는 시간이 실행 시간을 지배합니다. 병렬로 $K$ 개 토큰을 처리하기 위해 가중치를 한 번 로드하는 것은 단일 토큰을 처리하기 위해 가중치를 로드하는 것과 거의 동일한 시간이 걸립니다.*
+</details>
+
+<details>
+<summary>Quiz 2: 초안 모델이 매우 작지만 정확도가 극도로 낮다면 투기적 디코딩의 속도 향상은 어떻게 될까요?</summary>
+*초안 모델의 정확도가 낮으면 타겟 모델이 대부분의 주기에서 초기 위치의 초안 토큰을 거부하게 됩니다. 이는 모델이 주기당 1~2개의 토큰만 생성하게 되어 표준 자기회귀 디코딩과 비슷해지지만, 초안 모델을 실행하는 오버헤드가 추가됩니다. 따라서 속도 향상은 사라지고 오히려 추론이 더 느려질 수 있습니다.*
+</details>
+
+<details>
+<summary>Quiz 3: 수정된 분포 $p'(x)$ 가 최종 출력이 타겟 모델의 분포를 정확히 따르도록 보장하는 원리를 설명하세요.</summary>
+*수정된 분포 $p'(x)$ 는 타겟 모델이 토큰에 할당했지만 초안 모델이 놓친 확률 질량에 집중합니다. 이는 $\max(0, p(x) - q(x))$ 에 비례합니다. 초안 토큰이 거부될 때 이 잔여 분포에서 샘플링함으로써, 초안 모델에 의한 "과소 샘플링"을 수학적으로 보상하여 임의의 토큰을 생성할 총 확률이 타겟 모델과 정확히 일치하도록 합니다.*
+</details>
+
+<details>
+<summary>Quiz 4: 추측 해독(Speculative Decoding)에서 1회 반복(iteration)당 생성되는 기대 토큰 수 유도 공식을 도출하시오. 제안된 초안 토큰의 수를 $K$, 대상 모델이 각 초안 토큰을 수락할 독립적인 확률을 $\alpha$ 라 정의한다.</summary>
+*$K$ 개의 초안 토큰이 제안되는 반복 연산에서 생성되는 최종 시퀀스는 수락된 토큰 시퀀스에 대상 모델이 생성한 1개의 추가 토큰(첫 번째 거절된 토큰의 대체품 또는 $K$ 개 모두 수락되었을 때의 추가 토큰)이 합쳐집니다.
+수락된 초안 토큰의 수를 $X$ 라 할 때, $X$ 는 $0$ 에서 $K$ 까지의 값을 가질 수 있습니다.
+$0 \leq x < K$ 범위에서 $P(X = x) = \alpha^x (1 - \alpha)$ 이며, 이때 $x+1$ 개의 토큰이 생성됩니다.
+$x = K$ 인 경우 $P(X = K) = \alpha^K$ 이며, 이때 $K+1$ 개의 토큰이 생성됩니다.
+따라서 기대 토큰 수는 다음과 같습니다:
+$\mathbb{E}[N] = \sum_{x=0}^{K-1} (x+1) \alpha^x (1-\alpha) + (K+1)\alpha^K$
+이 등비수열의 합을 대수적으로 정리하면 정확하게 다음과 같이 수렴합니다:
+$\mathbb{E}[N] = \frac{1 - \alpha^{K+1}}{1 - \alpha}$
+이 수학적 공식은 수락 확률 $\alpha$ 가 낮을 때 초안 길이 $K$ 를 무리하게 늘리는 것이 연산적 수확 체감(diminishing returns)을 초래함을 증명합니다.*
+</details>
+
+---
+
+## References
+
+1. <a id="ref-1"></a>Leviathan, Y., et al. (2023). *Fast Inference from Transformers via Speculative Decoding*. [arXiv:2211.17192](https://arxiv.org/abs/2211.17192).
+2. <a id="ref-2"></a>Chen, C., et al. (2023). *Accelerating Large Language Model Decoding with Speculative Sampling*. [arXiv:2302.01318](https://arxiv.org/abs/2302.01318).

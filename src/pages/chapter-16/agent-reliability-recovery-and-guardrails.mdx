@@ -1,0 +1,138 @@
+---
+layout: ../../layouts/BookLayout.astro
+title: 16.5 Agent Reliability, Recovery, and Guardrails
+lang: en
+---
+
+# 16.5 Agent Reliability, Recovery, and Guardrails
+
+The difficult part of agent reliability is not producing one impressive run. It is ensuring that repeated runs continue to behave sensibly when tools are slow, permissions change, or the environment is partially broken. That is the point at which an "agent" becomes either a production system or a source of operational debt.
+
+Most real incidents are operationally mundane: duplicate writes, retries against non-idempotent tools, partial state updates, or endless loops after a validator fails. Reliability work is what prevents those failures from turning into expensive ones.
+
+Recent benchmarks such as $τ$-bench reinforce the point. Even strong function-calling agents are inconsistent across repeated trials and often struggle to follow domain rules reliably [[4]](#ref-4). Runtime guardrails exist because model capability alone is not enough.
+
+---
+
+## 1. Bound the Loop
+
+The first guardrail is simple: do not let the agent run indefinitely.
+
+### Minimum Execution Limits
+
+- maximum step count
+- wall-clock timeout
+- tool-call budget
+- retry budget per tool
+- a clear abort state when confidence collapses
+
+These limits are not signs of weakness. They are how the surrounding system prevents one bad trajectory from becoming an expensive one.
+
+---
+
+## 2. Checkpoint Before Risky Actions
+
+Agents interact with mutable state: files, tickets, databases, cloud resources. That means recovery matters as much as reasoning.
+
+### Recommended Pattern
+
+1. checkpoint state
+2. execute the risky action
+3. validate the result
+4. rollback or ask for help if validation fails
+
+This is especially important for destructive or hard-to-reverse actions. Human approval should be required for operations like deleting data, merging code, or sending irreversible messages.
+
+---
+
+## 3. Tool Execution Policy
+
+A tool interface is not a guarantee of safe behavior. The runtime still needs policy.
+
+### Useful Defaults
+
+- validate arguments against schema
+- set timeouts for every tool call
+- retry only idempotent operations automatically
+- require confirmation for destructive actions
+- treat tool output as untrusted input
+
+### Classify Tools by Blast Radius
+
+One practical pattern is to classify tools before the agent ever sees them:
+
+- **read-only tools:** search, inspect, fetch status
+- **reversible writes:** draft changes, create checkpoints, stage updates
+- **irreversible side effects:** payments, deletes, merges, external messages
+
+The broader the blast radius, the more validation and human approval you want between model intent and execution.
+
+Idempotency matters here. Retrying `fetch_status()` is very different from retrying `charge_credit_card()`.
+
+---
+
+## 4. Human-in-the-Loop Does Not Mean Human-in-the-Way
+
+In practice, human oversight works best when inserted at decision points rather than after every step.
+
+### Good Approval Boundaries
+
+- privilege escalation
+- external side effects
+- low-confidence plans with large blast radius
+- repeated recovery failures
+
+The goal is not to micromanage the agent. It is to interrupt the specific parts of the workflow where the downside risk is concentrated.
+
+---
+
+## 5. What the Research Actually Shows
+
+The literature on agent reliability is useful precisely because it shows that different techniques solve different slices of the problem.
+
+- **ReAct** improves action grounding by interleaving reasoning and tool use, but it does not by itself solve recovery after bad actions [[1]](#ref-1).
+- **Reflexion** shows that linguistic feedback can improve subsequent attempts, but this is still local adaptation rather than a full reliability guarantee [[2]](#ref-2).
+- **AgentBench** shows that long-horizon decision-making and instruction following remain weak points for many agents even when single-step tool use looks strong [[5]](#ref-5).
+- **SWE-bench** shows the same pattern in software engineering: realistic tasks require environment interaction, coordinated edits, and verification across files, not just code generation [[6]](#ref-6).
+- **$τ$-bench** adds an especially important production lesson: reliability across repeated trials is often much worse than best-case single-run performance [[4]](#ref-4).
+
+---
+
+## 6. Practical Takeaway
+
+Agent reliability is mostly about system design, not model heroics. Step budgets, checkpoints, rollback rules, and approval boundaries are mundane compared to planning algorithms, but they are usually what determine whether an agent is safe to operate.
+
+---
+
+## Quizzes
+
+<details>
+<summary>Quiz 1: Why is a maximum step count a core reliability control for agents?</summary>
+*Because it prevents an agent from turning a bad trajectory into an unbounded loop of tool calls, cost, and side effects.*
+</details>
+
+<details>
+<summary>Quiz 2: Why should risky actions be paired with checkpoints and validation?</summary>
+*Because reasoning alone does not guarantee the action had the intended effect. Checkpoints and validation make rollback possible when execution goes wrong.*
+</details>
+
+<details>
+<summary>Quiz 3: Why is idempotency important in tool retry policy?</summary>
+*Because safe automatic retries depend on whether repeating the same operation changes the world again. Re-fetching status is usually safe; repeating payment or deletion is not.*
+</details>
+
+<details>
+<summary>Quiz 4: What does effective human-in-the-loop design optimize for?</summary>
+*It places human approval at high-risk decision boundaries rather than forcing a human to approve every minor step, which would destroy the value of automation.*
+</details>
+
+---
+
+## References
+
+1. <a id="ref-1"></a>Yao, S., et al. (2022). *ReAct: Synergizing Reasoning and Acting in Language Models.* [arXiv:2210.03629](https://arxiv.org/abs/2210.03629).
+2. <a id="ref-2"></a>Shinn, N., et al. (2023). *Reflexion: Language Agents with Verbal Reinforcement Learning.* [arXiv:2303.11366](https://arxiv.org/abs/2303.11366).
+3. <a id="ref-3"></a>Schick, T., et al. (2023). *Toolformer: Language Models Can Teach Themselves to Use Tools.* [arXiv:2302.04761](https://arxiv.org/abs/2302.04761).
+4. <a id="ref-4"></a>Yao, S., Shinn, N., Razavi, P., & Narasimhan, K. (2024). *$τ$-bench: A Benchmark for Tool-Agent-User Interaction in Real-World Domains.* [arXiv:2406.12045](https://arxiv.org/abs/2406.12045).
+5. <a id="ref-5"></a>Liu, X., et al. (2024). *AgentBench: Evaluating LLMs as Agents.* [arXiv:2308.03688](https://arxiv.org/abs/2308.03688).
+6. <a id="ref-6"></a>Jimenez, C. E., et al. (2024). *SWE-bench: Can Language Models Resolve Real-World GitHub Issues?* [arXiv:2310.06770](https://arxiv.org/abs/2310.06770).

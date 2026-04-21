@@ -1,0 +1,470 @@
+.kd-visualizer-container {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 20px;
+  margin: 20px 0;
+  font-family: system-ui, -apple-system, sans-serif;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.kd-controls {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.kd-controls button {
+  padding: 8px 16px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #334155;
+  transition: all 0.2s;
+}
+
+.kd-controls button:hover {
+  background: #e2e8f0;
+}
+
+.kd-controls button.active {
+  background: #3b82f6;
+  color: white;
+  border-color: #2563eb;
+}
+
+.kd-controls button.train-btn {
+  background: #10b981;
+  color: white;
+  border-color: #059669;
+  margin-left: auto;
+}
+
+.kd-controls button.train-btn:hover:not(:disabled) {
+  background: #059669;
+}
+
+.kd-controls button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.kd-status {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.progress-bar {
+  flex-grow: 1;
+  height: 8px;
+  background: #e2e8f0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #3b82f6;
+  transition: width 0.1s linear;
+}
+
+.kd-canvas-wrapper {
+  display: flex;
+  justify-content: center;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.kd-canvas {
+  background: white;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+}
+
+.kd-legend {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 20px;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.legend-color {
+  width: 16px;
+  height: 16px;
+}
+
+/* QuantizationMethodVisualizer Styles */
+.quant-method-container {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 20px;
+  margin: 20px 0;
+  font-family: system-ui, -apple-system, sans-serif;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.quant-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.quant-header h4 {
+  margin: 0;
+  color: #1e293b;
+  font-size: 1.1rem;
+}
+
+.quant-tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.quant-tabs button {
+  padding: 6px 12px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: #475569;
+  transition: all 0.2s;
+}
+
+.quant-tabs button:hover {
+  background: #e2e8f0;
+}
+
+.quant-tabs button.active {
+  background: #3b82f6;
+  color: white;
+  border-color: #2563eb;
+}
+
+.quant-visualization {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 30px 20px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: center;
+}
+
+.weights-grid {
+  display: flex;
+  gap: 20px;
+  align-items: flex-end;
+  height: 160px;
+}
+
+.weight-bar-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 60px;
+}
+
+.weight-bar {
+  width: 30px;
+  border-radius: 4px 4px 0 0;
+  transition: height 0.3s ease, background-color 0.3s ease;
+}
+
+.weight-value {
+  font-size: 12px;
+  font-family: monospace;
+  color: #64748b;
+}
+
+.weight-bar-container.outlier .weight-value {
+  color: #e74c3c;
+  font-weight: 600;
+}
+
+.quant-description {
+  font-size: 14px;
+  color: #334155;
+  line-height: 1.6;
+  background: #f1f5f9;
+  padding: 12px;
+  border-radius: 6px;
+}
+
+/* QuantizationErrorVisualizer Styles */
+.quantization-visualizer {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 20px;
+  margin: 20px 0;
+  font-family: system-ui, -apple-system, sans-serif;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.quantization-visualizer .controls {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.quantization-visualizer .control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.quantization-visualizer .control-group label {
+  font-size: 14px;
+  color: #475569;
+  font-weight: 500;
+}
+
+.quantization-visualizer .button-group {
+  display: flex;
+  gap: 10px;
+}
+
+.quantization-visualizer .button-group button {
+  padding: 8px 16px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #334155;
+  transition: all 0.2s;
+}
+
+.quantization-visualizer .button-group button:hover {
+  background: #e2e8f0;
+}
+
+.quantization-visualizer .button-group button.active.ptq {
+  background: #ef4444;
+  color: white;
+  border-color: #dc2626;
+}
+
+.quantization-visualizer .button-group button.active.qat {
+  background: #10b981;
+  color: white;
+  border-color: #059669;
+}
+
+.quantization-visualizer .canvas-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+
+.quantization-visualizer canvas {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  max-width: 100%;
+}
+
+.quantization-visualizer .legend {
+  display: flex;
+  gap: 20px;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.quantization-visualizer .legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.quantization-visualizer .color-box {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+}
+
+.quantization-visualizer .color-box.bins {
+  background: #cbd5e1;
+}
+
+.quantization-visualizer .color-box.ptq {
+  background: #ef4444;
+}
+
+.quantization-visualizer .color-box.qat {
+  background: #10b981;
+}
+
+.quantization-visualizer .description {
+  font-size: 14px;
+  color: #334155;
+  line-height: 1.6;
+  background: #f1f5f9;
+  padding: 12px;
+  border-radius: 6px;
+  width: 100%;
+}
+
+/* SparsityVisualizer Styles */
+.sparsity-visualizer {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 20px;
+  margin: 20px 0;
+  font-family: system-ui, -apple-system, sans-serif;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.sparsity-visualizer .controls {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.sparsity-visualizer .controls button {
+  padding: 8px 16px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #334155;
+  transition: all 0.2s;
+}
+
+.sparsity-visualizer .controls button:hover {
+  background: #e2e8f0;
+}
+
+.sparsity-visualizer .controls button.active {
+  background: #3b82f6;
+  color: white;
+  border-color: #2563eb;
+}
+
+.sparsity-visualizer .visualization-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.sparsity-visualizer .activations-panel,
+.sparsity-visualizer .weights-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sparsity-visualizer h4 {
+  margin: 0;
+  color: #1e293b;
+  font-size: 1rem;
+}
+
+.sparsity-visualizer .activations-row {
+  display: flex;
+  gap: 8px;
+}
+
+.sparsity-visualizer .activation-cell {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e2e8f0;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: monospace;
+  color: #475569;
+}
+
+.sparsity-visualizer .activation-cell.outlier {
+  background: #fee2e2;
+  color: #ef4444;
+  border: 1px solid #fecaca;
+}
+
+.sparsity-visualizer .matrix {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sparsity-visualizer .matrix-row {
+  display: flex;
+  gap: 8px;
+}
+
+.sparsity-visualizer .matrix-cell {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: monospace;
+  color: #334155;
+  transition: all 0.3s ease;
+}
+
+.sparsity-visualizer .matrix-cell.pruned {
+  background: #f1f5f9;
+  color: #cbd5e1;
+  border-style: dashed;
+}
+
+.sparsity-visualizer .matrix-cell.protected {
+  border-color: #10b981;
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.sparsity-visualizer .explanation-panel {
+  font-size: 14px;
+  color: #334155;
+  line-height: 1.6;
+  background: #f1f5f9;
+  padding: 12px;
+  border-radius: 6px;
+}

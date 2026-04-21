@@ -1,0 +1,126 @@
+---
+layout: ../../layouts/BookLayout.astro
+title: "20.7 Path to AGI & World Models"
+lang: en
+---
+
+# 20.7 Path to AGI & World Models
+
+The path to AGI is not one settled roadmap. It is a field-wide argument about what current language models are missing and which missing ingredients matter most. One influential view says that next-token prediction, even at enormous scale, is not the whole story. According to this view, future systems also need richer internal models of how actions change environments over time.
+
+That is where the idea of a **world model** becomes useful. A world model is not just a generator of plausible outputs. It is a system that tries to capture enough structure about an environment that it can predict what may happen next under different actions or conditions.
+
+---
+
+## 1. Why the World-Model Idea Is Appealing
+
+A language model can often describe a situation fluently without actually simulating it. This is one reason people reach for the world-model framing.
+
+A simple analogy helps:
+
+- a large language model can resemble a talented improviser that has seen many scripts
+- a world model aims to behave more like an internal simulator that can roll forward consequences
+
+The analogy is imperfect, but it captures the main intuition. Fluency and simulation are related, yet not identical.
+
+---
+
+## 2. JEPA as an Influential Alternative Framing
+
+Yann LeCun’s **Joint Embedding Predictive Architecture (JEPA)** is one of the clearest examples of this line of thinking [[1]](#ref-1). The key idea is to predict in **representation space** rather than reconstructing every low-level detail.
+
+Instead of forcing the model to predict the exact next pixel or token, JEPA-style systems try to learn a compressed representation of what matters for future prediction. The motivation is that some details are inherently noisy, while higher-level structure is what supports planning and understanding.
+
+```python
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+class JEPACore(nn.Module):
+    def __init__(self, input_dim=1024, hidden_dim=512, rep_dim=256):
+        super().__init__()
+        self.encoder = nn.Sequential(
+            nn.Linear(input_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, rep_dim)
+        )
+        self.predictor = nn.Sequential(
+            nn.Linear(rep_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, rep_dim)
+        )
+
+    def forward(self, x, y):
+        rep_x = self.encoder(x)
+        rep_y = self.encoder(y).detach()
+        pred_rep_y = self.predictor(rep_x)
+        return F.mse_loss(pred_rep_y, rep_y)
+```
+
+This example is illustrative. Real systems require far richer structure, but the educational point remains useful: the learning target can be a latent representation instead of a surface-level reconstruction.
+
+---
+
+## 3. Genie 3 as a Concrete World-Model Example
+
+Google DeepMind presents **Genie 3** as a general-purpose world model rather than as a standard text-only language model [[2]](#ref-2). In DeepMind’s official description, Genie 3 can generate **interactive environments from text prompts**, render them in real time, and maintain consistency for a limited duration. That framing is important because it emphasizes simulation and interaction, not just one-shot generation.
+
+This does **not** prove that world models are the single path to AGI. It does show what the term looks like when a frontier lab uses it in practice: a model that tries to generate and maintain a navigable environment rather than only a standalone sequence.
+
+---
+
+## 4. What Is Established, Emerging, and Speculative?
+
+### Established
+
+- World models are a meaningful research direction in robotics, simulated environments, and model-based control.
+- Representation learning matters when exact reconstruction is not the best learning objective.
+
+### Emerging
+
+- Large multimodal systems that combine generation, simulation, and agent training loops.
+- Using simulated worlds as training grounds for more capable agents.
+
+### Speculative
+
+- The claim that world models are *the* decisive ingredient missing from current LLMs.
+- The claim that one specific architecture has already shown the path to AGI.
+
+That distinction matters for tone. The idea is important. The outcome is still open.
+
+---
+
+## 5. Practical Takeaway
+
+The value of the world-model discussion is not that it settles the AGI debate. It is that it sharpens the question. If current systems are fluent but brittle, then richer simulation, environment modeling, and action-conditioned prediction become reasonable places to look next. Whether those ingredients are sufficient is still unresolved.
+
+---
+
+## Quizzes
+
+<details>
+<summary>Quiz 1: Why do researchers use the term “world model” instead of treating all progress as just larger language modeling?</summary>
+*Because the term highlights a different goal: learning enough structure about an environment to predict how it changes, especially under actions, rather than only generating plausible sequences.*
+</details>
+
+<details>
+<summary>Quiz 2: What is the main intuition behind JEPA-style prediction?</summary>
+*It predicts in representation space rather than reconstructing every low-level detail, on the assumption that compact, meaningful structure can be more useful for planning and understanding.*
+</details>
+
+<details>
+<summary>Quiz 3: According to Google DeepMind’s public description, what makes Genie 3 relevant to the world-model discussion?</summary>
+*DeepMind presents it as a system that generates interactive environments from text prompts and maintains them over time, which fits the idea of simulation rather than one-shot generation alone.*
+</details>
+
+<details>
+<summary>Quiz 4: Why is it important to separate established claims from speculative ones in AGI discussions?</summary>
+*Because the field contains real technical progress alongside strong forecasts. Mixing them makes uncertain ideas sound more settled than they are.*
+</details>
+
+---
+
+## References
+
+1. <a id="ref-1"></a>LeCun, Y. (2022). *A Path Towards Autonomous Machine Intelligence.* [arXiv:2206.14176](https://arxiv.org/abs/2206.14176).
+2. <a id="ref-2"></a>Google DeepMind. (2026). *Genie 3: A New Frontier for World Models.* [Google DeepMind Blog](https://deepmind.google/blog/genie-3-a-new-frontier-for-world-models/).

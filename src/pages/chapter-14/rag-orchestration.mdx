@@ -1,0 +1,162 @@
+---
+layout: ../../layouts/BookLayout.astro
+title: 14.4 RAG Orchestration
+lang: en
+---
+
+# 14.4 RAG Orchestration: Routing and Agents
+
+Having mastered advanced retrieval techniques like Hybrid Search, Re-ranking, and Query Transformation, the next challenge is building the system that coordinates all these components. This is **RAG Orchestration**.
+
+In a production environment, you cannot simply run every query through every retrieval pipeline. It is too expensive and slow. You need an intelligent controller that decides *what* to do based on the user's intent.
+
+---
+
+## 1. Query Routing
+
+Query Routing is the process of classifying an incoming query and directing it to the most appropriate retrieval pipeline or data source.
+
+Not all queries are created equal:
+- **"What is the capital of France?"** -> No search needed (parametric knowledge).
+- **"What was my account balance yesterday?"** -> SQL database query.
+- **"How do I fix error XJ-992?"** -> Vector search over technical manuals.
+
+### LLM-Based Routing
+
+The most flexible way to route queries is using a small, fast LLM as a router. We provide the LLM with a list of available tools/sources and ask it to output a JSON deciding where to go.
+
+```python
+import json
+from openai import OpenAI
+
+client = OpenAI()
+
+def route_query(query: str) -> dict:
+    prompt = f"""
+    Classify the following user query and route it to the best source.
+    Available sources:
+    1. 'parametric': For general knowledge questions the model already knows.
+    2. 'vector_db': For technical documentation, manuals, and guides.
+    3. 'sql_db': For structured user data like balances, order history.
+    
+    Query: "{query}"
+    
+    Output JSON in this format: {{"source": "source_name", "reason": "why"}}
+    """
+    
+    response = client.chat.completions.create(
+        model="gpt-4o-mini", # Use a fast model for routing
+        messages=[{{"role": "user", "content": prompt}}],
+        response_format={{"type": "json_object"}}
+    )
+    
+    return json.loads(response.choices[0].message.content)
+
+# Example Usage
+print(route_query("How do I reset my password in the portal?"))
+# Output: {'source': 'vector_db', 'reason': 'Asking for instructions in the documentation.'}
+```
+
+### Routing Is a Budgeting Problem, Not Just a Classification Problem
+
+In production, routing is rarely about semantic intent alone. It is also about latency, cost, trust, and permissions.
+
+- A parametric answer may be fast, but unsafe for rapidly changing facts.
+- A SQL route may be accurate, but only if the user is authenticated and the query has the right filters.
+- A vector route may be appropriate, but only if the retrieval budget and evidence quality justify the extra work.
+
+Good orchestrators therefore route not just by **topic**, but by **operational policy**: freshness requirements, access control, expected latency, and whether the system is allowed to answer at all without clarification.
+
+---
+
+## 2. Context Management and "Lost in the Middle"
+
+Once you retrieve documents, you must fit them into the LLM's context window. However, simply stuffing as many documents as possible leads to performance degradation.
+
+### The "Lost in the Middle" Phenomenon [[1]](#ref-1)
+
+Research has shown that LLMs are best at utilizing information at the very beginning and the very end of the context window. Information placed in the middle is often ignored or forgotten.
+
+**Best Practices for Context Management:**
+1.  **Rank-Aware Placement:** Place the most relevant documents (highest re-ranker scores) at the *beginning* and *end* of the context window, not in the middle.
+2.  **Information Density:** Use summarization to condense retrieved chunks before feeding them to the generation model.
+3.  **Dynamic Truncation:** Stop adding documents once a relevance threshold is met, rather than filling the window.
+
+### Context Assembly Is a Policy Layer
+
+This is why strong RAG systems treat context assembly as its own stage rather than a trivial concatenation step. The orchestrator may decide to:
+
+- include a short answer-first summary and append evidence afterward
+- separate structured facts from free-form passages
+- keep mutually contradictory documents apart and ask the model to compare them explicitly
+- reserve part of the context window for tool results or conversation state
+
+In other words, orchestration is what turns retrieval outputs into a usable prompt budget.
+
+---
+
+## 3. Agentic RAG: Beyond Linear Pipelines
+
+Traditional RAG is a linear pipeline: `Retrieve -> Augment -> Generate`. 
+**Agentic RAG** introduces a loop where the LLM can decide to retrieve more information if the first attempt was insufficient.
+
+### The ReAct Framework (Reasoning + Acting)
+
+An agent uses a loop of **Thought**, **Action**, and **Observation**.
+
+1.  **Thought:** "I need to find out who won the 2024 election."
+2.  **Action:** `search("2024 election winner")`
+3.  **Observation:** "Results show candidates but not the final winner."
+4.  **Thought:** "I need to check for certification news."
+5.  **Action:** `search("2024 election certification")`
+
+This allows the system to solve complex, multi-step problems that a single retrieval step cannot handle.
+
+### Agentic RAG Needs Stop Conditions
+
+Agentic retrieval loops are powerful, but without explicit stop conditions they turn into expensive failure amplifiers. A practical orchestrator usually bounds:
+
+- the maximum number of retrieval rounds
+- the total token or tool budget
+- the confidence threshold for asking another question versus answering
+- the conditions for escalation to a human or a fallback workflow
+
+This is the real difference between a neat demo and an operable system. The orchestration layer decides not only how to retrieve more, but also when to stop searching and admit that grounding is still insufficient.
+
+---
+
+## 4. Summary
+
+RAG Orchestration moves us from static pipelines to dynamic, intelligent systems. By implementing Query Routing, we save costs and reduce latency. By understanding Context Management, we avoid the "Lost in the Middle" trap. And by embracing Agentic RAG, we enable models to solve complex, multi-hop problems autonomously.
+
+In the next section, we will explore the ultimate form of structured retrieval: **GraphRAG**, where we move beyond text chunks to traversing relationships in a knowledge graph.
+
+---
+
+## Quizzes
+
+<details>
+<summary>Quiz 1: What is the primary benefit of implementing Query Routing in a RAG system?</summary>
+*It allows the system to save costs and reduce latency by directing queries to the most appropriate specialized source (or skipping search entirely) rather than running every query through every expensive retrieval pipeline.*
+</details>
+
+<details>
+<summary>Quiz 2: Describe the "Lost in the Middle" phenomenon and how to mitigate it in context management.</summary>
+*The "Lost in the Middle" phenomenon refers to the tendency of LLMs to ignore or forget information placed in the middle of a long context window, performing best with information at the very beginning or end. It can be mitigated by placing the most relevant documents at the beginning and end, condensing information, or using dynamic truncation.*
+</details>
+
+<details>
+<summary>Quiz 3: How does Agentic RAG differ from traditional linear RAG pipelines?</summary>
+*Traditional RAG follows a strict linear `Retrieve -> Augment -> Generate` pipeline. Agentic RAG introduces a loop where the LLM can use reasoning (e.g., the ReAct framework) to decide to retrieve more information or use different tools if the initial results were insufficient, allowing it to solve complex, multi-step problems.*
+</details>
+
+<details>
+<summary>Quiz 4: Formulate the probabilistic classification sequence for an LLM Router deciding to call a specialized SQL tool over a general Vector DB. What parameters dictate the logical routing threshold?</summary>
+*The router processes intention classification over discrete tools $T \in \{SQL, Vector, Parametric\}$. It assigns soft-logits to intentions: $P(T=SQL | Q) = \frac{\exp(w_{SQL}^T E(Q))}{\sum_{T'} \exp(w_{T'}^T E(Q))}$, where $E(Q)$ is the query embedding and $w_T$ represents trained intention vectors. The system triggers the SQL pipeline if $P(T=SQL | Q) \ge \theta_{threshold}$ and structured parameters are extracted with logical consistency. This explicit formulation enables developers to set deterministic validation bounds to avoid expensive hallucinated tool calls.*
+</details>
+
+---
+
+## References
+
+1. <a id="ref-1"></a>Liu, N. F., et al. (2023). *Lost in the Middle: How Language Models Use Long Contexts.* [arXiv:2307.03172](https://arxiv.org/abs/2307.03172).

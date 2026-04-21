@@ -1,0 +1,258 @@
+/* Styles for Chapter 2 Visualizers */
+
+.gv-container {
+  padding: 1.5rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  background-color: #f8fafc;
+  color: #1e293b;
+  font-family: sans-serif;
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.gv-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  color: #0f172a;
+}
+
+.gv-description {
+  font-size: 0.875rem;
+  color: #475569;
+  margin-bottom: 1.5rem;
+}
+
+.gv-controls {
+  margin-bottom: 2rem;
+}
+
+.gv-controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.gv-controls input {
+  width: 100%;
+  max-width: 300px;
+}
+
+.gv-grid {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  height: 200px;
+  padding: 1rem;
+  background-color: #ffffff;
+  border-radius: 0.5rem;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 1.5rem;
+}
+
+.gv-layer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+}
+
+.gv-layer-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #94a3b8;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+}
+
+.gv-bar-container {
+  height: 150px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: 100%;
+}
+
+.gv-bar {
+  width: 2rem;
+  border-radius: 0.25rem 0.25rem 0 0;
+  transition: height 0.3s, background-color 0.3s;
+}
+
+.gv-bar-normal {
+  background-color: #3b82f6;
+}
+
+.gv-bar-vanishing {
+  background-color: #94a3b8;
+  opacity: 0.5;
+}
+
+.gv-bar-exploding {
+  background-color: #ef4444;
+  animation: pulse 1s infinite;
+}
+
+.gv-value {
+  font-size: 0.75rem;
+  font-family: monospace;
+  color: #475569;
+  margin-top: 0.5rem;
+}
+
+.gv-explanation {
+  padding: 1rem;
+  background-color: #f1f5f9;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  color: #334155;
+}
+
+.gv-explanation p {
+  margin: 0.25rem 0;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* Translation Visualizer Styles */
+.tv-container {
+  padding: 1.5rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  background-color: #f8fafc;
+  color: #1e293b;
+  font-family: sans-serif;
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.tv-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  color: #0f172a;
+}
+
+.tv-description {
+  font-size: 0.875rem;
+  color: #475569;
+  margin-bottom: 1.5rem;
+}
+
+.tv-sentence-container, .tv-target-container, .tv-display-container {
+  margin-bottom: 1.5rem;
+}
+
+.tv-source-title, .tv-target-title, .tv-display-title {
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.tv-source-text {
+  padding: 0.75rem;
+  background-color: #ffffff;
+  border-radius: 0.5rem;
+  border: 1px solid #e2e8f0;
+  font-size: 1rem;
+}
+
+.tv-buttons {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.tv-btn {
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  border: 1px solid #cbd5e1;
+  background-color: #ffffff;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.tv-btn:hover {
+  background-color: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.tv-btn-active {
+  background-color: #8e44ad;
+  color: #ffffff;
+  border-color: #8e44ad;
+}
+
+.tv-btn-active:hover {
+  background-color: #7d3c98;
+}
+
+.tv-grid {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  height: 150px;
+  padding: 1rem;
+  background-color: #ffffff;
+  border-radius: 0.5rem;
+  border: 1px solid #e2e8f0;
+  gap: 10px;
+}
+
+.tv-bar-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  min-width: 40px;
+}
+
+.tv-prob-label {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-bottom: 0.25rem;
+}
+
+.tv-bar-container {
+  height: 100px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: 100%;
+}
+
+.tv-bar {
+  width: 100%;
+  max-width: 30px;
+  background-color: #8e44ad;
+  border-radius: 0.25rem 0.25rem 0 0;
+  transition: height 0.3s ease;
+}
+
+.tv-word-label {
+  font-size: 0.85rem;
+  color: #1e293b;
+  margin-top: 0.5rem;
+  text-align: center;
+  word-break: break-all;
+}
+
+/* Glassmorphism Styles */
+.glass-container {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+  border-radius: 12px;
+}

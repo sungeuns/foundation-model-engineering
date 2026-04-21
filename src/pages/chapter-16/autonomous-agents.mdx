@@ -1,0 +1,174 @@
+---
+layout: ../../layouts/BookLayout.astro
+title: 16.2 Autonomous Agents
+lang: en
+---
+
+import LATSVisualizer from '../../components/chapter-16/LATSVisualizer.tsx';
+
+# 16.2 Autonomous Agents
+
+It is much easier to produce an impressive demo agent than a reliable autonomous one. A useful autonomous agent has to notice when progress stalls, decide whether to inspect logs or run tests, and stop before it causes damage. The difference between "tool use" and "autonomy" is not a single clever prompt. It is whether the system can stay coherent across many steps.
+
+This distinction matters because it is the point where LLMs stop behaving like single-turn chat interfaces and begin to function more like workers: debugging code, triaging incidents, researching APIs, or moving tickets through a workflow. Those tasks are valuable precisely because they are multi-step, stateful, and messy.
+
+That still sounds abstract, so picture a concrete failure. Suppose you ask an agent to update a broken deployment script. A basic tool-using model may correctly call `read_file()` and even `edit_file()`, but still fail the task because it never steps back to ask whether the patch actually fixed the problem. Autonomy begins when the system has a loop for planning, acting, and checking itself.
+
+---
+
+## 1. What Makes an Agent Autonomous?
+
+In practice, autonomy is usually a combination of four capabilities:
+
+1. **Goal persistence:** the system keeps working toward a target across many steps.
+2. **Action selection:** it chooses tools, not just words.
+3. **State tracking:** it remembers what has already happened.
+4. **Self-correction:** it changes course when the environment disagrees.
+
+This does not require a single grand architecture. Many deployed systems are still careful orchestration layers wrapped around an LLM.
+
+Recent benchmarks make this gap painfully clear. AgentBench shows that long-horizon reasoning, decision-making, and instruction following remain major obstacles for usable agents [[4]](#ref-4). SWE-bench makes the same point in software engineering: real issues require environment interaction, long contexts, and coordinated edits, not just one-shot code generation [[5]](#ref-5).
+
+---
+
+## 2. A Minimal Production Agent Loop
+
+Before thinking about tree search or reflection, it helps to write down the smallest agent loop that is actually useful:
+
+1. **Read the current state**
+2. **Propose the next action**
+3. **Execute or request approval**
+4. **Verify the result**
+5. **Finish, replan, or escalate**
+
+Most production agents are some version of this loop plus budgets, memory, and guardrails. For developers, this is a useful mental model: autonomy is not fully general independence, but a budgeted control system around an LLM.
+
+### Autonomy Is a Stack, Not a Single Prompt
+
+It is useful to separate the loop into layers:
+
+- **perception:** read files, logs, tool output, or user state
+- **policy:** decide what to do next
+- **execution:** carry out the action through tools
+- **verification:** check whether the world changed in the intended way
+
+Many agent failures are not failures of "reasoning" in the abstract. They are failures at one of these interfaces: the agent misread the environment, called the wrong tool, interpreted tool output badly, or skipped verification entirely.
+
+---
+
+## 3. Planning Loops
+
+### ReAct: Reasoning Interleaved with Action
+
+**ReAct** remains one of the clearest starting points [[1]](#ref-1). The model alternates between a short internal plan and an external action:
+
+1. think
+2. act
+3. observe
+4. think again
+
+This is simple, powerful, and easy to build. It is also fragile. A linear loop can get trapped in bad local decisions because it has no built-in mechanism to explore alternatives.
+
+### Search-Based Planning
+
+That weakness motivates search-based approaches such as **Language Agent Tree Search (LATS)** [[2]](#ref-2). Instead of committing to a single reasoning trajectory, the system explores multiple branches and scores them. The important idea is not that every production agent should run full tree search. The important idea is that longer-horizon tasks often benefit from explicit search rather than pure left-to-right improvisation.
+
+LATS uses the familiar UCT trade-off:
+
+$$
+UCT(s, a) = Q(s, a) + c \sqrt{\frac{\ln N(s)}{N(s, a)}}
+$$
+
+The equation is less important than the engineering lesson behind it: an autonomous agent needs some balance between following the best known path and testing alternatives.
+
+---
+
+## 4. Reflection and Self-Correction
+
+A useful way to understand autonomous agents is to contrast them with traditional RL systems. Classical RL changes model weights. Many agent systems instead change the **context** available to the model at the next step.
+
+### Reflexion
+
+**Reflexion** is a well-known example [[3]](#ref-3). After a failed attempt, the agent produces a short natural-language lesson about what went wrong. On the next attempt, that lesson is appended to the working context.
+
+This is not the same thing as durable learning. It is closer to giving the model a scratchpad full of recent mistakes and heuristics. That distinction matters. In current systems, reflection often improves local behavior without creating robust long-term competence across unrelated tasks.
+
+### What Is Established and What Is Emerging?
+
+- **Established:** ReAct-style loops and reflection prompts are practical and widely used design patterns.
+- **Emerging:** more structured agent-training schemes that try to store reusable “meta-policies” across tasks.
+- **Still unsettled:** how much reliable generalization these memory or rule-extraction methods actually provide in open environments.
+
+---
+
+## 5. The Real Bottleneck: Reliability
+
+Autonomy looks impressive when the agent keeps going. Reliability matters when it knows when to stop.
+
+Common failure modes include:
+
+- repeating the same tool call
+- drifting away from the original goal
+- over-trusting its own intermediate outputs
+- spending too many steps on low-value branches
+- taking an action that is technically valid but operationally unsafe
+
+This is why production agents are usually bounded by system-level controls:
+
+- step limits
+- retry limits
+- timeouts
+- checkpointing
+- human approval for destructive actions
+
+The model may feel autonomous, but the surrounding runtime still needs guardrails.
+
+---
+
+## 6. Interactive LATS Visualizer
+
+The visualizer below shows why search can help when linear loops get stuck. Notice how the agent can compare multiple branches instead of committing immediately to the first plausible action.
+
+<LATSVisualizer client:load />
+
+---
+
+## 7. Practical Takeaway
+
+Autonomous agents are best understood as **LLMs embedded inside a control loop**. The loop is what gives them persistence, action, and self-correction. Research continues to explore better planning and learning schemes, but the production lesson is already clear: autonomy without runtime limits is usually a liability.
+
+In the next section, we move from a single agent to systems where multiple specialized agents share work and information.
+
+---
+
+## Quizzes
+
+<details>
+<summary>Quiz 1: Why is a ReAct-style loop often insufficient for long-horizon tasks?</summary>
+*Because it follows a single linear trajectory. Once the agent makes a poor early decision, it may continue compounding the mistake instead of exploring alternatives.*
+</details>
+
+<details>
+<summary>Quiz 2: What is the key systems difference between a tool-using assistant and an autonomous agent?</summary>
+*An autonomous agent is wrapped in a control loop that tracks progress, chooses actions repeatedly, inspects outcomes, and decides whether to continue or stop.*
+</details>
+
+<details>
+<summary>Quiz 3: Why is reflection not the same thing as durable learning?</summary>
+*Because reflection usually changes the next prompt or working context, not the model weights. It can improve local behavior without guaranteeing broad generalization across tasks.*
+</details>
+
+<details>
+<summary>Quiz 4: Why do production agents still need external guardrails even if the underlying model is strong?</summary>
+*Because the main risks are often operational rather than purely cognitive: runaway loops, unsafe tool use, repeated retries, and goal drift. Runtime controls limit the damage from these failures.*
+</details>
+
+---
+
+## References
+
+1. <a id="ref-1"></a>Yao, S., et al. (2022). *ReAct: Synergizing Reasoning and Acting in Language Models.* [arXiv:2210.03629](https://arxiv.org/abs/2210.03629).
+2. <a id="ref-2"></a>Zhou, A., et al. (2023). *Language Agent Tree Search Unifies Reasoning Acting and Planning in Language Models.* [arXiv:2310.04406](https://arxiv.org/abs/2310.04406).
+3. <a id="ref-3"></a>Shinn, N., et al. (2023). *Reflexion: Language Agents with Verbal Reinforcement Learning.* [arXiv:2303.11366](https://arxiv.org/abs/2303.11366).
+4. <a id="ref-4"></a>Liu, X., et al. (2024). *AgentBench: Evaluating LLMs as Agents.* [arXiv:2308.03688](https://arxiv.org/abs/2308.03688).
+5. <a id="ref-5"></a>Jimenez, C. E., Yang, J., Wettig, A., Yao, S., Pei, K., Press, O., & Narasimhan, K. (2024). *SWE-bench: Can Language Models Resolve Real-World GitHub Issues?* [arXiv:2310.06770](https://arxiv.org/abs/2310.06770).

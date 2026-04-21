@@ -1,0 +1,134 @@
+---
+layout: ../../layouts/BookLayout.astro
+title: 17.5 Production Evaluation and Release Gates
+lang: en
+---
+
+# 17.5 Production Evaluation and Release Gates
+
+Consider a candidate model that wins judge-based comparisons in the lab, then increases support tickets after rollout because its refusals became less predictable and its tool calls slowed down a critical workflow. That gap between "bench better" and "ship better" is the reason release gates exist.
+
+Production evaluation is not merely a scoreboard. It is a decision system that connects research metrics to deployment decisions: what must improve, what is allowed to stay flat, which regressions block release, and which signals only become visible after rollout.
+
+---
+
+## 1. Offline Evaluation Is a Gate, Not the Whole Decision
+
+Offline evaluation is still essential. It is where teams detect large regressions cheaply and repeatedly.
+
+Typical offline checks include:
+
+- benchmark suites
+- task-specific regression sets
+- safety tests
+- tool-use or workflow tests
+- judge-based pairwise comparisons
+
+But offline scores do not tell the whole story. They rarely capture freshness, user patience, or how a model behaves under real product traffic.
+
+### Build a Release Packet, Not a Single Score
+
+A practical release review usually combines four views at once:
+
+- **benchmark regressions:** broad capability changes
+- **private workflow evals:** product-specific tasks that actually matter
+- **judge packet:** pairwise or rubric-based comparisons with calibration checks
+- **systems packet:** latency, cost, and tool-use reliability
+
+Thinking this way prevents a single impressive leaderboard number from dominating the decision.
+
+---
+
+## 2. Judge Calibration and Benchmark Hygiene
+
+If LLM-as-a-Judge is used in release decisions, the judge itself must be monitored.
+
+### Practical Rules
+
+- maintain a calibration set with human labels
+- track agreement drift over time
+- avoid relying on a single related model family as the only judge
+- audit position bias and verbosity bias regularly
+
+Benchmark hygiene matters just as much:
+
+- version eval sets
+- record model training cutoff dates
+- keep holdout sets private when possible
+- check for contamination before declaring progress
+
+Freshness-aware and contamination-aware benchmarks such as LiveBench are useful because they reduce the chance that offline progress is mostly memorization [[3]](#ref-3). But they still complement, rather than replace, private regression sets tied to your own product.
+
+Another recent warning is **Preference Leakage**: if the judge and the synthetic-data pipeline are too closely related, release decisions can quietly favor familiar model families instead of genuinely better behavior [[2]](#ref-2).
+
+---
+
+## 3. Release Gates Need Clear Blocking Criteria
+
+A release gate is useful only when it is explicit.
+
+### Example Gate Structure
+
+1. No critical safety regression
+2. No statistically meaningful regression on core workflows
+3. Judge-based win rate above threshold on target tasks
+4. Latency and cost remain inside budget
+5. Canary rollout metrics stay healthy
+
+This turns evaluation from a vague “the new model looks better” discussion into an operational contract.
+
+---
+
+## 4. Canary Releases Close the Loop
+
+Offline evaluation reduces risk. Canary releases reveal reality.
+
+Typical canary metrics include:
+
+- refusal rate drift
+- answer-quality complaints
+- latency regressions
+- tool-call failure rate
+- user retention or conversion on the affected workflow
+
+Many teams also add **shadow traffic** before a user-facing canary so they can inspect latency, tool behavior, and refusal changes without exposing the full workflow to end users.
+
+The main idea is simple: do not expose the full user base before the new model proves itself under live traffic.
+
+---
+
+## 5. Practical Takeaway
+
+Production evaluation is the bridge between benchmark culture and product engineering. Offline tests catch obvious regressions, judges scale qualitative review, and canaries reveal real-world behavior. Release decisions should be based on all three, not on leaderboard movement alone.
+
+---
+
+## Quizzes
+
+<details>
+<summary>Quiz 1: Why is offline evaluation insufficient by itself for model release decisions?</summary>
+*Because offline datasets rarely capture all of the conditions that matter in production, such as real user behavior, freshness requirements, latency tolerance, and live failure patterns.*
+</details>
+
+<details>
+<summary>Quiz 2: Why does judge calibration matter when using LLM-as-a-Judge in release gates?</summary>
+*Because the judge can drift, inherit bias, or favor related model families. Without calibration against human labels, judge scores can create false confidence.*
+</details>
+
+<details>
+<summary>Quiz 3: What makes a release gate operationally useful?</summary>
+*It must define explicit blocking criteria, such as safety thresholds, workflow regression tolerances, latency budgets, and canary health checks.*
+</details>
+
+<details>
+<summary>Quiz 4: Why are canary releases important even after strong offline results?</summary>
+*Because they expose the model to real traffic and real workflows, where hidden regressions in latency, tool use, safety, or user satisfaction often appear for the first time.*
+</details>
+
+---
+
+## References
+
+1. <a id="ref-1"></a>Liu, Y., et al. (2023). *G-Eval: NLG Evaluation using GPT-4 with Better Human Alignment.* [arXiv:2303.16634](https://arxiv.org/abs/2303.16634).
+2. <a id="ref-2"></a>Li, D., et al. (2025). *Preference Leakage: A Contamination Problem in LLM-as-a-Judge.* [arXiv:2502.01534](https://arxiv.org/abs/2502.01534).
+3. <a id="ref-3"></a>Gu, A., et al. (2024). *LiveBench: A Challenging, Contamination-Free LLM Benchmark.* [arXiv:2406.19314](https://arxiv.org/abs/2406.19314).

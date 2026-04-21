@@ -1,0 +1,166 @@
+---
+layout: ../../layouts/BookLayout.astro
+title: "4.5 Various LLM Architectures"
+lang: "en"
+---
+
+import AttentionMaskVisualizer from '../../components/chapter-4/AttentionMaskVisualizer';
+
+# 4.5 Various LLM Architectures
+
+By the time many readers reach this section, it is tempting to think the architecture debate is over: decoder-only won, everyone copied GPT, and the rest is just scaling. In practice, that is where the real engineering begins. The moment you ask for longer context windows, lower serving cost, better throughput, or stronger tool use, models start to diverge again.
+
+A useful analogy is transportation. Cargo ships, racing cars, and commuter trains all move people or goods, but each is optimized for a different bottleneck. Modern LLMs are similar. They still generate text autoregressively, yet they make different architectural trade-offs depending on whether the main pain point is KV-cache growth, attention complexity, routing efficiency, or training stability.
+
+This section looks at those design pressures first, then the architectural ideas they produced.
+
+---
+
+## Why Architectures Keep Diverging
+
+Chapter 3 gave us the canonical Transformer. Real systems, however, run into recurring pressure points:
+
+1. Long contexts make full attention expensive.
+2. KV caches become costly during autoregressive serving.
+3. Dense feed-forward layers scale poorly as models get larger.
+4. Training objectives that work for next-token prediction are not always optimal for throughput or reasoning.
+
+Most modern architectural changes can be understood as responses to one or more of these bottlenecks.
+
+### 1. Hybrid and Linear Attention
+Standard self-attention has quadratic cost in sequence length, so it becomes expensive when context grows. One increasingly common response is a **hybrid attention stack**.
+
+Instead of using full attention in every layer, hybrid models mix expensive but expressive attention layers with cheaper mechanisms such as linear attention, local attention, or state-space style updates. The intuition is simple: not every layer needs to perform global token-to-token lookup with the same fidelity.
+
+This is a recurring pattern in modern model design. Keep some layers that are excellent at exact retrieval and composition, then use cheaper layers elsewhere to carry longer-range state at lower cost.
+
+### 2. KV-Cache Compression and Memory-Aware Attention
+For autoregressive models, serving cost is often dominated not just by compute, but by memory movement. Every generated token extends the KV cache, and that cache must be read repeatedly during inference.
+
+This is why designs such as **Multi-head Latent Attention (MLA)** matter. Instead of storing large key and value tensors directly, the model stores a compressed latent representation and reconstructs what it needs for attention computation [[1]](#ref-1). Some systems then combine cache compression with local or sparse attention patterns to reduce both memory footprint and attention work.
+
+### 3. Mixture of Experts in the Feed-Forward Stack
+Another major lever is the feed-forward block. Dense FFNs scale cost with the full parameter count, while **Mixture of Experts (MoE)** activates only a subset of experts for each token.
+
+MoE is attractive because it increases total model capacity without paying the full inference cost of a dense model of the same size. The trade-off is engineering complexity: routing, load balancing, expert parallelism, and communication overhead become first-class concerns. In other words, MoE often trades arithmetic cost for systems complexity.
+
+### 4. Multi-Token Prediction (MTP)
+Most language models are trained to predict exactly one next token. **Multi-token prediction (MTP)** changes the objective so that the model predicts several future positions at once.
+
+This can improve training efficiency and create a cleaner path to faster inference schemes such as speculative decoding. Conceptually, it is a reminder that architecture is not only about layers and blocks. Training objectives also shape which serving optimizations become natural later.
+
+---
+
+## A Better Way to Compare Modern Architectures
+
+Rather than memorizing product names, it is more useful to compare architectures by the bottleneck they target.
+
+| Design Pressure | Common Architectural Response | What You Gain | What You Give Up |
+| :--- | :--- | :--- | :--- |
+| Long contexts | Hybrid, local, linear, or sparse attention | Lower asymptotic attention cost | Less uniform behavior across layers |
+| KV-cache growth | GQA, MQA, MLA, sliding windows | Lower memory traffic during serving | More specialized implementation details |
+| Massive parameter counts | MoE layers | Higher capacity per unit inference compute | Routing and load-balancing complexity |
+| Throughput during decoding | MTP, speculative-friendly objectives | Faster generation paths | More training and serving coordination |
+| Long-context stability | QK-Norm, RoPE variants, windowing | Better optimization at scale | Extra design tuning and validation |
+
+This lens also explains why there is no single “best” modern architecture. A model optimized for short, frequent chat requests may choose very different internals from one optimized for long-context document work or large-scale coding assistance.
+
+### A Short Story About the Bottleneck Shift
+Early Transformer discussions focused mostly on parameter count and benchmark quality. Production systems taught a harsher lesson: many deployment failures do not come from insufficient model intelligence, but from bandwidth, latency, and memory pressure. Once models started serving long prompts at scale, “How smart is the model?” was joined by “What is the cheapest way to keep it responsive?”
+
+That is why modern architecture work often looks less like a search for a universal winner and more like a search for the right compromise.
+
+---
+
+## PyTorch Implementation: Simplified MLA
+
+Despite the rise of hybrid attention, Multi-head Latent Attention (MLA) is still a useful example because it makes the serving problem concrete. The simplified implementation below shows the central idea: compress what you store, then reconstruct what you need for attention computation.
+
+```python
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+class SimpleLatentAttention(nn.Module):
+    def __init__(self, d_model, n_heads, d_head, d_latent):
+        super().__init__()
+        self.d_model = d_model
+        self.n_heads = n_heads
+        self.d_head = d_head
+        self.d_latent = d_latent # Dimension of compressed KV
+        
+        # Standard Q projection
+        self.q_proj = nn.Linear(d_model, n_heads * d_head)
+        
+        # KV Compression: Projects input to a smaller latent space
+        self.kv_compress = nn.Linear(d_model, d_latent)
+        
+        # KV Decompression: Reconstructs K and V from the latent space
+        self.kv_decompress = nn.Linear(d_latent, n_heads * d_head * 2) 
+        
+        self.o_proj = nn.Linear(n_heads * d_head, d_model)
+        
+    def forward(self, x):
+        batch_size, seq_len, _ = x.size()
+        
+        # 1. Project Query
+        q = self.q_proj(x).view(batch_size, seq_len, self.n_heads, self.d_head)
+        q = q.transpose(1, 2) # (B, H, S, d_head)
+        
+        # 2. Compress KV
+        # This 'latent' vector is what we store in the KV Cache!
+        latent = self.kv_compress(x) # (B, S, d_latent)
+        
+        # 3. Decompress KV for attention computation
+        kv = self.kv_decompress(latent).view(batch_size, seq_len, self.n_heads, self.d_head, 2)
+        k = kv[..., 0].transpose(1, 2) # (B, H, S, d_head)
+        v = kv[..., 1].transpose(1, 2) # (B, H, S, d_head)
+        
+        # 4. Scaled Dot-Product Attention
+        scores = torch.matmul(q, k.transpose(-2, -1)) / (self.d_head ** 0.5)
+        
+        # Apply causal mask (simplified)
+        mask = torch.tril(torch.ones(seq_len, seq_len, device=x.device))
+        scores = scores.masked_fill(mask == 0, float('-inf'))
+        
+        attn = F.softmax(scores, dim=-1)
+        
+        context = torch.matmul(attn, v) # (B, H, S, d_head)
+        context = context.transpose(1, 2).contiguous().view(batch_size, seq_len, -1)
+        
+        return self.o_proj(context)
+```
+
+---
+
+## Interactive Visualization: Attention Masking
+
+To better understand how these different architectures control information flow, let's visualize their attention masks. AI experts know that the mask is what truly defines whether a model behaves as an Encoder (bidirectional), a Decoder (causal), or a Prefix-LM.
+
+<AttentionMaskVisualizer client:load lang="en" />
+
+---
+
+## Quizzes
+
+<details>
+<summary>Quiz 1: Why would a model designer choose a hybrid attention stack instead of using full self-attention in every layer?</summary>
+*Because full self-attention gives strong token-to-token interaction but becomes expensive at long sequence lengths. A hybrid stack keeps some layers that are good at exact global retrieval while replacing other layers with cheaper mechanisms such as local, linear, or state-space style updates. The goal is to preserve enough expressiveness while reducing cost.*
+</details>
+
+<details>
+<summary>Quiz 2: What is the advantage of combining KV-cache compression with sparse or local attention patterns?</summary>
+*These techniques attack different costs. KV-cache compression reduces memory footprint and bandwidth pressure, while sparse or local attention reduces the amount of attention work performed over long sequences. Used together, they can improve long-context serving more than either change alone.*
+</details>
+
+<details>
+<summary>Quiz 3: Why do long-context models often introduce stabilizers such as QK-Norm or attention windowing?</summary>
+*As sequence length grows, attention scores and memory use can become harder to control. Stabilizers such as QK-Norm help keep attention values numerically well-behaved during training, while windowing reduces how much context each layer must process at once. Together they make long-context optimization more practical.*
+</details>
+
+---
+
+## References
+
+1. <a id="ref-1"></a>DeepSeek-AI. (2024). *DeepSeek-V3 Technical Report*. [arXiv:2412.19437](https://arxiv.org/abs/2412.19437).
+2. <a id="ref-2"></a>Ainslie, J., et al. (2023). *GQA: Training Generalized Multi-Query Transformer Models from Multi-Head Checkpoints*. [arXiv:2305.13245](https://arxiv.org/abs/2305.13245).

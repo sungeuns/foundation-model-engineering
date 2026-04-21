@@ -1,0 +1,23 @@
+{
+  "name": "foundation-model-engineering",
+  "type": "module",
+  "version": "0.0.1",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "astro dev --host 0.0.0.0 --port 4321 --strictPort",
+    "build": "astro build",
+    "preview": "astro preview --host 0.0.0.0 --port 4321 --strictPort",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/mdx": "^5.0.3",
+    "@astrojs/react": "^5.0.0",
+    "astro": "^6.1.3",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "rehype-katex": "^7.0.1",
+    "remark-math": "^6.0.0"
+  }
+}

@@ -1,0 +1,212 @@
+---
+layout: ../../../layouts/BookLayout.astro
+title: 12.6 Serving Policies, SLOs, and Fallbacks
+lang: ko
+---
+
+# 12.6 서빙 정책, SLO, 그리고 폴백
+
+주방이 하나뿐인 식당을 떠올려 봅시다. 커피 두 잔을 주문한 손님과 12코스 디너를 주문한 손님이 동시에 들어왔는데, 주방이 단순한 선착순만 따른다면 커피 손님은 디너 주문이 끝날 때까지 기다려야 합니다. 프로덕션 LLM 서빙도 정확히 이런 방식으로 망가집니다.
+
+스테이징에서는 멀쩡하던 서비스가 실제 트래픽에서는 갑자기 흔들릴 수 있습니다. 한 기업 고객이 5만 토큰짜리 계약서를 붙여 넣고, 동시에 배치 요약 잡이 수백 개 돌기 시작하면, 모든 채팅 사용자의 첫 토큰 지연 시간이 몇 초씩 튈 수 있습니다. 모델 가중치가 문제인 것은 아닙니다. 커널이 틀린 것도 아닙니다. 서로 성격이 완전히 다른 작업을 같은 큐 규칙으로 다룬 운영 정책이 문제입니다.
+
+그래서 서빙 정책이 중요합니다. 커널 수준 최적화는 추론을 가능하게 만들지만, 정책은 그 서비스가 혼합 트래픽, bursty tenant, 부분 장애 상황에서도 믿을 만한 제품처럼 동작할지를 결정합니다. 이 절에서는 커널과 메모리 레이아웃 위에 있는 운영 제어층, 즉 누가 들어오고 어떤 SLO를 우선시하며 공정성을 어떻게 지키고 시스템이 hard outage 전에 어떻게 단계적으로 버티는지를 다룹니다.
+
+---
+
+## 1. 처리량보다 먼저 SLO를 정의하자
+
+Continuous batching, PagedAttention, chunked prefill 같은 최적화는 효율을 높여 주지만, 실제 서비스 팀이 결국 책임지는 것은 대체로 몇 가지 사용자 지표입니다.
+
+- **TTFT (Time To First Token):** 첫 토큰이 나오기까지 사용자가 기다리는 시간
+- **TPOT 또는 TBT:** 생성이 시작된 뒤 토큰이 얼마나 매끄럽게 이어지는지. `TPOT`는 시스템 관점 지표이고, `TBT`는 사용자가 체감하는 같은 현상에 가깝습니다.
+- **Success Rate:** timeout, OOM, cancellation 없이 끝나는 비율
+- **Cost per Successful Request:** 지연 목표를 지키면서 요청 하나를 성공시키는 데 드는 비용
+
+이 지표들은 서로 충돌하기 쉽습니다. aggregate throughput은 높아졌는데 interactive 사용자 체감 성능은 더 나빠지는 경우가 대표적입니다. Orca는 트랜스포머 서빙에서 iteration-level scheduling의 중요성을 보여 주었고 [[1]](#ref-1), DistServe는 한 걸음 더 나아가 "단순 처리량보다 SLO를 만족시키는 요청률이 더 중요하다"는 점을 분명하게 보여 줍니다 [[5]](#ref-5).
+
+### Goodput이라는 관점
+
+프로덕션에서는 다음과 같은 관점이 훨씬 유용합니다.
+
+$$
+\text{Goodput} = \text{TTFT, TPOT, 성공률 제약을 만족하는 요청 처리율}
+$$
+
+이 값이 raw throughput보다 더 중요합니다. 총 토큰 처리량은 높아졌어도 p95 TTFT가 무너지면 interactive 제품 입장에서는 더 나쁜 시스템일 수 있기 때문입니다.
+
+### SLO는 lane별로 달라야 한다
+
+IDE copilot, 배치 요약기, 툴을 여러 번 호출하는 에이전트가 같은 임계값을 공유해서는 안 됩니다.
+
+- **대화형 제품**은 p95 또는 p99 TTFT, jitter, 완료 신뢰성이 가장 중요합니다.
+- **배치 워크플로우**는 throughput, 큐를 비우는 시간, 비용 효율이 더 중요합니다.
+- **에이전트형 워크플로우**는 한 턴의 실패가 전체 작업을 깨뜨릴 수 있기 때문에, end-to-end task completion rate가 중요합니다.
+
+### Latency Budget을 분해해서 봐야 한다
+
+첫 토큰 지연 시간을 다음처럼 쪼개서 보는 습관이 중요합니다.
+
+$$
+\text{TTFT} \approx t_{\text{queue}} + t_{\text{prefill}} + t_{\text{schedule}} + t_{\text{transfer}}
+$$
+
+정확한 항은 아키텍처마다 다르지만 핵심은 같습니다. p95 TTFT를 놓쳤다면 원인이 queueing인지, prefill 간섭인지, 노드 간 KV 전송인지, scheduler 지연인지 구분할 수 있어야 합니다. 좋은 정책은 막연히 "빨라야 한다"가 아니라 "어디에 latency budget을 쓰는지 보이게 관리한다"입니다.
+
+---
+
+## 2. Admission Control은 비용을 아는 큐잉 정책이다
+
+프로덕션에서 흔한 실수는 모든 요청을 같은 큐에 넣는 것입니다. 하지만 200토큰짜리 짧은 채팅 질의와 4만 토큰짜리 문서 재작성 요청은 prefill 연산량도 다르고 decode 메모리 압력도 완전히 다릅니다.
+
+### 추천하는 큐 분리
+
+1. **Interactive lane:** 짧은 프롬프트, 엄격한 TTFT 목표, 보수적인 출력 상한
+2. **Heavy lane:** 긴 프롬프트, 긴 출력, 비싼 툴 호출
+3. **Background lane:** 오프라인 처리나 저우선순위 작업
+
+같은 모델을 써도 괜찮습니다. 중요한 것은 같은 모델 위에서도 큐 규칙과 스케줄러 임계값을 다르게 두는 것입니다. SARATHI는 chunked prefill이 왜 prompt-heavy 요청과 decode-heavy 요청의 공존에 도움이 되는지 보여 주고 [[3]](#ref-3), Splitwise와 DistServe는 prefill과 decode를 아예 물리적으로 분리하거나 disaggregate해서 간섭을 더 줄입니다 [[4]](#ref-4)[[5]](#ref-5).
+
+### 요청은 들어오기 전에 분류해야 한다
+
+실무의 admission controller는 보통 다음 요소를 봅니다.
+
+- 프롬프트 길이
+- 예상 출력 길이 또는 `max_new_tokens`
+- retrieval이나 tool 사용 가능성
+- tenant 우선순위
+- 현재 큐 깊이와 KV 메모리 압력
+
+핵심은 요청이 시스템을 망가뜨리기 전에 비용을 대략이라도 추정하는 것입니다.
+
+### 간단한 비용 프록시
+
+현실에서는 아래처럼 단순한 휴리스틱을 자주 씁니다.
+
+$$
+\text{CostScore} = \alpha \cdot \text{prompt\_tokens} + \beta \cdot \text{max\_new\_tokens} + \gamma \cdot \text{tool\_risk}
+$$
+
+이 식은 물리 법칙이 아니라 실무용 근사치입니다. 하지만 이 정도만 있어도 interactive lane으로 바로 넣을지, defer할지, 아예 reject할지 판단하는 데 큰 도움이 됩니다.
+
+### Admission Rule 예시
+
+- 프롬프트 길이가 설정된 예산을 넘으면 defer 또는 reject
+- interactive lane에서는 `max_new_tokens` 상한을 더 공격적으로 낮춤
+- 매우 긴 프롬프트는 active decode를 방해하지 않도록 저우선순위 큐로 이동
+- shared cluster에서는 interactive traffic을 위해 일정량의 KV 메모리를 예약하여 PagedAttention block pool을 보호 [[2]](#ref-2)
+- interactive p95 TTFT가 SLO에 가까워지면 background 작업을 일시적으로 throttle
+
+중요한 점은 admission control이 단순한 허용/거부 스위치가 아니라, 요청을 가장 덜 위험한 운영 모드로 보내는 정책 계층이라는 것입니다.
+
+## 3. Fairness와 Isolation이 noisy neighbor 문제를 막는다
+
+멀티테넌트 환경에서는 한 고객의 긴 프롬프트나 burst traffic이 다른 사용자 전체를 흔들 수 있습니다. 그래서 tenant-aware policy가 필요합니다.
+
+### 최소한의 가드레일
+
+- tenant별 rate limit
+- tenant별 concurrency cap
+- shared cluster에서 프롬프트 길이 상한
+- interactive와 background를 분리한 quota
+- `degraded`, `interactive_only`, `batch_paused` 같은 명확한 overload 상태
+
+### 공정성은 모두를 똑같이 대하는 것이 아니다
+
+공정성은 모든 요청을 동일하게 다루는 것이 아닙니다. 프리미엄 interactive 제품이 오프라인 export job보다 더 좋은 지연 시간을 보장받는 것은 충분히 합리적일 수 있습니다. 중요한 것은 그 정책이 명시적이고 예측 가능하며 안전해야 한다는 점입니다.
+
+실무에서는 weighted fairness가 자주 쓰입니다. interactive 작업을 위해 scheduler slot이나 KV capacity의 최소 몫을 확보해 두고, 남는 자원을 batch가 기회적으로 사용하는 방식입니다. 이런 장치가 없으면 시스템은 겉으로는 효율적으로 보이다가도 특정 tenant가 큐를 장악하는 순간 모두의 지연 시간이 절벽처럼 무너집니다.
+
+### 어떤 자원을 격리할지 맞게 골라야 한다
+
+장애를 만드는 자원은 하나가 아닙니다.
+
+- prefill-heavy 트래픽은 compute를 포화시킵니다.
+- decode-heavy 트래픽은 KV 메모리 대역폭과 용량을 압박합니다.
+- tool-heavy 트래픽은 모델 서버 밖의 tail latency를 키웁니다.
+
+좋은 isolation 정책은 이 실제 병목에 맞춰 limit를 겁니다. 모든 것을 하나의 글로벌 request counter로만 막으려 하면 중요한 것을 놓치게 됩니다.
+
+## 4. 폴백은 hard failure 전에 발동해야 한다
+
+좋은 프로덕션 시스템은 hard failure가 난 뒤에야 반응하지 않습니다. SLO budget이 사라지기 시작하는 순간 단계적으로 행동을 바꿔야 합니다.
+
+### 자주 보는 트리거 신호
+
+- queue wait time 급증
+- p95 TTFT가 목표치에 근접하거나 초과
+- KV block pool 사용률이 위험 수준으로 상승
+- 요청 수는 비슷한데 decode TPS가 하락
+- tool 또는 retriever timeout 증가
+
+### 현실적인 fallback ladder
+
+1. **선택적 고비용 기능 비활성화**: `best_of`, 추가 샘플링, 긴 reasoning trace 같은 옵션을 먼저 끔
+2. **Interactive lane의 `max_new_tokens` 축소**
+3. **프롬프트 압축 또는 요약**
+4. **저우선순위 트래픽을 더 작은 모델이나 더 싼 모델로 라우팅**
+5. **Background lane 일시 중단**
+6. **부분 응답 또는 명시적인 재시도 안내 반환**
+
+KV block pool이 부족해지면, OOM을 터뜨리기 전에 context budget을 줄이거나 저우선순위 트래픽을 덜어내는 편이 낫습니다. 사용자 입장에서는 완벽하지만 timeout 나는 응답보다, 짧더라도 솔직하게 축약되거나 degraded state를 알리는 응답이 더 낫습니다.
+
+## 5. 장애 대응은 올바른 카운터에서 시작한다
+
+지연 시간이 튀었을 때는 GPU metric이나 kernel trace만 보지 말고, 어떤 큐 정책이 문제를 증폭시켰는지도 같이 봐야 합니다. 실제로 가장 도움이 되는 값들은 의외로 아주 운영적인 지표들입니다.
+
+- lane별 queue wait time
+- 프롬프트 길이 분포
+- 생성 토큰 수 분포
+- tenant별 동시성
+- KV block 사용률
+- prefill 대비 decode 점유율
+- fallback 발동 비율
+
+### 빠른 진단을 위한 증상 해석
+
+- **TTFT만 나쁘고 TPOT는 괜찮다:** queueing 또는 prefill 간섭을 먼저 의심
+- **TTFT는 괜찮고 TPOT만 나쁘다:** decode contention, KV 압력, downstream tool 지연 가능성이 큼
+- **TTFT와 TPOT가 둘 다 나쁘다:** 클러스터 과부하이거나 fairness 정책이 실패했을 가능성이 큼
+- **특정 tenant만 문제다:** tenant quota, routing bug, 비정상 workload를 먼저 확인
+
+운영 관점에서 이 절의 핵심은 단순합니다. scheduler는 제품 표면의 일부입니다. mixed traffic에서 scheduler가 나쁘게 동작하면, 사용자에게는 그것이 곧 모델 실패처럼 보입니다.
+
+---
+
+## 6. Practical Takeaway
+
+추론 최적화는 커널이 빨라졌다고 끝나지 않습니다. 긴 프롬프트, burst traffic, partial failure, 멀티테넌트 경쟁 같은 지저분한 상황에서도 서비스가 예측 가능해야 비로소 끝납니다. 결국 프로덕션 서빙에는 엔진 최적화뿐 아니라 정책, 명시적인 SLO budget, fairness rule, 그리고 시스템이 쓰러지기 전에 발동하는 fallback plan이 함께 필요합니다.
+
+---
+
+## Quizzes
+
+<details>
+<summary>Quiz 1: interactive LLM 제품에서 raw throughput보다 goodput이 더 중요한 이유는 무엇인가요?</summary>
+*goodput은 지연 시간과 성공률 목표를 만족한 요청 처리율만 세기 때문입니다. 총 토큰 처리량은 늘어났더라도 p95 TTFT나 TPOT가 무너지면 사용자 입장에서는 더 나쁜 시스템일 수 있습니다.*
+</details>
+
+<details>
+<summary>Quiz 2: 평균 지연 시간은 괜찮은데, 긴 문서 재작성 요청이 들어올 때마다 채팅 사용자의 p99 TTFT만 급격히 튄다면 가장 먼저 의심해야 할 정책 실수는 무엇인가요?</summary>
+*짧은 interactive 요청과 긴 prefill-heavy 요청을 같은 큐 규칙으로 경쟁시키고 있을 가능성이 큽니다. 평균값은 멀쩡해 보여도 tail latency는 lane 분리나 stricter admission control이 없으면 쉽게 무너집니다.*
+</details>
+
+<details>
+<summary>Quiz 3: shared inference cluster에서 fairness 정책을 단순 request count가 아니라 prefill compute나 KV memory 같은 실제 병목에 맞춰 설계해야 하는 이유는 무엇인가요?</summary>
+*같은 1개의 요청이라도 비용이 완전히 다를 수 있기 때문입니다. 긴 컨텍스트 요청 하나가 짧은 채팅 여러 개보다 훨씬 더 큰 피해를 줄 수 있으므로, limit는 요청 수가 아니라 compute, memory, tool 사용량 같은 실제 부담을 반영해야 합니다.*
+</details>
+
+<details>
+<summary>Quiz 4: 시스템이 KV 메모리 고갈에 가까워질 때, OOM이 난 뒤 재시도로 복구하는 것보다 명시적인 fallback ladder가 더 나은 이유는 무엇인가요?</summary>
+*명시적인 fallback ladder는 사용자 경험과 클러스터 안정성을 통제된 방식으로 지킬 수 있게 해 주기 때문입니다. context 축소, 출력 길이 제한, 저우선순위 작업 중단, degraded 응답 반환 등을 통해 혼란스러운 실패 모드로 떨어지기 전에 질서 있게 성능을 낮출 수 있습니다.*
+</details>
+
+---
+
+## References
+
+1. <a id="ref-1"></a>Yu, G.-I., Jeong, J. S., Kim, G.-W., Kim, S., & Chun, B.-G. (2022). *Orca: A Distributed Serving System for Transformer-Based Generative Models.* [arXiv:2203.10842](https://arxiv.org/abs/2203.10842).
+2. <a id="ref-2"></a>Kwon, W., et al. (2023). *Efficient Memory Management for Large Language Model Serving with PagedAttention.* [arXiv:2309.06180](https://arxiv.org/abs/2309.06180).
+3. <a id="ref-3"></a>Agrawal, A., et al. (2023). *SARATHI: Efficient LLM Inference by Piggybacking Decodes with Chunked Prefills.* [arXiv:2308.16369](https://arxiv.org/abs/2308.16369).
+4. <a id="ref-4"></a>Patel, P., Choukse, E., Zhang, C., Shah, A., Goiri, I., Maleki, S., & Bianchini, R. (2024). *Splitwise: Efficient Generative LLM Inference Using Phase Splitting.* [arXiv:2311.18677](https://arxiv.org/abs/2311.18677).
+5. <a id="ref-5"></a>Zhong, Y., Liu, S., Chen, J., Hu, J., Zhu, Y., Liu, X., Jin, X., & Zhang, H. (2024). *DistServe: Disaggregating Prefill and Decoding for Goodput-optimized Large Language Model Serving.* [arXiv:2401.09670](https://arxiv.org/abs/2401.09670).

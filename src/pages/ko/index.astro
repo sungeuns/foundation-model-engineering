@@ -1,0 +1,84 @@
+---
+import BookLayout from '../../layouts/BookLayout.astro';
+
+import { chapters } from '../../data/chapters.js';
+import { withBasePath } from '../../utils/paths.js';
+
+const getPath = (p) => `/ko${p}`;
+---
+
+<BookLayout title="홈" lang="ko">
+  <div style="text-align: right; color: var(--secondary-color); font-size: 0.9rem; margin-bottom: 1rem;">최근 업데이트: 2026-04-20</div>
+  <p><strong>Foundation Model Engineering</strong>은 현대 파운데이션 모델이 실제로 어떻게 동작하는지, 왜 지금의 기술 스택으로 발전했는지, 그리고 그 아이디어들이 실제 시스템과 만날 때 어떤 엔지니어링 트레이드오프가 생기는지를 이해하고 싶은 독자를 위한 기술 교재입니다.</p>
+
+  <p>이 프로젝트는 주로 <strong>AI 엔지니어</strong>와 <strong>리서치 지향 독자</strong>를 위해 쓰였습니다. 단순히 API를 사용하는 수준을 넘어, 아키텍처, 학습 파이프라인, 추론 시스템, 검색 스택, 평가 체계, 에이전트 워크플로우에 대해 더 깊고 연결된 관점을 갖고 싶은 사람을 대상으로 합니다.</p>
+
+  <p>이 책의 목적은 단편적인 팁이나 용어 설명을 나열하는 데 있지 않습니다. 어텐션, MoE, RLHF, 멀티모달, 롱 컨텍스트 서빙, RAG, 에이전트 같은 주제들이 어떤 역사적 흐름, 수학적 아이디어, 시스템 제약 위에서 서로 이어지는지를 하나의 엔지니어링 서사로 설명하는 데 있습니다.</p>
+
+  <h3>왜 이 책을 읽어야 하나</h3>
+
+  <p>RNN에서 Transformer로 왜 넘어왔는지, 어떤 모델은 dense이고 어떤 모델은 sparse인지, 왜 추론 시스템은 KV cache와 batching에 집착하는지, 왜 평가와 정렬이 연구 주제이면서 동시에 제품 문제이기도 한지 궁금했다면 이 책이 그 연결고리를 보여주려고 합니다.</p>
+
+  <p>각 주제를 유행어처럼 따로 떼어 놓고 설명하기보다, 모델링 아이디어와 시스템 제약, 제품 요구사항이 서로를 어떻게 밀어 올리고 제한하는지를 함께 보여주는 것이 목표입니다. 그래서 이 책을 다 읽고 나면 단순히 용어를 더 많이 아는 것이 아니라, 더 나은 엔지니어링 판단을 내릴 수 있게 되기를 기대합니다.</p>
+
+  <h3>이 책이 잘 맞는 독자</h3>
+
+  <p><strong>AI 엔지니어</strong><br />LLM 시스템, 추론 스택, RAG 시스템, 에이전트 제품을 만들거나 평가하는 독자.</p>
+
+  <p><strong>리서치 지향 독자</strong><br />최근 아키텍처와 시스템 트렌드를 포함해 파운데이션 모델 분야 전체를 기술적으로 탄탄하게 이해하고 싶은 독자.</p>
+
+  <h3>무엇을 기대할 수 있나</h3>
+
+  <p>책 전반에 걸쳐 개념 설명, PyTorch 예제, 이해를 점검할 수 있는 짧은 퀴즈, 그리고 직접 조작해 보며 감을 잡을 수 있는 인터랙티브 시각화가 함께 제공됩니다. 단순히 용어를 외우는 것이 아니라 <strong>품질, 메모리, 처리량, 지연 시간, 스케일링, 정렬</strong> 사이의 트레이드오프를 스스로 판단할 수 있도록 돕는 것이 목표입니다.</p>
+
+  <p>다만 이 책은 가벼운 입문서를 지향하지 않습니다. AI를 처음 접하는 독자나 프롬프트 엔지니어링 위주의 실용 가이드를 기대하는 독자에게는 다소 어렵게 느껴질 수 있습니다. 의도적으로 깊이를 우선한 구성입니다.</p>
+
+  <h3>계속 업데이트되는 문서</h3>
+
+  <p>AI 분야는 매우 빠르게 변하기 때문에, 이런 프로젝트에는 업데이트가 필요한 내용이 생길 수밖에 없습니다. 새로운 논문, 시스템, 제품이 나오면서 일부 설명이나 예시는 시간이 지나면 보완이 필요해질 수 있습니다.</p>
+
+  <p>틀린 부분, 어색한 설명, 번역 표현, 더 좋은 참고 자료를 발견하셨다면 언제든지 기여를 환영합니다. 정확성, 설명력, 예제, 한국어 표현, 전반적인 가독성을 개선하는 PR은 항상 반갑습니다. 이 프로젝트를 일회성 스냅샷이 아니라 계속 다듬어 가는 학습 자료로 만들고 싶습니다.</p>
+  
+  <h2>목차</h2>
+  <div class="toc">
+    {chapters.map(ch => (
+      <div class="toc-chapter">
+        <h3>{ch.title.ko}</h3>
+        <ul>
+          {ch.subs.map(sub => (
+            <li><a href={withBasePath(getPath(sub.path))}>{sub.title.ko}</a></li>
+          ))}
+        </ul>
+      </div>
+    ))}
+  </div>
+
+</BookLayout>
+
+<style>
+  .toc {
+    margin-top: 2rem;
+  }
+  .toc-chapter {
+    margin-bottom: 1.5rem;
+  }
+  .toc h3 {
+    font-size: 1.3rem;
+    margin-bottom: 0.5rem;
+    color: #111;
+  }
+  .toc ul {
+    list-style: none;
+    padding-left: 1rem;
+  }
+  .toc li {
+    margin-bottom: 0.25rem;
+  }
+  .toc a {
+    text-decoration: none;
+    color: var(--accent-color);
+  }
+  .toc a:hover {
+    text-decoration: underline;
+  }
+</style>

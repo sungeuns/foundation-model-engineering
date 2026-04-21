@@ -1,0 +1,133 @@
+---
+layout: ../../../layouts/BookLayout.astro
+title: "6.2 토큰화의 과학"
+lang: "ko"
+---
+
+# 6.2 토큰화의 과학 (Tokenization Science)
+
+파운데이션 모델이 인간의 언어, 코드 또는 픽셀을 처리하기 전에 가장 먼저 해야 할 일은 연속적인 원시 데이터 스트림을 이산적인 정수(Integer) 시퀀스로 변환하는 것입니다. 이 과정을 **토큰화(Tokenization)**라고 합니다.
+
+토큰화는 종종 단순한 전처리 단계로 치부되지만, 실제로는 모델 아키텍처의 핵심 구성 요소입니다. 잘못 설계된 토크나이저는 모델의 추론 능력을 인위적으로 손상시키고, 컴퓨팅 비용을 증가시키며, 영어가 아닌 언어(한국어 등)에 대해 심각한 편향을 유발할 수 있습니다.
+
+이 섹션에서는 **Byte-level BPE**, **WordPiece**, **SentencePiece** 등 주요 알고리즘을 비교하고 어휘 사전 크기(Vocabulary Size)와 압축 효율성의 엔지니어링 트레이드오프를 분석하며 토큰화의 과학을 탐구합니다.
+
+---
+
+## 1. 서브워드(Subword)의 진화
+
+초기 자연어 처리(NLP) 모델은 공백과 구두점을 기준으로 분할하는 **단어 수준 토큰화(Word-level tokenization)**에 의존했습니다. 이는 어휘 사전의 크기를 기하급수적으로 키웠고, 모델이 사전에 없는 단어(예: "AI-driven")를 만날 때마다 끔찍한 `[UNK]` (Unknown) 토큰 문제가 발생했습니다.
+
+이를 해결하기 위해 등장한 **문자 수준 토큰화(Character-level tokenization)**는 `[UNK]` 문제는 해결했지만, 시퀀스 길이가 극단적으로 길어지는 부작용을 낳았습니다. 시퀀스 길이의 제곱($O(L^2)$)에 비례하여 연산량이 증가하는 트랜스포머 모델에게 이는 치명적이었습니다.
+
+진정한 돌파구는 **서브워드 토큰화(Subword Tokenization)**였습니다. 희귀한 단어는 의미 있는 하위 단어(예: `["토큰", "화"]`)로 쪼개고, 자주 쓰이는 단어는 원형을 유지하는 방식입니다. 이를 통해 어휘 사전 크기와 시퀀스 길이 사이의 완벽한 균형을 찾았습니다.
+
+---
+
+## 2. 핵심 알고리즘
+
+현대 파운데이션 모델 생태계는 크게 세 가지 알고리즘이 지배하고 있습니다.
+
+### 2.1 Byte-Pair Encoding (BPE)
+원래 1994년 Philip Gage가 제안한 데이터 압축 알고리즘이었던 BPE는 2015년 Sennrich 등에 의해 NLP용으로 개조되었습니다 [[1]](#ref-1).
+- **작동 원리**: 개별 문자(Character)로 구성된 기본 어휘 사전에서 시작합니다. 말뭉치에서 모든 기호 쌍의 빈도를 세고, 가장 자주 등장하는 쌍을 새로운 기호로 병합합니다(예: `e`와 `s`를 `es`로 병합).
+- **Byte-level BPE**: GPT-2에서 도입된 이 방식은 유니코드 문자가 아닌 **원시 바이트(Raw Bytes)** 단위로 작동합니다 [[2]](#ref-2). 바이트 값은 256개뿐이므로, 기본 어휘 사전은 매우 작지만 이모지나 복잡한 문자를 포함한 *어떤* 텍스트든 `[UNK]` 토큰 없이 표현할 수 있습니다.
+
+### 2.2 WordPiece
+Google이 개발하여 BERT에 사용한 WordPiece는 BPE와 유사하지만 병합 기준이 다릅니다 [[3]](#ref-3).
+- **작동 원리**: 단순히 가장 *자주* 등장하는 쌍을 병합하는 대신, 학습 데이터의 **우도(Likelihood)**를 최대로 높이는 병합을 선택합니다. 확률 모델을 기반으로 `u`와 `g`를 병합하는 것이 `u`와 `n`을 병합하는 것보다 언어 모델링 관점에서 더 유리한지 평가합니다.
+
+### 2.3 SentencePiece
+Kudo & Richardson(2018)이 개발한 SentencePiece는 LLaMA, T5 등 현대 오픈소스 모델의 표준입니다 [[4]](#ref-4).
+- **작동 원리**: 기존 BPE나 WordPiece는 서브워드를 학습하기 전에 텍스트를 공백 기준으로 나누는 사전 토큰화(Pre-tokenization)가 필요합니다. 하지만 SentencePiece는 공백조차 일반 문자로 취급하여(일반적으로 `_` 기호로 치환) 입력 전체를 하나의 원시 스트림으로 처리합니다. 덕분에 띄어쓰기가 없거나 불규칙한 언어(중국어, 일본어, 한국어 등)에서도 완벽하게 언어 독립적으로 작동합니다.
+
+---
+
+## 3. 어휘 사전 크기의 트레이드오프 & 글리치 토큰 (Glitch Tokens)
+
+어휘 사전의 크기($V$)를 정하는 것은 모델의 성능과 직결되는 중요한 하이퍼파라미터입니다.
+
+*   **작은 어휘 사전 ($V \approx 30k$)**: 임베딩 행렬 크기가 작아져 메모리를 절약할 수 있습니다. 하지만 동일한 텍스트를 표현할 때 더 많은 토큰으로 쪼개져 시퀀스 길이가 길어지므로, Self-Attention 연산 비용($O(L^2)$)이 크게 증가합니다.
+*   **큰 어휘 사전 ($V \approx 100k+$)**: 텍스트를 더 적은 토큰으로 압축하여 어텐션 연산을 줄여줍니다. 하지만 임베딩 레이어가 거대해지며, $V$가 너무 크면 드물게 등장하는 토큰들은 충분한 경사하강법(Gradient Descent) 업데이트를 받지 못해 제대로 학습되지 않습니다.
+
+**💡 비하인드 스토리: "SolidGoldMagikarp"의 저주**
+2023년 초, 연구자들은 GPT 모델에서 기이한 현상을 발견했습니다. 모델에게 "SolidGoldMagikarp"와 같은 특정 무의미한 단어를 반복하라고 지시하면, 모델이 갑자기 횡설수설하거나 프롬프트를 회피하며 완전히 붕괴해버리는 것이었습니다.
+
+이는 **글리치 토큰(Glitch Token)**이라고 불리는 순수한 토큰화 아티팩트(Artifact)였습니다. OpenAI는 Reddit 사용자 이름이나 Twitch 이모티콘이 다수 포함된 방대한 데이터셋으로 토크나이저를 학습시켰습니다. 그래서 "SolidGoldMagikarp"(유명 Reddit 유저명)라는 고유 토큰이 사전에 등록되었습니다. 
+하지만 정작 *실제 언어 모델의 사전 학습(Pre-training) 말뭉치*에는 이 단어가 거의 등장하지 않았습니다. 결과적으로 이 토큰의 임베딩 벡터는 무작위로 초기화된 상태에서 단 한 번도 업데이트되지 않았습니다. 사용자가 이 "학습되지 않은" 토큰을 입력하자, 신경망은 그저 무작위 쓰레기(Garbage) 노이즈를 전달받은 꼴이 되었고 치명적인 환각(Hallucination)을 일으킨 것입니다.
+
+이런 문제를 방지하기 위해 Llama 3(128k `tiktoken` 기반 어휘 사전 사용)와 같은 최신 아키텍처는 토크나이저 학습 데이터와 사전 학습 데이터를 철저히 일치시켜 모든 토큰이 충분한 가중치 업데이트를 받도록 설계합니다.
+
+---
+
+## 4. PyTorch & Transformers 통합 구현
+
+실제로 토큰화가 PyTorch 임베딩으로 어떻게 매핑되는지 살펴보겠습니다. Hugging Face의 `transformers` 라이브러리를 사용하여 토큰 ID를 생성하고 PyTorch `nn.Embedding` 레이어에 통과시켜 보겠습니다.
+
+```python
+import torch
+import torch.nn as nn
+from transformers import AutoTokenizer
+
+# 1. 사전 학습된 토크나이저 불러오기 (예: BERT의 WordPiece)
+tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
+
+text = "Tokenization science is fascinating!"
+
+# 2. 텍스트 토큰화 수행
+# token_ids, attention_masks 등을 반환합니다.
+encoded_input = tokenizer(text, return_tensors="pt")
+token_ids = encoded_input["input_ids"]
+
+print(f"Original Text: {text}")
+print(f"Token IDs: {token_ids}")
+print(f"Decoded Tokens: {tokenizer.convert_ids_to_tokens(token_ids[0])}\n")
+
+# 3. 토큰 ID를 PyTorch 연속 임베딩으로 매핑
+vocab_size = tokenizer.vocab_size
+embedding_dim = 768
+
+# 랜덤 임베딩 레이어 생성 (실제로는 사전 학습된 가중치를 불러옴)
+embedding_layer = nn.Embedding(vocab_size, embedding_dim)
+
+# 토큰 ID를 임베딩 레이어에 통과시킴
+with torch.no_grad():
+    embedded_vectors = embedding_layer(token_ids)
+
+print(f"Input Shape (Batch, Seq_Len): {token_ids.shape}")
+print(f"Output Shape (Batch, Seq_Len, Hidden_Dim): {embedded_vectors.shape}")
+```
+
+---
+
+## 다음 단계 (Next Steps)
+
+지금까지 텍스트가 어떻게 효율적으로 압축되고 수치화된 벡터로 변환되는지 이해했습니다. 이제 우리는 이 거대한 시퀀스 데이터를 수천 개의 GPU에서 처리할 때 모델이 붕괴하지 않도록 유지하는 방법을 알아야 합니다. 다음 장인 **Chapter 6.3 대규모 학습 안정성**에서는 모델이 학습 중 갑자기 발산하는 이유와 z-loss 같은 기술이 어떻게 학습을 구출하는지 깊이 있게 파헤쳐 보겠습니다.
+
+---
+
+## Quizzes
+
+<details>
+<summary>Quiz 1: 임베딩 레이어와 출력 프로젝션 레이어의 가중치가 묶여있지 않은(Untied) 모델의 히든 차원은 $D = 8192$입니다. 개발진은 어휘 사전 크기 $V$를 32,000에서 128,000으로 확장하고자 합니다. 이 레이어들에서 발생하는 총 파라미터 증가량(백만 단위)을 계산하세요. 또한 이 파라미터들을 float16 정밀도(2바이트)로 저장하기 위해 추가적으로 요구되는 VRAM 용량(GB 단위)을 구하세요.</summary>
+*가중치가 묶이지 않은 경우 임베딩과 출력 레이어의 총 파라미터 수는 $2 \times V \times D$입니다. 어휘 사전 크기의 증가분은 $\Delta V = 128,000 - 32,000 = 96,000$입니다. 파라미터 증가량은 $2 \times 96,000 \times 8192 = 1,572,864,000$ 파라미터 $\approx 1,573\text{ 백만}$ 파라미터입니다. float16 정밀도(파라미터당 2바이트)에서 추가적인 VRAM 용량은 $1,572,864,000 \times 2\text{ 바이트} = 3,145,728,000\text{ 바이트} \approx 3.15\text{ GB}$ (또는 $2.93\text{ GiB}$)입니다.*
+</details>
+
+<details>
+<summary>Quiz 2: 병합할 토큰을 결정하는 방식에서 BPE와 WordPiece의 가장 큰 차이점은 무엇입니까?</summary>
+*BPE는 순전히 **빈도(Frequency)** 기반입니다. 말뭉치에서 가장 자주 나타나는 기호 쌍을 병합합니다. 반면 WordPiece는 **우도(Likelihood)** 기반입니다. 개별 기호가 독립적으로 나타날 확률과 비교하여 두 기호가 함께 나타날 확률이 얼마나 더 높은지를 계산하는 언어 모델을 기반으로, 학습 데이터의 우도를 가장 크게 증가시키는 쌍을 병합합니다.*
+</details>
+
+<details>
+<summary>Quiz 3: 한국어, 중국어, 일본어와 같은 언어에서 기존 BPE보다 SentencePiece가 특히 유리한 이유는 무엇입니까?</summary>
+*기존 BPE는 서브워드를 학습하기 전에 띄어쓰기(공백)를 기준으로 단어의 경계를 나누는 사전 토큰화(Pre-tokenization) 과정이 필수적입니다. 하지만 한/중/일 언어는 공백으로 단어를 명확하게 구분하지 않으므로 복잡한 언어 종속적 휴리스틱이 필요합니다. SentencePiece는 공백을 포함한 전체 텍스트를 하나의 원시 문자열 스트림으로 처리하므로, 띄어쓰기 기반의 사전 토큰화 없이 모든 언어에 보편적으로 적용할 수 있습니다.*
+</details>
+
+---
+
+## References
+
+1. <a id="ref-1"></a>Sennrich, R., Haddow, B., & Birch, A. (2015). *Neural machine translation of rare words with subword units*. [arXiv:1508.07909](https://arxiv.org/abs/1508.07909).
+2. <a id="ref-2"></a>Radford, A., et al. (2019). *Language models are unsupervised multitask learners*. OpenAI blog.
+3. <a id="ref-3"></a>Devlin, J., et al. (2018). *BERT: Pre-training of deep bidirectional transformers for language understanding*. [arXiv:1810.04805](https://arxiv.org/abs/1810.04805).
+4. <a id="ref-4"></a>Kudo, T., & Richardson, J. (2018). *SentencePiece: A simple and language independent subword tokenizer and detokenizer for neural text processing*. [arXiv:1808.06226](https://arxiv.org/abs/1808.06226).

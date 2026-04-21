@@ -1,0 +1,216 @@
+---
+layout: ../../../layouts/BookLayout.astro
+title: 20.6 확산 기반 LLM
+lang: ko
+---
+
+# 20.6 확산 기반 LLM
+
+수년 동안 언어 모델링의 표준 접근 방식은 **자기회귀 (Autoregressive, AR)** 방식이었습니다. 이는 왼쪽에서 오른쪽으로 다음 토큰을 하나씩 예측하는 방식입니다. 큰 성공을 거두었지만, 한 번 토큰을 내보내면 시퀀스 전체를 자연스럽게 다시 다듬기 어렵다는 한계도 분명합니다. 마치 지우개가 없는 타자기로 긴 글을 쓰는 것과 비슷합니다.
+
+이에 대한 대안으로 등장한 것이 **확산 기반 LLM (Diffusion-based LLMs)** 입니다. 이미지 생성 분야(Imagen, Stable Diffusion 등)에서 거둔 확산 모델의 압도적인 성공에 영감을 받아, 연구자들은 확산 프로세스를 이산적인 토큰 공간에 성공적으로 적용했습니다. 이는 단계별 생성에서 '반복적 정제(iterative refinement)'로의 패러다임 전환을 의미하며, 마치 조각가가 대리석 블록을 서서히 깎아내어 정교한 조각상을 만드는 것과 유사합니다.
+
+이 절은 11.4의 이미지 확산 모델과 직접 연결됩니다. 11.4에서 다룬 핵심은 “노이즈에서 시작해 여러 denoising step을 거쳐 샘플을 만든다”는 생성 방식이었습니다. 텍스트에서도 같은 직관을 쓰지만, 가장 큰 차이는 데이터 타입입니다. 이미지는 연속적인 픽셀/latent 공간이고, 텍스트는 이산적인 토큰입니다. 그래서 Diffusion LLM의 핵심 난제는 **연속 확산의 장점을 토큰 생성에 어떻게 옮길 것인가** 입니다.
+
+---
+
+## 1. 기본 개념: 확산(Diffusion)이란 무엇인가?
+
+확산이 텍스트에 어떻게 적용되는지 이해하기 전에, 원래 이미지와 같은 연속형 데이터를 위해 설계된 확산 모델의 핵심 메커니즘을 이해해야 합니다.
+
+확산 모델은 두 단계의 프로세스로 작동합니다:
+1. **순방향 프로세스 (노이즈 추가)**: 깨끗한 데이터(예: 이미지)에 $T$ 타임스텝에 걸쳐 점진적으로 가우시안 노이즈를 추가합니다. 결국 데이터는 순수한 무작위 노이즈와 구별할 수 없게 됩니다. 이 과정은 고정되어 있으며 학습이 필요하지 않습니다.
+2. **역방향 프로세스 (노이즈 제거)**: 이 단계에서 신경망이 학습합니다. 모델은 각 단계에서 추가된 노이즈를 예측하고 이를 역전시켜, 순수한 노이즈로부터 깨끗한 데이터를 점진적으로 복원하는 방법을 배웁니다.
+
+수학적으로 역방향 단계는 종종 점수 함수(score function, 데이터 로그 밀도의 기울기)를 예측하거나 노이즈 벡터 $\epsilon$ 자체를 예측하는 것과 관련이 있습니다.
+
+---
+
+## 2. 이산적 데이터의 도전 과제: 텍스트에 적용하기
+
+이러한 연속적인 프레임워크를 텍스트에 적용하는 것은 매우 까다로운 과제입니다. **텍스트는 이산적 (discrete)** 이기 때문입니다. 연속적인 의미에서의 "절반의 단어"나 "노이즈 섞인 텍스트"는 존재할 수 없습니다. 단어는 "고양이"이거나 아니거나 둘 중 하나입니다.
+
+엔지니어들은 이 간극을 메우기 위해 두 가지 주요 솔루션을 개발했습니다:
+
+### A. 연속적 완화 (Embedding Diffusion)
+가장 대중적인 접근 방식은 이산적인 토큰을 연속적인 벡터 공간(임베딩)으로 매핑하고, 그 공간에서 표준 연속 확산을 적용하는 것입니다 [[2]](#ref-2).
+- **순방향**: 텍스트 토큰을 임베딩으로 매핑한 다음, 임베딩에 연속적인 가우시안 노이즈를 추가합니다.
+- **역방향**: 모델이 노이즈가 섞인 임베딩의 노이즈를 제거합니다. 마지막 단계에서 '반올림(rounding)' 연산을 통해 노이즈가 제거된 연속 임베딩을 어휘 사전에서 가장 가까운 이산 토큰으로 매핑합니다.
+
+### B. 이산적/범주형 확산 (Discrete/Categorical Diffusion)
+연속 공간으로 매핑하는 대신, 이 모델들은 토큰의 이산적인 확률 분포에서 직접 작동합니다. 각 단계에서 토큰은 무작위 토큰이나 특수 `[MASK]` 토큰으로 전이될 작은 확률을 가집니다. 역방향 네트워크는 손상된 시퀀스로부터 올바른 토큰을 예측하는 법을 배웁니다.
+
+최근 Diffusion LLM의 주류는 점점 이산/마스크 기반 접근으로 이동하고 있습니다. LLaDA는 forward process에서 토큰을 마스킹하고, reverse process에서 마스크된 토큰을 반복적으로 예측하는 방식으로 대형 언어 확산 모델을 학습했습니다 [[3]](#ref-3). 이 접근은 BERT식 masked language modeling과 비슷해 보이지만, 목표는 단순 이해 모델이 아니라 실제 생성 모델입니다. 즉, 모든 `[MASK]` 로 채워진 응답을 여러 단계에 걸쳐 점점 더 구체적인 문장으로 복원합니다.
+
+---
+
+## 3. 확산 스타일 모델을 언어 영역으로 확장하기
+
+초기의 소규모 확산 언어 모델(Diffusion-LM [[1]](#ref-1) 등)이 개념 증명을 보여주었다면, 이후의 중요한 질문은 이런 확산 스타일 아키텍처가 언어 영역에서 대형 자기회귀 모델과 경쟁할 만큼 확장될 수 있는가 하는 점입니다.
+
+이 패러다임에서 모델은 토큰을 하나씩 생성하지 않습니다. 대신 *전체* 시퀀스 길이를 동시에 생성합니다.
+
+### 왜 이렇게 하는가? 글로벌 플래닝의 이점
+
+1. **제어 가능성 (Controllability)**: AR 모델에게 "5번째 단어가 '파란색'인 시를 써줘"라고 요청하면, 앞의 네 단어를 먼저 생성한 뒤에야 전체 문맥이 맞는지 확인할 수 있습니다. 확산 스타일 모델은 원칙적으로 이런 제약을 먼저 고정한 뒤 시퀀스 전체를 다듬는 접근을 취할 수 있습니다.
+2. **비자기회귀적 속도 향상**: 짧거나 중간 길이의 시퀀스의 경우, 모든 토큰을 병렬로 생성하고 20~50단계 만에 정제하는 것이 1000개의 토큰을 1000단계에 걸쳐 순차적으로 생성하는 것보다 빠를 수 있습니다.
+
+### 2025-2026년의 주요 흐름
+
+확산 기반 LLM은 아직 표준은 아니지만, 2025년 이후 연구 속도가 크게 빨라졌습니다.
+
+- **LLaDA:** 마스크 기반 diffusion language model을 scratch pretraining과 SFT로 확장해, 8B 규모에서 instruction following과 in-context learning 가능성을 보였습니다 [[3]](#ref-3).
+- **LLaDA-V:** diffusion language model에 vision encoder와 connector를 붙여 multimodal instruction tuning을 시도했습니다 [[4]](#ref-4). 이는 확산 기반 생성이 텍스트에만 머물지 않을 수 있음을 보여 줍니다.
+- **Mercury:** Inception Labs는 상용 규모 diffusion LLM 계열을 발표하며 매우 높은 토큰 처리량을 강조했습니다 [[5]](#ref-5). 공개 논문과 독립 재현을 함께 봐야 하지만, diffusion decoding이 serving latency 경쟁에 들어왔다는 점은 중요합니다.
+- **Dream 7B / Dream-Coder:** discrete diffusion LLM이 일반 텍스트뿐 아니라 코드 생성에서도 sketch-first, infill, arbitrary-order generation 같은 유연한 decoding을 보여줄 수 있음을 제시했습니다 [[6]](#ref-6).
+
+이 흐름을 한 문장으로 요약하면, Diffusion LLM은 “AR 모델보다 항상 낫다”가 아니라 **생성 순서를 고정하지 않아도 되는 모델링 자유도** 를 얻는 방향입니다.
+
+아래는 이산 토큰을 임베딩으로 매핑하고, 노이즈를 추가하고, 단순화된 노이즈 제거 단계를 적용하는 연속적 완화 확산의 핵심 개념을 보여주는 현실적인 PyTorch 구현체입니다.
+
+```python
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+class ContinuousDiffusionLM(nn.Module):
+    def __init__(self, vocab_size=30000, embed_dim=768, seq_len=128):
+        super().__init__()
+        self.embed = nn.Embedding(vocab_size, embed_dim)
+        self.seq_len = seq_len
+        
+        # 노이즈를 예측하기 위한 단순한 Transformer 백본
+        self.backbone = nn.TransformerEncoder(
+            nn.TransformerEncoderLayer(d_model=embed_dim, nhead=8, batch_first=True),
+            num_layers=6
+        )
+        
+        # 반올림을 위해 어휘 사전으로 다시 투영
+        self.lm_head = nn.Linear(embed_dim, vocab_size)
+
+    def add_noise(self, embeddings, timestep, total_steps=1000):
+        """
+        순방향 프로세스를 시뮬레이션합니다: 타임스텝에 따라 가우시안 노이즈를 추가합니다.
+        """
+        beta = timestep / total_steps
+        noise = torch.randn_like(embeddings)
+        # x_t = sqrt(1-beta)*x_0 + sqrt(beta)*noise
+        noisy_embeddings = torch.sqrt(1 - beta) * embeddings + torch.sqrt(beta) * noise
+        return noisy_embeddings, noise
+
+    def forward(self, input_ids, timestep):
+        # 1. 이산 토큰을 연속 임베딩으로 매핑
+        x = self.embed(input_ids) # Shape: [Batch, Seq_Len, Embed_Dim]
+        
+        # 2. 노이즈 추가 (순방향 프로세스의 특정 단계 시뮬레이션)
+        noisy_x, true_noise = self.add_noise(x, timestep)
+        
+        # 3. 백본을 사용하여 노이즈 예측
+        # 실제로는 백본에 타임스텝 조건도 부여해야 합니다.
+        predicted_noise = self.backbone(noisy_x)
+        
+        # 4. 실제 노이즈와 예측된 노이즈 간의 손실 계산
+        loss = F.mse_loss(predicted_noise, true_noise)
+        
+        return loss
+
+    def generate(self, batch_size, device='cpu'):
+        """
+        역방향 프로세스 모의 실험: 순수 노이즈에서 시작하여 노이즈를 제거합니다 (단순화됨).
+        """
+        self.eval()
+        with torch.no_grad():
+            # 임베딩 공간에서 순수 무작위 노이즈로 시작
+            x = torch.randn(batch_size, self.seq_len, 768).to(device)
+            
+            # 실제 모델에서는 T부터 0까지 루프를 돌며
+            # 예측된 노이즈를 기반으로 x를 업데이트합니다.
+            # 여기서는 최종 "반올림" 단계를 시뮬레이션합니다.
+            
+            # 반올림: 어휘 사전 로짓으로 투영
+            logits = self.lm_head(x) # Shape: [Batch, Seq_Len, Vocab_Size]
+            predicted_ids = torch.argmax(logits, dim=-1)
+            
+            return predicted_ids
+
+# 사용 예시
+model = ContinuousDiffusionLM()
+dummy_tokens = torch.randint(0, 30000, (2, 128)) # 배치 크기 2, 시퀀스 길이 128
+timestep = torch.tensor(500.0) # 확산 프로세스의 중간 단계
+
+loss = model(dummy_tokens, timestep)
+print(f"Training Loss: {loss.item():.4f}")
+
+generated = model.generate(batch_size=1)
+print(f"Generated token IDs shape: {generated.shape}")
+```
+
+## 4. AR LLM과 Diffusion LLM의 엔지니어링 비교
+
+| 축 | Autoregressive LLM | Diffusion LLM |
+| :--- | :--- | :--- |
+| 생성 순서 | 왼쪽에서 오른쪽으로 고정 | 여러 위치를 동시에 또는 임의 순서로 정제 가능 |
+| 강점 | 긴 자유 생성, streaming, mature serving stack | infilling, global constraint, parallel refinement, quality-speed trade-off |
+| 약점 | 한 번 낸 토큰을 자연스럽게 수정하기 어려움 | 여러 denoising step이 필요하고 serving stack이 아직 덜 성숙함 |
+| 좋은 사용처 | 챗, 장문 생성, agent streaming | 코드 infill, 구조화 출력 수정, 제약 조건 있는 생성, 병렬 후보 정제 |
+| 평가 포인트 | next-token perplexity, pass@k, latency/token | step 수 대비 품질, remasking policy, parallel efficiency, edit/infill accuracy |
+
+제품 관점에서 Diffusion LLM의 가장 흥미로운 지점은 **수정 가능한 생성** 입니다. 예를 들어 JSON schema를 맞춰야 하는 tool call, 코드 중간을 채우는 infill, 특정 slot을 유지한 채 문장을 다시 쓰는 controlled generation에서는 왼쪽에서 오른쪽으로 한 번에 쓰는 모델보다 자연스러운 인터페이스가 될 수 있습니다.
+
+### 남아 있는 어려움
+
+1. **길이 결정:** 전체 시퀀스를 먼저 잡아야 하므로, 응답 길이를 어떻게 예측하고 조정할지가 중요합니다.
+2. **마스크 스케줄:** 어떤 토큰을 언제 다시 마스킹하고 정제할지에 따라 품질과 속도가 크게 달라집니다.
+3. **Streaming UX:** AR 모델은 토큰을 즉시 흘려보내기 쉽지만, diffusion 모델은 전체 응답을 여러 번 고치므로 streaming 인터페이스가 다릅니다.
+4. **Tool use:** agent가 중간에 tool 결과를 받아 다음 토큰을 이어 쓰는 AR 패턴과 diffusion refinement를 어떻게 결합할지는 아직 열린 문제입니다.
+5. **평가:** 같은 최종 답이라도 step 수, wall-clock latency, 병렬성, 수정 가능성을 함께 봐야 합니다.
+
+---
+
+## Summary & Next Steps
+
+확산 기반 언어 모델링은 왼쪽에서 오른쪽으로 한 토큰씩 생성하는 방식의 중요한 대안입니다. 11.4의 이미지 확산이 “한 장의 이미지를 여러 번 다듬는 생성”을 보여 줬다면, Diffusion LLM은 “문장이나 코드 전체를 여러 번 다듬는 생성”을 실험합니다. 특히 복잡한 제약 조건, infilling, 구조화 출력, 반복적 정제가 중요한 작업에서 매력적입니다. 다만 아직은 자기회귀 LLM을 대체한 표준이라기보다, 가능성과 한계를 함께 탐색 중인 빠르게 떠오르는 방향으로 보는 편이 정확합니다.
+
+다음 섹션에서는 이러한 고급 모델링 기법들이 최종 목표인 AGI로의 길과 포괄적인 **World Models** 생성에 어떻게 기여하는지 살펴보겠습니다.
+
+---
+
+## Quizzes
+
+<details>
+<summary>Quiz 1: 텍스트 생성을 위한 자기회귀(AR) 방식과 비교했을 때 연속적 완화(Embedding Diffusion)의 가장 큰 장점은 무엇인가요?</summary>
+*연속적 완화 방식은 글로벌 플래닝을 가능하게 합니다. 모델이 전체 시퀀스를 동시에 처리하고 반복적으로 정제하기 때문에, 왼쪽에서 오른쪽으로 진행되는 자기회귀 모델에서는 처리하기 어려운 복잡한 글로벌 제약 조건과 양방향 컨텍스트를 자연스럽게 다룰 수 있습니다.*
+</details>
+
+<details>
+<summary>Quiz 2: 연속적 완화 확산에서 '반올림(rounding)' 연산이란 무엇이며 왜 필요한가요?</summary>
+*반올림 연산은 노이즈가 제거된 연속적인 임베딩을 어휘 사전에서 가장 가까운 이산 토큰으로 매핑하는 과정입니다. 확산 프로세스는 연속적인 벡터 공간에서 작동하지만, 최종 텍스트 출력은 이산적인 단어나 토큰으로 구성되어야 하므로 이 연산이 필수적입니다.*
+</details>
+
+<details>
+<summary>Quiz 3: 긴 시퀀스에 대해 확산 기반 LLM이 자기회귀 모델보다 추론 속도가 느린 이유는 무엇인가요?</summary>
+*자기회귀 모델은 한 번의 순방향 패스당 하나의 토큰을 생성합니다. 반면 확산 모델은 전체 시퀀스 길이를 한 번에 다루지만, 노이즈로부터 일관된 텍스트를 정제하기 위해 여러 번의 반복적인 순방향 패스(노이즈 제거 단계, 예: 20~50단계)를 거쳐야 하므로 전체 연산량이 더 많아지기 때문입니다.*
+</details>
+
+<details>
+<summary>Quiz 4: 텍스트를 위한 이산적/범주형 확산(Discrete/Categorical Diffusion)에서 순방향 프로세스는 범주형 전이 행렬(Categorical transition matrix)을 사용하여 모델링됩니다. 어휘 사전 크기가 $V$인 균일 확산 스케줄에 대한 전이 행렬 $Q_t$를 수학적으로 공식화하고, 원래 토큰 $x_0$가 주어졌을 때 토큰 $x_t$의 확률을 도출하세요.</summary>
+*범주형 확산에서 $x_{t-1}$에서 $x_t$로의 전이는 행렬 $Q_t \in \mathbb{R}^{V \times V}$에 의해 정의되며, 여기서 $Q_t[i, j] = q(x_t = j | x_{t-1} = i)$입니다. 토큰이 $1 - \beta_t$의 확률로 변경되지 않고 유지되고, $\beta_t$의 확률로 어휘 사전의 임의의 토큰으로 균일하게 전이되는 균일 확산 스케줄의 경우 전이 행렬은 다음과 같이 공식화됩니다:*
+$$Q_t = (1 - \beta_t) I + \beta_t \frac{1}{V} \mathbf{1}\mathbf{1}^T$$
+*다단계 전이 확률 $q(x_t | x_0)$를 찾기 위해 행렬을 순차적으로 곱할 수 있습니다. 누적 파라미터 $\bar{\alpha}_t = \prod_{s=1}^t (1 - \beta_s)$를 사용하면 누적 전이 행렬 $\bar{Q}_t$는 다음과 같이 됩니다:*
+$$\bar{Q}_t = \bar{\alpha}_t I + (1 - \bar{\alpha}_t) \frac{1}{V} \mathbf{1}\mathbf{1}^T$$
+*따라서 $x_0$로부터 직접적인 전이 확률은 다음과 같습니다:*
+$$q(x_t | x_0) = \bar{\alpha}_t x_0 + (1 - \bar{\alpha}_t) \frac{1}{V} \mathbf{1}$$
+*여기서 $x_0$는 원-핫(one-hot) 벡터로 표현됩니다.*
+</details>
+
+
+---
+
+## References
+
+1. <a id="ref-1"></a>Li, X., et al. (2022). *Diffusion-LM Improves Controllable Text Generation*. [arXiv:2205.14217](https://arxiv.org/abs/2205.14217).
+2. <a id="ref-2"></a>Gulrajani, I., & Tatsuno, K. (2023). *Continuous Diffusion for Categorical Data*. [arXiv:2306.06546](https://arxiv.org/abs/2306.06546).
+3. <a id="ref-3"></a>Nie, S., et al. (2025). *Large Language Diffusion Models.* [arXiv:2502.09992](https://arxiv.org/abs/2502.09992), [GitHub](https://github.com/ML-GSAI/LLaDA).
+4. <a id="ref-4"></a>You, Z., et al. (2025). *LLaDA-V: Large Language Diffusion Models with Visual Instruction Tuning.* [arXiv:2505.16933](https://arxiv.org/abs/2505.16933).
+5. <a id="ref-5"></a>Inception Labs. (2025). *Introducing Mercury, the World's First Commercial-Scale Diffusion Large Language Model.* [Blog](https://www.inceptionlabs.ai/introducing-mercury).
+6. <a id="ref-6"></a>Ye, J., et al. (2025). *Dream 7B: Diffusion Large Language Models.* [arXiv:2508.15487](https://arxiv.org/abs/2508.15487).

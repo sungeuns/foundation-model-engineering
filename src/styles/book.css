@@ -1,0 +1,338 @@
+:root {
+  --bg-color: #fcfbf9;
+  --text-color: #2c3e50;
+  --accent-color: #8e44ad;
+  --secondary-color: #7f8c8d;
+  --border-color: #bdc3c7;
+  --sidebar-width: 350px;
+}
+body {
+  font-family: 'Pretendard', 'Noto Sans CJK', 'Noto Sans KR', 'Noto Sans JP', 'Noto Sans SC', sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  line-height: 1.8;
+  margin: 0;
+  padding: 0;
+  display: flex;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Sidebar Styles */
+.sidebar {
+  width: var(--sidebar-width);
+  height: 100vh;
+  background-color: #f5f3f0;
+  border-right: 1px solid var(--border-color);
+  position: fixed;
+  top: 0;
+  left: 0;
+  overflow-y: auto;
+  padding: 2rem 1rem;
+  box-sizing: border-box;
+  transition: transform 0.3s ease;
+}
+
+.sidebar h2 {
+  font-size: 1.4rem;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  color: #111;
+}
+
+.sidebar ul {
+  list-style: none;
+  padding-left: 1rem;
+  margin: 0;
+}
+
+.sidebar li {
+  margin-bottom: 0.5rem;
+}
+
+.sidebar a {
+  text-decoration: none;
+  color: var(--text-color);
+  font-size: 1.1rem;
+  display: block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+.sidebar a:hover {
+  background-color: #eae6e1;
+  color: var(--accent-color);
+}
+
+.sidebar a.active {
+  background-color: #eae6e1;
+  color: var(--accent-color);
+  font-weight: 700;
+}
+
+/* Main Content Styles */
+.content-wrapper {
+  margin-left: var(--sidebar-width);
+  flex: 1;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 2rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 1rem;
+  margin-bottom: 2rem;
+}
+
+header h1 {
+  font-size: 2rem;
+  margin: 0;
+  font-weight: 700;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.github-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.45rem;
+  height: 2.45rem;
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.github-link svg {
+  width: 1.35rem;
+  height: 1.35rem;
+  fill: currentColor;
+}
+
+.github-link:hover,
+.github-link:focus-visible {
+  color: var(--accent-color);
+  border-color: var(--accent-color);
+  background-color: #f8fafc;
+  outline: none;
+}
+
+/* Dropdown Styles */
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dropbtn {
+  background-color: transparent;
+  color: var(--text-color);
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.dropdown-content {
+  display: none;
+  position: absolute;
+  right: 0;
+  background-color: white;
+  min-width: 150px;
+  box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.1);
+  z-index: 10;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+}
+
+.dropdown-content a {
+  color: var(--text-color);
+  padding: 10px 16px;
+  text-decoration: none;
+  display: block;
+  font-size: 0.95rem;
+  text-align: left;
+}
+
+.dropdown-content a:hover {
+  background-color: #f1f5f9;
+  color: var(--accent-color);
+}
+
+.dropdown:hover .dropdown-content {
+  display: block;
+}
+
+.dropdown.open .dropdown-content {
+  display: block;
+}
+
+.dropdown:hover .dropbtn {
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+}
+
+.dropdown.open .dropbtn,
+.dropbtn:focus-visible {
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+  outline: none;
+}
+
+main {
+  font-size: 1.2rem;
+  font-weight: 300;
+}
+
+/* Code Block Styles */
+pre, .astro-code {
+  padding: 1.5rem !important;
+  border-radius: 8px;
+  background-color: #1e293b !important;
+  overflow-x: auto;
+  margin: 1.5rem 0;
+}
+
+code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.05rem;
+  padding: 0.2rem 0.4rem;
+  background-color: #eaebed;
+  border-radius: 4px;
+  color: #e83e8c;
+}
+
+pre code, .astro-code code {
+  padding: 0 !important;
+  background-color: transparent !important;
+  font-size: 1rem;
+}
+
+/* Table Styles */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  font-size: 1rem;
+  background-color: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  border: 1px solid var(--border-color);
+}
+
+th, td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+  border-right: 1px solid #e2e8f0;
+}
+
+th:last-child, td:last-child {
+  border-right: none;
+}
+
+th {
+  background-color: #f8fafc;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+tr:last-child td {
+  border-bottom: none;
+}
+
+tr:nth-child(even) {
+  background-color: #f8fafc;
+}
+
+tr:hover {
+  background-color: #f1f5f9;
+}
+
+h1, h2, h3 {
+  font-weight: 700;
+  color: #111;
+}
+
+.navigation {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 3rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.navigation a {
+  text-decoration: none;
+  color: var(--accent-color);
+  font-weight: 500;
+}
+
+/* Mobile Toggle */
+.menu-toggle {
+  display: none;
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  z-index: 1000;
+  background: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    transform: translateX(-100%);
+    z-index: 999;
+  }
+  .sidebar.open {
+    transform: translateX(0);
+  }
+  .content-wrapper {
+    margin-left: 0;
+  }
+  .menu-toggle {
+    display: block;
+  }
+  header {
+    padding-left: 3rem; /* Make space for toggle */
+    gap: 1rem;
+  }
+  header h1 {
+    font-size: 1.35rem;
+  }
+}
+
+/* Fix for KaTeX duplicate rendering (hide MathML) */
+.katex-mathml {
+  display: none !important;
+}

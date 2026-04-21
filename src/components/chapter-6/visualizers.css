@@ -1,0 +1,431 @@
+.visualizer-container {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin: 2rem 0;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+.slider-container {
+  margin-bottom: 1.5rem;
+}
+.slider-container label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #334155;
+}
+.slider-container input[type="range"] {
+  width: 100%;
+  cursor: pointer;
+}
+.collapse-svg {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  display: block;
+  margin: 0 auto;
+}
+.description {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: #e0e7ff;
+  color: #3730a3;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  text-align: center;
+  font-weight: 500;
+}
+
+/* DataPipelineEvolution Styles */
+.pipeline-container {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 2rem;
+  margin: 2rem 0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+.pipeline-header h3 {
+  margin-top: 0;
+  color: #0f172a;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.pipeline-header p {
+  color: #64748b;
+  font-size: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.pipeline-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 0.5rem;
+}
+
+.pipeline-tab {
+  padding: 0.5rem 1rem;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #64748b;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.pipeline-tab:hover {
+  color: #0f172a;
+}
+
+.pipeline-tab.active {
+  color: #2563eb;
+}
+
+.pipeline-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -0.5rem;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: #2563eb;
+}
+
+.pipeline-content {
+  background: #ffffff;
+  padding: 1.5rem;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.pipeline-panel {
+  display: none;
+}
+
+.pipeline-panel.active {
+  display: block;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.pipeline-panel h4 {
+  margin-top: 0;
+  color: #0f172a;
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+
+.pipeline-desc {
+  color: #334155;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin-bottom: 1rem;
+}
+
+.pipeline-features {
+  list-style: none;
+  padding-left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.pipeline-features li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #475569;
+  font-size: 0.9rem;
+}
+
+.feature-icon {
+  color: #10b981;
+  font-weight: bold;
+}
+
+/* LossSpikeSimulator Styles */
+.loss-simulator-container {
+  background: #1e1e2e;
+  border-radius: 12px;
+  padding: 1.5rem;
+  color: #cdd6f4;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  margin: 2rem 0;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.simulator-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.simulator-header h4 {
+  margin: 0;
+  color: #f8fafc;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.simulator-header .controls {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.simulator-header button {
+  background: #313244;
+  color: #cdd6f4;
+  border: 1px solid #45475a;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.simulator-header button:hover:not(:disabled) {
+  background: #45475a;
+  color: #f8fafc;
+}
+
+.simulator-header button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.chart-container {
+  background: #181825;
+  border: 1px solid #313244;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  height: 250px;
+}
+
+.loss-chart {
+  width: 100%;
+  height: 100%;
+}
+
+.legend {
+  display: flex;
+  gap: 1.5rem;
+  font-size: 0.85rem;
+  color: #a6adc8;
+  margin-bottom: 1rem;
+  justify-content: center;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.color-box {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.status {
+  text-align: center;
+  font-size: 0.85rem;
+  color: #6c7086;
+  border-top: 1px solid #313244;
+  padding-top: 0.75rem;
+}
+
+/* ClusterTopologyExplorer Styles */
+.topology-explorer {
+  background: #1e1e2e;
+  border-radius: 12px;
+  padding: 1.5rem;
+  color: #cdd6f4;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  margin: 2rem 0;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.topology-explorer .tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid #313244;
+  padding-bottom: 0.5rem;
+}
+
+.tab-btn {
+  padding: 0.5rem 1rem;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #6c7086;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.tab-btn:hover {
+  color: #cdd6f4;
+}
+
+.tab-btn.active {
+  color: #89b4fa;
+}
+
+.tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: -0.5rem;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: #89b4fa;
+}
+
+.topology-desc {
+  color: #a6adc8;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin-bottom: 1.5rem;
+  min-height: 3rem;
+}
+
+.visualization-area {
+  background: #181825;
+  border: 1px solid #313244;
+  border-radius: 8px;
+  padding: 1.5rem;
+  min-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.node {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.gpu-node {
+  background: #313244;
+  color: #cdd6f4;
+  border: 1px solid #45475a;
+}
+
+.switch-node {
+  background: #45475a;
+  color: #f8fafc;
+  border: 1px solid #585b70;
+}
+
+.tpu-node {
+  background: #313244;
+  color: #cdd6f4;
+  border: 1px solid #45475a;
+  position: relative;
+}
+
+/* NVLink Layout */
+.nvlink-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+}
+
+.nvlink-switch {
+  background: #89b4fa;
+  color: #11111b;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 700;
+}
+
+.gpu-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+}
+
+/* Fat-Tree Layout */
+.fattree-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.layer {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  width: 100%;
+}
+
+.compute-layer {
+  gap: 0.5rem;
+}
+
+.mini {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+}
+
+/* TPU Layout */
+.tpu-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+}
+
+.ocs-switch {
+  background: #a6e3a1;
+  color: #11111b;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 700;
+}
+
+.tpu-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.fail-badge {
+  position: absolute;
+  top: -0.5rem;
+  right: -0.5rem;
+  background: #f38ba8;
+  color: #11111b;
+  font-size: 0.65rem;
+  padding: 0.1rem 0.3rem;
+  border-radius: 4px;
+  font-weight: 700;
+}

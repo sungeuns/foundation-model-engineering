@@ -1,0 +1,80 @@
+.kv-calculator-container {
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin: 2rem 0;
+  font-family: system-ui, -apple-system, sans-serif;
+  color: #333;
+}
+
+.kv-title {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+  font-size: 1.25rem;
+  color: #2c3e50;
+}
+
+.kv-desc {
+  font-size: 0.9rem;
+  color: #6c757d;
+  margin-bottom: 1.5rem;
+}
+
+.kv-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.kv-input-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.kv-input-group label {
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+
+.kv-input-group input[type="range"] {
+  width: 100%;
+  accent-color: #3498db;
+}
+
+.kv-input-group select {
+  padding: 0.4rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  background-color: #fff;
+  font-size: 0.9rem;
+}
+
+.kv-result {
+  background-color: #e3f2fd;
+  border-left: 4px solid #3498db;
+  padding: 1rem 1.5rem;
+  border-radius: 0 4px 4px 0;
+}
+
+.kv-result h4 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1rem;
+  color: #1976d2;
+}
+
+.kv-size-display {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #1565c0;
+  margin-bottom: 0.5rem;
+}
+
+.kv-formula-text {
+  font-size: 0.85rem;
+  color: #555;
+  margin: 0;
+  font-family: monospace;
+}

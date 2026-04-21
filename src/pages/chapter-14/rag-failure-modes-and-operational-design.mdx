@@ -1,0 +1,150 @@
+---
+layout: ../../layouts/BookLayout.astro
+title: 14.6 RAG Failure Modes and Operational Design
+lang: en
+---
+
+# 14.6 RAG Failure Modes and Operational Design
+
+A common production symptom is a complaint such as: "The bot cited the handbook and still answered the pricing question incorrectly." That symptom is useful because it reveals a key truth: RAG failures are rarely pure retrieval failures. They are pipeline failures.
+
+From an operational perspective, RAG is largely an error-handling problem. Chunking, routing, ranking, freshness checks, and generation constraints all fail in different ways, and to users those failures often look identical: a confident answer with weak grounding. The job of the system designer is to make those hidden failure modes observable and safe.
+
+---
+
+## 1. A Failure Taxonomy
+
+Most production failures fall into one of four categories:
+
+1. **Nothing useful was retrieved.**
+2. **Something useful was retrieved, but buried.**
+3. **The retrieved content was stale, contradictory, or low quality.**
+4. **The generator ignored or distorted the evidence.**
+
+These failures look similar to users. They all show up as a confident but ungrounded answer.
+
+### Map Failures to Owners
+
+In practice, a useful taxonomy also tells the team where to investigate:
+
+- **Recall failures** usually point to indexing, chunking, or query rewriting.
+- **Ranking failures** usually point to candidate budget, fusion strategy, or re-rankers.
+- **Freshness failures** usually point to ingestion and document lifecycle policy.
+- **Grounding failures** usually point to answer prompts, citation rules, or generator behavior.
+
+---
+
+## 2. Routing and Retrieval Need Confidence Thresholds
+
+A common anti-pattern is forcing every query through the same retrieval stack. Some queries are better answered from parametric knowledge, some require structured data, and some need clarification before retrieval even starts.
+
+### Recommended Routing Policy
+
+- If routing confidence is low, ask a clarifying question.
+- If retrieval returns weak evidence, do not pretend the answer is grounded.
+- If a query targets fast-changing information, prefer fresh sources or decline to answer from stale indexes.
+
+For retrieval itself, production teams usually monitor:
+
+- **Recall@k**
+- **nDCG@k**
+- **grounded answer rate**
+- **citation coverage**
+
+Recent systems such as Self-RAG and CRAG add explicit critique or corrective-retrieval loops [[3]](#ref-3)[[4]](#ref-4). These are useful patterns, but they do not remove the need for explicit thresholds, latency budgets, and abstention rules. If the system cannot tell whether it has enough evidence, it should not pretend that it does.
+
+---
+
+## 3. Timeouts, Stale Data, and Degraded Mode
+
+RAG pipelines often include a retriever, a re-ranker, and sometimes a query-rewrite or critique step. Each stage adds latency and another point of failure.
+
+### A Practical Degraded Mode
+
+1. Run the first-stage retriever.
+2. If the re-ranker times out, continue with a smaller candidate set rather than failing hard.
+3. If the evidence is stale, surface that explicitly in the answer.
+4. If evidence quality is below threshold, fall back to:
+   - clarification
+   - a partial answer
+   - or an explicit “I don’t have reliable grounding for this”
+
+This is especially important in enterprise settings where stale internal documents are often more dangerous than missing documents.
+
+### What to Log During Incidents
+
+When a RAG answer goes wrong, the most helpful logs are usually:
+
+- top-k retrieval scores and document IDs
+- document age or freshness metadata
+- re-ranker timeout or fallback events
+- citation coverage and citation correctness checks
+- whether the model abstained, hedged, or overclaimed
+
+---
+
+## 4. Generation Should Be Evidence-Aware
+
+Once documents are retrieved, the generation model still needs constraints. A strong generator can override weak evidence with fluent prior knowledge.
+
+### Useful Guardrails
+
+- Ask the model to cite the passages it used.
+- Separate retrieval from answer generation in the logs.
+- Track answer quality when citations are present versus absent.
+- Penalize answers that introduce unsupported claims.
+
+The goal is not just retrieval quality. It is **retrieval-conditioned generation quality**.
+
+---
+
+## 5. Evaluate the Pipeline, Not Just the Final Answer
+
+A final-answer accuracy number is useful, but it hides where the system is actually failing. Strong RAG teams evaluate intermediate stages separately:
+
+- query routing accuracy
+- retrieval recall on labeled evidence
+- re-ranking quality
+- citation correctness
+- abstention behavior when evidence is weak
+
+This matters because different fixes live in different layers. A better embedding model will not fix stale documents. A stronger generator will not fix missing citations. An orchestration bug can look like a model bug unless the trace is inspectable end to end.
+
+---
+
+## 6. Practical Takeaway
+
+RAG is not a single model feature. It is a systems pipeline with several quiet failure points. Operational design means accepting that retrieval will sometimes be incomplete, ranking will sometimes be late, and documents will sometimes be wrong. The production system should react accordingly instead of pretending that every answer is equally grounded.
+
+---
+
+## Quizzes
+
+<details>
+<summary>Quiz 1: Why can a RAG system still answer incorrectly even when retrieval succeeds?</summary>
+*Because retrieved evidence can be buried, stale, contradictory, or ignored by the generator. RAG quality depends on the whole pipeline, not only on whether some documents were returned.*
+</details>
+
+<details>
+<summary>Quiz 2: Why is routing confidence important in production RAG systems?</summary>
+*Because not every query should go through the same retrieval path. Low-confidence routing is a signal to clarify, switch data sources, or avoid presenting a falsely grounded answer.*
+</details>
+
+<details>
+<summary>Quiz 3: What is the purpose of degraded mode in a RAG pipeline?</summary>
+*It allows the system to continue operating safely when one stage fails or times out. For example, it may continue without a re-ranker, admit uncertainty, or ask for clarification instead of producing a brittle answer.*
+</details>
+
+<details>
+<summary>Quiz 4: Why should generation be evaluated separately from retrieval in RAG?</summary>
+*Because retrieval may have found good evidence while the generator still ignored or distorted it. Separating the two stages helps locate whether the failure is in search, ranking, or answer synthesis.*
+</details>
+
+---
+
+## References
+
+1. <a id="ref-1"></a>Lewis, P., et al. (2020). *Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks.* [arXiv:2005.11401](https://arxiv.org/abs/2005.11401).
+2. <a id="ref-2"></a>Liu, N. F., et al. (2023). *Lost in the Middle: How Language Models Use Long Contexts.* [arXiv:2307.03172](https://arxiv.org/abs/2307.03172).
+3. <a id="ref-3"></a>Asai, A., et al. (2024). *Self-RAG: Learning to Retrieve, Generate, and Critique through Self-Reflection.* [arXiv:2310.11511](https://arxiv.org/abs/2310.11511).
+4. <a id="ref-4"></a>Yan, S., et al. (2024). *Corrective Retrieval Augmented Generation.* [arXiv:2401.15884](https://arxiv.org/abs/2401.15884).

@@ -1,0 +1,221 @@
+---
+layout: ../../../layouts/BookLayout.astro
+title: 20.2 Mamba와 S6
+lang: ko
+---
+
+import SSMDualityVisualizer from '../../../components/chapter-20/SSMDualityVisualizer.tsx';
+
+# 20.2 Mamba와 S6
+
+상태 공간 모델(State Space Models, SSM)의 개념은 선형 시간(Linear-time) 시퀀스 모델링을 위한 이론적 기반을 제공했지만, 이를 트랜스포머와 경쟁할 수 있는 수준으로 끌어올리기 위해서는 알고리즘과 하드웨어의 공동 설계(Co-design)가 필요했습니다. Mamba 계열은 하나의 완성된 종착점이라기보다, 빠르게 진화해 온 아이디어들의 연속으로 읽는 편이 더 적절합니다.
+
+이 섹션에서는 Mamba-1의 **Selective Scan / S6** 에서 시작해, Mamba-2의 **Structured State Space Duality (SSD)** 를 거쳐, 2026년 ICLR에 등장한 **Mamba-3 (MIMO)** 논의까지의 흐름을 살펴봅니다. 먼저 용어부터 정리하면, S6는 “Mamba-1과 별개의 모델”이라기보다 Mamba-1 논문에서 selective SSM 계층을 설명할 때 쓰는 이름입니다. 실무에서는 보통 Mamba block, selective scan, S6가 같은 계열의 구현 세부를 가리키는 말로 섞여 쓰입니다.
+
+---
+
+## 1. S6 기반 (Mamba-1)
+
+초기 Mamba 아키텍처는 **S6 (Selective Structured State Space Sequence)** 모델을 도입했습니다 [[1]](#ref-1). 가장 핵심적인 혁신은 상태 전이(State transition) 파라미터($B$, $C$, $\Delta$)를 입력 $x_t$ 의 함수로 만들어, 모델이 정보를 선택적으로 기억하거나 잊을 수 있도록 한 것입니다.
+
+수학적으로 S6의 핵심은 대각 상태 전이 행렬(Diagonal state transition matrix) $A \in \mathbb{R}^{D \times N}$ 에 의존합니다. 여기서 $D$ 는 모델 차원(Model dimension)이고 $N$ 은 상태 크기(State size)입니다. $A$ 가 대각 행렬이기 때문에 은닉 상태(Hidden state) $h_t$ 는 각 차원별로 독립적으로 업데이트됩니다.
+
+하지만 S6는 근본적인 하드웨어적 한계를 안고 있었습니다. 순환(Recurrence) 구조가 입력에 의존하게 되면서, 이전의 LTI(Linear Time-Invariant) 모델들이 사용하던 빠른 푸리에 변환(Fast Fourier Transforms)을 더 이상 사용할 수 없게 되었습니다. 대신 Mamba-1은 CUDA로 작성된 맞춤형 **병렬 연관 스캔 (Parallel associative scan)** 을 활용했습니다.
+
+이 Prefix-sum 알고리즘은 상태 $h$ 를 GPU의 초고속 SRAM에 유지하도록 고도로 최적화되었지만, 궁극적으로 연산량(Compute)이 아닌 **메모리 대역폭(Memory bandwidth)** 에 병목 현상이 발생했습니다. 연관 스캔은 밀집 행렬 곱셈(Dense matrix multiplications, MatMuls)으로 표현될 수 없었기 때문에, Mamba-1은 최신 GPU의 Tensor Core가 제공하는 엄청난 FLOPs를 온전히 활용할 수 없었습니다.
+
+---
+
+## 2. 구조화된 상태 공간 이중성 (Mamba-2)
+
+2024년 중반, 연구진은 **Structured State Space Duality (SSD)** 라는 이론적 프레임워크를 바탕으로 구축된 **Mamba-2** 를 발표했습니다 [[2]](#ref-2). SSD는 심오한 수학적 통찰을 제공했습니다. 바로 *선택적 SSM (Selective SSMs)과 선형 어텐션 (Linear Attention)이 본질적으로 같은 동전의 양면* 이라는 점입니다.
+
+이 간극을 메우기 위해 Mamba-2는 의도적인 아키텍처적 타협을 단행했습니다. 대각 행렬 $A$ 를 **스칼라 곱 단위 행렬 (Scalar-times-identity)** 구조($A = a \cdot I$)로 제한한 것입니다. 대각선의 모든 요소를 동일하게 강제함으로써, 상태 업데이트는 상태 차원 $N$ 전체에 걸쳐 균일해집니다.
+
+표현력(Expressivity)을 약간 희생한 이 변화는 엄청난 연산적 이점을 가져왔습니다. 스칼라 $A$ 를 사용하면, 순차적인 SSM 업데이트를 특수한 어텐션 메커니즘으로 완벽하게 재작성할 수 있습니다. 구체적으로, 이는 시퀀스에 적용된 선형 어텐션과 동일하지만, 토큰 $i$ 와 토큰 $j$ 사이의 할인 계수(Discount factor)가 상태 전이의 누적 곱인 **반분리 인과적 마스크 (Semi-separable causal mask)** $\mathbf{L}$ 이 곱해진 형태가 됩니다.
+
+$$ \mathbf{L}_{ij} = \prod_{k=j+1}^i a_k $$
+
+### Tensor Core를 여는 전환점
+SSD가 순환(Recurrence) 구조를 어텐션 행렬로 재구성했기 때문에, 이제 연산을 **청크 단위 행렬 곱셈 (Chunkwise matrix multiplication)** 으로 실행할 수 있게 되었습니다. 시퀀스는 블록(예: 64 토큰 청크)으로 나뉩니다.
+1. **Intra-chunk (청크 내부):** 청크 *내부* 의 토큰 상호 작용은 표준 MatMul (선형 어텐션)을 사용하여 계산됩니다.
+2. **Inter-chunk (청크 간):** 청크의 최종 은닉 상태는 다음 청크로 순차적으로 전달됩니다.
+
+대역폭에 제한을 받던 연관 스캔에서 연산 중심의 MatMuls로 전환됨에 따라, Mamba-2는 Tensor Core를 100% 포화 상태로 활용할 수 있게 되었습니다. 학습 속도는 2~8배 증가했고, 상태 크기 $N$ 을 16에서 256으로 안전하게 확장하여 연관 기억(Associative recall) 용량을 대폭 향상시켰습니다.
+
+
+<SSMDualityVisualizer client:load />
+
+---
+
+## 3. 이중성 구현하기
+
+Mamba-2가 어떻게 순환 루프를 행렬 곱셈으로 변환하는지 정확히 이해하기 위해, 아래의 교육용 PyTorch 구현을 살펴보겠습니다. 이 코드는 SSD 프레임워크에서 파생된 청크 단위의 블록 내부 어텐션(Intra-block attention) 메커니즘을 시연합니다.
+
+```python
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+class SimplifiedSSD(nn.Module):
+    """
+    Structured State Space Duality (Mamba-2)의 교육용 구현체입니다.
+    청크 단위 행렬 곱셈(Chunkwise MatMul) 접근 방식을 시연합니다.
+    """
+    def __init__(self, d_model: int, d_state: int, chunk_size: int = 64):
+        super().__init__()
+        self.d_model = d_model
+        self.d_state = d_state
+        self.chunk_size = chunk_size
+        
+        # Mamba-2는 A를 스칼라 곱 단위 행렬 구조로 제한합니다.
+        # 채널당 하나의 스칼라를 학습합니다.
+        self.A_log = nn.Parameter(torch.randn(d_model))
+        
+        # Mamba-2에서는 X, B, C, dt가 병렬로 투영(Projection)됩니다.
+        self.in_proj = nn.Linear(d_model, d_model * 2 + d_state * 2)
+        self.out_proj = nn.Linear(d_model, d_model)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        B_batch, L, D = x.shape
+        
+        # 시퀀스 길이를 chunk_size의 배수가 되도록 패딩합니다.
+        pad_len = (self.chunk_size - (L % self.chunk_size)) % self.chunk_size
+        if pad_len > 0:
+            x = F.pad(x, (0, 0, 0, pad_len))
+        
+        L_padded = x.shape[1]
+        num_chunks = L_padded // self.chunk_size
+        
+        # 1. 병렬 투영 (Parallel Projection)
+        proj = self.in_proj(x)
+        x_proj, dt_raw, B_mat, C_mat = torch.split(
+            proj, 
+            [self.d_model, self.d_model, self.d_state, self.d_state], 
+            dim=-1
+        )
+        dt = F.softplus(dt_raw)
+        
+        # 2. A 이산화 (Scalar-times-identity)
+        A = -torch.exp(self.A_log) # (D,)
+        dA = torch.exp(dt * A)     # (B, L, D)
+        
+        # 청크 단위로 형태 변환: (Batch, Chunks, ChunkSize, Dim)
+        x_chunks = x_proj.view(B_batch, num_chunks, self.chunk_size, D)
+        B_chunks = B_mat.view(B_batch, num_chunks, self.chunk_size, self.d_state)
+        C_chunks = C_mat.view(B_batch, num_chunks, self.chunk_size, self.d_state)
+        dA_chunks = dA.view(B_batch, num_chunks, self.chunk_size, D)
+        
+        # 3. 청크에 대한 반분리 거리 마스크(Semi-separable distance mask) 계산
+        # L_{i,j} = \prod_{k=j+1}^i dA_k
+        # [참고]: 프로덕션 환경에서는 이 O(C^2) 연산이 Triton에서 네이티브로 융합(Fused)됩니다.
+        mask = torch.ones(B_batch, num_chunks, self.chunk_size, self.chunk_size, D, device=x.device)
+        for i in range(self.chunk_size):
+            for j in range(i):
+                mask[:, :, i, j, :] = torch.prod(dA_chunks[:, :, j+1:i+1, :], dim=2)
+                
+        # 인과적 마스킹 적용 (하삼각 행렬)
+        causal_mask = torch.tril(torch.ones(self.chunk_size, self.chunk_size, device=x.device))
+        mask = mask * causal_mask.view(1, 1, self.chunk_size, self.chunk_size, 1)
+        
+        # 4. B 이산화 및 상태 V 계산
+        dB_chunks = dt.view(B_batch, num_chunks, self.chunk_size, D).unsqueeze(-1) * B_chunks.unsqueeze(-2)
+        V = dB_chunks * x_chunks.unsqueeze(-1) # (B, Chunks, ChunkSize, D, d_state)
+        
+        # 5. 청크 내부 어텐션 (Intra-chunk Attention): Y = C * (Mask @ V)
+        # 시퀀스 차원 'j'를 따라 V에 마스크를 곱합니다.
+        attn_out = torch.einsum('bnijd,bnjde->bnide', mask, V) 
+        Y_intra = torch.einsum('bnide,bnie->bnid', attn_out, C_chunks) # (B, Chunks, ChunkSize, D)
+        
+        # [참고]: 청크 간 순환(Inter-chunk recurrence, 청크 간에 은닉 상태를 전달하는 과정)은 
+        # 간결성을 위해 여기서는 생략되었지만, 유사한 블록 단위 업데이트를 따릅니다.
+        
+        y = Y_intra.view(B_batch, L_padded, D)
+        if pad_len > 0:
+            y = y[:, :L, :]
+            
+        return self.out_proj(y)
+```
+
+---
+
+## 4. Mamba-3: 추론 우선의 프론티어
+
+Mamba-2의 성공은 미묘한 대가를 치렀습니다. 학습 처리량을 극대화하기 위해 $A$ 를 스칼라로 축소함으로써, 모델은 본질적인 상태 추적(State-tracking) 표현력의 일부를 희생했습니다. AI 산업의 초점이 사전 학습 속도에서 추론 효율성(에이전트 워크플로우, 긴 컨텍스트 검색, RL 롤아웃 등에 의해 주도됨)으로 이동함에 따라, 아키텍처는 다시 한번 진화해야 했습니다.
+
+인용된 프리프린트에서 **Mamba-3** [[3]](#ref-3) 로 설명되는 후속 방향은 다시 표현력 쪽으로 무게를 옮기며, 추론 시점의 trade-off에 주목합니다. 그 프레이밍에서는 스칼라 $A$ 제약을 완화하고 세 가지 아이디어를 강조합니다.
+
+### 복소수 상태 업데이트
+Mamba-2에서 잃어버린 상태 추적 능력을 복구하기 위해, Mamba-3는 은닉 상태를 실수에서 복소수 도메인($h \in \mathbb{C}^N$)으로 전환합니다. 복소수 값의 SSM은 진동 동작(Oscillatory behaviors), 회전(Rotations), 그리고 위상 의존적(Phase-dependent) 정보를 자연스럽게 모델링할 수 있습니다. 이는 순수 선형 어텐션이 긴 지평에 걸쳐 정확한 위치 관계를 유지하는 데 종종 어려움을 겪는 합성 상태 추적 작업이나 정확한 연관 기억에 매우 중요합니다.
+
+### Multi-Input Multi-Output (MIMO)
+표준 SSM(Mamba-1 및 2 포함)은 단일 입력 단일 출력(Single-Input Single-Output, SISO) 시스템입니다. Mamba-3는 **MIMO** 공식을 도입하여 $B$ 와 $C$ 투영을 확장함으로써, 병렬 스트림에서 여러 입력과 출력을 동시에 처리합니다.
+*   **Information Density (정보 밀도):** MIMO는 시퀀스 길이를 늘리지 않고도 상태의 모델링 파워를 증가시킵니다. 1.5B 파라미터 규모에서 MIMO 변형은 Mamba-2 대비 다운스트림 정확도를 1.8 포인트 향상시킵니다.
+*   **Hardware Utilization (하드웨어 활용):** MIMO 확장이 채널 차원을 따라 발생하기 때문에, 자기회귀적 디코딩(Auto-regressive decoding) 중에 산술 집약도(Arithmetic intensity, 바이트당 FLOPs)를 크게 증가시킵니다. 이를 통해 Mamba-3는 생성의 실제 지연 시간(Wall-clock latency)을 늘리지 않고도 더 높은 정확도를 달성할 수 있습니다.
+
+### 지수-사다리꼴 이산화
+Mamba-3는 표준 ZOH(Zero-Order Hold) 이산화를 **지수-사다리꼴 (Exponential-trapezoidal)** 체계로 대체합니다. 이는 기저의 연속 동적 시스템(Continuous dynamical system)을 더 잘 근사하는, 보다 안정적이고 표현력 있는 순환 공식을 제공합니다.
+
+이 프리프린트의 보고가 더 넓은 재현에서도 유지된다면, 이후 SSM 변형은 이 계열이 가진 배포상 장점을 유지하면서도 더 높은 표현력을 회복할 수 있다는 뜻이 됩니다.
+
+---
+
+## 5. 아키텍처 비교
+
+| 특징 (Feature) | Mamba-1 (S6) | Mamba-2 (SSD) | Mamba-3 (MIMO) |
+| :--- | :--- | :--- | :--- |
+| **상태 행렬 (State Matrix, $A$)** | 대각 행렬 (Diagonal) | 스칼라 곱 단위 행렬 | 복소수 (Complex-valued) |
+| **순환 모드 (Recurrence Mode)** | Selective Scan (Prefix-Sum) | 청크 단위 MatMul (SSD) | 최적화된 MIMO MatMuls |
+| **상태 크기 (State Size, $N$)** | 작음 (일반적으로 16) | 큼 (64–256) | 고밀도 (절반 크기로 Mamba-2와 동등) |
+| **핵심 최적화 목표** | 선형 확장성 (Linear scaling) | 학습 속도 & Tensor Cores | 상태 추적 & 추론 파레토 최적 |
+| **이론적 초점** | 연속 이산화 (Continuous Discretization) | 선형 어텐션과의 이중성 (Duality) | 지수-사다리꼴 이산화 |
+
+## 6. 어떤 모델에 Mamba 계열을 고려할까?
+
+Mamba 계열이 항상 트랜스포머보다 낫다는 뜻은 아닙니다. 선택 기준은 워크로드에 따라 다릅니다.
+
+- **긴 스트림 처리:** 로그, 센서, 오디오, 생물학 시퀀스처럼 입력이 길고 계속 들어오는 경우 SSM의 상수 상태 메모리가 매력적입니다.
+- **정확한 검색이 중요한 RAG:** 특정 문장을 그대로 찾아야 하는 needle-in-a-haystack 작업은 pure SSM보다 hybrid transformer-SSM이 안전합니다.
+- **추론 비용이 핵심인 서비스:** autoregressive decoding에서 KV cache가 병목이라면 Mamba-3처럼 inference-first 설계를 검토할 수 있습니다.
+- **프론티어 일반 챗 모델:** 현재는 pure SSM 하나로 모든 것을 대체하기보다, attention, SSM, MoE를 섞는 하이브리드 방향이 현실적입니다.
+
+엔지니어링 관점에서 가장 중요한 질문은 “이론적 복잡도가 선형인가”가 아닙니다. 실제 GPU에서 arithmetic intensity가 충분한지, 커널이 성숙했는지, batch/sequence 길이 분포에서 latency가 좋아지는지, 그리고 정확한 회상 능력이 제품 요구를 만족하는지까지 같이 봐야 합니다.
+
+---
+
+## 7. 요약과 열린 질문
+
+Mamba-1에서 Mamba-3로의 진화는 파운데이션 모델(Foundation Model) 엔지니어링의 현실을 완벽하게 보여줍니다. 이론적 우아함은 끊임없이 하드웨어 제약과 균형을 이루어야 합니다. Mamba-1은 선형 확장이 가능함을 증명했습니다. Mamba-2는 GPU Tensor Core의 원초적인 속도를 끌어내기 위해 표현력을 약간 타협했습니다. 마침내 Mamba-3는 복소수 상태와 MIMO 아키텍처를 통해 프로덕션 추론(Inference)의 병목 현상에 맞게 최적화하면서 그 표현력을 되찾았습니다.
+
+**다음 시대를 위한 열린 질문 (Open Questions):**
+상태 크기가 점점 더 조밀해지고 복잡해짐에 따라, FP8이나 INT4와 같은 양자화(Quantization) 기술이 복소수 순환 상태의 안정성에 어떤 영향을 미칠까요? 더 나아가, Mamba-3가 일정한 메모리로 트랜스포머의 성능에 필적할 수 있다면, 무한한 지평의 메모리 루프가 필요한 멀티 에이전트 시스템의 설계는 어떻게 바뀔까요? 다음 섹션에서는 대안적인 선형 어텐션 메커니즘과 신경망이 논리를 프로그램으로서 직접 실행하도록 진화하는 과정을 탐구해 보겠습니다.
+
+## Quizzes
+
+<details>
+<summary>Quiz 1: Mamba-1의 S6 아키텍처가 학습 중에 최신 GPU Tensor Core를 온전히 활용하는 데 어려움을 겪은 이유는 무엇인가요?</summary>
+*Mamba-1은 병렬 연관 스캔(Parallel associative scan) 알고리즘에 의존했습니다. 이 알고리즘은 메모리 대역폭과 SRAM 캐싱에 고도로 최적화되어 있었지만, 연관 스캔은 밀집 행렬 곱셈(MatMuls)으로 표현될 수 없습니다. GPU Tensor Core는 MatMuls를 가속하도록 명시적으로 설계되었기 때문에, Mamba-1은 GPU의 순수 연산 능력의 상당 부분을 활용하지 못한 채 남겨두었습니다.*
+</details>
+
+<details>
+<summary>Quiz 2: Mamba-2의 Structured State Space Duality (SSD) 프레임워크는 SSM 업데이트를 어떻게 재구성하나요?</summary>
+*SSD는 상태 행렬 $A$ 를 스칼라 곱 단위 행렬 구조로 제한함으로써, 순차적인 SSM 업데이트가 반분리 거리 마스크(Semi-separable distance mask)를 가진 선형 어텐션과 수학적으로 동일하다는 것을 증명합니다. 이를 통해 순환(Recurrence)을 청크 단위의 행렬 곱셈으로 계산할 수 있게 되어 Tensor Core 성능을 최대한 끌어낼 수 있습니다.*
+</details>
+
+<details>
+<summary>Quiz 3: Mamba-3에 도입된 Multi-Input Multi-Output (MIMO) 공식의 주요 이점은 무엇인가요?</summary>
+*MIMO는 $B$ 와 $C$ 투영을 확장하여 여러 입력과 출력을 동시에 처리합니다. 이는 자기회귀적 디코딩 중에 모델의 표현력과 하드웨어 활용도(바이트당 FLOPs)를 증가시켜, 실제 추론 지연 시간(Wall-clock latency)을 늘리지 않고도 다운스트림 정확도를 크게 향상시킵니다.*
+</details>
+
+<details>
+<summary>Quiz 4: Mamba-3가 은닉 상태를 실수에서 복소수(Complex-valued) 도메인으로 전환한 이유는 무엇인가요?</summary>
+*복소수 상태는 모델이 진동 동작과 위상 의존적 정보를 자연스럽게 추적할 수 있게 해줍니다. 이는 Mamba-2가 $A$ 행렬을 균일한 스칼라로 단순화했을 때 부분적으로 상실되었던 고급 상태 추적(State-tracking) 능력을 복원하고 향상시킵니다.*
+</details>
+
+---
+
+## References
+
+1. <a id="ref-1"></a>Gu, A., & Dao, T. (2023). *Mamba: Linear-Time Sequence Modeling with Selective State Spaces*. [arXiv:2312.00752](https://arxiv.org/abs/2312.00752).
+2. <a id="ref-2"></a>Dao, T., & Gu, A. (2024). *Transformers are SSMs: Generalized Models and Efficient Algorithms Through Structured State Space Duality (Mamba-2)*. [arXiv:2405.21060](https://arxiv.org/abs/2405.21060).
+3. <a id="ref-3"></a>Lahoti, A., Li, K. Y., Chen, B., Wang, C., Bick, A., Kolter, J. Z., Dao, T., & Gu, A. (2026). *Mamba-3: Improved Sequence Modeling using State Space Principles*. [arXiv:2603.15569](https://arxiv.org/abs/2603.15569).

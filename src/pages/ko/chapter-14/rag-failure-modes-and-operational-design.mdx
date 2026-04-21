@@ -1,0 +1,150 @@
+---
+layout: ../../../layouts/BookLayout.astro
+title: 14.6 RAG Failure Modes and Operational Design
+lang: ko
+---
+
+# 14.6 RAG 실패 모드와 운영 설계
+
+프로덕션에서 RAG를 운영해 본 팀이라면 이런 버그 리포트를 본 적이 있을 것입니다. "봇이 핸드북을 인용했는데도 가격 정책 답변이 틀렸어요." 이런 증상은 중요합니다. RAG 실패가 순수한 검색 실패가 아니라, 파이프라인 실패라는 사실을 드러내 주기 때문입니다.
+
+운영 관점에서 RAG는 결국 오류 처리 시스템에 가깝습니다. chunking, routing, ranking, freshness 체크, generation 제약이 각기 다른 방식으로 실패하지만, 사용자 눈에는 모두 "근거가 약한데 자신감 있게 말하는 답"으로 보입니다. 시스템 설계자의 일은 이런 숨은 실패 모드를 관측 가능하고 안전한 형태로 바꾸는 것입니다.
+
+---
+
+## 1. 실패 유형을 먼저 나눠보자
+
+프로덕션에서 자주 보는 실패는 대체로 네 가지입니다.
+
+1. **유용한 문서를 아예 못 찾았다.**
+2. **유용한 문서를 찾았지만 뒤로 밀려났다.**
+3. **찾은 문서가 오래됐거나 서로 모순되거나 품질이 낮았다.**
+4. **생성 모델이 증거를 무시하거나 왜곡했다.**
+
+사용자 입장에서는 이 모든 경우가 비슷하게 보입니다. 근거가 약한데도 자신 있게 말하는 답변으로 나타난다는 점에서 같습니다.
+
+### 실패 유형은 담당 주체와 함께 봐야 한다
+
+실무에서는 실패 분류가 곧 "어디를 먼저 봐야 하는가"까지 알려 주어야 합니다.
+
+- **Recall 실패**는 보통 indexing, chunking, query rewriting 쪽을 의심하게 합니다.
+- **Ranking 실패**는 candidate budget, fusion 전략, re-ranker 문제일 때가 많습니다.
+- **Freshness 실패**는 ingestion과 문서 생명주기 정책 문제인 경우가 많습니다.
+- **Grounding 실패**는 답변 프롬프트, citation 규칙, 생성 모델의 동작 문제와 연결됩니다.
+
+---
+
+## 2. 라우팅과 검색에는 confidence threshold가 필요하다
+
+자주 보이는 안 좋은 설계는 모든 질의를 같은 retrieval stack으로 밀어 넣는 것입니다. 어떤 질의는 모델 파라미터 안의 일반 지식으로 답하는 편이 낫고, 어떤 질의는 structured data가 필요하며, 어떤 질의는 검색 전에 clarification이 먼저 필요합니다.
+
+### 추천하는 라우팅 정책
+
+- routing confidence가 낮으면 먼저 clarification question을 던진다.
+- retrieval evidence가 약하면 “근거 있는 답변”인 척하지 않는다.
+- 빠르게 바뀌는 정보는 오래된 인덱스보다 fresh source를 우선하거나, 차라리 답변을 보류한다.
+
+운영에서는 보통 아래 지표를 같이 봅니다.
+
+- **Recall@k**
+- **nDCG@k**
+- **grounded answer rate**
+- **citation coverage**
+
+Self-RAG와 CRAG 같은 최근 접근은 critique loop나 corrective retrieval을 파이프라인 안에 넣어 이런 문제를 줄이려 합니다 [[3]](#ref-3)[[4]](#ref-4). 하지만 이런 연구적 아이디어가 있어도, 운영 환경에서는 여전히 명시적인 threshold, latency budget, abstention rule이 필요합니다. 시스템이 근거가 충분한지 판단할 수 없다면, 충분한 척해서는 안 됩니다.
+
+---
+
+## 3. Timeout, stale data, 그리고 degraded mode
+
+실제 RAG 파이프라인은 retriever만 있는 경우가 드뭅니다. re-ranker, query rewrite, critique step이 붙으면서 지연 시간과 실패 지점이 함께 늘어납니다.
+
+### 현실적인 degraded mode
+
+1. first-stage retriever는 먼저 실행한다.
+2. re-ranker가 timeout 나면 hard failure 대신 더 작은 candidate set으로 진행한다.
+3. evidence가 stale하면 답변 안에서 그 사실을 명시한다.
+4. evidence quality가 threshold 아래면 다음 중 하나로 fallback한다.
+   - clarification
+   - partial answer
+   - 또는 “신뢰할 만한 근거가 부족하다”는 명시적 응답
+
+특히 enterprise 환경에서는 문서가 없는 것보다 오래된 내부 문서를 근거처럼 쓰는 편이 더 위험할 때가 많습니다.
+
+### 장애 때 꼭 남겨야 할 로그
+
+RAG 답변이 틀렸을 때 가장 도움이 되는 로그는 보통 다음과 같습니다.
+
+- top-k retrieval score와 문서 ID
+- 문서의 생성 시각 또는 freshness metadata
+- re-ranker timeout이나 fallback 이벤트
+- citation coverage와 citation correctness 체크 결과
+- 모델이 abstain했는지, hedge했는지, 아니면 과도하게 단정했는지
+
+---
+
+## 4. 생성 단계도 evidence-aware 해야 한다
+
+문서를 찾았다고 끝이 아닙니다. 생성 모델이 fluent한 사전 지식으로 weak evidence를 덮어써 버릴 수 있기 때문입니다.
+
+### 유용한 가드레일
+
+- 어떤 passage를 근거로 썼는지 citation을 붙이게 한다.
+- retrieval 로그와 answer generation 로그를 분리한다.
+- citation이 있는 답과 없는 답의 품질을 따로 추적한다.
+- 근거 없는 추가 주장에는 패널티를 준다.
+
+핵심은 retrieval quality만이 아니라 **retrieval-conditioned generation quality** 를 보는 것입니다.
+
+---
+
+## 5. 최종 답만 보지 말고 파이프라인 전체를 평가하라
+
+최종 답변 정확도 하나만 보는 지표는 유용하지만, 실제로 어디서 실패했는지는 숨겨 버립니다. 강한 RAG 팀은 중간 단계를 따로 평가합니다.
+
+- query routing 정확도
+- 라벨링된 근거에 대한 retrieval recall
+- re-ranking 품질
+- citation correctness
+- 근거가 약할 때 제대로 abstain하는지
+
+이런 분리가 중요한 이유는, 해결책이 층마다 다르기 때문입니다. 더 좋은 임베딩 모델이 stale document 문제를 해결해 주지는 않습니다. 더 강한 생성 모델이 missing citation을 고쳐 주지도 않습니다. 오케스트레이션 버그는 trace를 끝까지 들여다볼 수 없으면 모델 버그처럼 보이기 쉽습니다.
+
+---
+
+## 6. 핵심 정리
+
+RAG는 모델 하나의 기능이 아니라 조용한 실패 지점이 많은 시스템 파이프라인입니다. 검색이 불완전할 수도 있고, re-ranking이 늦을 수도 있고, 문서 자체가 틀릴 수도 있습니다. 프로덕션 설계는 이 현실을 받아들이고, 매번 “근거가 충분하다”는 척하지 않도록 만드는 일입니다.
+
+---
+
+## Quizzes
+
+<details>
+<summary>Quiz 1: retrieval이 성공했는데도 RAG가 틀린 답을 할 수 있는 이유는 무엇인가요?</summary>
+*찾은 문서가 뒤로 밀렸거나, 오래됐거나, 서로 모순되거나, 생성 모델이 그 근거를 무시했을 수 있기 때문입니다. RAG 품질은 문서를 찾았는지 여부 하나로 결정되지 않습니다.*
+</details>
+
+<details>
+<summary>Quiz 2: production RAG에서 routing confidence가 중요한 이유는 무엇인가요?</summary>
+*모든 질의를 같은 검색 경로로 보내면 잘못된 grounding이 발생하기 쉽기 때문입니다. confidence가 낮으면 clarification, data source 변경, 또는 답변 보류가 더 안전할 수 있습니다.*
+</details>
+
+<details>
+<summary>Quiz 3: RAG pipeline에서 degraded mode의 목적은 무엇인가요?</summary>
+*어떤 단계가 실패하거나 timeout 나도 시스템이 안전하게 계속 동작하도록 하기 위해서입니다. re-ranker 없이 진행하거나, uncertainty를 드러내거나, clarification으로 전환하는 식이 여기에 해당합니다.*
+</details>
+
+<details>
+<summary>Quiz 4: RAG에서 retrieval과 generation을 따로 평가해야 하는 이유는 무엇인가요?</summary>
+*좋은 문서를 찾았는데도 생성 모델이 근거를 무시하거나 왜곡할 수 있기 때문입니다. 두 단계를 분리해 봐야 실패 위치를 정확히 찾을 수 있습니다.*
+</details>
+
+---
+
+## References
+
+1. <a id="ref-1"></a>Lewis, P., et al. (2020). *Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks.* [arXiv:2005.11401](https://arxiv.org/abs/2005.11401).
+2. <a id="ref-2"></a>Liu, N. F., et al. (2023). *Lost in the Middle: How Language Models Use Long Contexts.* [arXiv:2307.03172](https://arxiv.org/abs/2307.03172).
+3. <a id="ref-3"></a>Asai, A., et al. (2024). *Self-RAG: Learning to Retrieve, Generate, and Critique through Self-Reflection.* [arXiv:2310.11511](https://arxiv.org/abs/2310.11511).
+4. <a id="ref-4"></a>Yan, S., et al. (2024). *Corrective Retrieval Augmented Generation.* [arXiv:2401.15884](https://arxiv.org/abs/2401.15884).

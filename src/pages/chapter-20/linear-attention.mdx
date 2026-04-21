@@ -1,0 +1,172 @@
+---
+layout: ../../layouts/BookLayout.astro
+title: 20.3 Linear Attention
+lang: en
+---
+
+import LinearAttentionVisualizer from '../../components/chapter-20/LinearAttentionVisualizer.tsx';
+
+# 20.3 Linear Attention
+
+Long-context modeling keeps running into the same wall: standard attention is elegant, expressive, and expensive. Once sequence length becomes large enough, the cost of maintaining exact token-to-token interactions becomes a systems problem as much as an architecture problem. Linear attention sits in that tension. It is not a universal replacement for softmax attention, but it is one of the clearest attempts to trade some exactness for better scaling.
+
+---
+
+## 1. The Core Idea
+
+Standard attention materializes pairwise interactions across the sequence:
+
+$$
+\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d}}\right)V
+$$
+
+The expensive object here is the dense interaction pattern over all token pairs. Linear attention tries to avoid that by replacing softmax with a feature map $\phi(\cdot)$ that makes reassociation possible:
+
+$$
+\phi(Q)\left(\phi(K)^T V\right)
+$$
+
+The practical appeal is straightforward. If the model can summarize the history into a compact running state, the sequence can be processed with memory growth that is much gentler than full quadratic attention.
+
+---
+
+## 2. Why the Idea Is Attractive
+
+Imagine a document pipeline where prompts grow from a few hundred tokens to hundreds of thousands. Even if the model quality is acceptable, serving cost and KV-cache pressure may become the real bottleneck. Linear attention is attractive in exactly that regime:
+
+- lower memory pressure
+- better scaling for long contexts
+- a more recurrent view of sequence processing
+
+This is why linear-attention-style methods keep returning, even after earlier waves of interest cooled off.
+
+---
+
+## 3. Why Earlier Variants Struggled
+
+If the idea is so appealing, why did softmax attention remain dominant for so long?
+
+Because early linear variants often paid a quality tax:
+
+- unstable training
+- weak exact recall
+- degraded performance on tasks that needed precise token-level interactions
+
+In other words, summarizing the past into a compact state is efficient, but it can also over-compress the very information that makes a model good at constrained reasoning and exact retrieval.
+
+---
+
+## 4. What Modern Work Tries to Improve
+
+Recent work has focused on making the recurrent state more selective rather than purely additive. Gating, delta-style updates, and more structured state transitions all aim at the same problem: keeping useful history while not letting the state saturate.
+
+It is reasonable to describe these as **emerging design patterns**, not settled winners. Current evidence suggests that linear-attention-style layers can be useful in long-context regimes, especially when combined with stronger mechanisms elsewhere in the stack.
+
+### An Emerging Hybrid Pattern
+
+A cautious summary of the current situation is this:
+
+- pure linear attention is attractive for efficiency
+- full attention remains valuable for exact, high-resolution interactions
+- hybrid stacks are therefore a natural engineering compromise
+
+That does **not** mean the field has settled on one universal recipe. It means many teams are exploring ways to reserve expensive full attention for the parts of the network where exact interactions matter most.
+
+---
+
+## 5. Educational PyTorch Example
+
+The simplified block below illustrates the main computational idea: building a compact state before applying it back to the queries.
+
+```python
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+class GatedLinearAttention(nn.Module):
+    def __init__(self, d_model: int, num_heads: int):
+        super().__init__()
+        assert d_model % num_heads == 0
+        self.d_model = d_model
+        self.num_heads = num_heads
+        self.d_head = d_model // num_heads
+
+        self.q_proj = nn.Linear(d_model, d_model)
+        self.k_proj = nn.Linear(d_model, d_model)
+        self.v_proj = nn.Linear(d_model, d_model)
+        self.g_proj = nn.Linear(d_model, d_model)
+        self.out_proj = nn.Linear(d_model, d_model)
+
+    def feature_map(self, x: torch.Tensor) -> torch.Tensor:
+        return F.elu(x) + 1.0
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        bsz, seq_len, dim = x.shape
+
+        q = self.q_proj(x).view(bsz, seq_len, self.num_heads, self.d_head).transpose(1, 2)
+        k = self.k_proj(x).view(bsz, seq_len, self.num_heads, self.d_head).transpose(1, 2)
+        v = self.v_proj(x).view(bsz, seq_len, self.num_heads, self.d_head).transpose(1, 2)
+        g = torch.sigmoid(self.g_proj(x))
+
+        q_phi = self.feature_map(q)
+        k_phi = self.feature_map(k)
+
+        kv_state = torch.matmul(k_phi.transpose(-1, -2), v)
+        z_state = k_phi.sum(dim=2, keepdim=True).transpose(-1, -2)
+
+        numerator = torch.matmul(q_phi, kv_state)
+        denominator = torch.matmul(q_phi, z_state) + 1e-6
+        out = numerator / denominator
+
+        out = out.transpose(1, 2).contiguous().view(bsz, seq_len, dim)
+        out = out * g
+        return self.out_proj(out)
+```
+
+This code is illustrative. Real systems add more careful normalization, gating, masking, and hardware-specific optimizations.
+
+---
+
+## 6. Interactive: Memory Complexity Visualizer
+
+The visualizer below is useful for building intuition. The architectural debate becomes much easier to understand once you can see how memory grows as sequence length increases.
+
+<LinearAttentionVisualizer client:load />
+
+---
+
+## 7. Practical Takeaway
+
+Linear attention is best understood as an important efficiency direction rather than a settled replacement for standard attention. It is compelling because long contexts are expensive. It is difficult because compact recurrent states can lose exactly the information that some tasks need. That is why the most plausible near-term story is not “linear attention wins,” but “models mix different interaction mechanisms depending on where precision and efficiency matter.”
+
+---
+
+## Quizzes
+
+<details>
+<summary>Quiz 1: What problem is linear attention fundamentally trying to address?</summary>
+*It is trying to reduce the cost of sequence interaction so that long contexts become more tractable in both memory and computation.*
+</details>
+
+<details>
+<summary>Quiz 2: Why did early linear attention methods often underperform full attention?</summary>
+*Because summarizing the history into a compact state can over-compress token-level information, harming tasks that need exact recall or fine-grained interactions.*
+</details>
+
+<details>
+<summary>Quiz 3: Why are hybrid stacks a natural engineering compromise?</summary>
+*Because linear-style mechanisms help with efficiency, while full attention remains useful for exact, high-resolution interactions. Combining them lets a model use each where it is most valuable.*
+</details>
+
+<details>
+<summary>Quiz 4: Why is it misleading to call one specific hybrid ratio the “production standard” today?</summary>
+*Because the field is still exploring multiple recipes and trade-offs. Hybrid design is an emerging pattern, but one exact formula has not been universally established.*
+</details>
+
+---
+
+## References
+
+1. <a id="ref-1"></a>Katharopoulos, A., et al. (2020). *Transformers are RNNs: Fast Autoregressive Transformers with Linear Attention.* [arXiv:2006.16236](https://arxiv.org/abs/2006.16236).
+2. <a id="ref-2"></a>Yang, S., et al. (2024). *DeltaNet: Linear-Time Sequence Modeling with Gated Delta Rule.* [arXiv:2406.06484](https://arxiv.org/abs/2406.06484).
+3. <a id="ref-3"></a>Dao, T., & Gu, A. (2024). *Transformers are SSMs: Generalized Models and Efficient Algorithms Through Structured State Space Duality.* [arXiv:2405.21060](https://arxiv.org/abs/2405.21060).
