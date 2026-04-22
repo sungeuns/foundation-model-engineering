@@ -108,12 +108,12 @@ For local development and normal local builds, the site uses the root path `/`.
 
 For GitHub Pages repo hosting under:
 
-`https://sungeuns.github.io/founation-model-engineering/`
+`https://sungeuns.github.io/foundation-model-engineering/`
 
 build with:
 
 ```bash
-SITE_BASE=/founation-model-engineering/ npm run build
+SITE_BASE=/foundation-model-engineering/ npm run build
 ```
 
 That sets Astro's `base` only for the deployment build, so local `npm run dev` routing stays normal while GitHub Pages still gets the correct subpath links.

@@ -31,7 +31,7 @@ jobs:
         run: npm ci
 
       - name: Build site
-        run: SITE_BASE=/founation-model-engineering/ npm run build
+        run: SITE_BASE=/foundation-model-engineering/ npm run build
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

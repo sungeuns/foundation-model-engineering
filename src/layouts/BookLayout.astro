@@ -1,9 +1,10 @@
 ---
 import { chapters } from '../data/chapters.js';
+import { site } from '../data/site.js';
 import { getBasePath, normalizePathname, stripBasePath, withBasePath } from '../utils/paths.js';
 import '../styles/book.css';
 
-const { title, lang = 'en' } = Astro.props.frontmatter || Astro.props;
+const { title, lang = 'en', description } = Astro.props.frontmatter || Astro.props;
 const basePath = getBasePath();
 const chapterRoutes = chapters.flatMap((chapter) =>
   chapter.subs.flatMap((sub) => [
@@ -16,11 +17,9 @@ const existingRoutes = new Set(['/', '/ko', ...chapterRoutes]);
 // Helper to check active link
 const currentPath = stripBasePath(Astro.url.pathname, basePath);
 const isActive = (pagePath) => currentPath === normalizePathname(pagePath);
-const siteTitle = 'Foundation Model Engineering';
 const isHomePage = currentPath === '/' || currentPath === '/ko';
-const pageTitle = isHomePage ? siteTitle : `${title} | ${siteTitle}`;
-
 const isKo = lang === 'ko';
+const siteTitle = site.titles[lang] || site.titles.en;
 const enPath = isKo ? currentPath.replace(/^\/ko/, '') || '/' : currentPath;
 const koPath = isKo ? currentPath : `/ko${currentPath === '/' ? '' : currentPath}`;
 const hasRoute = (pathname) => existingRoutes.has(normalizePathname(pathname));
@@ -36,8 +35,46 @@ const getLocalePath = (basePath, locale) => {
 const enTarget = hasRoute(enPath) ? normalizePathname(enPath) : normalizePathname(koPath);
 const koTarget = hasRoute(koPath) ? normalizePathname(koPath) : normalizePathname(enPath);
 const homePath = getLocalePath('/', lang);
+const currentSub = chapters
+  .flatMap((chapter) => chapter.subs)
+  .find((sub) => currentPath === normalizePathname(getLocalePath(sub.path, lang)));
+const contentTitle = currentSub?.title?.[lang] || title;
+const pageTitle = isHomePage ? siteTitle : `${contentTitle} | ${siteTitle}`;
 const toHref = (pagePath) => withBasePath(pagePath, basePath);
-const githubUrl = 'https://github.com/sungeuns/founation-model-engineering';
+const toAbsoluteUrl = (pagePath) =>
+  new URL(withBasePath(pagePath, basePath), Astro.site || site.url).toString();
+const githubUrl = 'https://github.com/sungeuns/foundation-model-engineering';
+const canonicalUrl = toAbsoluteUrl(currentPath);
+const enUrl = toAbsoluteUrl(enTarget);
+const koUrl = toAbsoluteUrl(koTarget);
+const pageDescription = description || (
+  isHomePage
+    ? site.descriptions[lang]
+    : isKo
+      ? `${contentTitle} 장에서는 파운데이션 모델 엔지니어링의 핵심 개념과 시스템 트레이드오프를 기술적으로 설명합니다.`
+      : `${contentTitle} explains key foundation model engineering concepts and production trade-offs in a technical, systems-oriented way.`
+);
+const ogLocale = isKo ? 'ko_KR' : 'en_US';
+const alternateLocale = isKo ? 'en_US' : 'ko_KR';
+const structuredData = {
+  '@context': 'https://schema.org',
+  '@type': isHomePage ? 'Book' : 'TechArticle',
+  name: pageTitle,
+  headline: pageTitle,
+  description: pageDescription,
+  inLanguage: lang,
+  url: canonicalUrl,
+  author: {
+    '@type': 'Person',
+    name: site.author,
+    url: 'https://www.linkedin.com/in/sungeuns2',
+  },
+  isPartOf: {
+    '@type': 'Book',
+    name: site.titles[lang] || site.titles.en,
+    url: toAbsoluteUrl(homePath),
+  },
+};
 
 // Navigation logic
 const allPages = chapters.flatMap(ch => 
@@ -67,6 +104,24 @@ if (currentIndex !== -1) {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{pageTitle}</title>
+    <meta name="description" content={pageDescription} />
+    <meta name="author" content={site.author} />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href={canonicalUrl} />
+    <link rel="alternate" hreflang="en" href={enUrl} />
+    <link rel="alternate" hreflang="ko" href={koUrl} />
+    <link rel="alternate" hreflang="x-default" href={enUrl} />
+    <meta property="og:type" content={isHomePage ? 'website' : 'article'} />
+    <meta property="og:site_name" content={siteTitle} />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={pageDescription} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:locale" content={ogLocale} />
+    <meta property="og:locale:alternate" content={alternateLocale} />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content={pageTitle} />
+    <meta name="twitter:description" content={pageDescription} />
+    <script type="application/ld+json" set:html={JSON.stringify(structuredData)}></script>
     <link rel="icon" type="image/svg+xml" href={withBasePath('/favicon.svg', basePath)} />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -80,7 +135,7 @@ if (currentIndex !== -1) {
     <button class="menu-toggle" id="menuToggle">Menu</button>
     
     <nav class="sidebar" id="sidebar">
-      <h1><a href={toHref(homePath)} style="text-decoration: none; color: inherit;">Table of Contents</a></h1>
+      <h1><a href={toHref(homePath)} style="text-decoration: none; color: inherit;">{isKo ? '목차' : 'Table of Contents'}</a></h1>
       {chapters.map(ch => (
         <div>
           <h2>{ch.title[lang]}</h2>
@@ -108,7 +163,7 @@ if (currentIndex !== -1) {
     <div class="content-wrapper">
       <div class="container">
         <header>
-          <h1><a href={toHref(homePath)} style="text-decoration: none; color: inherit;">Foundation Model Engineering</a></h1>
+          <h1><a href={toHref(homePath)} style="text-decoration: none; color: inherit;">{siteTitle}</a></h1>
           <div class="header-actions">
             <a class="github-link" href={githubUrl} target="_blank" rel="noopener noreferrer" aria-label="Open GitHub repository">
               <svg viewBox="0 0 24 24" aria-hidden="true">
