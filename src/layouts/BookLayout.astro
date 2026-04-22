@@ -41,8 +41,13 @@ const currentSub = chapters
 const contentTitle = currentSub?.title?.[lang] || title;
 const pageTitle = isHomePage ? siteTitle : `${contentTitle} | ${siteTitle}`;
 const toHref = (pagePath) => withBasePath(pagePath, basePath);
-const toAbsoluteUrl = (pagePath) =>
-  new URL(withBasePath(pagePath, basePath), Astro.site || site.url).toString();
+const toAbsoluteUrl = (pagePath) => {
+  const url = new URL(withBasePath(pagePath, basePath), Astro.site || site.url);
+  if (!url.pathname.endsWith('/')) {
+    url.pathname = `${url.pathname}/`;
+  }
+  return url.toString();
+};
 const githubUrl = 'https://github.com/sungeuns/foundation-model-engineering';
 const canonicalUrl = toAbsoluteUrl(currentPath);
 const enUrl = toAbsoluteUrl(enTarget);

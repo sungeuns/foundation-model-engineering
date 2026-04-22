@@ -22,12 +22,20 @@ const escapeXml = (value) =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&apos;');
 
+const toAbsoluteUrl = (path, basePath, origin) => {
+  const url = new URL(withBasePath(path, basePath), origin);
+  if (!url.pathname.endsWith('/')) {
+    url.pathname = `${url.pathname}/`;
+  }
+  return url.toString();
+};
+
 export function GET({ site: astroSite }) {
   const origin = astroSite || site.url;
   const basePath = getBasePath();
   const urls = pages
     .map((path) => {
-      const loc = new URL(withBasePath(path, basePath), origin).toString();
+      const loc = toAbsoluteUrl(path, basePath, origin);
       return [
         '  <url>',
         `    <loc>${escapeXml(loc)}</loc>`,

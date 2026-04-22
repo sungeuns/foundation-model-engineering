@@ -106,6 +106,10 @@ If you use `serve`, run `serve dist` instead of `serve -s dist`. This project is
 
 For local development and normal local builds, the site uses the root path `/`.
 
+Repository:
+
+`https://github.com/sungeuns/foundation-model-engineering`
+
 For GitHub Pages repo hosting under:
 
 `https://sungeuns.github.io/foundation-model-engineering/`
