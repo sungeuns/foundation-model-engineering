@@ -49,6 +49,40 @@ MoE의 매력은 분명합니다. dense 모델과 같은 비용을 모두 치르
 
 이 방식은 학습 효율을 높일 수 있고, 이후 추측 해독(speculative decoding) 같은 빠른 서빙 경로와도 잘 연결됩니다. 아키텍처는 레이어 구조만이 아니라 학습 목표까지 포함한다는 점을 보여주는 좋은 예입니다.
 
+### 5. 광학적 컨텍스트 압축 (Optical Context Compression)
+앞의 예시들은 토큰이 이미 Transformer 안에 들어온 뒤, 모델이 그 토큰을 어떻게 처리할지 바꿉니다. 그런데 최근에는 더 낯선 질문도 등장했습니다. 긴 텍스트 컨텍스트가 애초에 긴 1D token sequence로 모델에 들어가야만 할까요?
+
+DeepSeek-OCR은 이 질문을 보여주는 좋은 사례입니다. 이름만 보면 단순히 "더 좋은 OCR"처럼 보이지만, 더 흥미로운 지점은 **contexts optical compression** 입니다. 텍스트가 많은 문서를 2D 시각 표현으로 매핑하고, page image를 적은 수의 vision token으로 인코딩한 뒤, language decoder가 그 내용을 복원하거나 추론하는 방식입니다 [[3]](#ref-3). 텍스트가 빽빽한 한 페이지를 수천 개의 text token으로 넣는 대신, vision encoder를 통과시켜 더 적은 token budget으로 표현할 수 있다는 발상입니다.
+
+직관은 어렵지 않습니다. 긴 문단을 스크린샷으로 찍으면 줄바꿈, 표, 수식, 공간적 배치가 하나의 압축된 물체처럼 보존됩니다. DeepSeek-OCR은 이 직관을 모델 pipeline으로 바꿉니다.
+
+1. 문서를 image-like 2D signal로 렌더링하거나 입력받습니다.
+2. vision encoder인 DeepEncoder가 page를 제한된 수의 vision token으로 압축합니다.
+3. DeepSeek3B-MoE-A570M language decoder가 압축된 표현을 디코딩합니다.
+4. OCR text, markdown, layout-aware output, document-grounded response를 생성합니다.
+
+이 말은 시스템이 text를 버렸다는 뜻은 아닙니다. 출력은 여전히 text이고, decoder도 language model입니다. 달라지는 부분은 입력 경계입니다. text를 바로 token sequence로 넣기 전에, 광학적으로 압축할 수 있는 대상으로 다루는 것입니다.
+
+실무적으로 중요한 값은 compression ratio입니다.
+
+$$
+r = \frac{N_{\text{text tokens}}}{N_{\text{vision tokens}}}
+$$
+
+예를 들어 원래 2,000개의 text token을 먹는 문서를 200개의 vision token으로 표현할 수 있다면 $r = 10$입니다. DeepSeek-OCR 논문은 이 비율이 대략 $10\times$ 미만일 때 OCR precision이 약 97% 수준을 유지하고, $20\times$ 근처에서는 약 60%까지 떨어진다고 보고합니다 [[3]](#ref-3). 핵심은 바로 이 trade-off입니다. Optical compression은 context length를 벌어줄 수 있지만, text tokenization의 무손실 대체재는 아닙니다.
+
+기술적으로 보면 이 접근은 부담의 일부를 sequence modeling에서 visual representation learning으로 옮깁니다. Encoder는 글자 모양, reading order, table structure, layout geometry를 보존하면서도 일반 OCR 또는 문서 파싱 pipeline보다 훨씬 적은 token을 만들어야 합니다. Decoder는 이 압축된 visual token을 다시 정확한 symbol이나 structured text로 바꿔야 합니다. 이것은 일반 image captioning과 다릅니다. 코드, 수식, 법률 문서, 표에서는 한 글자나 한 숫자 오류도 치명적일 수 있기 때문입니다.
+
+더 깊은 함의는 "context length"가 더 이상 attention만의 문제가 아니라는 점입니다. Long-context system은 여러 층위에서 공략할 수 있습니다.
+
+- 긴 token sequence 위에서 attention을 더 싸게 만들기;
+- generation 중 KV cache를 더 싸게 만들기;
+- MoE로 computation을 sparse하게 routing하기;
+- 여러 token을 한 번에 예측하거나 검증하기;
+- 또는 입력 표현이 token sequence가 되기 전에 압축하기.
+
+Optical context compression은 마지막 범주에 속합니다. 스캔 문서, PDF, 표, 영수증, 역사적 아카이브, layout-rich corpus에는 매력적입니다. 반면 source code patch, formal proof, 계약서, safety-critical numeric table처럼 정확한 byte-level fidelity가 중요한 workload에서는 더 조심스럽습니다. 실제 production system이라면 confidence scoring, text OCR로의 selective fallback, 원본 document image와의 verification을 함께 두는 편이 안전합니다.
+
 ---
 
 ## 최신 아키텍처를 비교하는 더 좋은 방법
@@ -61,6 +95,7 @@ MoE의 매력은 분명합니다. dense 모델과 같은 비용을 모두 치르
 | KV cache 증가 | GQA, MQA, MLA, sliding windows | 서빙 메모리와 대역폭 절감 | 구현이 더 특수해짐 |
 | 거대한 파라미터 수 | MoE 레이어 | 추론 비용 대비 더 큰 용량 | routing과 load balancing 복잡도 |
 | 디코딩 처리량 | MTP, speculative-friendly objective | 더 빠른 생성 경로 | 학습/서빙 협업 설계 필요 |
+| 입력 컨텍스트 토큰 증가 | optical 2D mapping, vision-token compression | 큰 문서를 더 적은 context token으로 표현 | OCR 오류, layout 의존성, 검증 부담 |
 | 장문 학습 안정성 | QK-Norm, RoPE 변형, windowing | 더 안정적인 최적화 | 추가 튜닝과 검증 필요 |
 
 이 관점에서 보면 “최고의 현대 아키텍처 하나”를 찾기보다, 어떤 서비스 조건에 어떤 타협이 맞는지를 보는 편이 현실적입니다.
@@ -158,9 +193,15 @@ class SimpleLatentAttention(nn.Module):
 *시퀀스가 길어질수록 attention score의 수치적 안정성과 메모리 사용을 동시에 관리하기 어려워집니다. QK-Norm은 attention 값을 더 안정적으로 유지하도록 돕고, windowing은 한 번에 처리해야 할 범위를 줄여줍니다. 둘 다 장문 학습과 서빙을 더 현실적으로 만들어 주는 장치입니다.*
 </details>
 
+<details>
+<summary>Quiz 4: Optical context compression은 단순히 모델의 text context window를 늘리는 것과 왜 다를까요?</summary>
+*Text context window를 늘리는 방식은 입력을 discrete text token으로 보존한 채 attention과 KV cache 시스템이 더 많은 위치를 처리하도록 만듭니다. Optical compression은 모델이 입력을 보기 전에 표현 자체를 바꿉니다. text와 layout을 vision token으로 인코딩하여 token 수를 줄일 수 있지만, 그 대신 lossy reconstruction 문제, layout sensitivity, 정확한 symbol 검증 필요성이 생깁니다.*
+</details>
+
 ---
 
 ## References
 
 1. <a id="ref-1"></a>DeepSeek-AI. (2024). *DeepSeek-V3 Technical Report*. [arXiv:2412.19437](https://arxiv.org/abs/2412.19437).
 2. <a id="ref-2"></a>Ainslie, J., et al. (2023). *GQA: Training Generalized Multi-Query Transformer Models from Multi-Head Checkpoints*. [arXiv:2305.13245](https://arxiv.org/abs/2305.13245).
+3. <a id="ref-3"></a>Wei, H., Sun, Y., & Li, Y. (2025). *DeepSeek-OCR: Contexts Optical Compression*. [arXiv:2510.18234](https://arxiv.org/abs/2510.18234).

@@ -49,6 +49,40 @@ Most language models are trained to predict exactly one next token. **Multi-toke
 
 This can improve training efficiency and create a cleaner path to faster inference schemes such as speculative decoding. Conceptually, it is a reminder that architecture is not only about layers and blocks. Training objectives also shape which serving optimizations become natural later.
 
+### 5. Optical Context Compression
+The previous examples change how the model processes tokens once they are already inside the Transformer. A newer line of work asks a stranger question: what if a long text context should not enter the model as a long 1D token sequence at all?
+
+DeepSeek-OCR is an example of this idea. Despite the name, its most interesting contribution is not simply "better OCR." It investigates **contexts optical compression**: mapping text-heavy documents into a 2D visual representation, encoding that page image into a small number of vision tokens, and then using a language decoder to recover or reason over the content [[3]](#ref-3). A page full of text can sometimes be cheaper to pass through a vision encoder than to feed as thousands of text tokens.
+
+The intuition is familiar if you have ever screenshotted a long paragraph. A screenshot preserves line breaks, tables, mathematical notation, and spatial layout in one compact object. DeepSeek-OCR turns that intuition into a model pipeline:
+
+1. Render or receive the document as an image-like 2D signal.
+2. Compress the page with a vision encoder, DeepEncoder, into a bounded number of vision tokens.
+3. Decode the compressed representation with a DeepSeek3B-MoE-A570M language decoder.
+4. Produce OCR text, markdown, layout-aware outputs, or document-grounded responses.
+
+This does not mean the system has abandoned text. The output is still text, and the decoder is still a language model. The architectural shift is at the input boundary: text is treated as something that can be optically compressed before it becomes model context.
+
+For practitioners, the key quantity is the compression ratio:
+
+$$
+r = \frac{N_{\text{text tokens}}}{N_{\text{vision tokens}}}
+$$
+
+If a document would normally consume 2,000 text tokens but can be represented by 200 vision tokens, then $r = 10$. The DeepSeek-OCR paper reports that when this ratio stays below about $10\times$, OCR precision remains around 97%; at roughly $20\times$, accuracy falls to about 60% [[3]](#ref-3). That trade-off is the whole story: optical compression can buy context length, but it is not a lossless replacement for text tokenization.
+
+Technically, this moves some of the burden from sequence modeling into visual representation learning. The encoder must preserve fine-grained glyph identity, reading order, table structure, and layout geometry while producing far fewer tokens than a conventional OCR or document parsing pipeline. The decoder then has to turn those compressed visual tokens back into exact symbols or structured text. This is very different from ordinary image captioning: a one-character error in code, math, legal text, or a table cell may be unacceptable.
+
+The deeper implication is that "context length" is no longer only an attention problem. Long-context systems can be attacked at several levels:
+
+- make attention cheaper over long token sequences;
+- make the KV cache cheaper during generation;
+- route computation sparsely with MoE;
+- predict or verify multiple tokens at once;
+- or compress the input representation before it becomes a token sequence.
+
+Optical context compression belongs to the last category. It is promising for scanned documents, PDFs, tables, receipts, historical archives, and layout-rich corpora. It is riskier for workloads where exact byte-level fidelity matters, such as source code patches, formal proofs, contracts, and safety-critical numeric tables. A robust production system would often pair it with confidence scoring, selective fallback to text OCR, or verification against the original document image.
+
 ---
 
 ## A Better Way to Compare Modern Architectures
@@ -61,6 +95,7 @@ Rather than memorizing product names, it is more useful to compare architectures
 | KV-cache growth | GQA, MQA, MLA, sliding windows | Lower memory traffic during serving | More specialized implementation details |
 | Massive parameter counts | MoE layers | Higher capacity per unit inference compute | Routing and load-balancing complexity |
 | Throughput during decoding | MTP, speculative-friendly objectives | Faster generation paths | More training and serving coordination |
+| Input context token growth | Optical 2D mapping, vision-token compression | Large documents fit into fewer context tokens | OCR errors, layout dependence, and verification burden |
 | Long-context stability | QK-Norm, RoPE variants, windowing | Better optimization at scale | Extra design tuning and validation |
 
 This lens also explains why there is no single “best” modern architecture. A model optimized for short, frequent chat requests may choose very different internals from one optimized for long-context document work or large-scale coding assistance.
@@ -158,9 +193,15 @@ To better understand how these different architectures control information flow,
 *As sequence length grows, attention scores and memory use can become harder to control. Stabilizers such as QK-Norm help keep attention values numerically well-behaved during training, while windowing reduces how much context each layer must process at once. Together they make long-context optimization more practical.*
 </details>
 
+<details>
+<summary>Quiz 4: Why is optical context compression not equivalent to simply increasing a model's text context window?</summary>
+*Increasing the text context window preserves the input as discrete text tokens and asks attention and KV-cache systems to handle more positions. Optical compression changes the representation before the model sees it: text and layout are encoded as vision tokens. This can reduce token count, but it introduces a lossy reconstruction problem, layout sensitivity, and the need to verify exact symbols when precision matters.*
+</details>
+
 ---
 
 ## References
 
 1. <a id="ref-1"></a>DeepSeek-AI. (2024). *DeepSeek-V3 Technical Report*. [arXiv:2412.19437](https://arxiv.org/abs/2412.19437).
 2. <a id="ref-2"></a>Ainslie, J., et al. (2023). *GQA: Training Generalized Multi-Query Transformer Models from Multi-Head Checkpoints*. [arXiv:2305.13245](https://arxiv.org/abs/2305.13245).
+3. <a id="ref-3"></a>Wei, H., Sun, Y., & Li, Y. (2025). *DeepSeek-OCR: Contexts Optical Compression*. [arXiv:2510.18234](https://arxiv.org/abs/2510.18234).
