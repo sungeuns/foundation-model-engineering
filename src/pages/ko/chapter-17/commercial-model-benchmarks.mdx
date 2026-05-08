@@ -1,0 +1,254 @@
+---
+layout: ../../../layouts/BookLayout.astro
+title: 17.6 Commercial Model Benchmarks
+lang: ko
+---
+
+import CommercialModelBenchmarkExplorer from '../../../components/chapter-17/CommercialModelBenchmarkExplorer.tsx';
+
+# 17.6 상업용 모델 Benchmark
+
+앞 절에서는 evaluation을 release decision으로 보았습니다. 이번 절에서는 더 공개적인 질문을 다룹니다. OpenAI, Google, Anthropic, Mistral, Kimi, DeepSeek, Alibaba, MiniMax 같은 회사들이 몇 주 간격으로 새 모델을 내놓을 때, 우리는 benchmark 숫자를 어떻게 읽어야 할까요?
+
+모델 landscape는 메달 순위표보다 지도에 가깝습니다. 어떤 길은 raw reasoning ability를 보여 주고, 어떤 길은 coding-agent reliability를 보여 줍니다. 또 다른 길은 token price, speed, context window를 보여 줍니다. “가장 좋은 모델”은 제품이 실제로 어느 길을 달리는지에 따라 달라집니다.
+
+아래 interactive map은 **2026년 5월 8일** 기준 공개된 모델 정보를 반영합니다. 기본값은 가능한 모델에 대해 최신 Artificial Analysis Intelligence Index를 보여 주고, release timeline은 2024년 초부터 시작해 발전 속도가 눈에 보이도록 구성했습니다. Benchmark와 x축을 바꾸면 같은 모델도 전혀 다르게 보입니다. 시간에 따른 성능, token price 대비 성능, speed 대비 성능, context window 대비 성능을 각각 확인해 볼 수 있습니다.
+
+<CommercialModelBenchmarkExplorer client:load locale="ko" />
+
+---
+
+## 1. Map에 들어간 metric과 모델군
+
+이 map은 “누가 1등인가”를 보여 주기 위한 표가 아닙니다. **공개된 모델 release가 어떤 방향으로 빨라지고 있는지** 를 보기 위한 snapshot입니다. 값이 비어 있는 항목은 해당 모델에 대해 같은 harness의 공개 수치가 없다는 뜻입니다. 다른 benchmark variant에서 숫자를 빌려오지 않았습니다.
+
+| 항목 | 무엇을 보는가 | 읽을 때 주의할 점 |
+| :--- | :--- | :--- |
+| AA Index | Artificial Analysis가 여러 reasoning/eval을 묶어 만든 aggregate intelligence signal | public aggregate score입니다. 제품 workflow의 private eval을 대체하지 않습니다. |
+| Vals Index | law, finance, healthcare, education, coding, multimodal work 등 산업 task 중심 평가 | knowledge work와 domain task에 가깝지만, 실제 회사별 workflow와는 다를 수 있습니다. |
+| SWE-Bench | GitHub issue를 실제 repository 수정으로 해결하는 coding-agent benchmark | Verified, Pro, Multilingual, vendor harness 등 variant 차이가 큽니다. |
+| Terminal-Bench | shell 환경에서 명령을 실행하고 상태를 복구하며 문제를 푸는 agent benchmark | command-line workflow와 tool coordination을 강하게 봅니다. |
+| GPQA Diamond | PhD 수준 과학 문제에 가까운 hard reasoning benchmark | expert reasoning signal이지만 agentic execution이나 tool use를 직접 측정하지는 않습니다. |
+| Humanity's Last Exam | 여러 전문 분야의 어려운 지식/추론 문제를 모은 frontier benchmark | 빠르게 변하는 frontier signal입니다. 점수보다 trend가 중요합니다. |
+| Output speed | 모델이 output token을 생성하는 속도 | interactive product에서는 raw score만큼 중요할 수 있습니다. |
+| Token price | input/output token 가격을 단순 blend한 비용 proxy | 실제 비용은 prompt 길이, reasoning token, retry, tool call에 따라 달라집니다. |
+| Context window | 한 번에 처리할 수 있는 token budget | 긴 context가 항상 높은 품질을 보장하지는 않습니다. retrieval, attention stability, lost-in-the-middle 문제가 남습니다. |
+| Release date | 공개 release 또는 model card 기준 시점 | 가장 중요한 축입니다. 모델 개선 주기가 얼마나 짧아졌는지 보여 줍니다. |
+
+주요 모델군은 서로 다른 product thesis를 보여 줍니다.
+
+| 모델군 | 핵심 신호 |
+| :--- | :--- |
+| OpenAI GPT / Codex | reasoning, coding agent, computer use, tool ecosystem을 하나의 product system으로 묶는 방향입니다. |
+| Google Gemini | long context, native multimodality, 빠른 serving, broad reasoning을 강하게 밀고 있습니다. |
+| Anthropic Claude | coding, long-running work, instruction following, safety posture, enterprise workflow에서 강한 색깔을 보입니다. |
+| DeepSeek / Kimi / Qwen / MiniMax | MoE efficiency, open-weight release, reasoning, long context, low-cost inference로 frontier economics를 압박합니다. |
+| Mistral | open-weight, enterprise deployment, multilingual support, European/regional deployment 선택지를 넓힙니다. |
+
+따라서 이 map을 볼 때는 하나의 점수만 보지 말고, **release date, benchmark score, price, speed, context** 가 함께 움직이는 방식을 보아야 합니다. 같은 모델도 x축을 바꾸면 전혀 다른 제품적 의미를 갖습니다.
+
+---
+
+## 2. Leaderboard 하나로는 부족한 이유
+
+GPT-4 시기에는 비교적 단순한 이야기가 통했습니다. 더 강한 모델이면 넓은 academic/professional exam에서도 더 높은 점수를 받는다는 식입니다. GPT-4 release도 강한 reasoning, exam performance, 초기 multimodal capability를 중심으로 설명되었습니다 [[1]](#ref-1).
+
+하지만 이제는 그 설명만으로 부족합니다. 최근 frontier model은 단순히 더 큰 chatbot이 아닙니다. 하나의 product system에 가깝습니다.
+
+- 빠른 응답과 deeper reasoning mode를 고르는 router
+- 조절 가능한 thinking budget
+- browse, code 작성, file edit, computer operation을 수행하는 tool-using agent
+- screenshot, document, audio, video, 긴 repository를 처리하는 multimodal system
+- domain에 따라 행동을 바꾸는 safety layer
+
+OpenAI는 GPT-5를 단일 endpoint가 아니라 빠른 응답, deeper reasoning, routing component가 결합된 unified system으로 설명합니다 [[2]](#ref-2). Google은 Gemini 2.5와 Gemini 3.1 Pro를 long-context behavior를 갖춘 reasoning-oriented multimodal model로 설명합니다 [[6]](#ref-6) [[7]](#ref-7). Anthropic의 최근 Claude release는 long-running software work, computer use, prompt-injection resistance, 그리고 더 민감한 cybersecurity capability에 대한 controlled access를 강조합니다 [[8]](#ref-8) [[9]](#ref-9).
+
+이 때문에 benchmark number의 의미도 바뀝니다. 점수는 적어도 다섯 가지 선택에 의존합니다.
+
+| 선택 | 왜 중요한가 |
+| :--- | :--- |
+| Model variant | "Pro", "Thinking", "Instant", "max effort", coding-specialized variant는 서로 다른 operating point일 수 있습니다. |
+| Harness | screenshot 기반 browser-use, DOM access, shell access는 서로 다른 능력을 측정합니다. |
+| Tool allowance | search, Python, code execution, file-system access가 점수를 크게 바꿀 수 있습니다. |
+| Reasoning budget | 높은 effort는 accuracy를 올리지만 latency와 cost도 올릴 수 있습니다. |
+| Grading method | exact match, unit test, LLM judge, pairwise preference, human review는 서로 다른 행동을 보상합니다. |
+
+따라서 쓸모 있는 질문은 “어떤 모델이 최고인가?”가 아닙니다. **어떤 harness에서, 어떤 tool을 허용하고, 어떤 latency/cost budget에서 좋은가?** 입니다.
+
+---
+
+## 3. Public signal의 세 가지 렌즈
+
+### Lab model card와 release note
+
+Model card와 release note는 모델 제작자가 무엇을 중요하게 보는지 알려 줍니다. context length, modality, intended use, safety posture, benchmark methodology를 확인하는 가장 직접적인 출처입니다. 다만 중립적인 scoreboard는 아닙니다. 보통 lab은 자신들이 출시하는 모델의 의도를 가장 잘 설명하는 evaluation을 강조합니다.
+
+예를 들어 OpenAI의 GPT-5.3-Codex release는 SWE-Bench Pro, Terminal-Bench, OSWorld, GDPval, cybersecurity CTF, SWE-Lancer를 중심으로 설명합니다. 제품 자체가 coding 및 computer-use agent였기 때문입니다 [[3]](#ref-3). GPT-5.4와 GPT-5.5는 같은 계열의 metric을 general professional work, native computer use, long-horizon task completion 방향으로 확장합니다 [[4]](#ref-4) [[5]](#ref-5).
+
+Google의 Gemini 3.1 Pro model card는 HLE, ARC-AGI-2, GPQA Diamond, SWE-Bench, LiveCodeBench, BrowseComp, MMMU-Pro, long-context test를 강조합니다 [[7]](#ref-7). Anthropic의 Opus 4.7 announcement는 long-running software engineering, third-party GDPval-AA, document reasoning, prompt-injection resistance, tokenizer와 effort-level 변화 같은 migration issue를 함께 다룹니다 [[8]](#ref-8).
+
+Lab card가 답하는 질문은 이것입니다. **모델 제작자는 무엇을 최적화했고, 어떤 배포 제약을 함께 제시하는가?**
+
+### Independent benchmark dashboard
+
+Artificial Analysis, Vals AI, LMArena는 여러 provider의 모델을 비교적 일관된 public process로 계속 비교하기 때문에 유용합니다.
+
+Artificial Analysis는 GDPval-AA, Terminal-Bench Hard, GPQA Diamond, Humanity's Last Exam, SciCode, instruction-following test 등 여러 evaluation을 묶은 Intelligence Index를 제공합니다 [[10]](#ref-10). Vals AI는 law, finance, healthcare, education, coding, multimodal work 같은 real-world industry task에 초점을 둡니다 [[11]](#ref-11). LMArena는 text, code, vision, image, search, video arena에서 blind pairwise vote를 수집합니다 [[12]](#ref-12). 그 기반이 된 Chatbot Arena 방식은 대규모 human preference comparison입니다 [[13]](#ref-13).
+
+Independent dashboard가 답하는 질문은 이것입니다. **오늘 같은 public harness에서 모델들을 비교하면 어떻게 보이는가?**
+
+### Internal product evaluation
+
+회사에 가장 중요한 benchmark는 대개 공개되어 있지 않습니다. 실제 실패에서 만든 private regression set입니다. support conversation, code review incident, spreadsheet task, RAG miss, medical triage escalation, prompt-injection case, tool-call error, 혹은 public benchmark에는 들어가기 어려운 고객사 workflow가 여기에 들어갑니다.
+
+Public benchmark는 어떤 모델을 후보군에 넣을지 판단합니다. Private eval은 그 모델이 현재 production model을 대체해도 되는지 판단합니다.
+
+---
+
+## 4. 최근 3년 동안 무엇이 바뀌었나
+
+### Static knowledge에서 reasoning과 agent로
+
+2023년에는 MMLU, GSM8K, HumanEval, professional exam이 강한 headline signal이었습니다. 지금도 중요하지만, 이제는 frontier model의 최종 판단 기준이라기보다 baseline competence를 확인하는 unit test에 가깝습니다.
+
+Frontier는 아래 방향으로 이동했습니다.
+
+- **scientific reasoning:** GPQA Diamond, HLE, SciCode, CritPt
+- **coding agent:** SWE-Bench Verified, SWE-Bench Pro, Terminal-Bench, LiveCodeBench
+- **computer use:** OSWorld, WebArena-style browser task, MCP workflow task
+- **knowledge work:** GDPval, FinanceAgent, OfficeQA, Vals Index
+- **preference and product fit:** LMArena, WebDev Arena, domain-specific human review
+
+중요한 변화는 high-value task 상당수가 이제 one-shot answer가 아니라 loop를 필요로 한다는 점입니다.
+
+$$
+\text{observe} \rightarrow \text{plan} \rightarrow \text{act} \rightarrow \text{verify} \rightarrow \text{revise}
+$$
+
+이 loop는 단일 multiple-choice answer보다 훨씬 평가하기 어렵습니다. 대신 old benchmark가 숨기던 문제를 드러냅니다. tool-call reliability, latency, state management, 중간 실패에서 회복하는 능력, hidden instruction 아래의 safety behavior가 여기에 포함됩니다.
+
+### 더 빨라진 release cadence, 더 작아진 표면적 격차
+
+Commercial release cadence는 빨라졌습니다. 2024년 초에는 Gemini 1.5 Pro가 1M-token long context를 frontier feature로 끌어올렸고 [[15]](#ref-15), Claude 3는 Opus/Sonnet/Haiku product ladder를 명확히 만들었습니다 [[16]](#ref-16). GPT-4o는 low-latency multimodal interaction을 대중화했고 [[17]](#ref-17), Claude 3.5 Sonnet은 더 높은 capability를 더 싼 mid-tier price와 speed로 내렸습니다 [[18]](#ref-18). OpenAI o1은 test-time reasoning을 하나의 product category로 만들었습니다 [[19]](#ref-19). 이어서 Mistral Large 2, DeepSeek-V3, DeepSeek-R1, Qwen3, MiniMax-M1, Kimi K2는 challenger lane이 더 이상 “작은 open model”만의 영역이 아님을 보여 주었습니다. 이제는 MoE efficiency, reasoning, long context, agentic coding에서도 경쟁합니다 [[20]](#ref-20) [[21]](#ref-21) [[22]](#ref-22) [[23]](#ref-23) [[24]](#ref-24) [[25]](#ref-25).
+
+2026년에 들어서면 OpenAI의 GPT-5.3-Codex, GPT-5.4, GPT-5.5 흐름은 몇 주에서 몇 달 간격의 update가 coding-agent specialization, general professional work, computer use, long-horizon task completion을 서로 다른 각도에서 밀어 올리는 모습을 보여 줍니다 [[3]](#ref-3) [[4]](#ref-4) [[5]](#ref-5). Google의 Gemini 2.5, Gemini 3, Gemini 3.1 Pro 흐름도 비슷합니다. reasoning behavior와 multimodality는 더 이상 부가 기능이 아니라 핵심 product axis가 되었습니다 [[6]](#ref-6) [[7]](#ref-7). Anthropic의 Claude line은 Opus/Sonnet/Haiku economics뿐 아니라 effort level, computer-use reliability, safety posture, gated access까지 함께 분화하고 있습니다 [[8]](#ref-8) [[9]](#ref-9).
+
+오래된 static task에서는 top model 간 visible gap이 작을 때가 많습니다. 진짜 차이는 더 어려운 harness에서 나타납니다.
+
+- agent가 repository를 읽고 test를 실행해야 하는 long-horizon coding task
+- expert가 산출물 품질을 판단하는 professional task
+- UI friction에서 회복해야 하는 browser 또는 desktop task
+- hidden instruction을 무시해야 하는 adversarial safety setting
+- 조금 약하지만 훨씬 싸고 빠른 모델이 production에서 이기는 cost-adjusted evaluation
+
+### Challenger effect
+
+중국계 lab과 open-weight lab은 evaluation의 경제학을 바꾸었습니다. Kimi, DeepSeek, Alibaba의 Qwen family, MiniMax, Z.ai 계열은 independent dashboard에서 frontier 근처에 자주 등장합니다. 특히 cost까지 포함하면 압박이 더 커집니다. Mistral은 또 다른 전략적 위치를 갖습니다. 유럽 기반, enterprise-oriented, open-weight 및 customizable deployment에 초점을 둡니다 [[14]](#ref-14).
+
+이것이 중요한 이유는 model selection이 더 이상 순수 quality ranking이 아니기 때문입니다. Aggregate index에서 몇 점 낮더라도 훨씬 싸거나, 더 빠르거나, open-weight이거나, 원하는 jurisdiction에 배포 가능하다면 engineering choice로는 더 나을 수 있습니다.
+
+---
+
+## 5. 상업용 모델에서 배울 수 있는 것
+
+가장 중요한 교훈은 한 provider가 영원히 앞선다는 것이 아닙니다. 발전의 단위가 바뀌었다는 점입니다. 2024년에는 major release가 몇 달 간격으로 나오며 “더 긴 context, 더 나은 vision, 더 강한 coding, 더 낮은 price” 같은 model upgrade로 설명하기 쉬웠습니다. 2025년과 2026년에는 frontier가 thinking mode, tool use, browser/desktop operation, coding agent, long-horizon workflow completion, risk-gated access가 결합된 product system의 연속으로 움직이기 시작했습니다.
+
+이 가속화는 세 가지 실무적 결과를 만듭니다.
+
+첫째, benchmark leadership의 수명이 짧아졌습니다. 어떤 모델이 public aggregate score에서 1등이어도 몇 주 뒤 다른 harness, 더 싼 challenger, specialized coding agent에 밀릴 수 있습니다. 그래서 release timeline이 중요합니다. 현재 승자보다 변화의 기울기를 보여 주기 때문입니다.
+
+둘째, 개선은 더 이상 statistical score만의 문제가 아닙니다. 중요한 delta는 MoE routing efficiency, long-context stability, inference-time reasoning, tool reliability, token efficiency, safety gating에서 나오는 경우가 많습니다. 이런 요소가 saturated exam에서의 1점 차이보다 production behavior에 더 큰 영향을 줄 수 있습니다.
+
+셋째, frontier는 옆으로 넓어지고 있습니다. Closed proprietary model이 여전히 많은 top-line score를 이끌지만, 중국계 lab과 유럽 open-weight provider는 cost, deployment control, multilingual support, self-hosting을 evaluation 대화의 중심으로 끌어왔습니다. 결과적으로 더 빠르고 더 넓은 Pareto surface가 생겼습니다. Model selection은 이제 고정된 ranking이 아니라 계속 움직이는 engineering trade-off입니다.
+
+실제 모델 선택에서는 단일 rank보다 compact vector가 더 유용합니다.
+
+$$
+\mathbf{s}(m) =
+\left[
+q_{\text{reasoning}},
+q_{\text{coding}},
+q_{\text{tool}},
+q_{\text{domain}},
+c_{\text{token}},
+\ell_{\text{p95}},
+r_{\text{safety}}
+\right]
+$$
+
+선택된 모델은 보통 quality score 하나의 argmax가 아닙니다. 제약 조건 안에서 utility를 최대화하는 모델입니다.
+
+$$
+m^* = \arg\max_m U(m)
+\quad \text{s.t.} \quad
+c(m) \le C,\ \ell_{p95}(m) \le L,\ r_{\text{critical}}(m) = 0
+$$
+
+여기서 $U(m)$은 task utility, $C$는 cost budget, $L$은 latency budget, $r_{\text{critical}}$은 허용할 수 없는 failure의 count 또는 probability입니다. Capability는 “풀 수 있는가?”이고, deployability는 “우리 latency, cost, data residency, safety policy, private eval 아래에서도 쓸 수 있는가?”입니다. 이 둘을 분리해야 공개 leaderboard의 흥분에 production decision이 끌려가지 않습니다.
+
+---
+
+## 6. Practical Takeaway
+
+Frontier는 더 이상 단일 leaderboard race가 아닙니다. intelligence, tool use, latency, token price, safety posture, openness, product fit이 함께 만드는 움직이는 Pareto surface입니다. 2024년 초 이후 release cycle은 눈에 띄게 압축되었고, 개선의 중심은 static academic exam에서 dynamic, agentic, domain-specific work로 이동했습니다. 좋은 팀은 public score를 유용하지만 불완전한 신호로 읽고, private eval을 release gate로 유지합니다.
+
+다음 질문은 자연스럽습니다. benchmark가 계속 바뀐다면, 모델이 benchmark에 overfit하는 속도보다 더 빨리 좋아지는 evaluation system을 어떻게 만들 수 있을까요?
+
+---
+
+## Quizzes
+
+<details>
+<summary>Quiz 1: GPT-5.5의 Terminal-Bench 결과와 Gemini 3.1 Pro의 SWE-Bench 결과를 직접 비교하면 왜 misleading한가요?</summary>
+*두 benchmark는 task distribution과 execution loop가 다릅니다. Terminal-Bench는 command-line workflow, tool coordination, environment recovery를 더 강하게 보고, SWE-Bench variant는 특정 scaffold에서 repository issue resolution을 봅니다. model, harness, tool allowance, reasoning budget, grader가 모두 점수에 영향을 줍니다.*
+</details>
+
+<details>
+<summary>Quiz 2: 어떤 open-weight model이 aggregate benchmark에서 top proprietary model보다 4점 낮습니다. 그래도 production에서는 더 나은 선택일 수 있는 경우는 언제인가요?</summary>
+*latency, token cost, data residency, self-hosting, customization, auditability, fallback capacity가 utility function을 지배할 때입니다. public benchmark에서 작은 quality gap이 있더라도 private workflow eval을 통과하고 운영 제약을 더 잘 만족하면 더 좋은 선택이 될 수 있습니다.*
+</details>
+
+<details>
+<summary>Quiz 3: Public evaluation이 MMLU-style static exam에서 SWE-Bench Pro, Terminal-Bench, OSWorld, GDPval 같은 agentic benchmark로 이동한 이유는 무엇인가요?</summary>
+*Static exam은 빠르게 saturated 되었고 contamination에도 취약합니다. 고부가가치 commercial workload는 multi-step planning, tool use, state tracking, verification, error recovery를 요구합니다. Agentic benchmark는 이런 행동과 cost/latency를 one-shot QA보다 더 잘 드러냅니다.*
+</details>
+
+<details>
+<summary>Quiz 4: Model card의 숫자를 methodology note 없이 비교표에 복사하면 가장 큰 위험은 무엇인가요?</summary>
+*서로 비교 가능한 숫자처럼 보이지만 실제로는 그렇지 않을 수 있습니다. lab마다 prompt, tool, effort level, sampling setting, date, grader가 다를 수 있습니다. methodology note가 없으면 benchmark delta를 harness-specific measurement가 아니라 intrinsic model quality처럼 오해하기 쉽습니다.*
+</details>
+
+<details>
+<summary>Quiz 5: $m^* = \arg\max_m U(m)$ 를 cost, latency, critical-risk constraint 아래에서 고르는 공식에서, safety를 평균 utility에 섞는 것보다 hard constraint로 두는 편이 나은 이유는 무엇인가요?</summary>
+*일부 failure는 평균 품질이 아무리 좋아도 허용할 수 없습니다. Critical safety를 평균에 섞으면 많은 benign win 뒤에 드문 severe regression이 숨을 수 있습니다. Hard constraint는 모델이 전반적으로 더 좋아도 치명적 실패가 있으면 release를 막을 수 있게 해 줍니다.*
+</details>
+
+---
+
+## References
+
+1. <a id="ref-1"></a>OpenAI. (2023). *GPT-4.* [OpenAI Research](https://openai.com/research/gpt-4).
+2. <a id="ref-2"></a>OpenAI. (2025). *GPT-5 System Card.* [OpenAI](https://openai.com/index/gpt-5-system-card/).
+3. <a id="ref-3"></a>OpenAI. (2026). *Introducing GPT-5.3-Codex.* [OpenAI](https://openai.com/index/introducing-gpt-5-3-codex/).
+4. <a id="ref-4"></a>OpenAI. (2026). *Introducing GPT-5.4.* [OpenAI](https://openai.com/index/introducing-gpt-5-4/).
+5. <a id="ref-5"></a>OpenAI. (2026). *Introducing GPT-5.5* and *GPT-5.5 System Card.* [Release](https://openai.com/index/introducing-gpt-5-5/), [System Card](https://openai.com/index/gpt-5-5-system-card/).
+6. <a id="ref-6"></a>Google DeepMind. (2025). *Gemini 2.5: Our newest Gemini model with thinking.* [Google Blog](https://blog.google/technology/google-deepmind/gemini-model-thinking-updates-march-2025).
+7. <a id="ref-7"></a>Google DeepMind. (2026). *Gemini 3.1 Pro Model Card.* [Google DeepMind](https://deepmind.google/models/model-cards/gemini-3-1-pro/).
+8. <a id="ref-8"></a>Anthropic. (2026). *Introducing Claude Opus 4.7.* [Anthropic](https://www.anthropic.com/news/claude-opus-4-7).
+9. <a id="ref-9"></a>Anthropic. (2026). *Project Glasswing.* [Anthropic](https://www.anthropic.com/project/glasswing).
+10. <a id="ref-10"></a>Artificial Analysis. (2026). *AI Model Evaluations and Intelligence Index.* [Artificial Analysis](https://artificialanalysis.ai/evaluations).
+11. <a id="ref-11"></a>Vals AI. (2026). *Benchmarks.* [Vals AI](https://www.vals.ai/benchmarks).
+12. <a id="ref-12"></a>LMArena. (2026). *Leaderboard.* [LMArena](https://lmarena.ai/leaderboard/).
+13. <a id="ref-13"></a>Chiang, W.-L., et al. (2024). *Chatbot Arena: An Open Platform for Evaluating LLMs by Human Preference.* [arXiv:2403.04132](https://arxiv.org/abs/2403.04132).
+14. <a id="ref-14"></a>Mistral AI. (2026). *Models Overview.* [Mistral Docs](https://docs.mistral.ai/models/overview).
+15. <a id="ref-15"></a>Google. (2024). *Our next-generation model: Gemini 1.5.* [Google Blog](https://blog.google/innovation-and-ai/products/google-gemini-next-generation-model-february-2024/).
+16. <a id="ref-16"></a>Anthropic. (2024). *Introducing the next generation of Claude.* [Anthropic](https://www.anthropic.com/news/claude-3-family).
+17. <a id="ref-17"></a>OpenAI. (2024). *Hello GPT-4o.* [OpenAI](https://openai.com/index/hello-gpt-4o/).
+18. <a id="ref-18"></a>Anthropic. (2024). *Claude 3.5 Sonnet.* [Anthropic](https://www.anthropic.com/news/claude-3-5-sonnet).
+19. <a id="ref-19"></a>OpenAI. (2024). *Introducing OpenAI o1-preview.* [OpenAI](https://openai.com/index/introducing-openai-o1-preview/).
+20. <a id="ref-20"></a>Mistral AI. (2024). *Large Enough: Mistral Large 2.* [Mistral AI](https://mistral.ai/news/mistral-large-2407).
+21. <a id="ref-21"></a>DeepSeek-AI. (2024). *DeepSeek-V3 Technical Report.* [arXiv:2412.19437](https://arxiv.org/abs/2412.19437).
+22. <a id="ref-22"></a>DeepSeek-AI. (2025). *DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning.* [arXiv:2501.12948](https://arxiv.org/abs/2501.12948).
+23. <a id="ref-23"></a>Qwen Team. (2025). *Qwen3: Think Deeper, Act Faster.* [Qwen Blog](https://qwenlm.github.io/blog/qwen3/).
+24. <a id="ref-24"></a>MiniMax. (2025). *MiniMax-M1, the World's First Open-Source, Large-Scale, Hybrid-Attention Reasoning Model.* [MiniMax](https://www.minimax.io/news/minimaxm1).
+25. <a id="ref-25"></a>Moonshot AI. (2025). *Kimi K2.* [Kimi](https://www.kimi.com/preview/1980c532-5631-8c55-885f-517d380005e7).

@@ -34,6 +34,10 @@ Chapter 3에서 본 표준 Transformer는 출발점입니다. 실제 시스템�
 
 즉, 모든 레이어가 동일한 수준으로 “멀리 보고 정확하게 찾는” 일을 할 필요는 없다는 판단입니다.
 
+최근 공개된 open-weight 모델들은 이 흐름을 꽤 선명하게 보여줍니다. MiniMax-Text-01은 7개의 Lightning Attention 레이어 뒤에 1개의 Softmax attention 레이어를 두는 hybrid stack에 MoE를 결합해 매우 긴 컨텍스트를 지원했습니다 [[4]](#ref-4). Kimi Linear는 여기서 한 발 더 나아가 **Kimi Delta Attention (KDA)** 라는 gated-delta 계열 linear attention을 도입하고, 이를 global MLA layer와 3:1 비율로 섞었습니다. 모델 카드에서는 1M context에서 KV cache를 최대 75% 줄이고 decoding throughput을 최대 6배 높인다고 보고합니다 [[5]](#ref-5). Qwen3.6-35B-A3B도 같은 방향을 더 작은 open-weight 패키지로 보여줍니다. 총 35B 파라미터 중 3B만 활성화하고, `3 x Gated DeltaNet + 1 x Gated Attention` 패턴을 반복하며, 각 attention block 뒤에 MoE를 붙이고, multi-token prediction과 native 262K context를 제공합니다. YaRN 확장을 쓰면 약 1M token까지 늘릴 수 있습니다 [[6]](#ref-6). 2026년 4월 open model로 공개된 Ling-2.6-flash도 같은 흐름의 최신 사례입니다. 기존 GQA 설계를 1:7 MLA + Lightning Linear hybrid로 바꾸고 highly sparse MoE와 결합해, 단순히 chain-of-thought를 더 길게 쓰는 대신 agent-style inference를 더 빠르고 토큰 효율적으로 만드는 쪽을 겨냥합니다 [[7]](#ref-7).
+
+중요한 업데이트는 softmax attention이 사라졌다는 뜻이 아닙니다. 오히려 최근 패턴은 **선택적 full attention** 에 가깝습니다. 소수의 global attention layer는 고정밀 retrieval과 composition checkpoint로 남기고, 대부분의 장문 상태 전달은 linear attention layer가 맡는 식입니다. 그래서 hybrid linear attention은 이제 특이한 연구 아이디어라기보다, agentic workload와 long-context serving을 위한 실제 production architecture 후보로 보이기 시작했습니다.
+
 ### 2. KV Cache 압축과 메모리 친화적 어텐션
 자기회귀 모델의 서빙 비용은 계산량만으로 설명되지 않습니다. 생성이 길어질수록 KV cache가 커지고, 이 캐시를 계속 읽고 쓰는 메모리 이동 비용이 매우 중요해집니다.
 
@@ -75,7 +79,7 @@ $$
 
 더 깊은 함의는 "context length"가 더 이상 attention만의 문제가 아니라는 점입니다. Long-context system은 여러 층위에서 공략할 수 있습니다.
 
-- 긴 token sequence 위에서 attention을 더 싸게 만들기;
+- hybrid linear attention으로 긴 token sequence 위의 attention을 더 싸게 만들기;
 - generation 중 KV cache를 더 싸게 만들기;
 - MoE로 computation을 sparse하게 routing하기;
 - 여러 token을 한 번에 예측하거나 검증하기;
@@ -91,7 +95,7 @@ Optical context compression은 마지막 범주에 속합니다. 스캔 문서, 
 
 | 설계 압력 | 자주 쓰이는 대응 | 얻는 것 | 치르는 대가 |
 | :--- | :--- | :--- | :--- |
-| 긴 컨텍스트 | hybrid, local, linear, sparse attention | 낮은 attention 비용 | 레이어별 동작이 덜 균일해짐 |
+| 긴 컨텍스트 | hybrid linear attention, local attention, sparse attention | 낮은 attention 비용 | 레이어별 동작이 덜 균일해지고 custom kernel 의존성이 커짐 |
 | KV cache 증가 | GQA, MQA, MLA, sliding windows | 서빙 메모리와 대역폭 절감 | 구현이 더 특수해짐 |
 | 거대한 파라미터 수 | MoE 레이어 | 추론 비용 대비 더 큰 용량 | routing과 load balancing 복잡도 |
 | 디코딩 처리량 | MTP, speculative-friendly objective | 더 빠른 생성 경로 | 학습/서빙 협업 설계 필요 |
@@ -205,3 +209,7 @@ class SimpleLatentAttention(nn.Module):
 1. <a id="ref-1"></a>DeepSeek-AI. (2024). *DeepSeek-V3 Technical Report*. [arXiv:2412.19437](https://arxiv.org/abs/2412.19437).
 2. <a id="ref-2"></a>Ainslie, J., et al. (2023). *GQA: Training Generalized Multi-Query Transformer Models from Multi-Head Checkpoints*. [arXiv:2305.13245](https://arxiv.org/abs/2305.13245).
 3. <a id="ref-3"></a>Wei, H., Sun, Y., & Li, Y. (2025). *DeepSeek-OCR: Contexts Optical Compression*. [arXiv:2510.18234](https://arxiv.org/abs/2510.18234).
+4. <a id="ref-4"></a>MiniMaxAI. (2025). *MiniMax-Text-01 model card*. [Hugging Face](https://huggingface.co/MiniMaxAI/MiniMax-Text-01-hf).
+5. <a id="ref-5"></a>Moonshot AI. (2025). *Kimi Linear: An Expressive, Efficient Attention Architecture*. [Hugging Face](https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Instruct).
+6. <a id="ref-6"></a>Qwen. (2026). *Qwen3.6-35B-A3B model card*. [Hugging Face](https://huggingface.co/Qwen/Qwen3.6-35B-A3B).
+7. <a id="ref-7"></a>Inclusion AI. (2026). *Ling-2.6-flash model card*. [Hugging Face](https://huggingface.co/inclusionAI/Ling-2.6-flash).

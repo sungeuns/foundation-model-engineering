@@ -19,11 +19,11 @@ This book is **not** optimized as a beginner-friendly introduction for all softw
 > **A Living Document**: The field of AI and Foundation Models is evolving at a breakneck pace. While we strive to include the latest advancements and models (such as Llama, DeepSeek, Qwen, and Gemma), new breakthroughs happen every day. This project aims to be a living document, and we highly encourage contributions, updates, and corrections from the community to keep this resource current. Please refer to our [CONTRIBUTING.md](CONTRIBUTING.md) guide to see how you can help!
 
 ## 🌟 Key Features
-- **End-to-End Scope**: Covers model history, architectures, scaling, post-training, inference, RAG, agents, safety, interpretability, and emerging directions.
+- **End-to-End Scope**: Covers model history, architectures, scaling, post-training, inference, RAG, agents, evaluation, safety, interpretability, and emerging directions.
 - **Systems + Modeling Perspective**: Emphasizes why architectural ideas matter for training, serving, memory, throughput, and product design.
 - **Practical Code Examples**: Includes concept-focused PyTorch implementations to ground abstract ideas.
 - **Interactive Visualizations**: Uses web-based visualizers to make difficult mechanics more intuitive.
-- **Living Document**: Includes recent topics and welcomes corrections, updates, and contributions as the field evolves.
+- **Living Document**: Includes recent topics, including commercial model benchmark snapshots, and welcomes corrections, updates, and contributions as the field evolves.
 
 ## 🎯 Reader Fit
 

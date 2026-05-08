@@ -181,6 +181,7 @@ export const chapters = [
       { id: "17-3", title: { en: "17.3 Elo Rating & Leaderboards", ko: "17.3 Elo 레이팅 및 리더보드" }, path: "/chapter-17/elo-rating-and-leaderboards" },
       { id: "17-4", title: { en: "17.4 Contamination Issues", ko: "17.4 오염 문제" }, path: "/chapter-17/contamination-issues" },
       { id: "17-5", title: { en: "17.5 Production Evaluation and Release Gates", ko: "17.5 프로덕션 평가와 릴리스 게이트" }, path: "/chapter-17/production-evaluation-and-release-gates" },
+      { id: "17-6", title: { en: "17.6 Commercial Model Benchmarks", ko: "17.6 상업용 모델 Benchmark" }, path: "/chapter-17/commercial-model-benchmarks" },
     ]
   },
   {

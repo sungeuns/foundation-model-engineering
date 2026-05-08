@@ -34,6 +34,10 @@ Instead of using full attention in every layer, hybrid models mix expensive but 
 
 This is a recurring pattern in modern model design. Keep some layers that are excellent at exact retrieval and composition, then use cheaper layers elsewhere to carry longer-range state at lower cost.
 
+Recent open-weight releases make this trend concrete. MiniMax-Text-01 scaled a hybrid stack where seven Lightning Attention layers are followed by one Softmax attention layer, combined with MoE, to support very long contexts [[4]](#ref-4). Kimi Linear then pushed the idea further with **Kimi Delta Attention (KDA)**, a refined gated-delta linear attention module, interleaved with global MLA layers in a 3:1 ratio; its model card reports up to 75% KV-cache reduction and up to 6x decoding throughput at 1M context [[5]](#ref-5). Qwen3.6-35B-A3B shows the same direction in a smaller open-weight package: 35B total parameters, 3B active, a repeated `3 x Gated DeltaNet + 1 x Gated Attention` layout, MoE after each attention block, multi-token prediction, and native 262K context extendable to about 1M tokens [[6]](#ref-6). Ling-2.6-flash, released as an open model in April 2026, is another recent example: it upgrades a GQA design into a 1:7 MLA + Lightning Linear hybrid with highly sparse MoE, targeting faster agent-style inference rather than simply longer chain-of-thought outputs [[7]](#ref-7).
+
+The important update is not that softmax attention disappeared. It has not. The newer pattern is **selective full attention**: keep a small number of global attention layers as high-fidelity retrieval/composition checkpoints, and let linear-attention layers carry most of the long-context state. This makes hybrid linear attention look less like an exotic research branch and more like a practical production architecture for agentic and long-context workloads.
+
 ### 2. KV-Cache Compression and Memory-Aware Attention
 For autoregressive models, serving cost is often dominated not just by compute, but by memory movement. Every generated token extends the KV cache, and that cache must be read repeatedly during inference.
 
@@ -75,7 +79,7 @@ Technically, this moves some of the burden from sequence modeling into visual re
 
 The deeper implication is that "context length" is no longer only an attention problem. Long-context systems can be attacked at several levels:
 
-- make attention cheaper over long token sequences;
+- make attention cheaper over long token sequences with hybrid linear attention;
 - make the KV cache cheaper during generation;
 - route computation sparsely with MoE;
 - predict or verify multiple tokens at once;
@@ -91,7 +95,7 @@ Rather than memorizing product names, it is more useful to compare architectures
 
 | Design Pressure | Common Architectural Response | What You Gain | What You Give Up |
 | :--- | :--- | :--- | :--- |
-| Long contexts | Hybrid, local, linear, or sparse attention | Lower asymptotic attention cost | Less uniform behavior across layers |
+| Long contexts | Hybrid linear attention, local attention, sparse attention | Lower asymptotic attention cost | Less uniform behavior across layers and more custom kernels |
 | KV-cache growth | GQA, MQA, MLA, sliding windows | Lower memory traffic during serving | More specialized implementation details |
 | Massive parameter counts | MoE layers | Higher capacity per unit inference compute | Routing and load-balancing complexity |
 | Throughput during decoding | MTP, speculative-friendly objectives | Faster generation paths | More training and serving coordination |
@@ -205,3 +209,7 @@ To better understand how these different architectures control information flow,
 1. <a id="ref-1"></a>DeepSeek-AI. (2024). *DeepSeek-V3 Technical Report*. [arXiv:2412.19437](https://arxiv.org/abs/2412.19437).
 2. <a id="ref-2"></a>Ainslie, J., et al. (2023). *GQA: Training Generalized Multi-Query Transformer Models from Multi-Head Checkpoints*. [arXiv:2305.13245](https://arxiv.org/abs/2305.13245).
 3. <a id="ref-3"></a>Wei, H., Sun, Y., & Li, Y. (2025). *DeepSeek-OCR: Contexts Optical Compression*. [arXiv:2510.18234](https://arxiv.org/abs/2510.18234).
+4. <a id="ref-4"></a>MiniMaxAI. (2025). *MiniMax-Text-01 model card*. [Hugging Face](https://huggingface.co/MiniMaxAI/MiniMax-Text-01-hf).
+5. <a id="ref-5"></a>Moonshot AI. (2025). *Kimi Linear: An Expressive, Efficient Attention Architecture*. [Hugging Face](https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Instruct).
+6. <a id="ref-6"></a>Qwen. (2026). *Qwen3.6-35B-A3B model card*. [Hugging Face](https://huggingface.co/Qwen/Qwen3.6-35B-A3B).
+7. <a id="ref-7"></a>Inclusion AI. (2026). *Ling-2.6-flash model card*. [Hugging Face](https://huggingface.co/inclusionAI/Ling-2.6-flash).
