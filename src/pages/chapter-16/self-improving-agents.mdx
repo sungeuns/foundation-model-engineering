@@ -1,0 +1,239 @@
+---
+layout: ../../layouts/BookLayout.astro
+title: 16.3 Self-Improving Agents
+lang: en
+---
+
+# 16.3 Self-Improving Agents
+
+The previous section described autonomous agents as LLMs inside a control loop. Self-improving agents add a second loop around that loop. They do not merely ask, "What should I do next?" They ask, "How should the system that decides what to do next be changed?"
+
+That distinction is easy to miss. A normal autonomous coding agent might inspect a repository, edit a file, run tests, and retry. A self-improving coding agent may instead modify its own tools, prompts, memory policy, reviewer, search strategy, or evaluation harness so that the next generation of the agent is better at solving future tasks. The object being optimized is no longer only the answer. It is the agent-making process itself.
+
+A useful analogy is the difference between a student solving homework and a student redesigning their study routine. Reflection says, "I made this mistake; remember it next time." Self-improvement says, "The way I practice, evaluate, and choose problems is part of the system, so that system should also be editable."
+
+---
+
+## 1. Why the Outer Loop Matters
+
+The control loop from the previous section solves a local problem: how can an agent keep making progress inside one messy task? Self-improvement asks a longer-horizon question. If the same kind of failure appears again and again, should the agent merely replan one more time, or should it change the machinery that keeps producing that failure?
+
+Consider a coding agent that repeatedly edits the right file but forgets to run the relevant regression test. A normal autonomous agent may notice the mistake on the next step and run the test. A self-improving agent should ask whether the scaffold needs a durable change: a stronger checklist, a better test-selection tool, a reviewer agent, or an evaluator that rejects untested patches. The unit of adaptation moves from **trajectory** to **agent scaffold**.
+
+This is also where self-improvement differs from reflection and model training. Reflection usually writes a lesson into the next context window. Model training changes the weights. Most current self-improving agent systems sit between those two extremes: they keep the base model fixed, but change the code, prompts, tools, memory policy, search procedure, or evaluation harness around it.
+
+That middle layer matters because improvements compound. A better verifier, a cleaner editing tool, or a more reliable experiment loop may help not just the current task but every future task that passes through the same scaffold. The danger compounds too: if the evaluator is weak, the agent may become very good at exploiting the measurement instead of becoming better at the work.
+
+---
+
+## 2. The Minimal Self-Improvement Loop
+
+Most practical systems can be reduced to a simple outer loop:
+
+1. **Propose** a change to the agent or research system.
+2. **Apply** the change in a controlled environment.
+3. **Evaluate** it on a stable task distribution.
+4. **Accept, reject, or archive** the variant.
+5. **Use successful variants** as stepping stones for the next search.
+
+If this sounds like software engineering, that is the point. Self-improving agents are currently less like mystical recursive intelligence and more like automated experimental engineering. The difficulty is not writing the loop. The difficulty is choosing an evaluation signal that the agent cannot cheaply game.
+
+Formally, we can think of an agent scaffold as a program $A_\theta$ with editable parameters or code $\theta$. A self-improvement operator $M$ proposes a candidate:
+
+$$
+\theta' = M(\theta, H, E)
+$$
+
+where $H$ is the history of previous attempts and $E$ is evidence from evaluation. The candidate is accepted only if it improves an evaluator $J$ under a budget $B$:
+
+$$
+J(A_{\theta'}; \mathcal{T}, B) > J(A_{\theta}; \mathcal{T}, B)
+$$
+
+The hard part is hidden in $J$. If the evaluator is weak, the agent learns to exploit the measurement rather than the task. If the evaluator is too expensive, the loop becomes impractical. If the evaluator is too narrow, improvements fail to transfer.
+
+---
+
+## 3. Early Research Loops: Autoresearch and AI Scientists
+
+### Karpathy's Autoresearch
+
+Andrej Karpathy's `autoresearch` is a deliberately small example of the idea [[1]](#ref-1). The repository gives an AI coding agent a compact LLM training setup. The agent edits one file, `train.py`, runs a fixed five-minute training experiment, measures validation bits per byte (`val_bpb`), keeps improvements, and discards regressions.
+
+The design is interesting precisely because it is constrained:
+
+- only one editable training file keeps diffs inspectable
+- `prepare.py` and data preparation stay fixed
+- every experiment runs under the same wall-clock budget
+- the metric is numeric and hard to argue with
+
+This is not a general AI scientist. It is closer to an automated lab bench for a tiny ML system. But that makes it pedagogically valuable: it shows why self-improvement needs a tight loop, a narrow search space, and a metric that survives adversarial pressure from the agent.
+
+### The AI Scientist
+
+Sakana AI's **The AI Scientist** broadened the loop from training-script optimization to end-to-end ML research [[2]](#ref-2). The system generates research ideas, writes code, runs experiments, visualizes results, writes a paper, and uses an automated review process. The follow-up **AI Scientist-v2** removes more human-authored templates, uses agentic tree search, and adds a reviewer loop with vision-language feedback for figures [[3]](#ref-3).
+
+The important conceptual shift is that the artifact becomes a **research trajectory**, not a single code patch. The system is no longer just tuning a model. It is exploring idea space, implementation space, experimental evidence, and written communication.
+
+The limitation is equally important. A paper-like artifact can look coherent while the scientific contribution is weak, unoriginal, or measured by a brittle automated reviewer. In automated science, the evaluator is part of the scientific instrument. If that instrument is poorly calibrated, the whole loop becomes a machine for producing plausible but low-value artifacts.
+
+### Google DeepMind Co-Scientist
+
+Google DeepMind's **Co-Scientist** takes a different stance: it is a multi-agent partner for human scientists rather than a fully autonomous replacement [[4]](#ref-4). The system generates hypotheses, clusters nearby ideas, reflects as a peer reviewer, ranks hypotheses through idea tournaments, evolves promising candidates, and synthesizes final proposals. The 2025 arXiv paper describes a Gemini-based multi-agent system for biomedical hypothesis generation, and the May 2026 DeepMind update reports a Nature publication and a broader Gemini for Science rollout [[5]](#ref-5).
+
+This matters because Co-Scientist makes the evaluation problem more explicit. It dedicates substantial computation to checking novelty, correctness, grounding in literature, and testability. It also treats the human scientist as part of the final validation path. That is usually the right stance for real science: the agent can accelerate hypothesis search, but experimental truth still lives outside the model.
+
+---
+
+## 4. DGM: From Linear Iteration to Open-Ended Archives
+
+The **Darwin Gödel Machine (DGM)** is a more direct attempt at practical recursive self-improvement [[6]](#ref-6). It starts with a coding agent, lets the agent modify its own codebase, evaluates the new variant on coding benchmarks, and stores successful variants in an archive.
+
+The archive is the key idea. A simple hill-climber keeps only the current best agent. That is brittle because some changes are stepping stones: they may not immediately dominate every metric, but they create a useful basis for later improvements. DGM keeps a population-like archive so future variants can branch from multiple earlier agents.
+
+The reported gains are substantial. In the DGM paper, the system improves from 20.0% to 50.0% on SWE-bench and from 14.2% to 30.7% on Polyglot. The discovered changes are also concrete engineering improvements: better editing tools, long-context management, and peer-review mechanisms.
+
+That said, DGM has a hidden alignment advantage. It is evaluated on coding tasks, and the thing it modifies is also code. Better coding ability can directly help the system write better self-modifications. This is powerful, but it is also domain-specific. If the task were poetry critique, protein hypothesis generation, or robotics reward design, better task performance would not automatically mean better ability to edit the self-improvement machinery.
+
+---
+
+## 5. DGM-H: Why Hyperagents Are a Real Step Forward
+
+The 2026 **Hyperagents** paper introduces **DGM-Hyperagents (DGM-H)** to address that limitation [[7]](#ref-7). DGM-H separates two roles:
+
+- **task agent:** solves the target task
+- **meta agent:** modifies agents and generates improved variants
+
+Then it puts both inside a single editable program called a **hyperagent**. The crucial move is that the meta agent is not a fixed, handcrafted outer loop. The meta-level modification procedure is itself editable.
+
+This is why the paper calls the mechanism **metacognitive self-modification**. The system can improve not only what it does, but how it searches for future improvements.
+
+### Why DGM-H Improves on Earlier Self-Improving Agents
+
+| System | Improvement target | Outer improvement mechanism | Main bottleneck |
+| :--- | :--- | :--- | :--- |
+| **Reflexion-style agents** | Prompt context and lessons | Fixed prompt loop | Local memory, weak durability |
+| **Autoresearch** | Training code within a narrow lab | Human-written loop and metric | Narrow task and single-path search |
+| **AI Scientist / Co-Scientist** | Research hypotheses and artifacts | Mostly fixed orchestration | Evaluator calibration and scientific validation |
+| **DGM** | Coding agent codebase | Fixed instruction-generation mechanism | Coding-specific alignment assumption |
+| **DGM-H** | Task agent and meta agent | Editable meta-level mechanism | Evaluation quality, safety, and compute cost |
+
+DGM-H's technical improvement is not simply "more agents." It changes what is allowed to evolve.
+
+1. **The meta-policy becomes editable.** DGM had a handcrafted instruction-generation mechanism. DGM-H lets future variants modify the process that generates future variants.
+2. **Task skill and self-modification skill no longer need to be the same.** A robotics reward designer does not have to also be a strong codebase improver; the meta agent can specialize in modification.
+3. **Improvements can transfer across domains.** The paper reports meta-level improvements such as persistent memory and performance tracking that transfer from paper review and robotics reward design to Olympiad-level math grading.
+4. **Open-ended archives remain central.** DGM-H keeps DGM's archive structure, preserving diverse stepping stones rather than collapsing to one incumbent.
+
+The most interesting claim is not that DGM-H solves recursive self-improvement. It does not. The interesting claim is that self-improvement can be made less dependent on a lucky overlap between "the task being solved" and "the skill needed to improve the solver."
+
+### The Hyperagent Loop
+
+In DGM-H, a candidate hyperagent contains both task-solving logic and meta-improvement logic. A run roughly follows this pattern:
+
+1. sample a parent hyperagent from the archive
+2. let its meta agent propose a modified child hyperagent
+3. evaluate the child task agent on a task distribution
+4. add successful or interesting children to the archive
+5. allow later generations to modify both task and meta components
+
+This creates a search process over **agents that search for better agents**. That sentence sounds circular, but the implementation is concrete: code, prompts, tools, memory, performance logs, and selection logic become editable artifacts.
+
+---
+
+## 6. Engineering Lessons for Future Self-Improving Agents
+
+The direction is promising, but the open problems are sharp.
+
+### Evaluators Must Become First-Class Systems
+
+Self-improvement is only as good as its evaluator. Future systems need evaluators that are:
+
+- stable enough to compare generations
+- broad enough to discourage overfitting
+- grounded enough to resist hallucinated evidence
+- auditable enough for humans to inspect failures
+- expensive only where additional certainty is worth the cost
+
+This is why self-improving agents connect directly to Chapter 17 on evaluation. A weak benchmark turns recursive improvement into recursive Goodharting.
+
+### The Search Space Needs Boundaries
+
+Letting an agent edit everything sounds elegant, but unbounded editability is dangerous and hard to debug. Practical systems should define layers:
+
+- task code and prompts
+- tool-use policies
+- memory and retrieval policies
+- evaluator configuration
+- meta-agent strategy
+- sandbox and permission boundaries
+
+The inner layers can be more editable. The outer safety and measurement layers should change slowly, with stricter review.
+
+### Archives Beat Single Incumbents
+
+DGM and DGM-H both show why single-path self-improvement is fragile. Keeping a diverse archive enables stepping stones, fallback, and later recombination. This is the same engineering intuition behind version control, experiment tracking, and model registries: do not throw away useful intermediate structure just because it is not the current leaderboard winner.
+
+### Self-Improvement Needs Provenance
+
+Every accepted change should carry provenance:
+
+- parent agent
+- diff or configuration change
+- evaluation set and seed
+- metric movement
+- known regressions
+- human review status
+
+Without provenance, an improving system becomes less understandable as it gets stronger. That is exactly the wrong direction for safety.
+
+---
+
+## 7. Practical Takeaway
+
+Self-improving agents are best understood as **experimental systems that modify their own agent scaffold under evaluation**. Autoresearch shows the smallest useful loop. AI Scientist and Co-Scientist show how the loop expands into research workflows. DGM shows that an archive of self-modified coding agents can produce real benchmark gains. DGM-H pushes the idea further by making the meta-improvement process itself editable, reducing dependence on coding-specific alignment.
+
+The next frontier is not just more autonomy. It is trustworthy autonomy: evaluators, archives, sandboxes, provenance, and human review paths that let agents improve without quietly corrupting the measurement system they depend on.
+
+In the next section, we move from self-improving individual systems to groups of specialized agents that share work, critique each other, and coordinate through structured state.
+
+---
+
+## Quizzes
+
+<details>
+<summary>Quiz 1: Why is Karpathy's autoresearch a useful example even though it is narrow?</summary>
+*Because it isolates the essential mechanics of practical self-improvement: a small editable surface, a fixed time budget, a stable metric, and an accept/reject loop. Its narrowness is what makes the feedback signal legible.*
+</details>
+
+<details>
+<summary>Quiz 2: Why can DGM improve at self-improvement in coding more naturally than in unrelated domains?</summary>
+*In DGM, the evaluated task is coding and the self-modification medium is also code. Improvements in coding ability can therefore help the agent write better future modifications. That alignment does not automatically hold in domains such as biology, robotics reward design, or paper review.*
+</details>
+
+<details>
+<summary>Quiz 3: What is the core technical difference between DGM and DGM-H?</summary>
+*DGM keeps a fixed, handcrafted mechanism for generating self-improvement instructions. DGM-H wraps the task agent and meta agent into a single editable hyperagent, so the meta-level improvement procedure itself can be modified and improved.*
+</details>
+
+<details>
+<summary>Quiz 4: Why is evaluator quality the central bottleneck for self-improving agents?</summary>
+*The agent optimizes whatever the evaluator rewards. If the evaluator is narrow, stale, or easy to game, recursive improvement amplifies those flaws. A strong self-improving system therefore needs evaluation infrastructure as much as it needs a strong base model.*
+</details>
+
+<details>
+<summary>Quiz 5: Why do archive-based systems often outperform single-incumbent hill-climbing for agent improvement?</summary>
+*Some changes are stepping stones rather than immediate winners. An archive preserves diverse partial improvements, lets future variants branch from multiple ancestors, and reduces the risk of prematurely converging on a locally good but globally limited agent.*
+</details>
+
+---
+
+## References
+
+1. <a id="ref-1"></a>Karpathy, A. (2026). *autoresearch.* GitHub repository. [github.com/karpathy/autoresearch](https://github.com/karpathy/autoresearch).
+2. <a id="ref-2"></a>Lu, C., Lu, C., Lange, R. T., Foerster, J., Clune, J., & Ha, D. (2024). *The AI Scientist: Towards Fully Automated Open-Ended Scientific Discovery.* [arXiv:2408.06292](https://arxiv.org/abs/2408.06292).
+3. <a id="ref-3"></a>Yamada, Y., Lange, R. T., Lu, C., Hu, S., Lu, C., Foerster, J., Clune, J., & Ha, D. (2025). *The AI Scientist-v2: Workshop-Level Automated Scientific Discovery via Agentic Tree Search.* [arXiv:2504.08066](https://arxiv.org/abs/2504.08066).
+4. <a id="ref-4"></a>Gottweis, J., et al. (2025). *Towards an AI co-scientist.* [arXiv:2502.18864](https://arxiv.org/abs/2502.18864).
+5. <a id="ref-5"></a>Google DeepMind. (2026). *Co-Scientist: A multi-agent AI partner to accelerate research.* [DeepMind blog](https://deepmind.google/blog/co-scientist-a-multi-agent-ai-partner-to-accelerate-research/).
+6. <a id="ref-6"></a>Zhang, J., Hu, S., Lu, C., Lange, R., & Clune, J. (2025). *Darwin Godel Machine: Open-Ended Evolution of Self-Improving Agents.* [arXiv:2505.22954](https://arxiv.org/abs/2505.22954).
+7. <a id="ref-7"></a>Zhang, J., Zhao, B., Yang, W., Foerster, J., Clune, J., Jiang, M., Devlin, S., & Shavrina, T. (2026). *Hyperagents.* [arXiv:2603.19461](https://arxiv.org/abs/2603.19461).

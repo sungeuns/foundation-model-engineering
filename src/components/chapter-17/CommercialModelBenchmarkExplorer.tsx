@@ -11,7 +11,10 @@ type CompanyKey =
   | 'DeepSeek'
   | 'Alibaba'
   | 'MiniMax'
-  | 'Mistral';
+  | 'Mistral'
+  | 'xAI'
+  | 'Z AI'
+  | 'Cohere';
 type MetricKey =
   | 'aaIndex'
   | 'valsIndex'
@@ -137,6 +140,22 @@ const MODEL_SNAPSHOTS: ModelSnapshot[] = [
     access: 'ChatGPT / API preview',
     contextK: 128,
     note: 'Made inference-time reasoning budget a product feature: harder science, math, and code tasks improved by thinking longer.',
+  },
+  {
+    id: 'gpt-5',
+    company: 'OpenAI',
+    model: 'GPT-5',
+    release: '2025-08',
+    releaseMonth: 2025.58,
+    family: 'unified reasoning system',
+    access: 'API / ChatGPT',
+    aaIndex: 45,
+    sweBench: 74.9,
+    inputPrice: 1.25,
+    outputPrice: 10,
+    outputSpeed: 87.1,
+    contextK: 400,
+    note: 'The base GPT-5 system introduced routing between fast responses and deeper reasoning, making “model” and “product system” harder to separate.',
   },
   {
     id: 'qwen-25',
@@ -274,6 +293,24 @@ const MODEL_SNAPSHOTS: ModelSnapshot[] = [
     outputSpeed: 125.6,
     contextK: 1000,
     note: 'Shows why plotting speed and price matters: near-frontier aggregate score with unusually high output speed.',
+  },
+  {
+    id: 'gemini-35-flash',
+    company: 'Google',
+    model: 'Gemini 3.5 Flash',
+    release: '2026-05',
+    releaseMonth: 2026.42,
+    family: 'fast multimodal agent',
+    access: 'Gemini App / Gemini API / Vertex AI',
+    aaIndex: 55,
+    sweBench: 55.1,
+    terminalBench: 76.2,
+    hle: 40.2,
+    inputPrice: 1.5,
+    outputPrice: 9,
+    outputSpeed: 280,
+    contextK: 1000,
+    note: 'A Flash-line release aimed at agentic coding, long-horizon workflows, and multimodal work: lower-latency positioning with 1M input context and 64K output.',
   },
   {
     id: 'gpt-53-codex',
@@ -416,6 +453,24 @@ const MODEL_SNAPSHOTS: ModelSnapshot[] = [
     note: 'Shows the breadth of Chinese frontier competition beyond one or two labs.',
   },
   {
+    id: 'qwen37-max',
+    company: 'Alibaba',
+    model: 'Qwen3.7-Max',
+    release: '2026-05',
+    releaseMonth: 2026.42,
+    family: 'proprietary agent foundation',
+    access: 'Alibaba Cloud Model Studio (announced)',
+    aaIndex: 57,
+    sweBench: 60.6,
+    terminalBench: 69.7,
+    gpqa: 92.4,
+    inputPrice: 2.5,
+    outputPrice: 7.5,
+    outputSpeed: 210.5,
+    contextK: 1000,
+    note: 'A proprietary Qwen release for agent scaffolds, office automation, coding, and long-horizon execution, with published examples above 1,000 tool calls.',
+  },
+  {
     id: 'minimax-m27',
     company: 'MiniMax',
     model: 'MiniMax-M2.7',
@@ -429,6 +484,84 @@ const MODEL_SNAPSHOTS: ModelSnapshot[] = [
     outputSpeed: 45.4,
     contextK: 205,
     note: 'A strong price-performance point: not the top raw score, but very competitive once token cost is plotted.',
+  },
+  {
+    id: 'kimi-k26',
+    company: 'Kimi',
+    model: 'Kimi K2.6',
+    release: '2026-04',
+    releaseMonth: 2026.33,
+    family: 'open-weight agentic MoE',
+    access: 'API / open-weight ecosystem',
+    aaIndex: 54,
+    inputPrice: 0.95,
+    outputPrice: 4,
+    outputSpeed: 96.3,
+    contextK: 256,
+    note: 'A newer open-weight Kimi point with strong agentic and multimodal positioning: 1T total parameters, 32B active, and 256K context.',
+  },
+  {
+    id: 'deepseek-v4-flash',
+    company: 'DeepSeek',
+    model: 'DeepSeek V4 Flash',
+    release: '2026-04',
+    releaseMonth: 2026.33,
+    family: 'low-cost open-weight reasoning',
+    access: 'API / open-weight ecosystem',
+    aaIndex: 47,
+    inputPrice: 0.14,
+    outputPrice: 0.28,
+    outputSpeed: 97,
+    contextK: 1000,
+    note: 'The efficiency sibling of DeepSeek V4 Pro: lower raw score, but an unusually aggressive price point with 1M context.',
+  },
+  {
+    id: 'grok-43',
+    company: 'xAI',
+    model: 'Grok 4.3',
+    release: '2026-04',
+    releaseMonth: 2026.33,
+    family: 'cost-efficient proprietary reasoning',
+    access: 'xAI API / Grok',
+    aaIndex: 53,
+    inputPrice: 1.25,
+    outputPrice: 2.5,
+    outputSpeed: 209,
+    contextK: 1000,
+    note: 'A cost-efficiency pressure point: not the top raw intelligence score, but strong speed, 1M context, and low output-token pricing.',
+  },
+  {
+    id: 'glm-47',
+    company: 'Z AI',
+    model: 'GLM-4.7',
+    release: '2025-12',
+    releaseMonth: 2025.92,
+    family: 'open-weight coding agent',
+    access: 'Z.AI API / open-weight ecosystem',
+    aaIndex: 42,
+    sweBench: 73.8,
+    terminalBench: 41.0,
+    hle: 42.8,
+    inputPrice: 0.6,
+    outputPrice: 2.2,
+    outputSpeed: 99.9,
+    contextK: 200,
+    note: 'A Z.ai coding-oriented open model with stronger multi-step execution, frontend generation, and tool-use positioning.',
+  },
+  {
+    id: 'command-a-plus',
+    company: 'Cohere',
+    model: 'Command A+',
+    release: '2026-05',
+    releaseMonth: 2026.42,
+    family: 'enterprise open-weight',
+    access: 'Cohere API / open weights',
+    aaIndex: 37,
+    gpqa: 76,
+    hle: 11,
+    outputSpeed: 208.7,
+    contextK: 192,
+    note: 'A sovereign-AI and enterprise deployment point: lower frontier score, but open weights, strong speed, and conservative hallucination behavior.',
   },
   {
     id: 'mistral-large-3',
@@ -481,7 +614,7 @@ const labels = {
     detailContext: 'context',
     priceAxis: 'Lower is cheaper',
     source:
-      'Snapshot as of May 8, 2026. Values combine cited lab cards/release notes with Artificial Analysis and Vals AI public benchmark pages.',
+      'Snapshot as of May 27, 2026. Values combine cited lab cards/release notes with Artificial Analysis and Vals AI public benchmark pages.',
   },
   ko: {
     title: '상업용 모델 Benchmark Map',
@@ -506,7 +639,7 @@ const labels = {
     detailContext: 'context',
     priceAxis: '왼쪽일수록 저렴',
     source:
-      '2026년 5월 8일 기준 snapshot입니다. 값은 본문에 인용한 lab card/release note와 Artificial Analysis, Vals AI public benchmark page를 함께 정리했습니다.',
+      '2026년 5월 27일 기준 snapshot입니다. 값은 본문에 인용한 lab card/release note와 Artificial Analysis, Vals AI public benchmark page를 함께 정리했습니다.',
   },
 };
 
@@ -520,6 +653,9 @@ const companyOptions: CompanyKey[] = [
   'Alibaba',
   'MiniMax',
   'Mistral',
+  'xAI',
+  'Z AI',
+  'Cohere',
 ];
 
 const metricOptions: MetricKey[] = [

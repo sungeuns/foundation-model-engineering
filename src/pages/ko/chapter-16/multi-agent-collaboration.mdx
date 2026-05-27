@@ -1,14 +1,14 @@
 ---
 layout: ../../../layouts/BookLayout.astro
-title: 16.3 Multi-agent Collaboration
+title: 16.4 멀티 에이전트 협업
 lang: ko
 ---
 
 import MultiAgentTopologyVisualizer from '../../../components/chapter-16/MultiAgentTopologyVisualizer.tsx';
 
-# 16.3 Multi-agent Collaboration
+# 16.4 Multi-agent Collaboration
 
-이전 장에서는 단일 자율 에이전트(Autonomous agent)가 LATS와 성찰형 메모리(Reflective memory) 같은 계획 아키텍처를 사용하여 복잡한 환경을 탐색하는 방법을 살펴보았습니다. 그러나 단일 에이전트는 필연적으로 인지적 한계(Cognitive ceiling)에 부딪힙니다. 작업의 복잡성이 증가함에 따라, 단일 컨텍스트 윈도우(Context window)는 이질적인 지시사항, 중간 스크래치패드(Scratchpads), 그리고 상충하는 목표들로 오염됩니다.
+이전 장에서는 단일 에이전트가 실행을 거듭하며 자기 scaffold를 개선하는 방식을 살펴보았습니다. 그러나 단일 에이전트는 필연적으로 인지적 한계(Cognitive ceiling)에 부딪힙니다. 작업의 복잡성이 증가함에 따라, 단일 컨텍스트 윈도우(Context window)는 이질적인 지시사항, 중간 스크래치패드(Scratchpads), 그리고 상충하는 목표들로 오염됩니다.
 
 더욱 치명적인 것은 단일 에이전트가 겪는 **페르소나 붕괴 (Persona collapse)** 현상입니다. 만약 단일 LLM에게 "창의적인 개발자"와 "엄격한 보안 감사자" 역할을 동시에 수행하도록 프롬프트를 주면, 모델은 이 상충하는 목표 사이의 긴장감을 유지하는 데 어려움을 겪습니다. 결국 두 가지 특성 중 어느 것도 완벽히 수행하지 못하고 어중간하게 타협한 결과물을 생성하게 됩니다.
 
@@ -185,7 +185,7 @@ if __name__ == "__main__":
 
 그러나 에이전트 군집이 며칠 또는 몇 주 동안 지속적으로 실행됨에 따라 새로운 문제가 대두됩니다. 에이전트 생태계는 한 달 전에 있었던 대화에서 사용자의 선호도를 어떻게 기억할까요? 매 세션마다 수백만 개의 토큰을 다시 읽지 않고도 장기적인 사실적 지식의 수명 주기를 어떻게 관리할 수 있을까요?
 
-다음 섹션인 **16.4 Long-term Memory for Agents** 에서는 에이전트가 시간이 지남에 따라 지속되고 진화할 수 있도록 하는 메모리 계층 구조(벡터 데이터베이스, GraphRAG 통합, 그리고 지속적 평생 학습 아키텍처)에 대해 심도 있게 다룹니다.
+다음 섹션인 **16.5 Long-term Memory for Agents** 에서는 에이전트가 시간이 지남에 따라 지속되고 진화할 수 있도록 하는 메모리 계층 구조(벡터 데이터베이스, GraphRAG 통합, 그리고 지속적 평생 학습 아키텍처)에 대해 심도 있게 다룹니다.
 
 ---
 

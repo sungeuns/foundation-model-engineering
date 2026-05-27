@@ -1,14 +1,14 @@
 ---
 layout: ../../layouts/BookLayout.astro
-title: 16.3 Multi-agent Collaboration
+title: 16.4 Multi-agent Collaboration
 lang: en
 ---
 
 import MultiAgentTopologyVisualizer from '../../components/chapter-16/MultiAgentTopologyVisualizer.tsx';
 
-# 16.3 Multi-agent Collaboration
+# 16.4 Multi-agent Collaboration
 
-In the previous section, we explored how a single autonomous agent uses planning architectures like LATS and reflective memory to navigate complex environments. However, a solitary agent inevitably hits a cognitive ceiling. As tasks scale in complexity, a single context window becomes polluted with disparate instructions, intermediate scratchpads, and conflicting objectives. 
+In the previous section, we explored how a single agent can improve its own scaffold across runs. However, a solitary agent inevitably hits a cognitive ceiling. As tasks scale in complexity, a single context window becomes polluted with disparate instructions, intermediate scratchpads, and conflicting objectives. 
 
 More critically, monolithic agents suffer from **persona collapse**. If you prompt a single LLM to simultaneously act as a "Creative Developer" and a "Strict Security Auditor," the model will struggle to maintain the tension between these opposing goals. It will often compromise, producing code that is neither highly innovative nor fully secure.
 
@@ -185,7 +185,7 @@ Multi-agent collaboration solves the persona collapse and narrow context issues 
 
 However, as agent swarms run continuously for days or weeks, a new problem emerges. How does an agent ecosystem remember a user's preferences from a conversation that happened a month ago? How do agents manage the lifecycle of long-term factual knowledge without re-reading millions of tokens every session? 
 
-In the next section, **16.4 Long-term Memory for Agents**, we will dive into the memory hierarchies—Vector Databases, GraphRAG integrations, and continuous lifelong learning architectures—that allow agents to persist and evolve over time.
+In the next section, **16.5 Long-term Memory for Agents**, we will dive into the memory hierarchies—Vector Databases, GraphRAG integrations, and continuous lifelong learning architectures—that allow agents to persist and evolve over time.
 
 ---
 

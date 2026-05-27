@@ -595,6 +595,9 @@
 .provider-alibaba { background: #ffedd5; color: #9a3412; }
 .provider-minimax { background: #e0f2fe; color: #075985; }
 .provider-mistral { background: #ffedd5; color: #9a3412; }
+.provider-xai { background: #e2e8f0; color: #0f172a; }
+.provider-z-ai { background: #ccfbf1; color: #0f766e; }
+.provider-cohere { background: #ede9fe; color: #6d28d9; }
 
 .commercial-plot-layout {
   display: grid;
@@ -692,6 +695,9 @@
 .company-alibaba { fill: #ea580c; }
 .company-minimax { fill: #0284c7; }
 .company-mistral { fill: #f97316; }
+.company-xai { fill: #334155; }
+.company-z-ai { fill: #0f766e; }
+.company-cohere { fill: #7c3aed; }
 
 .commercial-detail-panel {
   padding: 1rem;

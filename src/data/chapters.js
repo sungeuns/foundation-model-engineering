@@ -167,9 +167,10 @@ export const chapters = [
     subs: [
       { id: "16-1", title: { en: "16.1 Function Calling & Tool Use", ko: "16.1 함수 호출 및 도구 사용" }, path: "/chapter-16/function-calling-and-tool-use" },
       { id: "16-2", title: { en: "16.2 Autonomous Agents", ko: "16.2 자율 에이전트" }, path: "/chapter-16/autonomous-agents" },
-      { id: "16-3", title: { en: "16.3 Multi-agent Collaboration", ko: "16.3 멀티 에이전트 협업" }, path: "/chapter-16/multi-agent-collaboration" },
-      { id: "16-4", title: { en: "16.4 Long-term Memory for Agents", ko: "16.4 에이전트를 위한 장기 기억" }, path: "/chapter-16/long-term-memory-for-agents" },
-      { id: "16-5", title: { en: "16.5 Agent Reliability, Recovery, and Guardrails", ko: "16.5 에이전트 신뢰성, 복구, 그리고 가드레일" }, path: "/chapter-16/agent-reliability-recovery-and-guardrails" },
+      { id: "16-3", title: { en: "16.3 Self-Improving Agents", ko: "16.3 자기 개선 에이전트" }, path: "/chapter-16/self-improving-agents" },
+      { id: "16-4", title: { en: "16.4 Multi-agent Collaboration", ko: "16.4 멀티 에이전트 협업" }, path: "/chapter-16/multi-agent-collaboration" },
+      { id: "16-5", title: { en: "16.5 Long-term Memory for Agents", ko: "16.5 에이전트를 위한 장기 기억" }, path: "/chapter-16/long-term-memory-for-agents" },
+      { id: "16-6", title: { en: "16.6 Agent Reliability, Recovery, and Guardrails", ko: "16.6 에이전트 신뢰성, 복구, 그리고 가드레일" }, path: "/chapter-16/agent-reliability-recovery-and-guardrails" },
     ]
   },
   {
