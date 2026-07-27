@@ -30,7 +30,7 @@ Mixtral employs a standard Top-2 routing mechanism out of 8 experts ($K=2, N=8$)
 
 $$ y = \sum_{i=1}^{2} G(x)_i E_i(x) $$
 
-By activating only two experts per token, Mixtral achieves the inference speed of a ~12B parameter model while leveraging the knowledge capacity of a 47B parameter model. This proved that sparse MoE could be trained efficiently and deployed on consumer hardware (when quantized), democratizing the architecture.
+By activating only two experts per token, Mixtral uses roughly 13B active parameters while retaining 47B total parameters. That active-parameter count does not guarantee the latency of a dense 13B model: all expert weights still occupy memory, routing creates communication, and kernel utilization depends on batch shape. Mixtral nevertheless showed that sparse MoE could be trained efficiently and, when quantized, deployed beyond hyperscaler clusters.
 
 ---
 
@@ -143,11 +143,23 @@ class DeepSeekAuxFreeRouter(nn.Module):
         self.expert_bias += step_size * torch.sign(load_diff)
 ```
 
-By removing the auxiliary loss, DeepSeek-V3 achieves a purer signal for the next-token prediction task, which is a major factor in its state-of-the-art performance on reasoning and mathematics benchmarks.
+Removing the auxiliary balancing loss avoids one source of gradient interference. It is one contributor among data, scale, architecture, optimization, and post-training—not a causal explanation by itself for the final benchmark scores.
 
 ---
 
-## 5. Architectural Comparison
+## 5. GLM-5.2: MoE Becomes a Full Agent Pipeline
+
+GLM-5.2 is a useful 2026 case because its improvement is not confined to the router. The released MIT configuration describes 753B parameters, 78 layers, three initial dense layers, then 256 routed experts plus one shared expert with eight routed experts selected per token [[5]](#ref-5) [[6]](#ref-6).
+
+Its long-context path uses DeepSeek Sparse Attention with **IndexShare**: one sparse indexer is reused across each four-layer group. The model retains layer-specific attention computation while amortizing the expensive decision about which historical positions to retrieve. This turns sparse attention from a paper-level asymptotic claim into a serving design.
+
+The MTP path was co-designed with inference. Z.ai reports IndexShare/KVShare, rejection sampling, and an end-to-end total-variation objective that move average accepted speculative length from 4.56 to 5.47 tokens. Its serving stack also describes layer splitting, memory management, long-context kernels, a cache pipeline, and CPU scheduler paths [[5]](#ref-5). A model architecture can enable speculative decoding, but the systems layer decides whether that draft acceptance becomes user-visible latency.
+
+Post-training targets long-horizon agents directly. Parallel on-policy distillation merges more than ten expert policies; critic-based PPO trains on compacted long trajectories; token-level loss avoids letting short samples dominate; and an anti-hacking filter first applies rules and then an LLM judge. Blocked suspicious tool calls return dummy results so the rollout must recover rather than disappear from the dataset. This is a rare public example where **failure recovery is part of the training distribution**.
+
+The data disclosure boundary is just as important: the launch materials describe post-training machinery in detail, but not the full pre-training corpus mixture and filtering recipe. “Open weight” makes architecture inspection and deployment possible; it does not automatically make the entire training pipeline reproducible.
+
+## 6. Architectural Comparison
 
 To synthesize the differences, let's look at a comparative matrix of these models alongside a dense baseline (Llama-3 70B).
 
@@ -157,13 +169,14 @@ To synthesize the differences, let's look at a comparative matrix of these model
 | **Mixtral 8x7B** | Coarse MoE | 47B | 13B | 8 | 2 | Standard Softmax |
 | **DBRX** | Fine-Grained MoE | 132B | 36B | 16 | 4 | Dropless (MegaBlocks) |
 | **Grok-1** | Coarse MoE | 314B | ~78B | 8 | 2 | Standard Softmax |
-| **DeepSeek-V3** | Ultra-Fine MoE | 671B | 37B | 256 (+1 Shared)| 8 | Aux-Loss-Free Bias |
+| **DeepSeek-V3** | Ultra-Fine MoE | 671B | 37B | 256 (+1 shared) | 8 | Aux-Loss-Free Bias |
+| **GLM-5.2** | Long-context MoE | 753B | Not disclosed in cited config | 256 (+1 shared) | 8 | Aux-Loss-Free + IndexShare |
 
 *Observation:* The industry trend is clear. Models are moving from coarse-grained experts (8 choose 2) toward extreme fine-grained sparsity (256 choose 8). Total parameter counts are skyrocketing to capture world knowledge, while active parameter counts are tightly constrained to maintain inference speed and batch processing efficiency.
 
 ---
 
-## 6. Summary & Next Steps
+## 7. Summary & Next Steps
 
 The evolution of MoE architectures from Mixtral to DeepSeek-V3 demonstrates that scaling intelligence is no longer just about stacking more layers; it is about **routing efficiency and sparsity**. We have seen how fine-grained experts increase combinatorial capacity, how dropless routing maximizes hardware utilization, and how auxiliary-loss-free strategies protect the purity of the learning signal.
 
@@ -200,3 +213,5 @@ In the next chapter, **Chapter 6: Foundation Model Pre-training**, we will desce
 2. <a id="ref-2"></a>Gale, T., et al. (2022). *MegaBlocks: Efficient Routing for Mixture-of-Experts*. arXiv preprint. [arXiv:2211.15841](https://arxiv.org/abs/2211.15841).
 3. <a id="ref-3"></a>xAI. (2024). "Open Release of Grok-1." "xAI Blog". [Link](https://x.ai/blog/grok-os).
 4. <a id="ref-4"></a>DeepSeek-AI. (2024). *DeepSeek-V3 Technical Report*. arXiv preprint. [arXiv:2412.19437](https://arxiv.org/abs/2412.19437).
+5. <a id="ref-5"></a>Z.ai. (2026). *GLM-5.2: From Long Context to Long-Horizon Agents*. [Z.ai](https://z.ai/blog/glm-5.2).
+6. <a id="ref-6"></a>Z.ai. (2026). *GLM-5.2 model card and configuration*. [Hugging Face](https://huggingface.co/zai-org/GLM-5.2).

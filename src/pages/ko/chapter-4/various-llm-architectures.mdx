@@ -89,6 +89,37 @@ Optical context compression은 마지막 범주에 속합니다. 스캔 문서, 
 
 ---
 
+## 2026년 7월 오픈 모델 전선: 아키텍처와 공개 범위를 함께 읽기
+
+제품명만 나열하는 표보다 더 유용한 것은 **주장의 경계**를 보여 주는 표입니다. 가중치와 설정 파일로 검증할 수 있는 사실, 출시 글에만 적힌 설명, 아직 약속 단계인 정보를 분리해야 합니다.
+
+| 모델 | 2026년 7월 26일 공개 상태 | 검증 가능한 아키텍처 정보 | 아직 공개되지 않은 것 |
+| :--- | :--- | :--- | :--- |
+| GLM-5.2 | MIT 라이선스 가중치와 설정 공개 | 753B MoE, 78개 레이어, 앞쪽 3개 dense layer, 256 routed + 1 shared expert, 토큰당 routed expert 8개, 1M position, DeepSeek Sparse Attention, IndexShare, MTP layer 1개 [[8]](#ref-8) [[9]](#ref-9) | 전체 pre-training corpus 구성과 filtering recipe |
+| Kimi K3 | hosted model 공개; full weights와 technical report는 7월 27일 예정 | 2.8T parameter, native multimodality, 1M context, Kimi Delta Attention, Attention Residuals, Stable LatentMoE, 16-of-896 expert routing [[11]](#ref-11) | weight file, config 차원, data mixture, 전체 training recipe |
+| Qwen3.7 | agent 중심 Qwen 세대로 공개 | 1M-context 제품 설정과 long-horizon agent 사례 [[12]](#ref-12) | 이 정보는 Qwen3.8 내부 구조의 증거가 아님 |
+| Qwen3.8-Max-Preview | 2.4T hosted preview; open weights 공개 예정 | parameter 규모와 제품 제공 경로 [[13]](#ref-13) | weights, model card, architecture config, corpus recipe, 상세 post-training report |
+
+여기서 “오픈”은 미래의 약속이나 API endpoint, parameter count 발표를 뜻하지 않습니다. 재현 가능한 엔지니어링 관점에서 open-weight 공개는 실제 weight file과 실행 가능한 설정이 올라온 시점부터입니다.
+
+### GLM-5.2: attention 결과가 아니라 indexer를 공유한다
+
+GLM-5.2의 흥미로운 장문 설계는 **IndexShare**입니다. Sparse attention에는 과거의 어느 위치에 비싼 attention을 쓸지 결정하는 indexer가 필요합니다. GLM-5.2는 네 개 레이어 묶음에서 학습된 sparse indexer 하나를 공유합니다. 선택된 위치를 처리하는 attention projection은 각 레이어가 따로 가질 수 있고, 공유되는 것은 검색 *결정 장치*입니다. Z.ai는 1M-token 경로에서 token당 FLOPs가 2.9배 줄었다고 보고합니다 [[8]](#ref-8).
+
+설정 파일에는 의도적인 단계 구성이 드러납니다. 처음 세 dense layer가 초기 표현을 만들고, 이후 레이어는 항상 켜지는 shared expert 하나와 routed expert 8개를 선택하는 fine-grained MoE를 사용합니다. MTP layer 하나는 speculative decoding용 draft signal을 만듭니다. 출시 글은 IndexShare/KVShare, rejection sampling, end-to-end total-variation objective로 평균 accept length가 4.56에서 5.47 token으로 늘었다고 설명합니다 [[8]](#ref-8). 이는 accepted draft length가 약 20% 늘었다는 뜻이지, end-to-end latency가 자동으로 20% 줄었다는 뜻은 아닙니다. Verification, memory traffic, batching, scheduler overhead가 남아 있기 때문입니다.
+
+Post-training pipeline도 눈여겨볼 만합니다. Z.ai는 열 개가 넘는 expert policy를 약 이틀 안에 합치는 parallel on-policy distillation, 압축된 장기 trajectory를 위한 critic-based PPO, 길이가 다른 trajectory의 불균형을 다루는 token-level loss normalization, 두 단계 anti-reward-hacking filter를 설명합니다. 의심스러운 tool call을 차단할 때 episode를 버리지 않고 dummy result를 반환해 rollout을 계속합니다. 덕분에 실패 뒤 회복하는 행동 자체가 학습 데이터가 됩니다 [[8]](#ref-8). 이제 “agent model”은 아키텍처 하나가 아니라 rollout compression, verifier, serving kernel까지 결합한 시스템입니다.
+
+### Kimi K3: 공개된 세 가지 아이디어와 중요한 분모
+
+K3는 recurrent/linear 경로인 Kimi Delta Attention, 레이어 사이 표현을 attention 방식으로 섞는 Attention Residuals, Stable LatentMoE를 결합합니다. Router는 896개 expert 중 16개를 선택합니다. 이는 **expert pool의 약 1.8%**이지, 전체 parameter의 1.8%만 활성화된다는 증거가 아닙니다. Embedding, attention, shared component, expert 크기를 알아야 진짜 active-parameter ratio를 계산할 수 있습니다. Moonshot은 K2 대비 2.5배 높은 scaling efficiency를 제시하지만, 그 정의를 감사할 technical report는 다음 날 공개 예정입니다 [[11]](#ref-11).
+
+K3에는 흥미로운 제품 제약도 있습니다. Reasoning session에서는 thinking history를 보존해야 하며, 대화 도중 mode를 바꾸면 trajectory가 불안정해질 수 있습니다. 대화 상태가 UI 장식이 아니라 inference contract의 일부라는 뜻입니다.
+
+### Qwen3.8: ‘아직 없음’도 기술적 사실이다
+
+Qwen3.8-Max-Preview는 근거 규율을 가르쳐 준다는 점에서 포함할 가치가 있습니다. Alibaba는 2.4T preview와 향후 open weights를 발표했지만, 현재 expert 수, attention layout, data mixture, training pipeline을 뒷받침할 공개 artifact는 없습니다 [[13]](#ref-13). Qwen3.7의 세부 정보를 후속 모델에 조용히 이식해서는 안 됩니다. Artifact가 올라오기 전까지 기술적으로 올바른 아키텍처 표기는 추정치가 아니라 **미공개**입니다.
+
 ## 최신 아키텍처를 비교하는 더 좋은 방법
 
 개별 제품명을 외우기보다, 어떤 병목을 겨냥한 설계인지로 비교하는 편이 훨씬 오래 갑니다.
@@ -213,3 +244,9 @@ class SimpleLatentAttention(nn.Module):
 5. <a id="ref-5"></a>Moonshot AI. (2025). *Kimi Linear: An Expressive, Efficient Attention Architecture*. [Hugging Face](https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Instruct).
 6. <a id="ref-6"></a>Qwen. (2026). *Qwen3.6-35B-A3B model card*. [Hugging Face](https://huggingface.co/Qwen/Qwen3.6-35B-A3B).
 7. <a id="ref-7"></a>Inclusion AI. (2026). *Ling-2.6-flash model card*. [Hugging Face](https://huggingface.co/inclusionAI/Ling-2.6-flash).
+8. <a id="ref-8"></a>Z.ai. (2026). *GLM-5.2: From Long Context to Long-Horizon Agents*. [Z.ai](https://z.ai/blog/glm-5.2).
+9. <a id="ref-9"></a>Z.ai. (2026). *GLM-5.2 model card*. [Hugging Face](https://huggingface.co/zai-org/GLM-5.2).
+10. <a id="ref-10"></a>Z.ai. (2026). *GLM-5.2 configuration*. [Hugging Face](https://huggingface.co/zai-org/GLM-5.2/blob/main/config.json).
+11. <a id="ref-11"></a>Moonshot AI. (2026). *Kimi K3: A Native Multimodal Agent Model*. [Kimi](https://www.kimi.com/blog/kimi-k3).
+12. <a id="ref-12"></a>Qwen Team. (2026). *Qwen3.7: The Agent Frontier*. [Alibaba Cloud Community](https://www.alibabacloud.com/blog/qwen3-7-the-agent-frontier_603154).
+13. <a id="ref-13"></a>Alibaba Group. (2026). *Alibaba Unveils Qwen3.8-Max-Preview*. [Alibaba Group](https://www.alibabagroup.com/en-US/document-2016703577908576256).

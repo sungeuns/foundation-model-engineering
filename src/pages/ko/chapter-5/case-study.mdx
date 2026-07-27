@@ -28,7 +28,7 @@ Mixtral은 8개의 전문가 중 2개를 선택하는 표준적인 Top-2 라우�
 
 $$ y = \sum_{i=1}^{2} G(x)_i E_i(x) $$
 
-토큰당 단 두 개의 전문가만 활성화함으로써, Mixtral은 약 12B 파라미터 모델의 추론 속도를 달성하면서도 47B 파라미터 모델의 지식 용량을 활용합니다. 이는 Sparse **MoE** 가 효율적으로 학습될 수 있고, 양자화(Quantization) 시 소비자용 하드웨어에서도 배포될 수 있음을 증명하며 아키텍처의 민주화를 이끌었습니다.
+토큰당 단 두 개의 전문가만 활성화하므로 Mixtral은 약 13B의 active parameter만 계산하면서 47B의 전체 parameter를 유지합니다. 다만 이 숫자가 dense 13B와 같은 latency를 보장하지는 않습니다. 모든 expert weight를 메모리에 올려야 하고, routing communication과 batch shape에 따른 kernel utilization 차이가 남습니다. 그럼에도 Mixtral은 sparse MoE가 효율적으로 학습되고, 양자화하면 hyperscaler 밖에서도 배포될 수 있음을 보여 주었습니다.
 
 ---
 
@@ -141,11 +141,23 @@ class DeepSeekAuxFreeRouter(nn.Module):
         self.expert_bias += step_size * torch.sign(load_diff)
 ```
 
-보조 손실을 제거함으로써 **DeepSeek-V3** 는 다음 단어 예측 태스크를 위한 더 순수한 학습 신호를 얻을 수 있었으며, 이는 추론(Reasoning) 및 수학 벤치마크에서 SOTA(State-of-the-Art) 성능을 달성하는 주요 요인이 되었습니다.
+보조 균형 손실을 제거하면 gradient interference의 한 원인을 줄일 수 있습니다. 하지만 최종 benchmark는 data, scale, architecture, optimization, post-training이 함께 만든 결과이므로 이 기법 하나를 성능의 인과적 설명으로 보아서는 안 됩니다.
 
 ---
 
-## 5. 아키텍처 비교 (Architectural Comparison)
+## 5. GLM-5.2: MoE가 전체 agent pipeline으로 확장되다
+
+GLM-5.2는 개선이 router에만 머물지 않는 2026년 사례입니다. MIT로 공개된 설정에는 753B parameter, 78개 layer, 처음 3개의 dense layer, 이후 256 routed expert + 1 shared expert, 토큰당 routed expert 8개 선택이 명시되어 있습니다 [[5]](#ref-5) [[6]](#ref-6).
+
+Long-context 경로는 **IndexShare**를 포함한 DeepSeek Sparse Attention을 사용합니다. 네 개 layer 묶음이 sparse indexer 하나를 재사용합니다. 각 layer의 attention 계산은 독립적으로 유지하면서, 과거의 어느 위치를 검색할지 정하는 비싼 결정을 amortize합니다. Sparse attention을 논문 속 복잡도 주장이 아니라 실제 serving design으로 만든 셈입니다.
+
+MTP 경로도 inference와 함께 설계됐습니다. Z.ai는 IndexShare/KVShare, rejection sampling, end-to-end total-variation objective로 평균 accepted speculative length가 4.56에서 5.47 token으로 늘었다고 보고합니다. Serving stack에는 layer splitting, memory management, long-context kernel, cache pipeline, CPU scheduler path도 포함됩니다 [[5]](#ref-5). Architecture가 speculative decoding을 가능하게 할 수는 있지만, draft acceptance가 실제 latency 개선으로 이어지는지는 systems layer가 결정합니다.
+
+Post-training은 long-horizon agent를 직접 겨냥합니다. Parallel on-policy distillation은 열 개가 넘는 expert policy를 합치고, critic-based PPO는 압축된 장기 trajectory를 학습하며, token-level loss는 짧은 sample이 학습을 지배하지 않도록 합니다. Anti-hacking filter는 rule을 먼저 적용하고 LLM judge를 거칩니다. 의심스러운 tool call을 막았을 때 dummy result를 돌려주어 rollout이 실패 뒤 회복하게 합니다. **Failure recovery 자체가 training distribution에 들어간** 드문 공개 사례입니다.
+
+공개 범위도 함께 읽어야 합니다. Launch material은 post-training machinery를 자세히 설명하지만 전체 pre-training corpus mixture와 filtering recipe는 공개하지 않습니다. Open weight는 architecture inspection과 deployment를 가능하게 하지만, 전체 training pipeline의 재현성을 자동으로 보장하지는 않습니다.
+
+## 6. 아키텍처 비교
 
 차이점을 종합하기 위해, Dense 베이스라인(Llama-3 70B)과 함께 이 모델들의 비교 매트릭스를 살펴보겠습니다.
 
@@ -155,9 +167,22 @@ class DeepSeekAuxFreeRouter(nn.Module):
 | **Mixtral 8x7B** | Coarse MoE | 47B | 13B | 8 | 2 | Standard Softmax |
 | **DBRX** | Fine-Grained MoE | 132B | 36B | 16 | 4 | Dropless (MegaBlocks) |
 | **Grok-1** | Coarse MoE | 314B | ~78B | 8 | 2 | Standard Softmax |
-| **DeepSeek-V3** | Ultra-Fine MoE | 671B | 37B | 256 (+1 Shared)| 8 | Aux-Loss-Free Bias |
+| **DeepSeek-V3** | Ultra-Fine MoE | 671B | 37B | 256 (+1 shared) | 8 | Aux-Loss-Free Bias |
+| **GLM-5.2** | Long-context MoE | 753B | 인용한 config에 미공개 | 256 (+1 shared) | 8 | Aux-Loss-Free + IndexShare |
 
 *관찰 결과:* 업계의 트렌드는 명확합니다. 모델은 Coarse-Grained 전문가(8 choose 2)에서 극단적인 Fine-Grained 희소성(256 choose 8)으로 이동하고 있습니다. 총 파라미터 수는 세상의 지식을 담기 위해 기하급수적으로 증가하는 반면, 활성 파라미터 수는 추론 속도와 배치 처리 효율성을 유지하기 위해 엄격하게 제한되고 있습니다.
+
+---
+
+## 7. 요약 및 다음 단계
+
+Mixtral에서 DeepSeek-V3로 이어지는 **MoE** 아키텍처의 진화는 지능을 확장하는 것이 더 이상 단순히 레이어를 쌓는 문제가 아님을 보여줍니다. 핵심은 **라우팅 효율성과 희소성(Sparsity)** 에 있습니다. 우리는 Fine-Grained 전문가가 어떻게 조합적 용량을 증가시키는지, Dropless 라우팅이 어떻게 하드웨어 활용도를 극대화하는지, 그리고 Auxiliary-Loss-Free 전략이 어떻게 학습 신호의 순수성을 보호하는지 살펴보았습니다.
+
+하지만 아키텍처를 설계하는 것은 절반의 성공에 불과합니다. 256개의 전문가를 가진 671B 파라미터 모델을 학습시키는 것은 치명적인 시스템 수준의 도전 과제를 안겨줍니다. 15조 개의 토큰을 GPU가 쉬지 않도록 이 거대한 모델에 어떻게 공급할 수 있을까요? 토큰이 완전히 다른 서버에 상주하는 전문가에게 전송되어야 할 때 발생하는 엄청난 노드 간 통신 오버헤드는 어떻게 처리할까요?
+
+다음 장인 **Chapter 6: Foundation Model Pre-training** 에서는 인프라 계층으로 깊이 내려갑니다. 수개월간의 연속적인 학습 동안 이 거대한 Sparse 모델을 안정적으로 유지하고 데이터를 공급하기 위해 필요한 방대한 데이터 엔지니어링 파이프라인, 토큰화(Tokenization) 과학, 그리고 극한의 네트워킹(NVLink/InfiniBand) 기술을 탐구할 것입니다.
+
+---
 
 ---
 
@@ -189,18 +214,13 @@ class DeepSeekAuxFreeRouter(nn.Module):
 
 ---
 
-## 7. 요약 및 다음 단계
-
-Mixtral에서 DeepSeek-V3로 이어지는 **MoE** 아키텍처의 진화는 지능을 확장하는 것이 더 이상 단순히 레이어를 쌓는 문제가 아님을 보여줍니다. 핵심은 **라우팅 효율성과 희소성(Sparsity)** 에 있습니다. 우리는 Fine-Grained 전문가가 어떻게 조합적 용량을 증가시키는지, Dropless 라우팅이 어떻게 하드웨어 활용도를 극대화하는지, 그리고 Auxiliary-Loss-Free 전략이 어떻게 학습 신호의 순수성을 보호하는지 살펴보았습니다.
-
-하지만 아키텍처를 설계하는 것은 절반의 성공에 불과합니다. 256개의 전문가를 가진 671B 파라미터 모델을 학습시키는 것은 치명적인 시스템 수준의 도전 과제를 안겨줍니다. 15조 개의 토큰을 GPU가 쉬지 않도록 이 거대한 모델에 어떻게 공급할 수 있을까요? 토큰이 완전히 다른 서버에 상주하는 전문가에게 전송되어야 할 때 발생하는 엄청난 노드 간 통신 오버헤드는 어떻게 처리할까요?
-
-다음 장인 **Chapter 6: Foundation Model Pre-training** 에서는 인프라 계층으로 깊이 내려갑니다. 수개월간의 연속적인 학습 동안 이 거대한 Sparse 모델을 안정적으로 유지하고 데이터를 공급하기 위해 필요한 방대한 데이터 엔지니어링 파이프라인, 토큰화(Tokenization) 과학, 그리고 극한의 네트워킹(NVLink/InfiniBand) 기술을 탐구할 것입니다.
-
 ---
+
 ## References
 
 1. <a id="ref-1"></a>Jiang, A. Q., et al. (2024). *Mixtral of Experts*. arXiv preprint. [arXiv:2401.04088](https://arxiv.org/abs/2401.04088).
 2. <a id="ref-2"></a>Gale, T., et al. (2022). *MegaBlocks: Efficient Routing for Mixture-of-Experts*. arXiv preprint. [arXiv:2211.15841](https://arxiv.org/abs/2211.15841).
 3. <a id="ref-3"></a>xAI. (2024). "Open Release of Grok-1." "xAI Blog". [Link](https://x.ai/blog/grok-os).
 4. <a id="ref-4"></a>DeepSeek-AI. (2024). *DeepSeek-V3 Technical Report*. arXiv preprint. [arXiv:2412.19437](https://arxiv.org/abs/2412.19437).
+5. <a id="ref-5"></a>Z.ai. (2026). *GLM-5.2: From Long Context to Long-Horizon Agents*. [Z.ai](https://z.ai/blog/glm-5.2).
+6. <a id="ref-6"></a>Z.ai. (2026). *GLM-5.2 model card and configuration*. [Hugging Face](https://huggingface.co/zai-org/GLM-5.2).

@@ -24,6 +24,7 @@ type MetricKey =
   | 'hle'
   | 'outputSpeed';
 type AxisMode = 'timeline' | 'price' | 'speed' | 'context';
+type ReleaseStatus = 'released' | 'preview' | 'announced' | 'restricted';
 
 type ModelSnapshot = {
   id: string;
@@ -43,6 +44,7 @@ type ModelSnapshot = {
   outputPrice?: number;
   outputSpeed?: number;
   contextK?: number;
+  releaseStatus?: ReleaseStatus;
   note: string;
 };
 
@@ -313,6 +315,22 @@ const MODEL_SNAPSHOTS: ModelSnapshot[] = [
     note: 'A Flash-line release aimed at agentic coding, long-horizon workflows, and multimodal work: lower-latency positioning with 1M input context and 64K output.',
   },
   {
+    id: 'gemini-36-flash',
+    company: 'Google',
+    model: 'Gemini 3.6 Flash',
+    release: '2026-07',
+    releaseMonth: 2026.5,
+    family: 'token-efficient multimodal agent',
+    access: 'Gemini App / Gemini API / Vertex AI',
+    sweBench: 58.7,
+    terminalBench: 78.0,
+    inputPrice: 1.5,
+    outputPrice: 7.5,
+    contextK: 1000,
+    releaseStatus: 'released',
+    note: 'An efficiency-focused update to 3.5 Flash: Google reports 17% fewer output tokens on the AA Index, fewer tool loops, stronger coding and computer use, and a lower output-token price.',
+  },
+  {
     id: 'gpt-53-codex',
     company: 'OpenAI',
     model: 'GPT-5.3 Codex',
@@ -363,6 +381,60 @@ const MODEL_SNAPSHOTS: ModelSnapshot[] = [
     note: 'Highest AA Index in this snapshot, but its cost point makes the efficiency view more nuanced than the headline score.',
   },
   {
+    id: 'gpt-56-sol',
+    company: 'OpenAI',
+    model: 'GPT-5.6 Sol',
+    release: '2026-07',
+    releaseMonth: 2026.5,
+    family: 'flagship frontier agent',
+    access: 'API / ChatGPT / Codex',
+    aaIndex: 58.9,
+    sweBench: 64.6,
+    terminalBench: 88.8,
+    gpqa: 94.6,
+    inputPrice: 5,
+    outputPrice: 30,
+    contextK: 1050,
+    releaseStatus: 'released',
+    note: 'The flagship GPT-5.6 tier adds max reasoning and multi-agent ultra mode. Public results emphasize long-running coding, computer use, science, and cyber work, with a 1.05M-token context window.',
+  },
+  {
+    id: 'gpt-56-terra',
+    company: 'OpenAI',
+    model: 'GPT-5.6 Terra',
+    release: '2026-07',
+    releaseMonth: 2026.5,
+    family: 'balanced frontier agent',
+    access: 'API / Work / Codex',
+    aaIndex: 55,
+    sweBench: 63.4,
+    terminalBench: 87.4,
+    gpqa: 92.9,
+    inputPrice: 2.5,
+    outputPrice: 15,
+    contextK: 1050,
+    releaseStatus: 'released',
+    note: 'The balanced GPT-5.6 tier is positioned around GPT-5.5-class quality at half the token price, while retaining the same 1.05M context and 128K maximum output.',
+  },
+  {
+    id: 'gpt-56-luna',
+    company: 'OpenAI',
+    model: 'GPT-5.6 Luna',
+    release: '2026-07',
+    releaseMonth: 2026.5,
+    family: 'fast cost-efficient agent',
+    access: 'API / Work / Codex',
+    aaIndex: 51.2,
+    sweBench: 62.7,
+    terminalBench: 84.7,
+    gpqa: 92.3,
+    inputPrice: 1,
+    outputPrice: 6,
+    contextK: 1050,
+    releaseStatus: 'released',
+    note: 'The fastest and lowest-cost GPT-5.6 tier illustrates capability compression: lower aggregate quality than Sol, but strong agentic scores at one-fifth of Sol’s input and output prices.',
+  },
+  {
     id: 'claude-sonnet-46',
     company: 'Anthropic',
     model: 'Claude Sonnet 4.6',
@@ -406,6 +478,37 @@ const MODEL_SNAPSHOTS: ModelSnapshot[] = [
     access: 'controlled research preview',
     contextK: 1000,
     note: 'Included as a deployment lesson, not as a public leaderboard point: capability may be identity-gated when risk is high.',
+  },
+  {
+    id: 'claude-fable-5',
+    company: 'Anthropic',
+    model: 'Claude Fable 5',
+    release: '2026-06',
+    releaseMonth: 2026.42,
+    family: 'safeguarded Mythos-class agent',
+    access: 'API / Claude / cloud partners',
+    aaIndex: 59.9,
+    sweBench: 80.0,
+    terminalBench: 83.1,
+    inputPrice: 10,
+    outputPrice: 50,
+    contextK: 1000,
+    releaseStatus: 'released',
+    note: 'Fable exposes Mythos-class capability through broad safety classifiers and automatic fallback. The deployed product can therefore be a routed system, not always a pure Fable response.',
+  },
+  {
+    id: 'claude-opus-5',
+    company: 'Anthropic',
+    model: 'Claude Opus 5',
+    release: '2026-07',
+    releaseMonth: 2026.5,
+    family: 'everyday frontier agent',
+    access: 'API / Claude / cloud partners',
+    inputPrice: 5,
+    outputPrice: 25,
+    contextK: 1000,
+    releaseStatus: 'released',
+    note: 'Near-Fable capability at half Fable’s token price, with effort controls, 1M context, stronger self-verification, and less restrictive safeguards for everyday coding and knowledge work.',
   },
   {
     id: 'kimi-k2-thinking',
@@ -471,6 +574,17 @@ const MODEL_SNAPSHOTS: ModelSnapshot[] = [
     note: 'A proprietary Qwen release for agent scaffolds, office automation, coding, and long-horizon execution, with published examples above 1,000 tool calls.',
   },
   {
+    id: 'qwen38-max-preview',
+    company: 'Alibaba',
+    model: 'Qwen3.8-Max-Preview',
+    release: '2026-07',
+    releaseMonth: 2026.5,
+    family: '2.4T agent-model preview',
+    access: 'Token Plan / Qoder / QoderWork',
+    releaseStatus: 'preview',
+    note: 'Alibaba has disclosed a 2.4T-parameter preview and says open weights are coming. No model card, weight files, or detailed training recipe was public as of July 26, so it is not yet an open-weight release.',
+  },
+  {
     id: 'minimax-m27',
     company: 'MiniMax',
     model: 'MiniMax-M2.7',
@@ -499,6 +613,20 @@ const MODEL_SNAPSHOTS: ModelSnapshot[] = [
     outputSpeed: 96.3,
     contextK: 256,
     note: 'A newer open-weight Kimi point with strong agentic and multimodal positioning: 1T total parameters, 32B active, and 256K context.',
+  },
+  {
+    id: 'kimi-k3',
+    company: 'Kimi',
+    model: 'Kimi K3',
+    release: '2026-07',
+    releaseMonth: 2026.5,
+    family: '2.8T multimodal sparse MoE',
+    access: 'Kimi / Kimi Code / API',
+    inputPrice: 3,
+    outputPrice: 15,
+    contextK: 1000,
+    releaseStatus: 'announced',
+    note: 'K3 is live as a hosted model; Moonshot says full weights and the technical report will arrive July 27. The launch discloses KDA, Attention Residuals, and 16-of-896 expert routing, but not the full data recipe.',
   },
   {
     id: 'deepseek-v4-flash',
@@ -549,6 +677,20 @@ const MODEL_SNAPSHOTS: ModelSnapshot[] = [
     note: 'A Z.ai coding-oriented open model with stronger multi-step execution, frontend generation, and tool-use positioning.',
   },
   {
+    id: 'glm-52',
+    company: 'Z AI',
+    model: 'GLM-5.2',
+    release: '2026-06',
+    releaseMonth: 2026.42,
+    family: 'open-weight long-horizon MoE',
+    access: 'Z.AI API / MIT open weights',
+    sweBench: 62.1,
+    terminalBench: 81.0,
+    contextK: 1000,
+    releaseStatus: 'released',
+    note: 'An open 753B MoE with 1M context. IndexShare reuses one sparse-attention indexer across four layers, and its post-training pipeline targets compacted long-horizon agent trajectories.',
+  },
+  {
     id: 'command-a-plus',
     company: 'Cohere',
     model: 'Command A+',
@@ -580,14 +722,25 @@ const MODEL_SNAPSHOTS: ModelSnapshot[] = [
   },
 ];
 
-const metricLabels: Record<MetricKey, string> = {
-  aaIndex: 'AA Index',
-  valsIndex: 'Vals Index',
-  sweBench: 'SWE-Bench',
-  terminalBench: 'Terminal-Bench',
-  gpqa: 'GPQA Diamond',
-  hle: 'Humanity’s Last Exam',
-  outputSpeed: 'Output speed',
+const metricLabels: Record<Locale, Record<MetricKey, string>> = {
+  en: {
+    aaIndex: 'AA Index',
+    valsIndex: 'Vals Index',
+    sweBench: 'SWE-Bench',
+    terminalBench: 'Terminal-Bench',
+    gpqa: 'GPQA Diamond',
+    hle: 'Humanity’s Last Exam',
+    outputSpeed: 'Output speed',
+  },
+  ko: {
+    aaIndex: 'AA 지능 지수',
+    valsIndex: 'Vals 지수',
+    sweBench: 'SWE-Bench',
+    terminalBench: 'Terminal-Bench',
+    gpqa: 'GPQA Diamond',
+    hle: 'Humanity’s Last Exam',
+    outputSpeed: '출력 속도',
+  },
 };
 
 const labels = {
@@ -596,6 +749,9 @@ const labels = {
     subtitle:
       'Choose a benchmark, then change the x-axis to see whether the same model still looks strong by time, token cost, speed, or context budget.',
     benchmark: 'Benchmark',
+    controlAria: 'Benchmark plot controls',
+    noPoints: 'No model in this filter reports the selected metric.',
+    selectModel: 'Select model',
     axisMode: 'X-axis',
     company: 'Company',
     all: 'All companies',
@@ -614,13 +770,16 @@ const labels = {
     detailContext: 'context',
     priceAxis: 'Lower is cheaper',
     source:
-      'Snapshot as of May 27, 2026. Values combine cited lab cards/release notes with Artificial Analysis and Vals AI public benchmark pages.',
+      'Snapshot as of July 26, 2026. Values combine cited lab cards/release notes with Artificial Analysis and Vals AI public benchmark pages. A missing score means not reported under the mapped methodology, not zero.',
   },
   ko: {
     title: '상업용 모델 Benchmark Map',
     subtitle:
       'Benchmark를 고른 뒤 x축을 바꿔 보세요. 같은 모델도 시간, token cost, 속도, context budget 기준에서는 전혀 다르게 보입니다.',
     benchmark: 'Benchmark',
+    controlAria: 'Benchmark 그래프 설정',
+    noPoints: '이 필터에서 선택한 metric을 공개한 모델이 없습니다.',
+    selectModel: '모델 선택',
     axisMode: 'X축',
     company: '회사',
     all: '전체 회사',
@@ -639,8 +798,62 @@ const labels = {
     detailContext: 'context',
     priceAxis: '왼쪽일수록 저렴',
     source:
-      '2026년 5월 27일 기준 snapshot입니다. 값은 본문에 인용한 lab card/release note와 Artificial Analysis, Vals AI public benchmark page를 함께 정리했습니다.',
+      '2026년 7월 26일 기준 snapshot입니다. 값은 본문에 인용한 lab card/release note와 Artificial Analysis, Vals AI public benchmark page를 함께 정리했습니다. 값이 없다는 것은 0점이 아니라 해당 methodology에서 미공개라는 뜻입니다.',
   },
+};
+
+const notesKo: Partial<Record<string, string>> = {
+  'gpt-4': '오늘날의 agent benchmark 체계가 자리 잡기 전, 시험·coding 성능을 대표했던 역사적 기준점입니다.',
+  'gemini-15-pro': '1M-token preview와 MoE 효율을 앞세워 long-context multimodal work를 전면으로 끌어올렸습니다.',
+  'mistral-large': '다국어 reasoning과 enterprise API deployment를 겨냥한 유럽계 commercial flagship입니다.',
+  'claude-3-opus': '최고 품질 Opus, 균형형 Sonnet, 저비용 Haiku라는 product ladder를 명확히 만든 모델입니다.',
+  'gpt-4o': '텍스트 점수만이 아니라 실시간 음성·vision·latency·비용으로 경쟁축을 넓혔습니다.',
+  'claude-35-sonnet': '상위 capability가 더 저렴한 tier로 내려오는 capability compression을 보여 준 사례입니다.',
+  'mistral-large-2': 'code, math, multilingual support, function calling을 개선하며 open-weight enterprise 영역을 확장했습니다.',
+  'o1-preview': '더 오래 생각할수록 어려운 수학·과학·code 문제가 개선되는 inference-time reasoning을 제품 기능으로 만들었습니다.',
+  'gpt-5': '빠른 응답과 깊은 reasoning을 routing하는 unified system으로, 모델과 제품 시스템의 경계를 흐렸습니다.',
+  'qwen-25': '여러 크기와 modality를 공개해 Alibaba의 광범위한 open-model 전략을 보여 준 모델군입니다.',
+  'claude-35-sonnet-computer': '화면을 읽고 cursor, click, typing을 수행하면서 답변 모델에서 행동 모델로 넘어간 전환점입니다.',
+  'deepseek-v3': '671B 중 token당 37B만 활성화하는 MoE와 높은 학습 효율로 비용 논의를 바꿨습니다.',
+  'deepseek-r1': '대규모 RL로 학습한 open reasoning model이 폐쇄형 시스템과 경쟁할 수 있음을 보여 줬습니다.',
+  qwen3: 'thinking/non-thinking mode를 함께 제공해 reasoning budget을 제어 가능한 open-model 기능으로 만들었습니다.',
+  'minimax-m1': 'hybrid attention, 1M context, open weights를 결합해 long-context reasoning 비용을 낮췄습니다.',
+  'kimi-k2': 'coding, reasoning, autonomous tool use에 초점을 둔 trillion-parameter open MoE입니다.',
+  'gemini-25-pro': '장문·고속 특성이 aggregate score 1위와 별개인 축임을 보여 주는 사례입니다.',
+  'gemini-3-pro': 'Google의 빠른 multimodal profile을 유지하면서 reasoning 성능을 크게 끌어올렸습니다.',
+  'gemini-31-pro': 'frontier에 가까운 aggregate score와 높은 출력 속도를 함께 보여 주므로 price/speed 축 비교가 중요합니다.',
+  'gemini-35-flash': '1M input, 64K output을 지원하며 Flash tier를 agentic coding과 long-horizon workflow로 확장했습니다.',
+  'gemini-36-flash': '3.5 대비 output token 17% 감소, 더 적은 tool loop, coding·computer use 개선, 더 낮은 output price를 내세운 효율 업데이트입니다.',
+  'gpt-53-codex': '특화 coding agent가 일반 모델보다 workflow eval에서 앞설 수 있음을 보여 줍니다.',
+  'gpt-54': 'coding 전용 특화를 넘어 general-purpose agent 성능을 넓힌 후속 모델입니다.',
+  'gpt-55': '당시 높은 AA Index를 기록했지만, cost 축에서는 headline score와 다른 결론이 나옵니다.',
+  'gpt-56-sol': 'max reasoning과 multi-agent ultra를 추가한 flagship으로, long-running coding·computer use·science·cyber work를 전면에 둡니다.',
+  'gpt-56-terra': 'GPT-5.5급 품질을 절반 가격에 제공하는 균형형 tier이며 Sol과 같은 1.05M context, 128K output을 지원합니다.',
+  'gpt-56-luna': 'Sol보다 aggregate 품질은 낮지만 input/output 가격이 1/5인 capability compression 사례입니다.',
+  'claude-sonnet-46': 'frontier capability가 더 저렴한 Sonnet tier로 내려오는 흐름을 보여 줍니다.',
+  'claude-opus-47': 'professional-work suite에 강하지만 비슷한 모델보다 느리고 비싼 trade-off가 있습니다.',
+  'claude-mythos': '공개 leaderboard 점이 아니라 위험이 높은 capability가 identity-gated될 수 있음을 보여 주는 deployment 사례입니다.',
+  'claude-fable-5': 'Mythos-class capability에 넓은 safety classifier와 fallback을 결합했습니다. 실제 제품 응답이 항상 순수 Fable은 아닐 수 있습니다.',
+  'claude-opus-5': 'Fable 절반 가격에 가까운 capability, effort control, 1M context, 강화된 self-verification을 제공합니다.',
+  'kimi-k2-thinking': 'raw score보다 price-performance에서 더 강하게 보이고 speed-performance에서는 불리한 challenger입니다.',
+  'deepseek-v4-pro': '높은 aggregate capability를 훨씬 낮은 token price에 제공하는 open-weight 대안입니다.',
+  'qwen3-max-thinking': '중국 frontier 경쟁이 한두 연구소에 국한되지 않음을 보여 줍니다.',
+  'qwen37-max': 'coding, office automation, multi-agent orchestration, 장기 실행을 위한 proprietary agent foundation입니다.',
+  'qwen38-max-preview': '2.4T preview와 향후 open weights만 공개됐습니다. 7월 26일 현재 model card·weights·상세 학습 recipe가 없어 아직 open-weight release는 아닙니다.',
+  'minimax-m27': 'raw score 1위는 아니지만 token cost를 함께 그리면 강한 price-performance 지점입니다.',
+  'kimi-k26': '1T total, 32B active, 256K context를 갖춘 multimodal agentic open-weight 모델입니다.',
+  'kimi-k3': 'hosted model은 공개됐지만 full weights와 technical report는 7월 27일 예정입니다. KDA, AttnRes, 16-of-896 routing까지 공개됐고 data recipe는 아직 없습니다.',
+  'deepseek-v4-flash': '낮은 raw score 대신 1M context와 공격적인 가격을 택한 V4 Pro의 효율형 sibling입니다.',
+  'grok-43': '1M context, 빠른 출력, 낮은 output price로 cost-efficiency를 압박하는 proprietary 모델입니다.',
+  'glm-47': 'multi-step execution, frontend generation, tool use를 강화한 Z.ai의 open coding model입니다.',
+  'glm-52': '1M context를 지원하는 753B open MoE입니다. IndexShare와 compacted long-horizon trajectory 학습이 핵심 개선점입니다.',
+  'command-a-plus': '최고 raw score보다 sovereign AI, enterprise deployment, open weights, 빠른 serving에 초점을 둡니다.',
+  'mistral-large-3': '최고 점수는 아니지만 customization, sovereignty, open deployment가 중요할 때 유효합니다.',
+};
+
+const releaseStatusLabels: Record<Locale, Record<ReleaseStatus, string>> = {
+  en: { released: 'released', preview: 'preview', announced: 'weights/report announced', restricted: 'restricted' },
+  ko: { released: '공개 완료', preview: '프리뷰', announced: '가중치/리포트 공개 예정', restricted: '제한 공개' },
 };
 
 const companyOptions: CompanyKey[] = [
@@ -668,11 +881,19 @@ const metricOptions: MetricKey[] = [
   'outputSpeed',
 ];
 
-const axisLabels: Record<AxisMode, string> = {
-  timeline: 'Release date',
-  price: 'Blended price, $/1M tokens',
-  speed: 'Output tokens/sec',
-  context: 'Context window, K tokens',
+const axisLabels: Record<Locale, Record<AxisMode, string>> = {
+  en: {
+    timeline: 'Release date',
+    price: 'Blended price, $/1M tokens',
+    speed: 'Output tokens/sec',
+    context: 'Context window, K tokens',
+  },
+  ko: {
+    timeline: '공개 시점',
+    price: '혼합 가격, $/1M tokens',
+    speed: '초당 출력 token',
+    context: 'Context window, K tokens',
+  },
 };
 
 const chart = { width: 760, height: 420, left: 72, right: 30, top: 32, bottom: 64 };
@@ -714,9 +935,18 @@ function formatX(value: number, axisMode: AxisMode) {
 
 function formatMetric(value: number | undefined, metric: MetricKey, missing: string) {
   if (typeof value !== 'number') return missing;
-  if (metric === 'aaIndex') return value.toFixed(0);
+  if (metric === 'aaIndex') return value.toFixed(1);
   if (metric === 'outputSpeed') return `${value.toFixed(0)} tok/s`;
   return `${value.toFixed(1)}%`;
+}
+
+function formatContext(value: number | undefined, missing: string) {
+  if (typeof value !== 'number') return missing;
+  if (value >= 1000) {
+    const millions = value / 1000;
+    return `${millions.toFixed(Number.isInteger(millions) ? 0 : 2)}M`;
+  }
+  return `${value}K`;
 }
 
 function companyClass(company: string) {
@@ -727,7 +957,7 @@ export default function CommercialModelBenchmarkExplorer({ locale = 'en' }: { lo
   const [metric, setMetric] = useState<MetricKey>('aaIndex');
   const [axisMode, setAxisMode] = useState<AxisMode>('timeline');
   const [company, setCompany] = useState<CompanyKey>('All');
-  const [selectedId, setSelectedId] = useState('gpt-55');
+  const [selectedId, setSelectedId] = useState('gpt-56-sol');
   const text = labels[locale];
 
   const plottedRows = useMemo(() => {
@@ -750,7 +980,7 @@ export default function CommercialModelBenchmarkExplorer({ locale = 'en' }: { lo
   const sy = (value: number) => chart.top + innerHeight - ((value - yMin) / (yMax - yMin)) * innerHeight;
 
   const bestRows = [...MODEL_SNAPSHOTS]
-    .filter((row) => typeof row[metric] === 'number')
+    .filter((row) => (company === 'All' || row.company === company) && typeof row[metric] === 'number')
     .sort((a, b) => (b[metric] as number) - (a[metric] as number))
     .slice(0, 5);
   const timelineRows = [...MODEL_SNAPSHOTS]
@@ -760,6 +990,15 @@ export default function CommercialModelBenchmarkExplorer({ locale = 'en' }: { lo
   const xTicks = [0, 0.25, 0.5, 0.75, 1].map((ratio) => xMin + (xMax - xMin) * ratio);
   const yTicks = [0, 0.25, 0.5, 0.75, 1].map((ratio) => yMin + (yMax - yMin) * ratio);
 
+  const handleCompanyChange = (nextCompany: CompanyKey) => {
+    setCompany(nextCompany);
+    if (nextCompany === 'All' || selected.company === nextCompany) return;
+    const latest = MODEL_SNAPSHOTS
+      .filter((row) => row.company === nextCompany)
+      .sort((a, b) => b.releaseMonth - a.releaseMonth)[0];
+    if (latest) setSelectedId(latest.id);
+  };
+
   return (
     <section className="commercial-benchmark-explorer">
       <div className="commercial-benchmark-header">
@@ -767,13 +1006,13 @@ export default function CommercialModelBenchmarkExplorer({ locale = 'en' }: { lo
           <h3>{text.title}</h3>
           <p>{text.subtitle}</p>
         </div>
-        <div className="commercial-benchmark-controls" aria-label="Benchmark plot controls">
+        <div className="commercial-benchmark-controls" aria-label={text.controlAria}>
           <label>
             <span>{text.benchmark}</span>
             <select value={metric} onChange={(event) => setMetric(event.target.value as MetricKey)}>
               {metricOptions.map((option) => (
                 <option key={option} value={option}>
-                  {metricLabels[option]}
+                  {metricLabels[locale][option]}
                 </option>
               ))}
             </select>
@@ -789,7 +1028,7 @@ export default function CommercialModelBenchmarkExplorer({ locale = 'en' }: { lo
           </label>
           <label>
             <span>{text.company}</span>
-            <select value={company} onChange={(event) => setCompany(event.target.value as CompanyKey)}>
+            <select value={company} onChange={(event) => handleCompanyChange(event.target.value as CompanyKey)}>
               {companyOptions.map((option) => (
                 <option key={option} value={option}>
                   {option === 'All' ? text.all : option}
@@ -803,7 +1042,7 @@ export default function CommercialModelBenchmarkExplorer({ locale = 'en' }: { lo
       <div className="commercial-plot-layout">
         <div className="commercial-plot-panel">
           <svg viewBox={`0 0 ${chart.width} ${chart.height}`} className="commercial-scatter" role="img">
-            <title>{`${metricLabels[metric]} by ${axisLabels[axisMode]}`}</title>
+            <title>{`${metricLabels[locale][metric]} by ${axisLabels[locale][axisMode]}`}</title>
             <rect
               x={chart.left}
               y={chart.top}
@@ -812,6 +1051,12 @@ export default function CommercialModelBenchmarkExplorer({ locale = 'en' }: { lo
               rx="8"
               className="plot-surface"
             />
+
+            {plottedRows.length === 0 && (
+              <text x={chart.left + innerWidth / 2} y={chart.top + innerHeight / 2} textAnchor="middle" className="plot-empty">
+                {text.noPoints}
+              </text>
+            )}
 
             {yTicks.map((tick) => (
               <g key={`y-${tick}`}>
@@ -835,10 +1080,10 @@ export default function CommercialModelBenchmarkExplorer({ locale = 'en' }: { lo
             <line x1={chart.left} x2={chart.left} y1={chart.top} y2={chart.top + innerHeight} className="plot-axis" />
 
             <text x={chart.left + innerWidth / 2} y={chart.height - 6} textAnchor="middle" className="plot-axis-label">
-              {axisLabels[axisMode]} {axisMode === 'price' ? `(${text.priceAxis})` : ''}
+              {axisLabels[locale][axisMode]} {axisMode === 'price' ? `(${text.priceAxis})` : ''}
             </text>
             <text x="18" y={chart.top + innerHeight / 2} textAnchor="middle" className="plot-axis-label vertical-label">
-              {metricLabels[metric]}
+              {metricLabels[locale][metric]}
             </text>
 
             {plottedRows.map((point) => {
@@ -848,16 +1093,28 @@ export default function CommercialModelBenchmarkExplorer({ locale = 'en' }: { lo
                   key={point.row.id}
                   className={`plot-point-group ${isSelected ? 'is-selected' : ''}`}
                   onClick={() => setSelectedId(point.row.id)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      setSelectedId(point.row.id);
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`${text.selectModel}: ${point.row.model}`}
                 >
+                  <title>{`${point.row.model}: ${formatMetric(point.y, metric, text.noScore)}`}</title>
                   <circle
                     cx={sx(point.x)}
                     cy={sy(point.y)}
                     r={isSelected ? 8 : 6}
                     className={`plot-dot company-${companyClass(point.row.company)}`}
                   />
-                  <text x={sx(point.x) + 10} y={sy(point.y) - 8} className="plot-label">
-                    {point.row.model}
-                  </text>
+                  {isSelected && (
+                    <text x={sx(point.x) + 10} y={sy(point.y) - 8} className="plot-label">
+                      {point.row.model}
+                    </text>
+                  )}
                 </g>
               );
             })}
@@ -869,10 +1126,11 @@ export default function CommercialModelBenchmarkExplorer({ locale = 'en' }: { lo
           <h4>{selected.model}</h4>
           <p className="commercial-detail-meta">
             {selected.release} · {selected.family} · {selected.access}
+            {selected.releaseStatus ? ` · ${releaseStatusLabels[locale][selected.releaseStatus]}` : ''}
           </p>
           <div className="commercial-detail-grid">
             <div>
-              <span>{metricLabels[metric]}</span>
+              <span>{metricLabels[locale][metric]}</span>
               <strong>{formatMetric(selected[metric], metric, text.noScore)}</strong>
             </div>
             <div>
@@ -885,16 +1143,16 @@ export default function CommercialModelBenchmarkExplorer({ locale = 'en' }: { lo
             </div>
             <div>
               <span>{text.detailContext}</span>
-              <strong>{typeof selected.contextK === 'number' ? (selected.contextK >= 1000 ? '1M' : `${selected.contextK}K`) : text.noScore}</strong>
+              <strong>{formatContext(selected.contextK, text.noScore)}</strong>
             </div>
           </div>
-          <p className="commercial-note">{selected.note}</p>
+          <p className="commercial-note">{locale === 'ko' ? notesKo[selected.id] ?? selected.note : selected.note}</p>
         </aside>
       </div>
 
       <div className="commercial-ranking-strip">
         {bestRows.map((row, index) => (
-          <button key={row.id} type="button" onClick={() => setSelectedId(row.id)}>
+          <button key={row.id} type="button" onClick={() => setSelectedId(row.id)} aria-pressed={row.id === selected.id}>
             <span>{index + 1}</span>
             <strong>{row.model}</strong>
             <em>{formatMetric(row[metric], metric, text.noScore)}</em>
@@ -914,6 +1172,7 @@ export default function CommercialModelBenchmarkExplorer({ locale = 'en' }: { lo
               type="button"
               className={`commercial-timeline-item ${row.id === selected.id ? 'is-selected' : ''}`}
               onClick={() => setSelectedId(row.id)}
+              aria-pressed={row.id === selected.id}
             >
               <span>{row.release}</span>
               <strong>{row.model}</strong>
