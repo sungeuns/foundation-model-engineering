@@ -9,7 +9,8 @@
     "dev": "astro dev --host 0.0.0.0 --port 4321 --strictPort",
     "build": "astro build",
     "preview": "astro preview --host 0.0.0.0 --port 4321 --strictPort",
-    "astro": "astro"
+    "astro": "astro",
+    "test:content": "node --test scripts/content-contract.test.mjs"
   },
   "dependencies": {
     "@astrojs/mdx": "^5.0.3",

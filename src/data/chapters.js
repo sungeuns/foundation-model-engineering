@@ -137,6 +137,7 @@ export const chapters = [
       { id: "13-2", title: { en: "13.2 Quantization Methods", ko: "13.2 양자화 방법" }, path: "/chapter-13/quantization-methods" },
       { id: "13-3", title: { en: "13.3 Weight Sparsification", ko: "13.3 가중치 희소화" }, path: "/chapter-13/weight-sparsification" },
       { id: "13-4", title: { en: "13.4 Knowledge Distillation", ko: "13.4 지식 증류" }, path: "/chapter-13/knowledge-distillation" },
+      { id: "13-5", title: { en: "13.5 Advanced Quantization", ko: "13.5 고급 양자화" }, path: "/chapter-13/advanced-quantization" },
     ]
   },
   {
