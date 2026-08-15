@@ -93,6 +93,42 @@ These instructions apply to the entire repository. They consolidate the durable 
 - When reviewing “the whole book,” use mechanical scans to find risky patterns, then inspect and fix the affected pages. A clean grep is not proof of full editorial quality.
 - Preserve unrelated user changes. Use WSL Git for this repository because Windows Git may report false modifications from line-ending differences.
 
+
+## Canonical Inventory and Audit Evidence
+
+- Treat the actual EN/KO MDX file pairs, `src/data/chapters.js`, `docs/chapter_list.md`, and the current review ledger as one **canonical inventory**. Before a build, compare slug, number, and order rather than checking counts alone.
+- Run `npm run test:content` whenever pages, navigation, references, or audit ledgers change.
+- A **review ledger** may mark an item complete only when the current file was inspected and the date or commit providing that evidence is recorded. Adding a page must make it visibly unreviewed until that inspection happens.
+
+## Training and Adaptation Examples
+
+- Every new or substantially revised training page must state its input artifacts, objective, decisive hyperparameters, memory/compute assumptions, observable metrics, failure or abort conditions, checkpoint contents, offline evaluations, and release or rollback gate.
+- SFT examples must use the model's **tokenizer-native chat template**. Verify train/serve template parity, BOS/EOS behavior, `add_generation_prompt`, truncation, padding, assistant-span loss masks, and whether packed samples can attend across boundaries.
+- SFT, DPO, KTO, PPO, and related code must state prompt/completion masks, special-token handling, reference-checkpoint identity, response-length policy, and variable-length batch semantics.
+- A runnable or production-grade label is allowed only for **smoke-tested** code with realistic shape, dtype, device, masking, and distributed assumptions. Put a limitation block immediately above deliberately simplified code and list the missing production semantics.
+- Resource estimates must separate parameters, gradients, optimizer states, activations, temporary buffers, collectives, checkpoints, and evaluation overhead. State precision, sharding, recomputation, sequence length, and active-expert assumptions.
+- Observability guidance must include token-normalized training and validation loss, useful domain slices, nonfinite or overflow counts, gradient/activation norms, throughput, MFU, data wait, collectives or stragglers, and reconstructable batch identifiers.
+
+## Data and Evaluation Isolation
+
+- Record dataset provenance, license or consent constraints, PII/secrets handling, deletion lineage, filter versions, mixture weights, tokenizer version, shard hashes, and sample identifiers in an immutable manifest.
+- Perform exact/near deduplication and semantic clustering before train/dev/test assignment. Keep related documents, conversations, entities, and synthetic siblings in one split.
+- Put public benchmarks, private release sets, prompts, rubrics, semantic neighbors, and teacher-generated variants in **evaluation quarantine** for every pre-training and post-training corpus.
+- For synthetic or feedback data, retain teacher/judge model version, prompt, decoding settings, seed, rejection reason, annotator or verifier provenance, yield by slice, and human-audit results.
+
+## Artifact and Recovery Contracts
+
+- Treat base model, tokenizer, chat template, adapter, generation configuration, tool schema, safety policy, code/config/container versions, and their hashes as one immutable **artifact bundle**.
+- A training checkpoint must include sharded model and optimizer state, scheduler, gradient scaler or FP8 state, global step and tokens, RNG state, sampler state, and the exact **data cursor** plus dataset/tokenizer/config hashes.
+- Publish distributed checkpoints atomically with checksums and a completion marker. Document retention, remote replication, changed-world-size limits, restore drills, and continuation-equivalence checks.
+- Define pause, abort, rollback, and last-known-good switching thresholds before a run or rollout. Include an owner, observation window, hysteresis where needed, and a periodic **rollback rehearsal**.
+- A release artifact must pass domain, base-capability-retention, safety, format/tool, latency, cost, and error-rate gates with paired uncertainty or justified sample-size analysis; averages must not hide critical slice failures.
+
+## Time-sensitive Tables and Claims
+
+- Every current/latest/SOTA comparison, price, license, availability statement, or mutable table/component must show `as of YYYY-MM-DD`, use row-level primary sources, and preserve missing values as `not reported`.
+- Reverify the snapshot immediately before publication. Do not carry a future-dated snapshot or stale provider status into a new release.
+- Never infer undisclosed architecture, parameter counts, active parameters, data mixtures, context limits, or training recipes in prose, quizzes, code, or visuals; write `undisclosed` and separate provider claims from editorial inference.
 ## Verification Before Handoff
 
 1. Confirm changed EN/KO pairs have substantive parity.

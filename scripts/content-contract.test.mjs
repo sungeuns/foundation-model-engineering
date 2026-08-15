@@ -152,3 +152,21 @@ test('review ledgers that claim full coverage include the current inventory', ()
     }
   }
 });
+
+test('AGENTS.md defines operational contracts for training content', () => {
+  const agents = read(path.join(ROOT, 'AGENTS.md'));
+  const requiredPhrases = [
+    'canonical inventory',
+    'tokenizer-native chat template',
+    'evaluation quarantine',
+    'artifact bundle',
+    'data cursor',
+    'rollback rehearsal',
+    'smoke-tested',
+    'review ledger',
+  ];
+
+  for (const phrase of requiredPhrases) {
+    assert.ok(agents.toLowerCase().includes(phrase), `AGENTS.md is missing ${phrase}`);
+  }
+});
