@@ -90,121 +90,65 @@ The DeepSpeed team introduced **ZeRO-Offload** [[2]](#ref-2) and **ZeRO-Infinity
 
 ---
 
-## 5. Engineering Implementation (DeepSpeed)
+## 5. Engineering Implementation: Initialization Is Part of the Memory Plan
 
-Writing the low-level Reduce-Scatter and All-Gather CUDA kernels for ZeRO is incredibly complex. Today, engineers rely on Microsoft's `deepspeed` library or PyTorch's native `FSDP`. 
+**Limitation:** this compact DeepSpeed sketch illustrates initialization and causal loss semantics. It omits a real Transformer, padding masks, mixed-precision policy, validation, and production checkpoint orchestration; it is not production-grade.
 
-Below is a production-grade example of integrating ZeRO-3 using DeepSpeed. Notice how DeepSpeed acts as a wrapper around standard PyTorch code.
-
-### The DeepSpeed Configuration (`ds_config.json`)
-DeepSpeed is driven by a JSON configuration file. This dictates the ZeRO stage and offloading behavior without requiring changes to the model architecture.
-
-```json
-{
-  "train_batch_size": 128,
-  "train_micro_batch_size_per_gpu": 16,
-  "gradient_accumulation_steps": 1,
-  "optimizer": {
-    "type": "AdamW",
-    "params": {
-      "lr": 2e-5,
-      "weight_decay": 0.01
-    }
-  },
-  "fp16": {
-    "enabled": true
-  },
-  "zero_optimization": {
-    "stage": 3,
-    "overlap_comm": true,
-    "contiguous_gradients": true,
-    "reduce_bucket_size": 5e7,
-    "stage3_prefetch_bucket_size": 5e7,
-    "stage3_param_persistence_threshold": 1e5,
-    "offload_optimizer": {
-      "device": "cpu",
-      "pin_memory": true
-    }
-  }
-}
-```
-
-### The PyTorch Integration Script
+ZeRO-3 cannot rescue memory already exhausted while constructing the full model. Instantiate large parameters inside `deepspeed.zero.Init` (or use an equivalent FSDP/meta-device initialization path) so weights are partitioned as they are created.
 
 ```python
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
+import torch.distributed as dist
 import deepspeed
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import Dataset
 
-# 1. Define a standard PyTorch Model
-# Even if this model is 50B parameters and cannot fit on one GPU,
-# DeepSpeed will partition it automatically during initialization.
 class SimpleLLM(nn.Module):
-    def __init__(self, vocab_size=32000, d_model=4096):
+    def __init__(self, vocab_size=32_000, d_model=4_096):
         super().__init__()
         self.embed = nn.Embedding(vocab_size, d_model)
-        # In reality, this would be a stack of Transformer blocks
-        self.layers = nn.Sequential(
-            *[nn.Linear(d_model, d_model) for _ in range(24)]
-        )
-        self.lm_head = nn.Linear(d_model, vocab_size)
+        self.layers = nn.Sequential(*[
+            nn.Linear(d_model, d_model, bias=False) for _ in range(24)
+        ])
+        self.lm_head = nn.Linear(d_model, vocab_size, bias=False)
 
-    def forward(self, x):
-        x = self.embed(x)
-        x = self.layers(x)
-        return self.lm_head(x)
+    def forward(self, token_ids):
+        return self.lm_head(self.layers(self.embed(token_ids)))
 
-# Dummy Dataset
-class DummyDataset(Dataset):
-    def __len__(self): return 1000
-    def __getitem__(self, idx):
-        return torch.randint(0, 32000, (512,)), torch.randint(0, 32000, (512,))
+class TokenDataset(Dataset):
+    def __len__(self): return 1_000
+    def __getitem__(self, index):
+        generator = torch.Generator().manual_seed(index)
+        return torch.randint(0, 32_000, (513,), generator=generator)
 
 def train():
-    # 2. Initialize DeepSpeed Distributed Backend
     deepspeed.init_distributed()
+    with deepspeed.zero.Init(config_dict_or_path="ds_config.json"):
+        model = SimpleLLM(vocab_size=32_000, d_model=4_096)
 
-    model = SimpleLLM()
-    dataset = DummyDataset()
-    
-    # 3. Initialize DeepSpeed Engine
-    # DeepSpeed replaces the standard PyTorch DDP wrapper and Optimizer
-    model_engine, optimizer, _, dataloader = deepspeed.initialize(
-        args=None,
+    engine, _, _, loader = deepspeed.initialize(
         model=model,
         model_parameters=model.parameters(),
-        training_data=dataset,
-        config="ds_config.json"
+        training_data=TokenDataset(),
+        config="ds_config.json",
     )
 
-    criterion = nn.CrossEntropyLoss()
-
-    # 4. Training Loop
-    for epoch in range(3):
-        for step, (inputs, targets) in enumerate(dataloader):
-            # Move data to the local GPU
-            inputs = inputs.to(model_engine.local_rank)
-            targets = targets.to(model_engine.local_rank)
-
-            # Forward pass (ZeRO-3 automatically All-Gathers weights layer-by-layer)
-            outputs = model_engine(inputs)
-            loss = criterion(outputs.view(-1, 32000), targets.view(-1))
-
-            # Backward pass (ZeRO-3 automatically Reduce-Scatters gradients)
-            model_engine.backward(loss)
-
-            # Optimizer step
-            model_engine.step()
-
-            if model_engine.local_rank == 0 and step % 10 == 0:
-                print(f"Epoch {epoch} | Step {step} | Loss {loss.item():.4f}")
-
-if __name__ == "__main__":
-    # Execution requires the deepspeed launcher to handle process spawning
-    # deepspeed --num_gpus=8 train_zero.py
-    train()
+    for tokens in loader:
+        tokens = tokens.to(engine.device)
+        inputs, targets = tokens[:, :-1], tokens[:, 1:]  # causal shift
+        logits = engine(inputs)
+        loss = F.cross_entropy(logits.float().flatten(0, 1), targets.flatten())
+        engine.backward(loss)
+        engine.step()
+        if dist.get_rank() == 0:
+            print(float(loss))
+            break
 ```
+
+The resolved global batch must equal microbatch × accumulation × data-parallel degree. Budget peak all-gathered parameter groups, activations, temporary buffers, fragmentation, and communication overlap in addition to persistent sharded states. Before scale-up, compare one-node and multi-node memory peaks and step time.
+
+A resumable checkpoint includes sharded model and optimizer, scheduler, scaler/FP8 state, global tokens, RNG and sampler/data cursor, plus model/data/tokenizer/code/config hashes. Test restore with the deployed DeepSpeed version and launcher; a weights-only save is not an exact continuation.
 
 ### The Engineering Trade-off
 While ZeRO-3 is magical, it is not a silver bullet. The Just-In-Time broadcasting of weights makes training highly sensitive to network bandwidth. If your cluster lacks high-speed InfiniBand or NVLink, the GPUs will stall waiting for weights to arrive over the network. In such cases, engineers often fall back to ZeRO-2, or combine ZeRO-1 with Tensor Parallelism (which we will explore in Chapter 7.3).

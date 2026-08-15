@@ -48,15 +48,15 @@ Date: 2026-04-20
 
 ## Chapter 7
 - [x] 7.1 `data-parallelism` reviewed (EN, KO)
-- [x] 7.2 `zero-redundancy-optimizer` reviewed (EN, KO)
-- [x] 7.3 `model-and-pipeline-parallelism` reviewed (EN, KO)
-- [x] 7.4 `flash-attention` reviewed (EN, KO)
+- [x] 7.2 `zero-redundancy-optimizer` reviewed (EN, KO; practitioner review 2026-08-16)
+- [x] 7.3 `model-and-pipeline-parallelism` reviewed (EN, KO; practitioner review 2026-08-16)
+- [x] 7.4 `flash-attention` reviewed (EN, KO; practitioner review 2026-08-16)
 
 ## Chapter 8
-- [x] 8.1 `power-law` reviewed (EN, KO)
+- [x] 8.1 `power-law` reviewed (EN, KO; practitioner review 2026-08-16)
 - [x] 8.2 `chinchilla-optimality` reviewed (EN, KO)
-- [x] 8.3 `over-training-vs-optimal-training` reviewed (EN, KO)
-- [x] 8.4 `transfer-learning-and-generalization` reviewed (EN, KO)
+- [x] 8.3 `over-training-vs-optimal-training` reviewed (EN, KO; practitioner review 2026-08-16)
+- [x] 8.4 `transfer-learning-and-generalization` reviewed (EN, KO; practitioner review 2026-08-16)
 - [x] 8.5 `continued-pretraining-and-domain-adaptation` reviewed (EN, KO; practitioner review 2026-08-16)
 
 ## Chapter 9

@@ -8,11 +8,11 @@ import PowerLawVisualizer from '../../components/chapter-8/PowerLawVisualizer.ts
 
 # 8.1 The Power Law: The Thermodynamics of Deep Learning
 
-Before 2020, deep learning architecture design was largely driven by intuition, heuristics, and trial-and-error. Engineers would build a model, train it, and hope the loss curve converged to a satisfactory number. The paradigm shifted fundamentally with the realization that neural network performance is not random, but governed by strict, predictable mathematical equations known as **Scaling Laws**.
+Before 2020, deep learning architecture design was largely driven by intuition, heuristics, and trial-and-error. Engineers would build a model, train it, and hope the loss curve converged to a satisfactory number. The paradigm shifted as researchers found repeatable empirical trends that can often be approximated by **scaling laws** within a defined model, data, and optimization regime.
 
 If backpropagation is the mechanics of deep learning, scaling laws are its thermodynamics. They describe the macroscopic behavior of the system—how the final loss of a model behaves as you scale up the fundamental resources: **Compute, Data, and Parameters**. 
 
-This predictability allows AI labs to train small, cheap models, fit a curve, and accurately predict the exact performance of a $100M training run before it even begins.
+This regularity lets teams use smaller pilot runs to forecast a larger run, but the forecast is conditional on the data, architecture, optimization, and extrapolation range and must carry uncertainty.
 
 ---
 
@@ -61,72 +61,50 @@ This is the equation of a straight line ($y = mx + b$). This linearity is what m
 
 ---
 
-## Extrapolating Loss in PyTorch
+## Extrapolating with Constraints and Uncertainty
 
-In practice, foundation model engineers use scaling laws to determine whether a massive training run is going off the rails. By fitting a curve to early, small-scale experiments, they establish a "baseline" expected loss.
+Scaling-law forecasts are engineering estimates, not exact predictions. Use the same tokenizer, data snapshot, architecture family, evaluation harness, and training-quality criteria across a factorial pilot grid of model sizes $N$, token budgets $D$, and multiple seeds. Tune learning rate, batch, and warmup for each scale rather than turning small-model under-training into an apparent scaling law.
 
-The following PyTorch code demonstrates how to empirically fit a power law curve to a set of small-scale training runs, allowing us to project the expected loss for an ExaFLOP-scale model.
+The following educational fit constrains amplitude and exponent to be positive and the floor to lie between zero and the smallest observed loss. Compute is measured in PetaFLOPs: **1 ExaFLOP = 1,000 PetaFLOPs**, so the target is `1e3`, not `1e6`.
 
 ```python
 import torch
 import torch.nn as nn
-import torch.optim as optim
+import torch.nn.functional as F
 
-# Empirical data: (Compute in PetaFLOPs, Validation Loss)
-# Simulated data based on small-scale experimental runs
-compute_flops = torch.tensor([1e1, 1e2, 1e3, 1e4, 1e5], dtype=torch.float32)
-empirical_loss = torch.tensor([4.65, 3.72, 3.10, 2.68, 2.41], dtype=torch.float32)
+compute_pf = torch.tensor([10., 30., 100., 300., 1_000.])
+validation_loss = torch.tensor([4.65, 4.02, 3.52, 3.18, 2.91])
 
-class PowerLawFitter(nn.Module):
-    """
-    Fits the equation: L(C) = a * C^(-alpha) + E
-    We optimize in log-space for numerical stability.
-    """
-    def __init__(self):
+class ConstrainedPowerLaw(nn.Module):
+    def __init__(self, min_observed_loss):
         super().__init__()
-        # Initialize parameters with reasonable guesses
-        self.log_a = nn.Parameter(torch.tensor(2.0))
-        self.alpha = nn.Parameter(torch.tensor(0.05))
-        self.E = nn.Parameter(torch.tensor(1.5)) # Irreducible entropy floor
-        
-    def forward(self, C):
-        a = torch.exp(self.log_a)
-        return a * torch.pow(C, -self.alpha) + self.E
+        self.raw_amplitude = nn.Parameter(torch.tensor(1.0))
+        self.raw_exponent = nn.Parameter(torch.tensor(-2.0))
+        self.raw_floor_fraction = nn.Parameter(torch.tensor(0.0))
+        self.register_buffer("min_loss", min_observed_loss)
 
-def fit_scaling_law(compute, loss, epochs=5000, lr=0.01):
-    model = PowerLawFitter()
-    optimizer = optim.Adam(model.parameters(), lr=lr)
-    criterion = nn.MSELoss()
-    
-    for epoch in range(epochs):
-        optimizer.zero_grad()
-        predictions = model(compute)
-        
-        # We use MSE on the log of the loss to penalize relative errors equally
-        fit_loss = criterion(torch.log(predictions), torch.log(loss))
-        fit_loss.backward()
-        optimizer.step()
-        
-        if epoch % 1000 == 0:
-            print(f"Epoch {epoch} | Fit MSE: {fit_loss.item():.6f}")
-            
-    return model
+    def forward(self, compute):
+        amplitude = F.softplus(self.raw_amplitude)
+        exponent = F.softplus(self.raw_exponent)
+        floor = self.min_loss * torch.sigmoid(self.raw_floor_fraction)
+        return amplitude * compute.pow(-exponent) + floor
 
-# Run the optimization
-fitted_model = fit_scaling_law(compute_flops, empirical_loss)
+model = ConstrainedPowerLaw(validation_loss.min())
+optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
+for _ in range(5_000):
+    prediction = model(compute_pf)
+    loss = F.mse_loss(torch.log(prediction), torch.log(validation_loss))
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
 
-# Extract learned coefficients
-a_learned = torch.exp(fitted_model.log_a).item()
-alpha_learned = fitted_model.alpha.item()
-E_learned = fitted_model.E.item()
-
-print(f"\nFitted Equation: L(C) = {a_learned:.2f} * C^(-{alpha_learned:.4f}) + {E_learned:.2f}")
-
-# Predict loss for a 1 ExaFLOP run (1e6 PetaFLOPs)
-c_next_gen = torch.tensor([1e6], dtype=torch.float32)
-predicted_loss = fitted_model(c_next_gen).item()
-print(f"Predicted Loss for 1 ExaFLOP: {predicted_loss:.3f}")
+one_exaflop_pf = torch.tensor([1_000.])
+print(model(one_exaflop_pf).item())
 ```
+
+Five aggregate points are still insufficient for a funding decision. Resample whole pilot runs with a **bootstrap** to obtain parameter and forecast intervals; do not resample individual validation tokens as if training runs were independent. Perform a **leave-largest-out** test: fit without the largest run and forecast it. Report that error and reject extrapolations far beyond the validated compute ratio.
+
+Reserve the largest planned pilot scale as a genuine forecast holdout. Compare predicted and actual validation loss, downstream checkpoint probes, achieved FLOP/s, restart overhead, and total cost. Convert peak FLOPs into GPU-hours using measured utilization and include data, checkpoint, evaluation, and failure overhead. A go/no-go band should include uncertainty and business value, not only a point estimate.
 
 ---
 
@@ -134,11 +112,11 @@ print(f"Predicted Loss for 1 ExaFLOP: {predicted_loss:.3f}")
 
 A critical nuance in scaling laws is the distinction between **cross-entropy loss** and **downstream task accuracy**. 
 
-While the cross-entropy loss follows a perfectly smooth, predictable power law, capabilities on specific benchmarks (like MMLU or GSM8K) often appear to exhibit "emergent abilities"—sudden, discontinuous jumps in performance at specific scale thresholds.
+Cross-entropy often follows a smooth trend within a fitted regime, while capabilities on specific benchmarks can appear to show sudden, discontinuous jumps. Neither behavior is guaranteed outside the measured model, data, and optimization range.
 
 However, researchers like Schaeffer et al. (2023) [[3]](#ref-3) argue that this emergence is largely a mirage caused by the choice of metric. Cross-entropy is continuous; it measures the probability distribution over tokens. If a model improves its probability assigned to the correct answer from 1% to 10%, the loss drops smoothly. But on a multiple-choice benchmark, the model will still score 0% until that probability surpasses the competing incorrect options, at which point the accuracy suddenly spikes to 100%. 
 
-The underlying intelligence (measured by loss) scales predictably; it is our step-function evaluation metrics that create the illusion of sudden emergence.
+Metric choice can create or amplify apparent thresholds, as Schaeffer et al. demonstrate for studied settings [[3]](#ref-3). That result does not settle every emergence claim; engineers should inspect continuous metrics, contamination, prompting, and confidence intervals rather than treating either smoothness or discontinuity as universal.
 
 ---
 

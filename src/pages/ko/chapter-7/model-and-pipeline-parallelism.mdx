@@ -57,53 +57,28 @@ NVIDIA의 **Megatron-LM** [[2]](#ref-2) 이 주도한 TP는 오늘날 거대 모
 2. **Row Parallelism on $B$:** 두 번째 가중치 행렬 $B$ 를 수평으로 잘라 $B_1$ 과 $B_2$ 로 나눕니다. GPU 0은 $Z_1 = Y_1 B_1$ 을 계산하고, GPU 1은 $Z_2 = Y_2 B_2$ 를 계산합니다.
 3. **Synchronization (동기화):** 최종 출력을 얻기 위해서는 부분 결과값들을 더해야 합니다: $Z = Z_1 + Z_2$. 이는 단 한 번의 **All-Reduce** 연산을 통해 달성됩니다.
 
-아래는 Megatron 스타일의 MLP 블록을 구현한 실제 PyTorch 코드입니다. 단일 GPU에서 수행되던 표준 연산이 어떻게 분산 프리미티브(Distributed primitives)로 대체되는지 주목해 보십시오.
+### TP 프로세스 그룹과 Autograd
 
-```python
-import torch
-import torch.nn as nn
-import torch.distributed as dist
+위 수식은 맞지만, 원시 in-place `dist.all_reduce`만으로는 실제 학습 구현이 되지 않습니다. 올바른 텐서 병렬 계층은 다음 계약을 모두 만족해야 합니다.
 
-class MegatronMLP(nn.Module):
-    def __init__(self, d_model, d_ff, rank, world_size):
-        super().__init__()
-        # Column Parallelism: 출력 차원(Output dimension)을 분할합니다.
-        self.w1 = nn.Linear(d_model, d_ff // world_size)
-        
-        # Row Parallelism: 입력 차원(Input dimension)을 분할합니다.
-        self.w2 = nn.Linear(d_ff // world_size, d_model)
-        self.gelu = nn.GELU()
-        
-    def forward(self, x):
-        # 1. Column Parallel 순전파 (독립적인 연산, 통신 없음)
-        # Input x: [batch, seq, d_model] 
-        # Output y_local: [batch, seq, d_ff // world_size]
-        y_local = self.gelu(self.w1(x))
-        
-        # 2. Row Parallel 순전파 (부분합 계산)
-        # Output z_local: [batch, seq, d_model]
-        z_local = self.w2(y_local)
-        
-        # 3. All-Reduce를 통해 TP 그룹 내 모든 GPU의 부분 결과를 합산합니다.
-        dist.all_reduce(z_local, op=dist.ReduceOp.SUM)
-        
-        return z_local
-```
+- 하나의 텐서 병렬 복제본에 속한 랭크만 담은 **TP 프로세스 그룹** 을 만듭니다. 전역 그룹을 쓰면 데이터·파이프라인 병렬 복제본까지 섞입니다.
+- 역전파에서 대응하는 split, gather, reduce, identity 변환이 적용되도록 프레임워크의 텐서 병렬 API 또는 **autograd 인식** collective mapping을 사용합니다.
+- 은닉·헤드·피드포워드 차원이 TP 차수로 나누어지는지 단언하고 의도한 가중치 축을 샤딩합니다.
+- row-parallel 부분합을 줄인 뒤 출력 **bias를 한 번만** 더합니다. 각 로컬 선형 계층에 복제 bias가 있으면 TP 크기만큼 중복 합산됩니다.
+- 하나의 정식 전체 가중치에서 슬라이스를 초기화·로드하고 단일 디바이스 기준과 순전파 출력, 입력·파라미터 그래디언트를 비교합니다.
+
+PyTorch 텐서 병렬 인터페이스와 검증된 프레임워크는 이 mapping을 구현하므로 교육용 수제 collective보다 우선해야 합니다 [[5]](#ref-5). 노드 안팎의 TP 가능성은 “all-reduce”라는 이름이 아니라 실제 TP subgroup, 토폴로지, collective 지연, overlap 측정으로 판단합니다.
 
 ### 통신 병목 현상 (The Communication Bottleneck)
-**Tensor Parallelism** 은 엄청나게 강력하지만, 가혹한 하드웨어 제약 조건을 동반합니다. 위 코드에서 볼 수 있듯, *매 단일 Transformer 블록 내부마다* `All-Reduce` 연산이 필수적으로 요구됩니다. 이처럼 빈도가 높고 연산을 블로킹(Blocking)하는 통신은 막대한 대역폭을 요구합니다. 결과적으로, **TP는 거의 예외 없이 단일 물리적 노드 내부의 GPU들(예: NVLink로 연결된 8대의 GPU)로 엄격히 제한됩니다.** 일반적인 이더넷이나 심지어 InfiniBand를 통해 노드 간 TP를 실행하면 학습 속도는 처참하게 무너집니다.
+Tensor Parallelism은 Transformer 블록 내부에 collective를 추가하므로 지연, 메시지 크기, 토폴로지, overlap이 중요합니다. 고대역폭 노드 내부 패브릭이 흔한 첫 배치 선택이지만, 적절한 패브릭과 워크로드 형상에서는 노드 간 TP도 가능할 수 있습니다. 노드 경계를 절대 법칙으로 두지 말고 후보 TP 차수별 스텝 시간, collective 바이트, overlap, 지연 랭크를 측정합니다.
 
 ---
 
-## 3. 시퀀스 병렬화 (SP)
+## 3. 시퀀스 병렬화와 컨텍스트 병렬화
 
-AI 산업이 128k에서 1M 토큰에 이르는 거대한 컨텍스트 윈도우(Context windows)로 이동함에 따라, 엔지니어들은 새로운 Memory Wall 에 직면했습니다. 표준 TP에서는 가중치 행렬은 분할되지만, **모든 GPU가 여전히 전체 시퀀스 길이만큼의 활성화(Activations) 텐서를 온전히 보유해야 합니다.** Attention 연산의 메모리 사용량은 시퀀스 길이의 제곱에 비례하여 증가하므로, 긴 컨텍스트에서는 TP를 사용하더라도 Out-Of-Memory (OOM) 에러를 피할 수 없습니다.
+**시퀀스 병렬화** 라는 용어는 여러 의미로 사용됩니다. Megatron 계열 텐서 병렬화에서는 보통 정규화·드롭아웃 같은 연산을 시퀀스 차원으로 샤딩하여 복제된 활성화 메모리를 줄이고 TP collective와 짝을 이룹니다. 이것만으로 모든 토큰이 통신 없이 전역 어텐션을 수행하는 것은 아닙니다.
 
-**Sequence Parallelism (SP)** [[3]](#ref-3) 은 데이터 자체를 시퀀스 차원(Sequence dimension)을 따라 분할함으로써 이 문제를 해결합니다. 만약 시퀀스 길이가 8,000이고 8대의 GPU가 있다면, 각 GPU는 단 1,000개의 토큰만을 저장하고 처리합니다.
-- MLP 레이어에서는 토큰들이 서로 독립적으로 처리되므로 SP가 아주 매끄럽게 동작합니다.
-- Attention 레이어에서는 GPU 0에 있는 토큰이 GPU 7에 있는 토큰에 Attention을 수행해야 하므로, 복잡한 통신 알고리즘(예: **Ring Attention** 또는 **DeepSpeed-Ulysses**)을 사용하여 단일 디바이스에 전체 시퀀스를 구체화(Materialize)하지 않고도 연산을 수행합니다.
-
----
+장문 컨텍스트 시스템은 **컨텍스트 병렬화** 또는 Ring Attention·Ulysses 같은 시퀀스 차원 어텐션 알고리즘도 사용합니다. 이들은 어텐션 토큰을 나누고 서로 다른 collective·메모리 패턴으로 키/값 또는 중간 블록을 교환합니다. 프레임워크가 사용하는 정의, 샤딩 텐서, causal·패딩 마스크의 정확성, 계층당 통신량을 기록합니다. 기법을 같은 것으로 취급하지 말고 실제 시퀀스 길이와 토폴로지에서 벤치마크합니다.
 
 ## 4. 3D 병렬화와 자동 샤딩
 
@@ -117,7 +92,7 @@ Llama 3나 GPT-4와 같은 SOTA(State-of-the-Art) 모델을 학습시킬 때, �
 3. **Data Parallelism (클러스터 전체):** 수천 대의 서버에 이 전체 TP+PP 셋업을 복제하여 방대한 데이터셋을 병렬로 처리합니다.
 
 ### 자동 병렬화의 부상
-거대한 신경망을 3D 하드웨어 토폴로지에 수동으로 매핑하는 것은 엔지니어에게 극도로 고통스러운 작업입니다. 현재 시스템 연구의 최전선은 **Automated Parallelism** (자동 병렬화) 에 있습니다. **Alpa** [[4]](#ref-4) 와 같은 컴파일러는 병렬화를 일종의 최적화 문제로 취급합니다. 모델의 연산 그래프(Computational graph)와 클러스터의 네트워크 대역폭을 분석함으로써, Alpa는 엔지니어가 복잡한 분산 코드를 직접 작성하지 않아도 DP, TP, PP의 수학적으로 가장 완벽한 조합을 자동으로 도출해 냅니다.
+자동 병렬화 시스템은 연산 그래프와 토폴로지 비용 모델을 이용해 후보 DP/TP/PP 계획을 탐색합니다. Alpa는 이러한 접근의 한 예입니다 [[4]](#ref-4). 결과의 품질은 비용 모델과 지원 연산에 달려 있으므로, 자동 계획도 실제 클러스터에서 프로파일링하고 검증해야 합니다.
 
 ---
 
@@ -139,8 +114,8 @@ Llama 3나 GPT-4와 같은 SOTA(State-of-the-Art) 모델을 학습시킬 때, �
 </details>
 
 <details>
-<summary>Quiz 4: 극단적으로 긴 컨텍스트 윈도우(Long context windows) 환경에서, 표준 Tensor Parallelism 이 해결하지 못하는 메모리 병목 현상을 Sequence Parallelism (SP) 이 어떻게 해결하는가?</summary>
-*표준 Tensor Parallelism 에서는 모델의 가중치 행렬은 분할되지만, 각 GPU는 여전히 전체 시퀀스 길이에 해당하는 활성화(Activations) 텐서를 들고 있어야 합니다. 컨텍스트가 길어지면 Attention 활성화 메모리가 시퀀스 길이의 제곱에 비례하여 팽창하므로 OOM 에러가 발생합니다. SP는 시퀀스 차원 자체를 물리적으로 분할하므로, 각 GPU가 토큰의 일부분만 저장하고 연산하게 만들어 활성화 메모리 풋프린트를 극적으로 감소시킵니다.*
+<summary>Quiz 4: Megatron 계열 시퀀스 병렬화와 장문 컨텍스트 병렬화를 구분해야 하는 이유는 무엇인가요?</summary>
+*Megatron 계열 시퀀스 병렬화는 주로 TP 주변의 복제된 시퀀스 연산을 샤딩하지만, 컨텍스트 병렬 어텐션 알고리즘은 토큰을 나누고 키/값 또는 어텐션 블록을 통신합니다. 마스크, collective, 메모리 절감, 성능 한계가 다르므로 프레임워크의 정확한 정의를 문서화하고 시험해야 합니다.*
 </details>
 
 <details>
@@ -156,3 +131,4 @@ Llama 3나 GPT-4와 같은 SOTA(State-of-the-Art) 모델을 학습시킬 때, �
 2. <a id="ref-2"></a>Shoeybi, M., et al. (2019). *Megatron-LM: Training Multi-Billion Parameter Language Models Using Model Parallelism.* [arXiv:1909.08053](https://arxiv.org/abs/1909.08053).
 3. <a id="ref-3"></a>Li, S., et al. (2021). *Sequence Parallelism: Making 4D Parallelism Possible.* [arXiv:2105.13120](https://arxiv.org/abs/2105.13120).
 4. <a id="ref-4"></a>Zheng, L., et al. (2022). *Alpa: Automating Inter- and Intra-Operator Parallelism for Distributed Deep Learning.* OSDI. [arXiv:2201.12023](https://arxiv.org/abs/2201.12023).
+5. <a id="ref-5"></a>PyTorch. *Tensor Parallelism APIs*. [PyTorch 문서](https://docs.pytorch.org/docs/stable/distributed.tensor.parallel.html).

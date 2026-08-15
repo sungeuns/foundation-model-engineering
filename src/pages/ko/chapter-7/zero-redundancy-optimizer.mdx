@@ -90,121 +90,65 @@ DeepSpeed 팀은 전체 시스템의 메모리 계층 구조를 쥐어짜내기 
 
 ---
 
-## 5. 엔지니어링 구현 (DeepSpeed)
+## 5. 엔지니어링 구현: 초기화도 메모리 계획의 일부
 
-ZeRO를 위해 로우레벨(Low-level)의 Reduce-Scatter 및 All-Gather CUDA 커널을 직접 작성하는 것은 극도로 복잡합니다. 오늘날 엔지니어들은 Microsoft의 `deepspeed` 라이브러리나 PyTorch 네이티브의 `FSDP` 에 의존합니다.
+**한계:** 이 간결한 DeepSpeed 예제는 초기화와 인과 손실 의미만 설명합니다. 실제 Transformer, 패딩 마스크, 혼합 정밀도 정책, 검증, 프로덕션 체크포인트 조정이 없으므로 상용 수준 코드가 아닙니다.
 
-아래는 DeepSpeed를 사용하여 ZeRO-3를 상용 수준(Production-grade)으로 통합하는 예시입니다. DeepSpeed가 표준 PyTorch 코드를 어떻게 감싸서(Wrapper) 동작하는지 주목해 보십시오.
-
-### DeepSpeed 설정 파일 (`ds_config.json`)
-DeepSpeed의 동작은 JSON 설정 파일에 의해 제어됩니다. 모델 아키텍처의 코드를 수정할 필요 없이, 이 파일에서 ZeRO Stage와 오프로딩 동작을 정의할 수 있습니다.
-
-```json
-{
-  "train_batch_size": 128,
-  "train_micro_batch_size_per_gpu": 16,
-  "gradient_accumulation_steps": 1,
-  "optimizer": {
-    "type": "AdamW",
-    "params": {
-      "lr": 2e-5,
-      "weight_decay": 0.01
-    }
-  },
-  "fp16": {
-    "enabled": true
-  },
-  "zero_optimization": {
-    "stage": 3,
-    "overlap_comm": true,
-    "contiguous_gradients": true,
-    "reduce_bucket_size": 5e7,
-    "stage3_prefetch_bucket_size": 5e7,
-    "stage3_param_persistence_threshold": 1e5,
-    "offload_optimizer": {
-      "device": "cpu",
-      "pin_memory": true
-    }
-  }
-}
-```
-
-### PyTorch 통합 스크립트
+ZeRO-3는 전체 모델을 만드는 도중 이미 소진된 메모리를 구할 수 없습니다. 대형 파라미터를 `deepspeed.zero.Init` 안에서 인스턴스화하거나 동등한 FSDP/meta-device 초기화 경로를 사용하여 생성 시점부터 가중치를 분할합니다.
 
 ```python
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
+import torch.distributed as dist
 import deepspeed
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import Dataset
 
-# 1. 표준 PyTorch 모델 정의
-# 이 모델이 50B 파라미터라서 단일 GPU에 들어가지 않더라도,
-# DeepSpeed가 초기화 과정에서 자동으로 파티셔닝을 수행합니다.
 class SimpleLLM(nn.Module):
-    def __init__(self, vocab_size=32000, d_model=4096):
+    def __init__(self, vocab_size=32_000, d_model=4_096):
         super().__init__()
         self.embed = nn.Embedding(vocab_size, d_model)
-        # 실제로는 수십 개의 Transformer 블록이 쌓인 형태일 것입니다.
-        self.layers = nn.Sequential(
-            *[nn.Linear(d_model, d_model) for _ in range(24)]
-        )
-        self.lm_head = nn.Linear(d_model, vocab_size)
+        self.layers = nn.Sequential(*[
+            nn.Linear(d_model, d_model, bias=False) for _ in range(24)
+        ])
+        self.lm_head = nn.Linear(d_model, vocab_size, bias=False)
 
-    def forward(self, x):
-        x = self.embed(x)
-        x = self.layers(x)
-        return self.lm_head(x)
+    def forward(self, token_ids):
+        return self.lm_head(self.layers(self.embed(token_ids)))
 
-# 더미 데이터셋
-class DummyDataset(Dataset):
-    def __len__(self): return 1000
-    def __getitem__(self, idx):
-        return torch.randint(0, 32000, (512,)), torch.randint(0, 32000, (512,))
+class TokenDataset(Dataset):
+    def __len__(self): return 1_000
+    def __getitem__(self, index):
+        generator = torch.Generator().manual_seed(index)
+        return torch.randint(0, 32_000, (513,), generator=generator)
 
 def train():
-    # 2. DeepSpeed 분산 백엔드 초기화
     deepspeed.init_distributed()
+    with deepspeed.zero.Init(config_dict_or_path="ds_config.json"):
+        model = SimpleLLM(vocab_size=32_000, d_model=4_096)
 
-    model = SimpleLLM()
-    dataset = DummyDataset()
-    
-    # 3. DeepSpeed 엔진 초기화
-    # DeepSpeed가 표준 PyTorch DDP 래퍼와 Optimizer를 대체합니다.
-    model_engine, optimizer, _, dataloader = deepspeed.initialize(
-        args=None,
+    engine, _, _, loader = deepspeed.initialize(
         model=model,
         model_parameters=model.parameters(),
-        training_data=dataset,
-        config="ds_config.json"
+        training_data=TokenDataset(),
+        config="ds_config.json",
     )
 
-    criterion = nn.CrossEntropyLoss()
-
-    # 4. Training Loop
-    for epoch in range(3):
-        for step, (inputs, targets) in enumerate(dataloader):
-            # 데이터를 로컬 GPU로 이동
-            inputs = inputs.to(model_engine.local_rank)
-            targets = targets.to(model_engine.local_rank)
-
-            # 순전파 (ZeRO-3가 레이어별로 가중치를 자동으로 All-Gather 합니다)
-            outputs = model_engine(inputs)
-            loss = criterion(outputs.view(-1, 32000), targets.view(-1))
-
-            # 역전파 (ZeRO-3가 그래디언트를 자동으로 Reduce-Scatter 합니다)
-            model_engine.backward(loss)
-
-            # 옵티마이저 스텝 수행
-            model_engine.step()
-
-            if model_engine.local_rank == 0 and step % 10 == 0:
-                print(f"Epoch {epoch} | Step {step} | Loss {loss.item():.4f}")
-
-if __name__ == "__main__":
-    # 프로세스 생성을 처리하기 위해 deepspeed 런처를 통해 실행해야 합니다.
-    # deepspeed --num_gpus=8 train_zero.py
-    train()
+    for tokens in loader:
+        tokens = tokens.to(engine.device)
+        inputs, targets = tokens[:, :-1], tokens[:, 1:]  # 인과 시프트
+        logits = engine(inputs)
+        loss = F.cross_entropy(logits.float().flatten(0, 1), targets.flatten())
+        engine.backward(loss)
+        engine.step()
+        if dist.get_rank() == 0:
+            print(float(loss))
+            break
 ```
+
+해석된 전역 배치는 microbatch × accumulation × data-parallel 차수와 같아야 합니다. 상주 샤딩 상태 외에도 최대 all-gather 파라미터 그룹, 활성화, 임시 버퍼, 단편화, 통신 overlap을 계산합니다. 확장 전에 단일 노드와 다중 노드의 최대 메모리·스텝 시간을 비교합니다.
+
+재개 가능한 체크포인트에는 샤딩된 모델·옵티마이저, 스케줄러, scaler/FP8 상태, 전역 토큰, RNG와 샘플러/데이터 커서, 모델/데이터/토크나이저/코드/설정 해시가 들어갑니다. 배포한 DeepSpeed 버전과 런처로 복원을 시험합니다. 가중치만 저장한 결과는 정확한 재개가 아닙니다.
 
 ### 엔지니어링 트레이드오프 (The Engineering Trade-off)
 ZeRO-3는 마법 같지만 만능은 아닙니다. 가중치를 런타임(JIT)에 브로드캐스팅하는 방식은 네트워크 대역폭에 극도로 민감합니다. 만약 클러스터에 고속 InfiniBand나 NVLink가 없다면, GPU들은 네트워크를 통해 가중치가 도착하기만을 기다리며 유휴 상태(Stall)에 빠지게 됩니다. 이러한 경우, 엔지니어들은 종종 ZeRO-2로 후퇴하거나, ZeRO-1을 텐서 병렬화(Tensor Parallelism)와 결합하여 사용합니다 (이 방법은 7.3장에서 자세히 다룰 예정입니다).

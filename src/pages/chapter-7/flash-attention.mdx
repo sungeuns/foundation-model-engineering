@@ -71,41 +71,39 @@ FlashAttention-3 (2024) [[3]](#ref-3) targets the specific architectural feature
 
 ---
 
-## 5. PyTorch Implementation: Using Flash Attention
+## 5. PyTorch SDPA: Verify That Flash Is Actually Selected
 
-Modern PyTorch (2.0+) makes using Flash Attention incredibly easy through the `scaled_dot_product_attention` function. You don't need to write CUDA code; PyTorch will automatically use Flash Attention if the hardware supports it.
+PyTorch's scaled-dot-product attention (SDPA) dispatch depends on the installed PyTorch/CUDA version, GPU capability, dtype, shapes, masks, and dropout. The example below is intentionally CUDA-only and uses current `sdpa_kernel` backend selection. It demonstrates causal language-model attention; it is not a variable-length training loop.
 
 ```python
 import torch
 import torch.nn.functional as F
+from torch.nn.attention import SDPBackend, sdpa_kernel
 
-# Check if CUDA is available and get device
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+if not torch.cuda.is_available():
+    raise RuntimeError("Flash SDPA requires a supported CUDA GPU")
 
-# Define dimensions
-batch_size = 4
-num_heads = 8
-seq_len = 2048
-head_dim = 64
+device = torch.device("cuda")
+dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
+batch, heads, sequence, head_dim = 2, 8, 2048, 64
 
-# Create random Query, Key, Value tensors
-q = torch.randn(batch_size, num_heads, seq_len, head_dim, device=device)
-k = torch.randn(batch_size, num_heads, seq_len, head_dim, device=device)
-v = torch.randn(batch_size, num_heads, seq_len, head_dim, device=device)
+q = torch.randn(batch, heads, sequence, head_dim, device=device, dtype=dtype)
+k = torch.randn_like(q)
+v = torch.randn_like(q)
 
-# PyTorch 2.0+ Scaled Dot Product Attention
-# It automatically selects the best implementation (FlashAttention, Memory Efficient, or Math)
-# based on the inputs and hardware.
-with torch.inference_mode():
-    # Standard usage
-    output = F.scaled_dot_product_attention(q, k, v)
-    
-    print(f"Output shape: {output.shape}")
+with torch.inference_mode(), sdpa_kernel(backends=[SDPBackend.FLASH_ATTENTION]):
+    output = F.scaled_dot_product_attention(
+        q, k, v,
+        dropout_p=0.0,
+        is_causal=True,
+    )
 
-# To explicitly force or disable specific implementations, you can use a context manager:
-# with torch.nn.attention.sdp_kernel(enable_flash=True, enable_math=False, enable_mem_efficient=False):
-#     output = F.scaled_dot_product_attention(q, k, v)
+assert output.shape == q.shape
+assert output.dtype == dtype and torch.isfinite(output).all()
+print(torch.backends.cuda.flash_sdp_enabled(), output.shape, output.dtype)
 ```
+
+For training, set `dropout_p` explicitly because SDPA applies the supplied probability independently of module training mode. `is_causal=True` does not remove padding from variable-length batches. Use the framework's supported combined causal/padding or variable-length representation, then confirm that it remains eligible for the intended backend. Compare output and gradients with the math backend on small tensors within a dtype-appropriate tolerance, and use profiler/kernel logs to prove which backend ran [[4]](#ref-4). If forced Flash dispatch rejects the inputs, change the configuration or allow a documented fallback; do not report FlashAttention performance from the math path.
 
 ---
 
@@ -138,3 +136,4 @@ with torch.inference_mode():
 1. <a id="ref-1"></a>Dao, T., Fu, D., Ermon, S., Rudra, A., & Ré, C. (2022). *FlashAttention: Fast and memory-efficient exact attention with IO-awareness*. [arXiv:2205.14135](https://arxiv.org/abs/2205.14135).
 2. <a id="ref-2"></a>Dao, T. (2023). *FlashAttention-2: Faster attention with better parallelism and work partitioning*. [arXiv:2307.08691](https://arxiv.org/abs/2307.08691).
 3. <a id="ref-3"></a>Dao, T., & Haziza, N. (2024). *FlashAttention-3: Fast and Accurate Attention with Asynchrony and Low-precision*. [arXiv:2407.08608](https://arxiv.org/abs/2407.08608).
+4. <a id="ref-4"></a>PyTorch. *Scaled Dot Product Attention*. [PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.nn.functional.scaled_dot_product_attention.html).

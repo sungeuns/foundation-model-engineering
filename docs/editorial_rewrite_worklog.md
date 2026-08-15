@@ -127,15 +127,15 @@ Review completed on 2026-04-16 for every EN/KO sub-chapter pair below.
 
 ### chapter-7
 - [x] data-parallelism (EN/KO pair)
-- [x] flash-attention (EN/KO pair)
-- [x] model-and-pipeline-parallelism (EN/KO pair)
-- [x] zero-redundancy-optimizer (EN/KO pair)
+- [x] flash-attention (EN/KO pair; 2026-08-16 practitioner rewrite)
+- [x] model-and-pipeline-parallelism (EN/KO pair; 2026-08-16 practitioner rewrite)
+- [x] zero-redundancy-optimizer (EN/KO pair; 2026-08-16 practitioner rewrite)
 
 ### chapter-8
 - [x] chinchilla-optimality (EN/KO pair)
-- [x] over-training-vs-optimal-training (EN/KO pair)
-- [x] power-law (EN/KO pair)
-- [x] transfer-learning-and-generalization (EN/KO pair)
+- [x] over-training-vs-optimal-training (EN/KO pair; 2026-08-16 practitioner rewrite)
+- [x] power-law (EN/KO pair; 2026-08-16 practitioner rewrite)
+- [x] transfer-learning-and-generalization (EN/KO pair; 2026-08-16 practitioner rewrite)
 - [x] continued-pretraining-and-domain-adaptation (EN/KO pair; 2026-08-16 practitioner review)
 
 ### chapter-9

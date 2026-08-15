@@ -67,16 +67,16 @@ During this editorial overhaul, every English/Korean sub-chapter pair was review
 ## Chapter 7
 
 - `data-parallelism`: reviewed; no additional edits required; notes: no further edits needed after audit.
-- `flash-attention`: reviewed; no additional edits required; notes: continuity and references were acceptable.
-- `model-and-pipeline-parallelism`: reviewed; no additional edits required; notes: no blocking issues found.
-- `zero-redundancy-optimizer`: reviewed; no additional edits required; notes: no further edits required.
+- `flash-attention`: reviewed 2026-08-16; replaced the stale FP32/non-causal example with current causal low-precision SDPA backend selection, padding caveats, and backend verification.
+- `model-and-pipeline-parallelism`: reviewed 2026-08-16; corrected tensor-parallel collectives to require subgroups, autograd-aware mappings, one-time bias, and equivalence checks; separated sequence from context parallelism.
+- `zero-redundancy-optimizer`: reviewed 2026-08-16; added sharded initialization, causal loss preparation, peak-memory caveats, and complete checkpoint requirements.
 
 ## Chapter 8
 
 - `chinchilla-optimality`: reviewed; no additional edits required; notes: no material issues found in this pass.
-- `over-training-vs-optimal-training`: reviewed; no additional edits required; notes: structure and parity were acceptable.
-- `power-law`: reviewed; no additional edits required; notes: no further edits needed after audit.
-- `transfer-learning-and-generalization`: reviewed; no additional edits required; notes: no blocking issues found.
+- `over-training-vs-optimal-training`: reviewed 2026-08-16; replaced universal token-ratio and random-label Fisher advice with fixed held-out probes, uncertainty, and explicit checkpoint-selection gates.
+- `power-law`: reviewed 2026-08-16; corrected ExaFLOP units and added conditional framing, constrained fitting, bootstrap uncertainty, and leave-largest-out forecast validation.
+- `transfer-learning-and-generalization`: reviewed 2026-08-16; scoped grokking and weak-to-strong claims and added fixed held-out transfer probes, regression limits, and stop conditions.
 - `continued-pretraining-and-domain-adaptation`: reviewed 2026-08-16; added an EN/KO practitioner runbook covering intervention selection, replay, tokenizer compatibility, pilots, checkpoint recovery, evaluation, and rollback.
 
 ## Chapter 9

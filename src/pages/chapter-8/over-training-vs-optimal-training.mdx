@@ -8,159 +8,104 @@ import OvertrainingVisualizer from '../../components/chapter-8/OvertrainingVisua
 
 # 8.3 Over-training vs Optimal-training
 
-In the previous section, we established the physics of the Chinchilla scaling laws: to achieve the lowest possible pre-training loss for a strictly fixed compute budget, model parameters and training tokens must scale in equal proportions (roughly a 1:20 ratio). 
+“Optimal” depends on the objective. A compute-optimal run seeks the best validation loss for a fixed training budget. A deployment-oriented run may spend more training tokens on a smaller model because serving it repeatedly is cheaper. A post-training team may instead value a checkpoint that adapts reliably under SFT and preference optimization. These objectives can select different parameter and token budgets.
 
-However, looking at the modern landscape of open-weights models, you will notice that the industry has almost universally abandoned this rule. Meta’s Llama 3 (8B), for instance, was trained on 15 trillion tokens—nearly 100 times its Chinchilla-optimal data budget. 
+The Chinchilla study estimated compute-optimal relationships for its models, data, optimizer, and schedule [[1]](#ref-1). Its often-quoted token-per-parameter value is not a universal constant. Architecture, data quality, context length, optimizer tuning, and the cost assigned to training versus inference all change the decision.
 
-This divergence is not a mathematical error; it is an economic calculation. The Chinchilla laws optimize purely for the compute spent during the *training* phase. But for Foundation Models deployed at scale, training compute is a one-time Capital Expenditure (CapEx). Inference compute—generating tokens for millions of users daily—is a recurring, unbounded Operational Expenditure (OpEx). 
+## 1. Why Train Beyond a Compute-Optimal Point?
 
-This economic reality birthed the era of **Over-training** (also known as Inference-Optimal scaling). By forcing a small architecture to digest a massive corpus of data, engineers create a model that rivals the intelligence of a network ten times its size, but runs cheaply on consumer hardware. 
+Training cost is paid once per run; inference cost is paid for every served token. A smaller model trained on more data can therefore be economically attractive even if that run does not minimize training FLOPs. The correct comparison is lifecycle cost at the required quality:
 
-Yet, there is no free lunch in deep learning. Recent research reveals that pushing models too far past their compute-optimal point introduces a severe architectural brittleness, fundamentally changing how we approach the entire training lifecycle.
+$$
+C_{\text{lifecycle}}=C_{\text{train}}+Q_{\text{served}}c_{\text{inference/token}}+C_{\text{operations}},
+$$
 
----
+where $Q_{\text{served}}$ is expected served tokens and $C_{\text{operations}}$ includes evaluation, failures, storage, and engineering overhead. Use measured throughput, utilization, latency, and pricing assumptions. An open-weight model, an internal batch model, and a latency-critical API can have different optima.
 
-## The Fine-Tuning Paradox
+Over-training may improve some pre-training and downstream metrics under controlled settings [[2]](#ref-2). It does not guarantee that a smaller model matches a much larger model, that every task improves, or that the checkpoint remains easy to adapt.
 
-For years, the prevailing assumption in language modeling was simple: a lower pre-training loss strictly guarantees a better downstream model. If you train on more tokens, the model's zero-shot perplexity improves, and it should logically become a more capable assistant after Supervised Fine-Tuning (SFT) and Reinforcement Learning from Human Feedback (RLHF).
+## 2. The Fine-Tuning Question Is Empirical
 
-Recent empirical studies, most notably the discovery of **Catastrophic Overtraining** [[1]](#ref-1), have shattered this assumption. 
+A 2025 study reports settings in which later, more heavily trained language-model checkpoints became harder to fine-tune [[3]](#ref-3). This is important emerging evidence, not a settled law that additional pre-training “destroys adaptability.” The result can depend on the base model, data stream, checkpoints, downstream task, fine-tuning recipe, learning rate, and evaluation.
 
-While over-training reliably improves zero-shot benchmark performance [[2]](#ref-2), it paradoxically destroys the model's downstream adaptability. As a model is trained on an ever-growing token budget, its ability to be successfully instruction-tuned actually *degrades*. 
-
-### The OLMo-1B Case Study
-To isolate this phenomenon, researchers analyzed intermediate checkpoints of the OLMo-1B model. 
-*   **Checkpoint A:** Pre-trained on 2.3 Trillion tokens.
-*   **Checkpoint B:** Pre-trained on 3.0 Trillion tokens.
-
-As expected, Checkpoint B had a strictly lower pre-training loss than Checkpoint A. However, after applying the exact same instruction-tuning recipe to both models, Checkpoint B performed **over 2% worse** on standard LLM benchmarks. The extra 700 billion tokens of pre-training had actively harmed the model's utility as an assistant.
-
-![catastrophic_overtraining_curve](../../assets/images/chapter-8/catastrophic_overtraining_curve.png)
-
----
-
-## Progressive Sensitivity
-
-Why does a "smarter" pre-trained model become a worse instruction follower? The technical root cause is **Progressive Sensitivity**.
-
-Think of a neural network's latent space as a block of clay. At the Chinchilla-optimal point, the clay is highly structured but still moist and plastic—it can easily be molded into a specific shape (an instruction-following assistant) during fine-tuning. 
-
-When a model is massively over-trained, it is forced to compress an impossible amount of world knowledge into a limited number of parameters. To achieve this, the network relies on increasingly complex, highly overlapping representations (Superposition). The clay hardens. The parameters become hyper-specialized to the exact distribution of the pre-training corpus.
-
-Mathematically, this manifests as a spike in the trace of the **Fisher Information Matrix**. The loss landscape around the over-trained weights becomes incredibly sharp. During the fine-tuning phase, even a tiny gradient update causes massive, unpredictable shifts in the model's behavior. The model loses the broad, general knowledge it acquired during early pre-training because the parameters are too brittle to withstand the fine-tuning updates without shattering.
-
----
-
-## The Goldilocks Zone of Training
-
-We are currently entering a "Post-Chinchilla" era where the definition of optimal training is being redefined. Engineers are no longer optimizing solely for pre-training loss, nor are they blindly over-training to minimize inference costs. 
-
-The new objective is to find the **Utility-Optimal** point: the "Goldilocks zone" where a model is small enough for cheap inference, but still plastic enough to survive alignment and specialized task adaptation.
-
-| Feature | Compute-Optimal (Chinchilla) | Optimal-Training (Utility/SOTA) | Over-training (Brittle) |
-| :--- | :--- | :--- | :--- |
-| **Primary Goal** | Minimize training compute | Balance inference cost vs. adaptability | Minimize inference cost at all costs |
-| **Data-to-Param Ratio** | ~20 : 1 | ~100 : 1 to ~400 : 1 | > 1000 : 1 |
-| **Fine-tuning Plasticity**| Highly effective | Stable updates | Brittle; "Catastrophic Overtraining" |
-| **Pre-training Loss** | Moderate | Low | Lowest |
-| **Downstream Utility** | Good | **Best** | Declining (The Paradox) |
+Possible mechanisms such as progressive sensitivity, sharper local geometry, or increased feature interference are hypotheses to test. A lower pre-training loss and worse SFT result do not by themselves prove one mechanism. Conversely, one successful SFT recipe does not prove that plasticity is preserved for every task.
 
 <OvertrainingVisualizer client:load />
 
----
+*The visualization illustrates a possible quality–adaptability trade-off. Its regions are not universal token-per-parameter thresholds.*
 
-## Monitoring Parameter Sensitivity
+## 3. Why a Single Fisher Trace Is Not a Stop Signal
 
-To prevent catastrophic overtraining, modern pre-training clusters do not just monitor the validation loss; they continuously monitor the plasticity of the network. 
+The squared-gradient sum from one batch is sensitive to loss reduction, token count, parameterization, model scale, batch composition, label quality, and precision. Calling it an empirical-Fisher trace does not make values comparable across checkpoints. Random labels make the result even less representative of downstream adaptation.
 
-If the sensitivity of the weights spikes, it signals that the model is crossing the threshold from "Utility-Optimal" into "Brittle." One efficient way to approximate this sensitivity during a distributed training run is by tracking the trace of the Empirical Fisher Information Matrix—essentially, the sum of the squared gradients.
+If sensitivity metrics are investigated, use a **fixed held-out** corpus, identical causal labels and masks, normalized token counts, the same parameter subsets, multiple batches/seeds, and confidence intervals. Track gradient/update norms and loss curvature proxies as diagnostics—not as an automatic stop rule. Confirm any warning with actual downstream probes.
 
-The following PyTorch implementation demonstrates how an engineer might monitor this metric across checkpoints.
+## 4. Checkpoint Selection Protocol
 
-```python
-import torch
-import torch.nn as nn
+Save checkpoints frequently enough to compare the adaptation frontier. Before the run, freeze the following protocol:
 
-class TransformerBlock(nn.Module):
-    """A simplified Transformer block for demonstration."""
-    def __init__(self, d_model=256, vocab_size=1000):
-        super().__init__()
-        self.embedding = nn.Embedding(vocab_size, d_model)
-        self.encoder = nn.TransformerEncoderLayer(d_model=d_model, nhead=4, batch_first=True)
-        self.lm_head = nn.Linear(d_model, vocab_size)
-        
-    def forward(self, x):
-        return self.lm_head(self.encoder(self.embedding(x)))
+| Evidence | Required control |
+| :--- | :--- |
+| Pre-training progress | fixed held-out loss/perplexity by language and domain; identical tokenizer and packing |
+| Base capability | fixed zero/few-shot, safety, calibration, and long-context slices |
+| Adaptability | **standardized SFT probe** with the same data, chat template, token budget, LR sweep, seeds, and early-stop rule |
+| Retention after SFT | base-capability and safety suite rerun on every probe |
+| Economics | achieved training FLOPs, restarts, checkpoint/eval overhead, serving p50/p95 latency, memory, throughput, projected volume |
+| Statistics | paired samples where possible, minimum critical-slice size, bootstrap or other justified **confidence interval** |
 
-def compute_fisher_trace(model: nn.Module, inputs: torch.Tensor, targets: torch.Tensor) -> float:
-    """
-    Computes the empirical Fisher Information trace for a given batch.
-    
-    A rising trace across successive pre-training checkpoints indicates 
-    increasing parameter sensitivity (brittleness) and the onset of 
-    Catastrophic Overtraining.
-    """
-    model.eval()
-    criterion = nn.CrossEntropyLoss()
-    
-    # Forward pass
-    logits = model(inputs)
-    
-    # Reshape for CrossEntropy: (batch_size * seq_len, vocab_size)
-    loss = criterion(logits.view(-1, logits.size(-1)), targets.view(-1))
-    
-    # Zero gradients before backward pass to ensure clean accumulation
-    model.zero_grad()
-    loss.backward()
-    
-    fisher_trace = 0.0
-    for name, param in model.named_parameters():
-        if param.requires_grad and param.grad is not None:
-            # The diagonal of the empirical Fisher Information Matrix 
-            # is approximated by the squared gradients.
-            fisher_trace += (param.grad ** 2).sum().item()
-            
-    return fisher_trace
+The SFT probe should be cheap enough to run at selected pre-training checkpoints but realistic enough to predict the intended post-training stage. Include at least one domain task, one format/tool task if relevant, general-capability retention, and safety. Tune a small learning-rate range for each checkpoint; using one unsuitable LR can falsely label a checkpoint “brittle.”
 
-# --- Simulation: Monitoring a Checkpoint ---
-torch.manual_seed(42)
-model = TransformerBlock()
+Do not use the probe's training examples in the final private release evaluation. Split related conversations, documents, entities, and synthetic siblings before assignment and keep the release set quarantined.
 
-# Dummy validation batch: 4 sequences of length 32
-val_inputs = torch.randint(0, 1000, (4, 32))
-val_targets = torch.randint(0, 1000, (4, 32))
+## 5. Decision and Abort Gates
 
-trace_value = compute_fisher_trace(model, val_inputs, val_targets)
+Select a checkpoint on a Pareto surface rather than by minimum pre-training loss alone:
 
-print(f"Empirical Fisher Trace: {trace_value:.4f}")
-print("System Prompt: If this value exhibits a sustained exponential increase ")
-print("across checkpoints, trigger early stopping to preserve fine-tuning plasticity.")
-```
+- reject any checkpoint that fails a critical safety, privacy, or capability-retention slice;
+- require domain and standardized SFT gains to exceed the uncertainty band, not merely the point estimate;
+- compare the additional training cost with the measured serving savings at plausible traffic volumes;
+- stop a run for nonfinite state, reproducible corruption, or predeclared regression bounds—not for an uncalibrated sensitivity number;
+- keep the last-known-good checkpoint and complete optimizer/scheduler/RNG/data-cursor state so the team can resume or branch experiments.
 
-As the industry pushes toward increasingly massive datasets, the discipline of Foundation Model Engineering is shifting. Training is no longer just about feeding tokens into a GPU until the loss bottoms out; it is about dynamically managing the physical state of the neural network to ensure it survives the transition from a raw text predictor to an aligned, agentic AI.
+A later checkpoint may be best for base-model inference and an earlier checkpoint best for an instruction-tuned product. Keeping both can be rational. Report the chosen artifact, downstream recipe, and lifecycle assumptions together; “trained on more tokens” is not a product-quality certificate.
 
----
+## 6. Pilot Design Before a Large Run
+
+Use a factorial pilot across at least several model sizes and token budgets, with multiple seeds where affordable. Keep tokenizer, data snapshot, evaluation, and quality gates fixed; tune optimizer settings per scale. Reserve the largest pilot as a forecast holdout, estimate uncertainty, and test several downstream SFT probes at intermediate checkpoints.
+
+Log global tokens, realized mixture, training/validation loss by slice, gradient/update/activation norms, nonfinite events, throughput, MFU, data wait, checkpoint overhead, and reconstructable batch IDs. A useful run plan states in advance which checkpoint comparisons can change the final token budget and who approves that change.
+
+The engineering lesson is not “never over-train.” It is to optimize lifecycle utility with measured adaptation and retention, and to preserve enough checkpoints and state that the choice remains reversible.
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: Why does a model with a lower pre-training loss sometimes perform worse after Supervised Fine-Tuning (SFT)?</summary>
-*This is the Fine-Tuning Paradox caused by Catastrophic Overtraining. As a model is over-trained, its parameters become hyper-specialized and brittle (Progressive Sensitivity). During SFT, the gradients from the fine-tuning data cause massive, unpredictable shifts in these brittle weights, destroying the general knowledge the model acquired during pre-training.*
+<summary>Quiz 1: Why can a deployment-oriented token budget exceed a compute-optimal budget?</summary>
+*Extra one-time training can make a smaller model better, reducing recurring memory, latency, and cost for many served tokens. The decision depends on measured lifecycle cost and quality, not a universal ratio.*
 </details>
 
 <details>
-<summary>Quiz 2: If the Chinchilla scaling laws provide the mathematically optimal ratio for training efficiency, why do companies like Meta intentionally ignore them for models like Llama 3 8B?</summary>
-*Chinchilla optimizes for training compute (CapEx). For open-weights or heavily deployed models, inference compute (OpEx) is the dominant cost over the model's lifecycle. By over-training a small model on vastly more data than Chinchilla recommends, engineers create a highly capable model that is exceptionally cheap and fast to serve at scale.*
+<summary>Quiz 2: A later checkpoint has lower held-out pre-training loss but worse results under one SFT learning rate. Has lost plasticity been proven?</summary>
+*No. The observation matters, but it may depend on the SFT hyperparameter, seed, task, or evaluation. Run the frozen LR sweep and multiple seeds, compare confidence intervals and retention, and treat mechanism claims separately.*
 </details>
 
 <details>
-<summary>Quiz 3: How does monitoring the Empirical Fisher Information Matrix help engineers during a massive pre-training run?</summary>
-*The trace of the Fisher Information Matrix measures the sensitivity of the model's loss to changes in its parameters. If the trace spikes, it indicates the loss landscape has become extremely sharp and the weights have lost their plasticity. Engineers can use this metric as an early-warning system to halt pre-training before the model becomes too brittle to be aligned via RLHF or SFT.*
+<summary>Quiz 3: Why is a squared-gradient sum on a random-label batch an unsafe automatic stopping metric?</summary>
+*Its scale depends on the labels, batch/token count, loss reduction, parameterization, and precision. It is neither calibrated across checkpoints nor a direct measure of downstream adaptability. Fixed data and actual SFT probes are required.*
 </details>
 
----
+<details>
+<summary>Quiz 4: What must remain identical in a standardized SFT probe?</summary>
+*The dataset and split, tokenizer/chat template, token budget, evaluation, seed policy, LR search space, early-stop rule, and retention suite must be controlled so checkpoint identity is the intended variable.*
+</details>
+
+<details>
+<summary>Quiz 5: Why might a team retain both an earlier and later pre-training checkpoint?</summary>
+*The later artifact may provide better base-model quality or serving economics, while the earlier one may adapt or retain capabilities better under the target post-training recipe. Different product objectives can select different Pareto points.*
+</details>
 
 ## References
 
-1. <a id="ref-1"></a>Springer, J. M., et al. (2025). *Overtrained Language Models Are Harder to Fine-Tune*. [arXiv:2503.19206](https://arxiv.org/abs/2503.19206).
-2. <a id="ref-2"></a>Gadre, S. Y., et al. (2024). *Language models scale reliably with over-training and on downstream tasks*. [arXiv:2403.08540](https://arxiv.org/abs/2403.08540).
+1. <a id="ref-1"></a>Hoffmann, J., et al. (2022). *Training Compute-Optimal Large Language Models*. [arXiv:2203.15556](https://arxiv.org/abs/2203.15556).
+2. <a id="ref-2"></a>Gadre, S. Y., et al. (2024). *Language Models Scale Reliably With Over-Training and on Downstream Tasks*. [arXiv:2403.08540](https://arxiv.org/abs/2403.08540).
+3. <a id="ref-3"></a>Springer, J. M., et al. (2025). *Overtrained Language Models Are Harder to Fine-Tune*. [arXiv:2503.19206](https://arxiv.org/abs/2503.19206).

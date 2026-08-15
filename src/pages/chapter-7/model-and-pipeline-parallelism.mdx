@@ -57,53 +57,28 @@ A standard Transformer MLP consists of two linear transformations: $Y = \text{Ge
 2. **Row Parallelism on $B$:** The second weight matrix $B$ is split horizontally into $B_1$ and $B_2$. GPU 0 computes $Z_1 = Y_1 B_1$ and GPU 1 computes $Z_2 = Y_2 B_2$. 
 3. **Synchronization:** The final output requires summing the partial results: $Z = Z_1 + Z_2$. This is achieved via a single **All-Reduce** operation.
 
-Below is a realistic PyTorch implementation of the Megatron-style MLP block. Notice how standard single-GPU operations are replaced with distributed primitives.
+### TP Process Groups and Autograd
 
-```python
-import torch
-import torch.nn as nn
-import torch.distributed as dist
+The equations above are correct, but a raw in-place `dist.all_reduce` is not a realistic training implementation. A correct tensor-parallel layer must satisfy all of these contracts:
 
-class MegatronMLP(nn.Module):
-    def __init__(self, d_model, d_ff, rank, world_size):
-        super().__init__()
-        # Column Parallelism: Split the output dimension
-        self.w1 = nn.Linear(d_model, d_ff // world_size)
-        
-        # Row Parallelism: Split the input dimension
-        self.w2 = nn.Linear(d_ff // world_size, d_model)
-        self.gelu = nn.GELU()
-        
-    def forward(self, x):
-        # 1. Column Parallel Forward (Independent computation, no comms)
-        # Input x: [batch, seq, d_model] 
-        # Output y_local: [batch, seq, d_ff // world_size]
-        y_local = self.gelu(self.w1(x))
-        
-        # 2. Row Parallel Forward (Compute partial sums)
-        # Output z_local: [batch, seq, d_model]
-        z_local = self.w2(y_local)
-        
-        # 3. All-Reduce to sum the partial results across all TP GPUs
-        dist.all_reduce(z_local, op=dist.ReduceOp.SUM)
-        
-        return z_local
-```
+- create a **TP process group** containing only the ranks for one tensor-parallel replica; the global group would mix data- and pipeline-parallel replicas;
+- use framework tensor-parallel APIs or **autograd-aware** collective mappings so the backward pass applies the matching split, gather, reduce, or identity transformation;
+- assert that hidden, head, and feed-forward dimensions are divisible by the TP degree and shard the intended weight axis;
+- add the row-parallel output **bias exactly once** after the partial sums are reduced; a replicated bias inside every local linear layer would be multiplied by the TP size;
+- initialize or load slices from one canonical full weight and compare forward outputs plus input/parameter gradients against a single-device reference.
+
+PyTorch's tensor-parallel interfaces and established frameworks encode these mappings; they should be preferred to an educational hand-written collective [[5]](#ref-5). Profile the actual TP subgroup and topology, because collective latency and overlap—not the word “all-reduce”—determine whether intra- or inter-node TP is viable.
 
 ### The Communication Bottleneck
-Tensor Parallelism is incredibly powerful, but it comes with a severe hardware constraint. As seen in the code, an `All-Reduce` operation is required inside *every single Transformer block*. This high-frequency, blocking communication demands massive bandwidth. Consequently, **TP is almost strictly confined to GPUs within a single physical node** (e.g., 8 GPUs connected via NVLink). Running TP across nodes over standard Ethernet or even InfiniBand would cripple training speed.
+Tensor parallelism introduces collectives inside Transformer blocks, so latency, message size, topology, and overlap matter. High-bandwidth intra-node fabrics are often the first placement choice, but cross-node TP can be viable on suitable fabrics and workload shapes. Measure step time, collective bytes, overlap, and stragglers for candidate TP degrees instead of treating the node boundary as an absolute rule.
 
 ---
 
-## 3. Sequence Parallelism (SP)
+## 3. Sequence and Context Parallelism
 
-As the AI industry shifted towards massive context windows (e.g., 128k to 1M tokens), engineers hit a new Memory Wall. In standard TP, the weight matrices are sharded, but **every GPU still holds the full sequence length of the activations**. Since attention memory scales quadratically with sequence length, long contexts cause Out-Of-Memory (OOM) errors regardless of TP.
+The term **sequence parallelism** is overloaded. In Megatron-style tensor parallelism, sequence parallelism commonly shards operations such as normalization and dropout along the sequence dimension, reducing replicated activation memory while pairing with TP collectives. It does not by itself make every token attend globally without communication.
 
-**Sequence Parallelism (SP)** [[3]](#ref-3) solves this by sharding the data along the sequence dimension itself. If the sequence length is 8,000 and we have 8 GPUs, each GPU only stores and processes 1,000 tokens. 
-- In the MLP layer, SP operates seamlessly because MLPs process tokens independently.
-- In the Attention layer, SP requires complex communication algorithms (like **Ring Attention** or **DeepSpeed-Ulysses**) to allow tokens on GPU 0 to attend to tokens on GPU 7 without materializing the full sequence on any single device.
-
----
+Long-context systems also use **context parallelism** or sequence-dimension attention algorithms such as Ring Attention and Ulysses. They partition tokens for attention and exchange key/value or intermediate blocks with different collective and memory patterns. Record which definition the framework uses, which tensors are sharded, whether causal and padding masks remain correct, and the communication volume per layer. Benchmark the exact sequence length and topology rather than treating these methods as interchangeable.
 
 ## 4. 3D Parallelism & Automated Sharding
 
@@ -117,7 +92,7 @@ To train a state-of-the-art model like Llama 3 or GPT-4, engineers do not choose
 3. **Data Parallelism (Cluster-wide):** Replicates this entire TP+PP setup across thousands of servers to process massive datasets concurrently.
 
 ### The Rise of Auto-Parallelism
-Manually mapping a neural network to a 3D hardware topology is an agonizing engineering task. The current frontier of systems research is **Automated Parallelism**. Compilers like **Alpa** [[4]](#ref-4) treat parallelism as an optimization problem. By analyzing the model's computational graph and the cluster's network bandwidth, Alpa automatically derives the mathematically optimal combination of DP, TP, and PP without requiring engineers to write custom distributed code.
+Manually mapping a neural network to a 3D hardware topology is an agonizing engineering task. The current frontier of systems research is **Automated Parallelism**. Compilers like **Alpa** [[4]](#ref-4) treat parallelism as an optimization problem. By analyzing a computational graph and topology cost model, systems such as Alpa search for a candidate DP/TP/PP plan [[4]](#ref-4). The result is only as accurate as the cost model and supported operators, so engineers must profile and validate it on the deployed cluster.
 
 ---
 
@@ -139,8 +114,8 @@ Manually mapping a neural network to a 3D hardware topology is an agonizing engi
 </details>
 
 <details>
-<summary>Quiz 4: How does Sequence Parallelism (SP) solve the memory bottleneck of extremely long context windows that standard Tensor Parallelism cannot resolve?</summary>
-*In standard Tensor Parallelism, the model weights are sharded, but every GPU still holds the full sequence length of the activations. For very long contexts, activation memory scales quadratically and causes OOM errors. SP partitions the sequence dimension itself, meaning each GPU only stores and processes a fraction of the tokens, drastically reducing the activation memory footprint.*
+<summary>Quiz 4: Why must an engineer distinguish Megatron-style sequence parallelism from long-context context parallelism?</summary>
+*Megatron-style sequence parallelism mainly shards replicated sequence-wise operations around TP, while context-parallel attention algorithms partition tokens and communicate key/value or attention blocks. Their masks, collectives, memory savings, and performance limits differ, so the framework's exact definition must be documented and tested.*
 </details>
 
 <details>
@@ -156,3 +131,4 @@ Manually mapping a neural network to a 3D hardware topology is an agonizing engi
 2. <a id="ref-2"></a>Shoeybi, M., et al. (2019). *Megatron-LM: Training Multi-Billion Parameter Language Models Using Model Parallelism.* [arXiv:1909.08053](https://arxiv.org/abs/1909.08053).
 3. <a id="ref-3"></a>Li, S., et al. (2021). *Sequence Parallelism: Making 4D Parallelism Possible.* [arXiv:2105.13120](https://arxiv.org/abs/2105.13120).
 4. <a id="ref-4"></a>Zheng, L., et al. (2022). *Alpa: Automating Inter- and Intra-Operator Parallelism for Distributed Deep Learning.* OSDI. [arXiv:2201.12023](https://arxiv.org/abs/2201.12023).
+5. <a id="ref-5"></a>PyTorch. *Tensor Parallelism APIs*. [PyTorch documentation](https://docs.pytorch.org/docs/stable/distributed.tensor.parallel.html).

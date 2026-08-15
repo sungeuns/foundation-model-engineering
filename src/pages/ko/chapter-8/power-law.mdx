@@ -8,11 +8,11 @@ import PowerLawVisualizer from '../../../components/chapter-8/PowerLawVisualizer
 
 # 8.1 The Power Law: 딥러닝의 열역학
 
-2020년 이전의 딥러닝 아키텍처 설계는 직관, 휴리스틱(heuristics), 그리고 시행착오에 크게 의존했습니다. 엔지니어들은 모델을 만들고 학습시키면서 손실(loss) 곡선이 만족스러운 수치로 수렴하기만을 바랐습니다. 하지만 신경망의 성능이 무작위가 아니라 **Scaling Laws (스케일링 법칙)** 이라는 엄격하고 예측 가능한 수학적 방정식에 의해 지배된다는 사실이 밝혀지면서 패러다임이 근본적으로 바뀌었습니다.
+2020년 이전의 딥러닝 아키텍처 설계는 직관, 휴리스틱(heuristics), 그리고 시행착오에 크게 의존했습니다. 엔지니어들은 모델을 만들고 학습시키면서 손실(loss) 곡선이 만족스러운 수치로 수렴하기만을 바랐습니다. 하지만 특정 모델·데이터·최적화 조건 안에서 신경망 성능이 **Scaling Laws (스케일링 법칙)** 로 근사할 수 있는 반복적인 경험적 경향을 보인다는 연구가 축적되면서 패러다임이 바뀌었습니다.
 
 Backpropagation (오차역전파)이 딥러닝의 '역학(mechanics)'이라면, Scaling Laws 는 '열역학(thermodynamics)'에 비유할 수 있습니다. 이는 시스템의 거시적인 동작, 즉 **Compute (연산량), Data (데이터), Parameters (파라미터 수)** 라는 세 가지 핵심 자원을 확장함에 따라 모델의 최종 손실(Loss)이 어떻게 변화하는지를 설명합니다.
 
-이러한 예측 가능성 덕분에 AI 연구소들은 작고 저렴한 모델을 학습시켜 곡선을 피팅(fitting)한 뒤, 수백억 원이 드는 대규모 학습을 시작하기도 전에 그 최종 성능을 정확하게 예측할 수 있게 되었습니다.
+이러한 규칙성은 작은 파일럿 실행으로 큰 실행을 예측하는 데 도움을 주지만, 예측은 데이터·아키텍처·최적화·외삽 범위에 조건부이며 반드시 불확실성을 포함해야 합니다.
 
 ---
 
@@ -61,72 +61,50 @@ $$ \log L(C) \approx -\alpha_C \log C + \log(C_c^{\alpha_C}) $$
 
 ---
 
-## PyTorch 로 손실 외삽하기 (Extrapolating Loss in PyTorch)
+## 제약과 불확실성을 포함한 외삽
 
-실제 현업에서 Foundation Model 엔지니어들은 대규모 학습이 정상적인 궤도를 벗어나지 않았는지 확인하기 위해 스케일링 법칙을 사용합니다. 초기 소규모 실험에 곡선을 피팅하여 예상되는 손실의 "베이스라인(baseline)"을 설정하는 것입니다.
+스케일링 법칙 예측은 정확한 예언이 아니라 엔지니어링 추정입니다. 같은 토크나이저, 데이터 스냅샷, 아키텍처 계열, 평가 하네스, 학습 품질 기준으로 모델 크기 $N$, 토큰 예산 $D$, 여러 시드의 요인 파일럿 그리드를 구성합니다. 작은 모델의 과소 학습을 스케일링 법칙으로 오해하지 않도록 규모마다 학습률, 배치, 워밍업을 조정합니다.
 
-다음의 PyTorch 코드는 일련의 소규모 학습 결과에 Power law 곡선을 경험적으로 피팅(fitting)하여, 엑사플롭스(ExaFLOP) 규모 모델의 예상 손실을 프로젝션하는 방법을 보여줍니다.
+다음 교육용 피팅은 진폭·지수를 양수로, 하한을 0과 최소 관측 손실 사이로 제한합니다. 연산량 단위는 PetaFLOPs입니다. **1 ExaFLOP = 1,000 PetaFLOPs**이므로 목표는 `1e6`이 아니라 `1e3`입니다.
 
 ```python
 import torch
 import torch.nn as nn
-import torch.optim as optim
+import torch.nn.functional as F
 
-# 경험적 데이터: (Compute in PetaFLOPs, Validation Loss)
-# 소규모 실험 실행을 기반으로 한 시뮬레이션 데이터
-compute_flops = torch.tensor([1e1, 1e2, 1e3, 1e4, 1e5], dtype=torch.float32)
-empirical_loss = torch.tensor([4.65, 3.72, 3.10, 2.68, 2.41], dtype=torch.float32)
+compute_pf = torch.tensor([10., 30., 100., 300., 1_000.])
+validation_loss = torch.tensor([4.65, 4.02, 3.52, 3.18, 2.91])
 
-class PowerLawFitter(nn.Module):
-    """
-    다음 방정식을 피팅합니다: L(C) = a * C^(-alpha) + E
-    수치적 안정성을 위해 로그 공간(log-space)에서 최적화를 진행합니다.
-    """
-    def __init__(self):
+class ConstrainedPowerLaw(nn.Module):
+    def __init__(self, min_observed_loss):
         super().__init__()
-        # 합리적인 초깃값으로 파라미터 초기화
-        self.log_a = nn.Parameter(torch.tensor(2.0))
-        self.alpha = nn.Parameter(torch.tensor(0.05))
-        self.E = nn.Parameter(torch.tensor(1.5)) # Irreducible entropy floor
-        
-    def forward(self, C):
-        a = torch.exp(self.log_a)
-        return a * torch.pow(C, -self.alpha) + self.E
+        self.raw_amplitude = nn.Parameter(torch.tensor(1.0))
+        self.raw_exponent = nn.Parameter(torch.tensor(-2.0))
+        self.raw_floor_fraction = nn.Parameter(torch.tensor(0.0))
+        self.register_buffer("min_loss", min_observed_loss)
 
-def fit_scaling_law(compute, loss, epochs=5000, lr=0.01):
-    model = PowerLawFitter()
-    optimizer = optim.Adam(model.parameters(), lr=lr)
-    criterion = nn.MSELoss()
-    
-    for epoch in range(epochs):
-        optimizer.zero_grad()
-        predictions = model(compute)
-        
-        # 상대 오차를 동등하게 페널티하기 위해 손실의 로그값에 MSE를 적용
-        fit_loss = criterion(torch.log(predictions), torch.log(loss))
-        fit_loss.backward()
-        optimizer.step()
-        
-        if epoch % 1000 == 0:
-            print(f"Epoch {epoch} | Fit MSE: {fit_loss.item():.6f}")
-            
-    return model
+    def forward(self, compute):
+        amplitude = F.softplus(self.raw_amplitude)
+        exponent = F.softplus(self.raw_exponent)
+        floor = self.min_loss * torch.sigmoid(self.raw_floor_fraction)
+        return amplitude * compute.pow(-exponent) + floor
 
-# 최적화 실행
-fitted_model = fit_scaling_law(compute_flops, empirical_loss)
+model = ConstrainedPowerLaw(validation_loss.min())
+optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
+for _ in range(5_000):
+    prediction = model(compute_pf)
+    loss = F.mse_loss(torch.log(prediction), torch.log(validation_loss))
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
 
-# 학습된 계수 추출
-a_learned = torch.exp(fitted_model.log_a).item()
-alpha_learned = fitted_model.alpha.item()
-E_learned = fitted_model.E.item()
-
-print(f"\nFitted Equation: L(C) = {a_learned:.2f} * C^(-{alpha_learned:.4f}) + {E_learned:.2f}")
-
-# 1 ExaFLOP 실행에 대한 손실 예측 (1e6 PetaFLOPs)
-c_next_gen = torch.tensor([1e6], dtype=torch.float32)
-predicted_loss = fitted_model(c_next_gen).item()
-print(f"Predicted Loss for 1 ExaFLOP: {predicted_loss:.3f}")
+one_exaflop_pf = torch.tensor([1_000.])
+print(model(one_exaflop_pf).item())
 ```
+
+다섯 개 집계 점만으로 자금 결정을 내리기에는 부족합니다. 전체 파일럿 실행을 **부트스트랩** 재표집하여 파라미터·예측 구간을 만듭니다. 개별 검증 토큰을 독립 학습 실행처럼 재표집하면 안 됩니다. **최대 규모 제외(leave-largest-out)** 시험도 수행합니다. 가장 큰 실행을 빼고 피팅한 뒤 그 실행을 예측하여 오차를 보고하고, 검증한 연산 비율을 크게 넘는 외삽은 거부합니다.
+
+계획한 파일럿 중 가장 큰 규모는 진짜 예측 홀드아웃으로 남깁니다. 예측·실제 검증 손실, 다운스트림 체크포인트 프로브, 실측 FLOP/s, 재시작 오버헤드, 총비용을 비교합니다. 최대 FLOPs가 아니라 실측 활용률로 GPU 시간을 환산하고 데이터, 체크포인트, 평가, 장애 오버헤드를 포함합니다. 실행 여부 구간에는 점 추정뿐 아니라 불확실성과 사업 가치를 반영합니다.
 
 ---
 
@@ -134,11 +112,11 @@ print(f"Predicted Loss for 1 ExaFLOP: {predicted_loss:.3f}")
 
 스케일링 법칙에서 반드시 짚고 넘어가야 할 중요한 미묘함은 **Cross-entropy loss** 와 **Downstream task accuracy (하위 작업 정확도)** 간의 차이입니다.
 
-Cross-entropy loss 는 완벽하게 매끄럽고 예측 가능한 Power law 를 따르는 반면, MMLU 나 GSM8K 와 같은 특정 벤치마크에서의 성능은 특정 규모 임계값을 넘을 때 갑작스럽고 불연속적인 성능 도약을 보이는 "창발적 능력 (Emergent Abilities)"을 나타내는 것처럼 보입니다.
+Cross-entropy loss는 피팅한 범위 안에서 매끄러운 추세를 보이는 경우가 많지만, 특정 벤치마크 성능은 갑작스럽고 불연속적인 도약처럼 보일 수 있습니다. 어느 동작도 측정한 모델·데이터·최적화 범위 밖에서 보장되지는 않습니다.
 
 하지만 Schaeffer 등 (2023)의 연구 [[3]](#ref-3)는 이러한 창발성이 평가지표(metric)의 선택에 의해 발생하는 신기루에 불과하다고 주장합니다. Cross-entropy 는 연속적(continuous)이며 토큰에 대한 확률 분포를 측정합니다. 만약 모델이 정답에 부여하는 확률을 1%에서 10%로 향상시킨다면, 손실(loss)은 매끄럽게 감소합니다. 하지만 객관식 벤치마크에서는 그 확률이 경쟁하는 오답들의 확률을 뛰어넘을 때까지 모델의 점수는 계속 0점일 것이며, 정답 확률이 오답 확률을 넘어서는 순간 정확도는 갑자기 100%로 치솟게 됩니다.
 
-즉, (손실로 측정되는) 근본적인 지능은 예측 가능하게 확장되지만, 계단 함수(step-function) 형태의 평가 지표가 갑작스러운 창발의 환상을 만들어낸다는 것입니다.
+Schaeffer 등의 연구는 조사한 설정에서 지표 선택이 겉보기 임계값을 만들거나 키울 수 있음을 보여줍니다 [[3]](#ref-3). 모든 창발 논쟁이 끝났다는 뜻은 아닙니다. 엔지니어는 매끄러움과 불연속성 어느 쪽도 보편 법칙으로 두지 말고 연속 지표, 오염, 프롬프팅, 신뢰 구간을 함께 검사해야 합니다.
 
 ---
 

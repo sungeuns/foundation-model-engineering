@@ -73,40 +73,39 @@ FlashAttention-3 (2024) [[3]](#ref-3) 는 새로운 하드웨어 기능을 활�
 
 ---
 
-## 5. PyTorch 구현: Flash Attention 사용하기
+## 5. PyTorch SDPA: Flash 선택을 실제로 검증하기
 
-현대 PyTorch (2.0+) 에서는 `scaled_dot_product_attention` 함수를 통해 **Flash Attention** 을 매우 쉽게 사용할 수 있습니다. 사용자가 직접 CUDA 코드를 작성할 필요가 없으며, 하드웨어가 지원하는 경우 PyTorch가 자동으로 **Flash Attention** 을 사용합니다.
+PyTorch의 scaled-dot-product attention(SDPA) dispatch는 설치한 PyTorch/CUDA 버전, GPU 기능, dtype, 형상, 마스크, 드롭아웃에 따라 달라집니다. 아래 예제는 의도적으로 CUDA 전용이며 현재 `sdpa_kernel` backend 선택을 사용합니다. Causal 언어 모델 어텐션을 보여주지만 가변 길이 학습 루프는 아닙니다.
 
 ```python
 import torch
 import torch.nn.functional as F
+from torch.nn.attention import SDPBackend, sdpa_kernel
 
-# CUDA 사용 가능 여부 확인 및 디바이스 설정
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+if not torch.cuda.is_available():
+    raise RuntimeError("Flash SDPA requires a supported CUDA GPU")
 
-# 차원 정의
-batch_size = 4
-num_heads = 8
-seq_len = 2048
-head_dim = 64
+device = torch.device("cuda")
+dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
+batch, heads, sequence, head_dim = 2, 8, 2048, 64
 
-# 무작위 Query, Key, Value 텐서 생성
-q = torch.randn(batch_size, num_heads, seq_len, head_dim, device=device)
-k = torch.randn(batch_size, num_heads, seq_len, head_dim, device=device)
-v = torch.randn(batch_size, num_heads, seq_len, head_dim, device=device)
+q = torch.randn(batch, heads, sequence, head_dim, device=device, dtype=dtype)
+k = torch.randn_like(q)
+v = torch.randn_like(q)
 
-# PyTorch 2.0+ Scaled Dot Product Attention
-# 입력값과 하드웨어에 따라 최적의 구현체(FlashAttention, Memory Efficient, 또는 Math)를 자동으로 선택합니다.
-with torch.inference_mode():
-    # 표준적인 사용법
-    output = F.scaled_dot_product_attention(q, k, v)
-    
-    print(f"Output shape: {output.shape}")
+with torch.inference_mode(), sdpa_kernel(backends=[SDPBackend.FLASH_ATTENTION]):
+    output = F.scaled_dot_product_attention(
+        q, k, v,
+        dropout_p=0.0,
+        is_causal=True,
+    )
 
-# 특정 구현체를 강제하거나 비활성화하려면 컨텍스트 매니저를 사용할 수 있습니다:
-# with torch.nn.attention.sdp_kernel(enable_flash=True, enable_math=False, enable_mem_efficient=False):
-#     output = F.scaled_dot_product_attention(q, k, v)
+assert output.shape == q.shape
+assert output.dtype == dtype and torch.isfinite(output).all()
+print(torch.backends.cuda.flash_sdp_enabled(), output.shape, output.dtype)
 ```
+
+학습에서는 SDPA가 모듈의 training mode와 별개로 전달된 확률을 적용하므로 `dropout_p`를 명시합니다. `is_causal=True`만으로 가변 길이 배치의 패딩이 제거되지는 않습니다. 프레임워크가 지원하는 causal/패딩 결합 마스크 또는 가변 길이 표현을 사용하고, 의도한 backend 자격을 유지하는지 확인합니다. 작은 텐서에서 math backend와 출력·그래디언트를 dtype에 맞는 허용 오차로 비교하고 profiler·kernel 로그로 실제 backend를 증명합니다 [[4]](#ref-4). Flash 강제 dispatch가 입력을 거부하면 설정을 바꾸거나 문서화한 fallback을 허용해야 하며, math 경로의 성능을 FlashAttention 성능으로 보고해서는 안 됩니다.
 
 ---
 
@@ -139,3 +138,4 @@ with torch.inference_mode():
 1. <a id="ref-1"></a>Dao, T., Fu, D., Ermon, S., Rudra, A., & Ré, C. (2022). *FlashAttention: Fast and memory-efficient exact attention with IO-awareness*. [arXiv:2205.14135](https://arxiv.org/abs/2205.14135).
 2. <a id="ref-2"></a>Dao, T. (2023). *FlashAttention-2: Faster attention with better parallelism and work partitioning*. [arXiv:2307.08691](https://arxiv.org/abs/2307.08691).
 3. <a id="ref-3"></a>Dao, T., & Haziza, N. (2024). *FlashAttention-3: Fast and Accurate Attention with Asynchrony and Low-precision*. [arXiv:2407.08608](https://arxiv.org/abs/2407.08608).
+4. <a id="ref-4"></a>PyTorch. *Scaled Dot Product Attention*. [PyTorch 문서](https://docs.pytorch.org/docs/stable/generated/torch.nn.functional.scaled_dot_product_attention.html).
