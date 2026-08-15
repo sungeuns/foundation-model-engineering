@@ -60,11 +60,11 @@ Date: 2026-04-20
 - [x] 8.5 `continued-pretraining-and-domain-adaptation` reviewed (EN, KO; practitioner review 2026-08-16)
 
 ## Chapter 9
-- [x] 9.1 `sft-fundamentals` reviewed (EN, KO)
-- [x] 9.2 `dataset-quality-vs-quantity` reviewed (EN, KO)
-- [x] 9.3 `parameter-efficient-fine-tuning-peft` reviewed (EN, KO)
+- [x] 9.1 `sft-fundamentals` reviewed (EN, KO; practitioner review 2026-08-16)
+- [x] 9.2 `dataset-quality-vs-quantity` reviewed (EN, KO; practitioner review 2026-08-16)
+- [x] 9.3 `parameter-efficient-fine-tuning-peft` reviewed (EN, KO; practitioner review 2026-08-16)
 - [x] 9.4 `prompt-engineering-as-sft` reviewed (EN, KO)
-- [x] 9.5 `synthetic-instructions-and-self-instruct` reviewed (EN, KO)
+- [x] 9.5 `synthetic-instructions-and-self-instruct` reviewed (EN, KO; practitioner review 2026-08-16)
 
 ## Chapter 10
 - [x] 10.1 `human-feedback-loop` reviewed (EN, KO)

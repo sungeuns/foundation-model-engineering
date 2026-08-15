@@ -139,11 +139,11 @@ Review completed on 2026-04-16 for every EN/KO sub-chapter pair below.
 - [x] continued-pretraining-and-domain-adaptation (EN/KO pair; 2026-08-16 practitioner review)
 
 ### chapter-9
-- [x] dataset-quality-vs-quantity (EN/KO pair)
-- [x] parameter-efficient-fine-tuning-peft (EN/KO pair)
+- [x] dataset-quality-vs-quantity (EN/KO pair; 2026-08-16 practitioner rewrite)
+- [x] parameter-efficient-fine-tuning-peft (EN/KO pair; 2026-08-16 practitioner rewrite)
 - [x] prompt-engineering-as-sft (EN/KO pair)
-- [x] sft-fundamentals (EN/KO pair)
-- [x] synthetic-instructions-and-self-instruct (EN/KO pair)
+- [x] sft-fundamentals (EN/KO pair; 2026-08-16 practitioner rewrite)
+- [x] synthetic-instructions-and-self-instruct (EN/KO pair; 2026-08-16 practitioner rewrite)
 
 ### chapter-10
 - [x] alignment-tax (EN/KO pair)

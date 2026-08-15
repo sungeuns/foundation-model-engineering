@@ -6,131 +6,158 @@ lang: en
 
 # 9.1 Supervised Fine-Tuning (SFT) Fundamentals
 
-After the massive pre-training phase, a Foundation Model is a master of language, possessing vast world knowledge and complex syntactic understanding. However, it is fundamentally still just a next-token predictor. If you prompt a raw base model with "How do I bake a cake?", it might not answer you; instead, it might continue with "How do I bake a pie? How do I bake bread?", mimicking the structure of a list it saw on the web.
+A base model learns broad statistical structure by predicting tokens. **Supervised Fine-Tuning (SFT)** changes its behavior with curated demonstrations: answer this kind of request in this format, follow this tool schema, or refuse this unsafe request. SFT can also teach task knowledge when examples contain it, but it is not a reliable replacement for retrieval when facts change or require attribution.
 
-To transform a raw text predictor into a helpful, conversational assistant, we must undergo **Supervised Fine-Tuning (SFT)**. This is the first step of the post-training pipeline, popularized by OpenAI's InstructGPT [[2]](#ref-2), where we teach the model to follow instructions and adopt a specific persona.
-
----
-
-## The Analogy: The Scholar vs. The Intern
-
-Think of a pre-trained base model as a brilliant scholar who has read every book in the world library. They know facts about everything, but they have no social skills and don't know how to answer questions directly. If you ask them a question, they might just start reciting a related poem.
-
-Supervised Fine-Tuning is like taking this scholar and putting them through a training program to become a helpful intern. We show them thousands of examples of questions and ideal answers ("When a user asks X, you should reply with Y"). The scholar doesn't learn new facts (they already know everything), but they learn the *format* of how to be a helpful assistant.
+The practical objective is simple. The data contract is not.
 
 ---
 
-## The Mechanics of SFT
+## Objective and Loss Mask
 
-Mathematically, SFT is just continued pre-training, but on a highly curated distribution of data. However, there is a crucial difference in how we compute the loss.
+For messages serialized into tokens $z_1,\dots,z_T$, let $m_t=1$ only when token $z_t$ belongs to an assistant span that should be learned. Completion-only SFT minimizes
 
-During pre-training, we compute the loss on *every* token in the sequence. In SFT, we typically only compute the loss on the **response tokens**, not the instruction tokens. We want the model to learn to generate the answer, not to predict the user's question.
+$$
+\mathcal{L}_{\text{SFT}} = -\frac{1}{\sum_t m_t}\sum_{t=1}^{T}m_t\log p_\theta(z_t\mid z_{<t}).
+$$
 
-### The Masked Loss Function
+Labels for the system prompt, user turns, padding, and any excluded tool spans are set to `-100`. This prevents those positions from contributing directly to cross-entropy. It does **not** remove prompt tokens from the forward pass or their role as context: assistant predictions still attend to prompt activations, so prompt masking alone does not save activation memory in proportion to prompt length. Sequence length, checkpointing, attention implementation, and packing policy determine activation memory.
 
-Let the input sequence be a concatenation of the prompt $X$ and the response $Y$. The sequence of tokens is $x_1, x_2, ..., x_t$ (prompt) followed by $y_1, y_2, ..., y_m$ (response).
-
-The SFT loss is the standard autoregressive cross-entropy loss, but masked so that we only sum over the response tokens:
-
-$$ \mathcal{L}_{SFT} = - \sum_{i=1}^{m} \log P_\theta(y_i \mid y_{<i}, X) $$
-
-By ignoring the gradients for the prompt tokens $X$, we prevent the model from overfitting to the specific phrasing of the questions in our training set, focusing all its capacity on generating high-quality answers.
+Full-sequence loss is sometimes intentional—for example, when adapting a base model to a structured transcript distribution—but it is a different objective. Record which roles receive loss instead of calling one policy universally correct.
 
 ---
 
-## The Superficial Alignment Hypothesis
+## The Tokenizer and Template Are Part of the Model
 
-A critical concept in understanding SFT is the **Superficial Alignment Hypothesis** [[1]](#ref-1). It posits that a model's knowledge and capabilities are almost entirely learned during pre-training, while alignment (SFT) teaches the model which *sub-distribution* of formats to use when interacting with users. 
+Do not hand-write `<|user|>` strings copied from another model family. Use the checkpoint's tokenizer-native `chat_template` and freeze its exact bytes or hash with the training artifact. The same template, BOS/EOS behavior, and generation configuration must be used during training, evaluation, and serving.
 
-In other words, SFT doesn't make the model smarter; it just teaches it to act like a helpful assistant. This implies that we do not need millions of examples for SFT. A small set of high-quality, diverse instruction-response pairs is sufficient to align the model, as demonstrated by the LIMA paper [[1]](#ref-1).
+Before a run, inspect several encoded examples and verify:
 
----
+- `add_generation_prompt=False` for complete training conversations and the serving-time value for inference;
+- BOS is not duplicated and every learned completion has the intended EOS or end-of-turn token;
+- every assistant turn—not only the last one—has the intended loss mask;
+- system, user, padding, and excluded tool-result tokens are `-100`;
+- truncation never silently removes the answer while leaving only prompt tokens;
+- the rendered serving prefix is token-identical to the training prefix.
 
-## Chat Templates and Conversation Structure
+Some tokenizers expose an assistant mask only when their Jinja template contains generation blocks. If the tokenizer cannot return a trustworthy assistant mask, derive spans from tokenizer offsets or a template-aware collator and test the result. Searching token IDs for a delimiter is unsafe when the delimiter can appear in content.
 
-In production SFT, we don't just concatenate raw strings. We use structured formats to distinguish between the user, the assistant, and the system prompt. The industry standard is moving towards formats like **ChatML** or specific Jinja templates in Hugging Face.
-
-A typical training sequence looks like this:
-```text
-<|im_start|>system
-You are a helpful AI assistant.<|im_end|>
-<|im_start|>user
-How do I bake a cake?<|im_end|>
-<|im_start|>assistant
-To bake a cake, follow these steps...<|im_end|>
-```
-Special tokens like `<|im_start|>` and `<|im_end|>` (or `<|begin_of_text|>`, `<|start_header_id|>`, etc. in Llama 3) are added to the vocabulary. During SFT, we must ensure these special tokens are handled correctly and that loss is only computed on the assistant's response, including its closing tag.
+Adding new special tokens is a migration, not a formatting shortcut. It requires resizing and initializing embeddings, deciding whether `lm_head` is tied, retraining those rows, and recording checkpoint compatibility.
 
 ---
 
-## Engineering the SFT Loop (PyTorch)
+## A Mask-Inspection Collator
 
-Below is a realistic PyTorch implementation demonstrating how to apply a mask to ignore prompt tokens during loss calculation, a standard practice in frameworks like Hugging Face's TRL (Transformer Reinforcement Learning).
+The following is a deliberately compact educational example. It assumes a recent Transformers tokenizer whose chat template supports `return_assistant_tokens_mask`. API details vary by tokenizer and library version; test this path against the exact pinned artifact before training.
 
 ```python
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
 
-class SFTTrainer:
-    def __init__(self, model, tokenizer):
-        self.model = model
-        self.tokenizer = tokenizer
-        self.criterion = nn.CrossEntropyLoss(ignore_index=-100) # -100 is standard ignore index
+IGNORE_INDEX = -100
 
-    def train_step(self, prompt, response, optimizer):
-        self.model.train()
-        optimizer.zero_grad()
+def encode_conversation(tokenizer, messages, max_length=4096):
+    encoded = tokenizer.apply_chat_template(
+        messages,
+        tokenize=True,
+        add_generation_prompt=False,
+        return_dict=True,
+        return_assistant_tokens_mask=True,
+        truncation=True,
+        max_length=max_length,
+    )
+    input_ids = torch.tensor(encoded["input_ids"], dtype=torch.long)
+    assistant_mask = torch.tensor(
+        encoded["assistant_masks"], dtype=torch.bool
+    )
+    attention_mask = torch.ones_like(input_ids)
 
-        # 1. Tokenize prompt and response
-        prompt_ids = self.tokenizer.encode(prompt, add_special_tokens=False)
-        response_ids = self.tokenizer.encode(response, add_special_tokens=False)
+    labels = input_ids.clone()
+    labels[~assistant_mask] = IGNORE_INDEX
 
-        # 2. Concatenate and create labels
-        # We want to predict the response, so labels for prompt are ignored (-100)
-        input_ids = torch.tensor([prompt_ids + response_ids]).to(self.model.device)
-        
-        # Labels: ignore prompt tokens, keep response tokens
-        labels = torch.tensor([[-100] * len(prompt_ids) + response_ids]).to(self.model.device)
+    if labels.ne(IGNORE_INDEX).sum() == 0:
+        raise ValueError("truncation removed every supervised token")
+    if tokenizer.eos_token_id is not None:
+        learned = input_ids[assistant_mask]
+        if learned[-1].item() != tokenizer.eos_token_id:
+            raise ValueError("assistant span does not end with the expected EOS")
 
-        # 3. Forward pass
-        outputs = self.model(input_ids)
-        logits = outputs.logits
+    return {
+        "input_ids": input_ids,
+        "attention_mask": attention_mask,
+        "labels": labels,
+    }
 
-        # 4. Compute masked loss
-        # Shift logits and labels for autoregressive prediction
-        shift_logits = logits[..., :-1, :].contiguous()
-        shift_labels = labels[..., 1:].contiguous()
-        
-        loss = self.criterion(
-            shift_logits.view(-1, shift_logits.size(-1)), 
-            shift_labels.view(-1)
-        )
-
-        # 5. Backward pass
-        loss.backward()
-        optimizer.step()
-
-        return loss.item()
+def pad_batch(tokenizer, examples):
+    if tokenizer.pad_token_id is None:
+        raise ValueError("define a deliberate padding policy")
+    width = max(x["input_ids"].numel() for x in examples)
+    batch = {}
+    for key, pad_value in (
+        ("input_ids", tokenizer.pad_token_id),
+        ("attention_mask", 0),
+        ("labels", IGNORE_INDEX),
+    ):
+        rows = []
+        for item in examples:
+            pad = width - item[key].numel()
+            rows.append(torch.nn.functional.pad(item[key], (0, pad), value=pad_value))
+        batch[key] = torch.stack(rows)
+    return batch
 ```
+
+Visualize `tokenizer.convert_ids_to_tokens(input_ids)` beside the boolean mask for real multi-turn, tool-use, long, empty, and multilingual examples. This is more valuable than checking only tensor shapes.
+
+---
+
+## Packing and Truncation
+
+Packing short conversations into one sequence improves utilization, but ordinary causal attention lets later samples attend to earlier samples. Choose one of these contracts:
+
+1. concatenate documents with explicit EOS and accept cross-sample context as part of the training distribution;
+2. use block-diagonal or sequence-ID-aware attention so samples are isolated;
+3. disable packing when the implementation cannot prove either behavior.
+
+Never rely on EOS alone to block attention—it is a learned token, not an attention barrier. Log packing efficiency, supervised-token fraction, prompt/response length tails, examples dropped by truncation, and samples with zero supervised tokens.
+
+---
+
+## Run Contract and Evaluation
+
+Pin the base checkpoint, tokenizer, chat template, dataset manifest and split hashes, code/container, optimizer, precision, sequence length, packing policy, and seeds. Estimate weights, gradients, optimizer states, adapters, activations, temporary buffers, checkpoints, and evaluation separately. Save model/adapter, optimizer, scheduler, scaler, RNG, sampler, and data cursor so a resume does not replay or skip examples.
+
+Start with a small pilot and monitor token-normalized train and validation loss, gradient norms, nonfinite counts, throughput, data wait, prompt/response length, and loss by domain. Abort or investigate when masks are empty, EOS coverage changes, validation loss regresses beyond a declared band, nonfinite events persist, or a safety-critical slice fails.
+
+Immediate offline evaluation should include:
+
+- held-out instruction following and exact format/tool-schema validity;
+- base-capability retention and domain slices;
+- safety/refusal over-refusal pairs;
+- long-context and multi-turn cases matching the truncation policy;
+- fixed decoding settings and paired comparisons against the frozen baseline.
+
+Promote only the immutable artifact bundle that passed the gate. Keep the previous bundle as last-known-good and test rollback before serving traffic.
 
 ---
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: What is the theoretical activation gradient memory savings when applying prompt-masking in a causal LLM fine-tuning setup?</summary>
-*If the input prompt has $T_p$ tokens and the response has $T_r$ tokens, standard activation memory per layer is $M_{act} \times (T_p + T_r)$. With prompt masking, gradients for the prompt tokens are masked out and not computed, saving $T_p \times M_{act}$ memory per layer. The ratio of memory saved is $\frac{T_p}{T_p + T_r}$. For an instruction with $T_p = 3000$ and $T_r = 1000$, prompt-masking saves $75\%$ of the activation gradient memory per layer.*
+<summary>Quiz 1: Why does setting prompt labels to -100 not save prompt activation memory in proportion to prompt length?</summary>
+*The prompt remains in the causal forward graph because response tokens attend to it. The mask removes direct cross-entropy terms at prompt positions; it does not remove prompt attention, activations, or their contribution to response gradients.*
 </details>
 
 <details>
-<summary>Quiz 2: A common observation is that SFT models can lose some of their zero-shot capabilities on tasks not represented in the SFT dataset (Alignment Tax). How does the "Superficial Alignment Hypothesis" explain this?</summary>
-*The Superficial Alignment Hypothesis states that SFT does not teach the model new capabilities, but merely teaches it a new sub-distribution of formats (e.g., how to be an assistant). If the SFT dataset is narrow or contains bad formatting, the model might learn to restrict its outputs too strictly, effectively hiding or suppressing the vast world knowledge it acquired during pre-training.*
+<summary>Quiz 2: Why should an SFT pipeline use the checkpoint's tokenizer-native chat template?</summary>
+*Role markers, BOS/EOS rules, and generation prefixes are model-specific. A hand-written approximation can create a train/serve distribution shift or supervise the wrong tokens, while the pinned native template can be checked for token-level parity.*
 </details>
 
 <details>
-<summary>Quiz 3: From a systems perspective, why is SFT on a full 70B parameter model computationally expensive even if the dataset is small (e.g., only 1,000 examples)?</summary>
-*Because Full Fine-Tuning requires updating all parameters. The system must store not only the model weights but also the optimizer states (e.g., Adam's moments) and gradients for all 70B parameters, which requires massive VRAM (over 1TB). The small dataset size reduces the training time (fewer steps), but it does not reduce the peak memory required per step.*
+<summary>Quiz 3: Does inserting EOS between packed samples prevent attention leakage?</summary>
+*No. EOS marks a boundary in the token distribution but does not create an attention barrier. Isolation requires a block-diagonal or sequence-aware attention mask; otherwise cross-sample attention is an explicit accepted behavior.*
+</details>
+
+<details>
+<summary>Quiz 4: What should stop an SFT run even if training loss is falling?</summary>
+*Examples include empty or shifted assistant masks, EOS or truncation drift, persistent nonfinite values, held-out regression outside the declared band, or failure of a critical safety, format, or tool-use slice.*
 </details>
 
 ---
@@ -139,3 +166,4 @@ class SFTTrainer:
 
 1. <a id="ref-1"></a>Zhou, C., et al. (2023). *LIMA: Less Is More for Alignment.* [arXiv:2305.11206](https://arxiv.org/abs/2305.11206).
 2. <a id="ref-2"></a>Ouyang, L., et al. (2022). *Training language models to follow instructions with human feedback.* [arXiv:2203.02155](https://arxiv.org/abs/2203.02155).
+3. <a id="ref-3"></a>Hugging Face. *Chat templates.* [Transformers documentation](https://huggingface.co/docs/transformers/chat_templating).

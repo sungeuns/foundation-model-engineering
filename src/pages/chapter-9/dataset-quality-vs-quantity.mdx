@@ -8,182 +8,112 @@ import DataQualityVisualizer from '../../components/chapter-9/DataQualityVisuali
 
 # 9.2 Dataset Quality vs Quantity
 
-This chapter explores one of the most profound paradigm shifts in modern Foundation Model engineering: the transition from **Model-Centric** and **Volume-Centric** scaling to **Data-Centric** curation. While pre-training relies heavily on massive, diverse datasets to build world knowledge, the post-training and alignment phases (Supervised Fine-Tuning, RLHF/DPO) operate under a strictly inverted scaling law. Here, dataset composition and quality strictly dominate raw volume.
+Post-training data is a control surface, not a bag of examples. A smaller curated set can outperform a larger noisy set in some regimes, as LIMA and AlpaGasus illustrate [[1]](#ref-1) [[2]](#ref-2). That is not a universal inverted scaling law. Results depend on base-model capability, task coverage, diversity, label process, optimization, and evaluation. Quantity still matters when it adds missing support rather than repetitions of the same pattern.
 
 ---
 
-## The Paradigm Shift: From Big Data to Smart Data
+## Define Quality as Measurable Properties
 
-In the early deep learning era, scaling laws dictated that expanding dataset volume inevitably yielded better models. If a model misclassified an edge case, the prevailing engineering reflex was to increase the parameter count or scrape more data. 
+“High quality” should expand into testable dimensions:
 
-However, as models scaled into the hundreds of billions of parameters, researchers observed rapid diminishing returns when fine-tuning on unstructured "Dark Data" (noisy, uncurated web scrapes or broad organizational data). While expanding data quantity increases storage and compute costs linearly, it often introduces contradictory gradient signals that stall convergence. Today's state-of-the-art (SOTA) engineering focuses on **Data-Centric AI**, where the primary engineering effort is spent identifying and resolving specific noise in the training distribution rather than tuning model hyperparameters.
+- **correctness:** factual, executable, or rubric-valid output;
+- **relevance:** the answer satisfies the request without evasion;
+- **coverage:** task, domain, language, safety, difficulty, and length slices match the product;
+- **consistency:** role format, tool schema, citation policy, and refusal style are coherent;
+- **diversity:** paraphrases do not crowd out rare but important behaviors;
+- **provenance:** license, consent, PII/secrets handling, and deletion obligations are known.
 
-![quality_quantity_plateau](../../assets/images/chapter-9/quality_quantity_plateau.png)
-
----
-
-## The Superficial Alignment Hypothesis (LIMA)
-
-The foundational text for the "Quality over Quantity" movement in alignment is the **LIMA (Less Is More for Alignment)** paper (Zhou et al., 2023) [[1]](#ref-1). The researchers fine-tuned a 65B parameter LLaMA model using only **1,000 carefully curated prompts and responses**, entirely bypassing Reinforcement Learning from Human Feedback (RLHF). Despite the minuscule dataset, LIMA was competitive with or strictly preferred over GPT-4 in 43% of cases.
-
-This led to the **Superficial Alignment Hypothesis**:
-> *A model’s core knowledge and reasoning capabilities are learned almost entirely during pre-training. Alignment (SFT) merely teaches the model which sub-distribution of formats (e.g., a helpful assistant persona) it should use when interacting with users.*
-
-Because SFT does not inject new knowledge, massive datasets are unnecessary. In fact, large SFT datasets often contain subtle formatting inconsistencies, factual errors, or stylistic regressions that actively degrade the model's pre-trained capabilities—a phenomenon known as the **Alignment Tax**.
-
-### The Mathematics of Label Noise
-
-To understand why noisy data is so destructive during SFT, consider the standard autoregressive Cross-Entropy loss objective:
-
-$$ \mathcal{L}_{SFT} = - \sum_{t=1}^{T} \log P_\theta(y_t \mid y_{<t}, x) $$
-
-When training on high-quality, "gold-standard" data, the target distribution $P^*(y \mid x)$ is sharp. The model easily minimizes the Kullback-Leibler (KL) divergence $D_{KL}(P^* \parallel P_\theta)$ because the mapping from instruction $x$ to response $y$ is consistent.
-
-If the dataset contains low-quality or contradictory responses (noise), the target distribution $P^*(y \mid x)$ becomes high-entropy. The gradient updates $\nabla_\theta \mathcal{L}_{SFT}$ begin to conflict. The model wastes its parameter capacity attempting to model the irreducible entropy of the noise, flattening its own predictive distribution $P_\theta$. This leads to hallucination and loss spikes, requiring exponential compute to average out the noise.
-
----
-
-## Automated Data Curation: Filtering the Noise
-
-Manually curating 1,000 perfect examples (like LIMA) is feasible, but scaling high-quality data to 10k or 100k examples requires automation. The **AlpaGasus** paper (Chen et al., 2023) [[2]](#ref-2) demonstrated how to achieve this using an **LLM-as-a-Judge** pipeline. 
-
-The researchers took the popular 52k Alpaca dataset—which contained many low-quality, irrelevant, or hallucinated responses—and used GPT-4 to score each pair on a scale of 1 to 5. By discarding anything below a threshold, they distilled the dataset down to **9k high-quality examples**. Fine-tuning on this 9k subset not only reduced training time by 83% (from 80 minutes to 14 minutes) but also significantly outperformed the model trained on the full 52k dataset.
-
-### Engineering the Data Filter (PyTorch)
-
-In a modern MLOps pipeline, filtering is often done using a dedicated **Reward Model (RM)** or a Sequence Classification model rather than an expensive API call. Below is a realistic PyTorch implementation using Hugging Face to automatically score and filter an SFT dataset.
-
-```python
-import torch
-from transformers import AutoModelForSequenceClassification, AutoTokenizer
-from typing import List, Dict
-
-def filter_sft_data(
-    prompts: List[str], 
-    responses: List[str], 
-    model_id: str = "OpenAssistant/reward-model-deberta-v3-large-v2",
-    threshold: float = 1.5
-) -> List[Dict[str, str]]:
-    """
-    Filters SFT instruction-response pairs using a pre-trained Reward Model.
-    Pairs scoring below the given threshold are discarded to ensure high data quality.
-    """
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    
-    # Initialize tokenizer and sequence classification (reward) model
-    tokenizer = AutoTokenizer.from_pretrained(model_id)
-    model = AutoModelForSequenceClassification.from_pretrained(model_id).to(device)
-    model.eval()
-
-    filtered_dataset = []
-    
-    with torch.no_grad():
-        for prompt, response in zip(prompts, responses):
-            # Format input as typically expected by the RM
-            text = f"<|prompter|>{prompt}<|endoftext|><|assistant|>{response}<|endoftext|>"
-            
-            inputs = tokenizer(
-                text, 
-                return_tensors="pt", 
-                truncation=True, 
-                max_length=512
-            ).to(device)
-            
-            # Forward pass to get scalar reward (logit)
-            outputs = model(**inputs)
-            score = outputs.logits[0].item()
-            
-            if score >= threshold:
-                filtered_dataset.append({
-                    "prompt": prompt,
-                    "response": response,
-                    "score": round(score, 3)
-                })
-                
-    return filtered_dataset
-
-# Example Execution
-sample_prompts = [
-    "Explain the concept of backpropagation.",
-    "Write a python script to reverse a string.",
-    "asdfasdfasdf" # Intentional noise
-]
-sample_responses = [
-    "Backpropagation is an algorithm used to calculate gradients in neural networks by applying the chain rule backwards from the output.",
-    "print('hello'[::-1])",
-    "I am an AI assistant." # Low quality response to noise
-]
-
-# filtered_data = filter_sft_data(sample_prompts, sample_responses, threshold=1.0)
-# Expected output: Only the first two pairs are retained.
-```
-
----
-
-## Synthetic Data & Small Language Models (SLMs)
-
-The ultimate manifestation of "Quality over Quantity" is the use of **Synthetic Data**. As the internet runs out of high-quality, human-generated text, SOTA models increasingly rely on "Teacher Models" to generate textbook-grade data.
-
-1. **TinyStories (Eldan & Li, 2023)** [[3]](#ref-3): Researchers proved that models with fewer than 10 million parameters could generate coherent, grammatically perfect English and demonstrate basic reasoning. The secret? Training exclusively on a synthetic dataset of short stories restricted to the vocabulary of a 4-year-old. By removing the noise and complexity of the open web, the tiny model could focus entirely on syntax and logic.
-2. **Microsoft Phi-3 (Abdin et al., 2024)** [[4]](#ref-4): The 3.8B parameter Phi-3-mini model rivals the performance of models 10x its size (like Mixtral 8x7B). The innovation was entirely in the dataset: 3.3 trillion tokens of heavily filtered web data and synthetic "textbook" data. Phi-3 proves that high-quality data allows SLMs to punch significantly above their weight class, enabling powerful on-device AI.
-
----
-
-## The Duplication Threshold
-
-While filtering noise is critical, how we handle the remaining high-quality data is equally nuanced. Recent empirical studies on data duplication reveal a highly non-linear relationship between data repetition and model performance.
-
-*   **The Sweet Spot (~25% Duplication)**: Injecting a minimal amount of duplication for highly critical reasoning tasks can actually improve accuracy (acting as an implicit importance weight). It reinforces syntactic structures without causing catastrophic forgetting.
-*   **The Collapse (100% Duplication)**: If a dataset is heavily duplicated, the model rapidly overfits to the specific entities and phrasing of the training set. Performance on Out-Of-Distribution (OOD) tasks can drop by up to 40%. The model stops learning the underlying reasoning manifold and simply memorizes the duplicated sequence.
-
----
-
-## Interactive Visualizer: Quality vs. Quantity Trade-offs
-
-Use the interactive component below to simulate the relationship between Dataset Size, Noise Level, and Duplication Rate. Notice how increasing dataset size yields diminishing returns if the noise level is high, and how extreme duplication causes performance collapse.
+Do not infer that noise always requires exponential compute or that one duplication percentage is optimal. Repetition acts like sample weighting; its effect varies with model, schedule, example difficulty, and evaluation distribution. Measure unique and repeated-token exposure and compare controlled mixtures.
 
 <DataQualityVisualizer client:load />
 
+The visualizer is an intuition aid, not an empirical law or a source of default thresholds.
+
 ---
 
-## Summary & Next Steps
+## Immutable Manifest and Evaluation Quarantine
 
-The transition from volume to curation is the defining characteristic of modern post-training. By heavily filtering datasets, utilizing LLM-as-a-Judge pipelines, and synthesizing textbook-quality examples, engineers can train smaller, faster models that rival legacy behemoths at a fraction of the compute cost. 
+Every release candidate should point to an **immutable manifest** containing source/revision, license or consent basis, collection time, language/domain labels, filter versions, quality scores, mixture weights, tokenizer/template version, shard hashes, and stable sample IDs. Store PII/secrets decisions and deletion lineage so a source can be traced and removed.
 
-However, even with perfectly curated datasets, fine-tuning an entire 70B parameter model is computationally prohibitive for most organizations. How do we apply these high-quality datasets to massive models without requiring clusters of H100 GPUs? In the next section, **9.3 Parameter-Efficient Fine-Tuning (PEFT)**, we will explore mathematical techniques like LoRA and DoRA that allow us to fine-tune massive models by updating only a fraction of a percent of their weights.
+Create an **evaluation quarantine** before curation. It includes public benchmark items, private release prompts, rubrics, semantic neighbors, prior judge examples, and teacher-generated variants. Compare exact hashes, normalized text, and semantic neighbors against every human and synthetic training source. Contamination checks happen before training and again on the final rendered/tokenized corpus.
+
+---
+
+## Deduplicate, Cluster, Then Split
+
+The safe order is:
+
+1. normalize conservatively while preserving raw provenance;
+2. exact-deduplicate and detect near duplicates;
+3. build semantic clusters for related documents, conversations, entities, and synthetic siblings;
+4. assign whole clusters to train/dev/test;
+5. compute mixture weights and sample only from the training partition.
+
+Splitting first leaks paraphrases and siblings into validation. Record cluster IDs and split decisions. For preference data, keep both answers and all annotations for a prompt in the same split.
+
+---
+
+## Judges Are Instruments, Not Ground Truth
+
+A reward model logit such as `1.5` is not a portable quality threshold. Scores depend on the reward model's own chat format, domain, length distribution, and checkpoint. A judge may reward verbosity, familiar phrasing, or its own model family.
+
+Calibrate each judge on a human-labeled gold set from the target slices:
+
+1. use the judge's documented tokenizer-native format;
+2. measure ranking accuracy and calibration by domain, language, length, and safety slice;
+3. choose accept/review/reject thresholds from precision/recall and review budget;
+4. retain raw scores, rubric version, judge artifact, and rejection reason;
+5. send uncertain, disagreement, and high-risk samples to human audit.
+
+Use executable verification for code, math, structured output, and tools when available. Combine independent signals rather than letting one scalar reward decide everything.
+
+---
+
+## Mixture Design and Acceptance Tests
+
+Construct an explicit target distribution. Track per-source examples and tokens, effective sampling probability after filtering, response length, supervised-token fraction, and duplication exposure. Temperature sampling or capped upsampling can protect small important domains, but validate that repeated examples do not dominate updates.
+
+Before a full run, compare candidate manifests with the same checkpoint, tokenizer, token budget, optimization, and evaluation harness. Use multiple seeds when the decision is close. Report paired uncertainty, slice minima, and raw adjudicated examples—not only average win rate.
+
+Accept a data release only if:
+
+- schema, template, EOS, language, and tool-format checks pass;
+- license/consent and PII/secrets policy has an owner;
+- exact, near, semantic, and benchmark-contamination rates are within declared limits;
+- human audit reaches the target precision on critical slices;
+- a small SFT probe improves target slices without exceeding base-retention and safety regression limits.
+
+Version the accepted manifest and never mutate it in place. A rejected sample remains useful evidence when its rejection reason is retained.
+
+---
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: According to the Superficial Alignment Hypothesis, why does alignment require orders of magnitude less data than pre-training?</summary>
-*Because alignment does not inject new factual knowledge or reasoning capabilities into the model. All core knowledge is acquired during the massive pre-training phase. Alignment merely teaches the model the specific format, style, and persona (e.g., helpful assistant) required to surface that latent knowledge.*
+<summary>Quiz 1: Why is “always prefer fewer, cleaner examples” not a safe planning rule?</summary>
+*Quality and quantity interact. A small clean set may be enough for a narrow behavior, while additional diverse data may be required for domain, language, safety, and difficulty coverage. The claim must be tested under a fixed token budget and evaluation harness.*
 </details>
 
 <details>
-<summary>Quiz 2: Mathematically, why does label noise in an SFT dataset severely degrade model performance?</summary>
-*Label noise increases the entropy of the target distribution $P^*(y \mid x)$. When optimizing the Cross-Entropy loss, the model receives conflicting gradient updates for similar inputs. Instead of converging on a sharp reasoning manifold, the model wastes parameter capacity attempting to model the irreducible noise, flattening its predictive distribution and leading to hallucinations.*
+<summary>Quiz 2: Why must semantic clustering happen before train/dev/test assignment?</summary>
+*If splitting happens first, paraphrases, related entities, conversation siblings, or teacher variants can land on both sides. Validation then measures memorization of a cluster rather than generalization.*
 </details>
 
 <details>
-<summary>Quiz 3: When using an LLM-as-a-Judge (like GPT-4) to filter SFT data, what is a potential systemic risk introduced into the resulting dataset?</summary>
-*The distilled dataset may inherit the specific stylistic biases, verbosity, or "mode collapse" of the judge model. The student model might learn to mimic the judge's specific tone rather than generating diverse, human-like responses, potentially limiting its creative variance.*
+<summary>Quiz 3: Why is a reward-model logit threshold not portable?</summary>
+*The scale depends on checkpoint, format, domain, and length distribution. Thresholds must be calibrated against target-domain human labels and audited by slice.*
 </details>
 
 <details>
-<summary>Quiz 4: Why does a small amount of data duplication (~25%) sometimes improve accuracy, while 100% duplication catastrophically degrades it?</summary>
-*Minimal duplication acts as an implicit importance weight, reinforcing critical syntactic structures and reasoning paths without overwhelming the training distribution. However, excessive duplication (100%) leads to severe overfitting. The model stops generalizing and instead memorizes the specific duplicated sequences, drastically reducing its performance on Out-Of-Distribution (OOD) tasks.*
-</details>
-
-<details>
-<summary>Quiz 5: Mathematically formulate the Pareto optimal frontier equation defining the elastic trade-off between data volume $N$ and label noise $\epsilon$ for a constant test error $E_0$.</summary>
-*Using standard neural scaling laws, the test error can be modeled as $E(N, \epsilon) \approx \frac{A}{N^\alpha} + B\epsilon^\beta$, where $\alpha$ is the volume scaling exponent and $\beta$ is the noise sensitivity exponent. To find the Pareto optimal frontier where an increase in data volume compensates for an increase in label noise for a constant test error $E_0$, we set the total derivative to zero: $dE = -\alpha A N^{-\alpha - 1} dN + \beta B \epsilon^{\beta - 1} d\epsilon = 0$. Solving for the elasticity of the trade-off yields the Pareto optimal frontier equation: $\frac{dN}{d\epsilon} = \frac{\beta B}{\alpha A} N^{\alpha+1} \epsilon^{\beta-1}$.*
+<summary>Quiz 4: What evidence should accompany an accepted dataset version?</summary>
+*An immutable manifest, provenance and legal/PII decisions, filter and split versions, contamination report, mixture statistics, human-audit results, pilot evaluation with uncertainty, and the exact tokenizer/template hashes.*
 </details>
 
 ---
 
 ## References
 
-1. <a id="ref-1"></a>Zhou, C., et al. (2023). *LIMA: Less Is More for Alignment*. [arXiv:2305.11206](https://arxiv.org/abs/2305.11206).
-2. <a id="ref-2"></a>Chen, L., et al. (2023). *AlpaGasus: Training A Better Alpaca with Fewer Data*. [arXiv:2307.08701](https://arxiv.org/abs/2307.08701).
-3. <a id="ref-3"></a>Eldan, R., & Li, Y. (2023). *TinyStories: How Small Can Language Models Be and Still Speak Coherent English?*. [arXiv:2305.07759](https://arxiv.org/abs/2305.07759).
-4. <a id="ref-4"></a>Abdin, M., et al. (2024). *Phi-3 Technical Report: A Highly Capable Language Model Locally on Your Phone*. [arXiv:2404.14219](https://arxiv.org/abs/2404.14219).
+1. <a id="ref-1"></a>Zhou, C., et al. (2023). *LIMA: Less Is More for Alignment.* [arXiv:2305.11206](https://arxiv.org/abs/2305.11206).
+2. <a id="ref-2"></a>Chen, L., et al. (2023). *AlpaGasus: Training A Better Alpaca with Fewer Data.* [arXiv:2307.08701](https://arxiv.org/abs/2307.08701).
+3. <a id="ref-3"></a>Lee, K., et al. (2021). *Deduplicating Training Data Makes Language Models Better.* [arXiv:2107.06499](https://arxiv.org/abs/2107.06499).
+4. <a id="ref-4"></a>Sainz, O., et al. (2023). *NLP Evaluation in Trouble: On the Need to Measure LLM Data Contamination for Each Benchmark.* [arXiv:2310.18018](https://arxiv.org/abs/2310.18018).

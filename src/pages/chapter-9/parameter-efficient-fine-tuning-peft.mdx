@@ -8,237 +8,162 @@ import LoRAParameterVisualizer from '../../components/chapter-9/LoRAParameterVis
 
 # 9.3 Parameter-Efficient Fine-Tuning (PEFT)
 
-
-In the previous section, we established that dataset curation often matters more than raw volume during post-training. We can distill alignment into a few thousand carefully crafted examples. However, a significant engineering bottleneck remains: even with a small dataset, updating the weights of a 70-billion parameter model is still computationally expensive. 
-
-During Full Fine-Tuning (FFT), the system must store the model weights, the optimizer states (e.g., Adam's first and second moments), the gradients, and the forward activations. For a 70B model using 16-bit precision, this footprint can move into multi-terabyte territory and often requires cluster-scale GPU resources just to avoid Out-Of-Memory (OOM) errors. 
-
-To democratize model adaptation and enable rapid iteration, practitioners widely use **Parameter-Efficient Fine-Tuning (PEFT)**. Instead of updating the entire network, PEFT methods freeze the pre-trained weights and inject or optimize a minuscule fraction of parameters (often $< 1\%$). 
+Parameter-Efficient Fine-Tuning (PEFT) freezes most pretrained weights and learns a small task-specific state. It lowers gradient and optimizer-state cost, enables many adapters per base model, and can simplify rollback. It does not make activation memory disappear, and the base model, tokenizer, template, adapter, and runtime remain one compatibility unit.
 
 ---
 
-## The Taxonomy of PEFT
+## Start with a Memory Budget
 
-The landscape of PEFT has matured significantly over the past few years. According to recent comprehensive surveys [[1]](#ref-1), PEFT methodologies can be categorized into four distinct structural paradigms:
+For full fine-tuning, account separately for model weights, master weights if used, gradients, optimizer moments, activations, temporary kernels, communication buffers, and checkpoints. A statement such as “70B needs multiple terabytes” is only meaningful after specifying precision, optimizer, sharding, sequence length, microbatch, and activation recomputation.
 
-1. **Additive PEFT**: Introduces entirely new parameters into the architecture. This includes **Adapters** (small feed-forward networks inserted between transformer layers) and **Prompt/Prefix Tuning** (appending trainable continuous vectors to the input sequence).
-2. **Selective PEFT**: Identifies and updates a very small subset of the existing pre-trained parameters. A prominent example is **BitFit**, which only fine-tunes the bias terms of the network while freezing all weight matrices.
-3. **Reparameterized PEFT**: Leverages mathematical structures (typically low-rank matrices) to represent weight updates in a highly compressed form. **LoRA** and its variants dominate this category.
-4. **Emergent PEFT (Exploratory Frontier)**: Next-generation techniques that move beyond linear scaling laws, exploring advanced mathematical frameworks like quantum unitary parameterization to achieve sublinear or logarithmic parameter scaling.
-
-![peft_taxonomy](../../assets/images/chapter-9/peft_taxonomy.png)
+LoRA removes optimizer states and gradients for frozen base weights, but forward activations still scale with batch and sequence length. Gradient checkpointing trades extra compute for activation memory. FSDP or ZeRO shards model-related states across devices; tensor/context parallelism addresses layers or sequences that do not fit locally. Choose from a measured memory worksheet rather than by model size alone.
 
 ---
 
-## Reparameterization: LoRA and DoRA
+## LoRA: A Low-Rank Update
 
-In practice, the most common PEFT family is **Low-Rank Adaptation (LoRA)**. Its popularity stems from a crucial engineering advantage: unlike Additive methods (Adapters), LoRA introduces no extra inference path once the learned update is merged back into the base weights.
+For a frozen weight $W_0\in\mathbb{R}^{d\times k}$, LoRA learns
 
-### The Mathematics of LoRA
+$$
+W = W_0 + \Delta W,
+\qquad
+\Delta W = \frac{\alpha}{r}BA,
+$$
 
-The core hypothesis of LoRA is that the change in weights ($\Delta W$) required to adapt a model to a specific task has a low "intrinsic rank." While a pre-trained weight matrix $W_0$ might have dimensions $d \times k$ (e.g., $4096 \times 4096$), the meaningful updates do not span this entire high-dimensional space.
+where $A\in\mathbb{R}^{r\times k}$, $B\in\mathbb{R}^{d\times r}$, and $r\ll\min(d,k)$. Initializing one factor to zero keeps the initial function unchanged [[1]](#ref-1).
 
-LoRA freezes $W_0$ and represents the update $\Delta W$ as the product of two low-rank matrices, $B$ and $A$:
+The decisive choices are not only rank $r$. Sweep rank, $\alpha$, learning rate, effective batch in supervised tokens, token budget, dropout, and target modules. `q_proj`/`v_proj` is a cheap baseline; `all-linear` often gives more capacity at higher memory and checkpoint size. Train embeddings or `lm_head` only when new tokens, domain vocabulary, or output calibration justify it—and record tied-weight behavior.
 
-$$ h = W_0 x + \Delta W x = W_0 x + \frac{\alpha}{r} (B A) x $$
+### Educational Merge Semantics
 
-Where:
-* $W_0 \in \mathbb{R}^{d \times k}$ is the frozen pre-trained weight.
-* $B \in \mathbb{R}^{d \times r}$ is initialized to zero.
-* $A \in \mathbb{R}^{r \times k}$ is initialized with a Gaussian distribution.
-* $r \ll \min(d, k)$ is the low rank (typically 8, 16, or 64).
-* $\alpha$ is a constant scaling factor.
-
-Because $B$ is initialized to zero, $\Delta W = 0$ at the start of training, ensuring the model behaves exactly like the pre-trained base model before any gradient updates occur.
-
-### Engineering the Forward Pass
-
-Below is a realistic, production-grade PyTorch implementation of a LoRA layer injected into a standard linear transformation. Notice how the gradients are only computed for the small matrices $A$ and $B$.
+The module below illustrates an **idempotent** merge/unmerge contract. A real injector must wrap the actual pretrained module rather than constructing a random replacement, preserve bias/dtype/device, handle sharding, and test output equivalence.
 
 ```python
 import torch
 import torch.nn as nn
-import math
 
-class LoRALinear(nn.Module):
-    def __init__(self, in_features: int, out_features: int, r: int = 16, lora_alpha: int = 32, dropout: float = 0.05):
+class LoRAWrapper(nn.Module):
+    def __init__(self, base: nn.Linear, rank=16, alpha=32):
         super().__init__()
-        # 1. The original pre-trained weight (Frozen)
-        self.linear = nn.Linear(in_features, out_features, bias=False)
-        self.linear.weight.requires_grad = False
-        
-        # 2. LoRA specific attributes
-        self.r = r
-        self.lora_alpha = lora_alpha
-        self.scaling = self.lora_alpha / self.r
-        
-        # 3. Low-rank matrices (Trainable)
-        self.lora_A = nn.Linear(in_features, r, bias=False)
-        self.lora_B = nn.Linear(r, out_features, bias=False)
-        self.dropout = nn.Dropout(p=dropout)
-        
-        self.reset_parameters()
-        
-    def reset_parameters(self):
-        # Initialize A with Kaiming uniform (similar to standard linear init)
-        nn.init.kaiming_uniform_(self.lora_A.weight, a=math.sqrt(5))
-        # Initialize B with zeros so that initial Delta W is exactly 0
-        nn.init.zeros_(self.lora_B.weight)
-        
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # Standard forward pass through frozen weights
-        frozen_out = self.linear(x)
-        
-        # LoRA forward pass: x -> Dropout -> A -> B -> Scale
-        lora_out = self.lora_B(self.lora_A(self.dropout(x))) * self.scaling
-        
-        return frozen_out + lora_out
-        
-    def merge_weights(self):
-        """Merges the learned LoRA weights into the base model for zero-latency inference."""
-        if not self.linear.weight.requires_grad:
-            # W_new = W_0 + (B @ A) * scaling
-            delta_w = (self.lora_B.weight @ self.lora_A.weight) * self.scaling
-            self.linear.weight.data += delta_w
-            self.linear.weight.requires_grad = True # Mark as merged
+        self.base = base
+        self.base.requires_grad_(False)
+        self.A = nn.Parameter(torch.empty(rank, base.in_features, device=base.weight.device))
+        self.B = nn.Parameter(torch.zeros(base.out_features, rank, device=base.weight.device))
+        nn.init.kaiming_uniform_(self.A, a=5 ** 0.5)
+        self.scale = alpha / rank
+        self.merged = False
+
+    def delta(self):
+        return (self.B @ self.A).to(self.base.weight.dtype) * self.scale
+
+    def forward(self, x):
+        if self.merged:
+            return self.base(x)
+        return self.base(x) + (x @ self.A.T @ self.B.T) * self.scale
+
+    @torch.no_grad()
+    def merge(self):
+        if not self.merged:
+            self.base.weight.add_(self.delta())
+            self.merged = True
+
+    @torch.no_grad()
+    def unmerge(self):
+        if self.merged:
+            self.base.weight.sub_(self.delta())
+            self.merged = False
 ```
 
+Test repeated `merge()` calls, merge→unmerge restoration, and outputs before/after merge within a dtype-appropriate tolerance. Do not set frozen base weights trainable merely to mark merge state.
 
-### Practical Implementation: PEFT & Unsloth
+---
 
-While implementing LoRA from scratch is valuable for understanding its mechanics, production workflows typically rely on specialized libraries that handle edge cases, multi-GPU scaling, and quantization automatically.
+## QLoRA: Quantized Storage, Floating-Point Updates
 
-#### 1. Hugging Face PEFT
-The `peft` library is the industry standard for parameter-efficient fine-tuning. It integrates seamlessly with the `transformers` ecosystem.
+QLoRA stores frozen base weights in 4-bit **NF4**, optionally uses **double quantization** for quantization constants, and computes through dequantized values while LoRA parameters remain trainable [[2]](#ref-2). The **compute dtype**—usually BF16 on supported hardware, otherwise carefully tested FP16—is distinct from the storage dtype.
 
 ```python
-from peft import LoraConfig, get_peft_model
-from transformers import AutoModelForCausalLM
+import torch
+from transformers import AutoModelForCausalLM, BitsAndBytesConfig
+from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 
-# Load pre-trained base model
-model = AutoModelForCausalLM.from_pretrained("meta-llama/Meta-Llama-3-8B")
-
-# Define LoRA configuration
-peft_config = LoraConfig(
+model_id = "your-pinned-base-checkpoint"
+quant = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_quant_type="nf4",
+    bnb_4bit_use_double_quant=True,
+    bnb_4bit_compute_dtype=torch.bfloat16,
+)
+model = AutoModelForCausalLM.from_pretrained(
+    model_id, quantization_config=quant, device_map="auto"
+)
+model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=True)
+model = get_peft_model(model, LoraConfig(
     r=16,
     lora_alpha=32,
-    target_modules=["q_proj", "v_proj"], # Apply to attention projections
+    target_modules="all-linear",
     lora_dropout=0.05,
     bias="none",
-    task_type="CAUSAL_LM"
-)
-
-# Wrap model with PEFT
-model = get_peft_model(model, peft_config)
-model.print_trainable_parameters()
+    task_type="CAUSAL_LM",
+))
 ```
 
-#### 2. Ultra-Fast Fine-Tuning with Unsloth
-For maximum efficiency on single or few GPUs, `unsloth` has become highly popular. It provides hand-optimized Triton kernels that accelerate training by up to 2x and reduce memory usage significantly.
-
-```python
-from unsloth import FastLanguageModel
-import torch
-
-# Load model optimized by Unsloth
-model, tokenizer = FastLanguageModel.from_pretrained(
-    model_name = "unsloth/llama-3-8b-Instruct",
-    max_seq_length = 2048,
-    dtype = None, # Auto-detect (float16 or bfloat16)
-    load_in_4bit = True, # Use 4-bit quantization
-)
-
-# Apply LoRA
-model = FastLanguageModel.get_peft_model(
-    model,
-    r = 16,
-    target_modules = ["q_proj", "k_proj", "v_proj", "o_proj",
-                      "gate_proj", "up_proj", "down_proj"],
-    lora_alpha = 16,
-    lora_dropout = 0, # Optimized for 0
-    bias = "none",    # Optimized for "none"
-    use_gradient_checkpointing = "unsloth",
-)
-```
-
-### Beyond LoRA: DoRA (Weight-Decomposed Low-Rank Adaptation)
-
-While LoRA is efficient, researchers observed that it updates the *magnitude* and *direction* of the weight vectors in a coupled manner, which differs from how Full Fine-Tuning operates. 
-
-**DoRA** separates the pre-trained weight $W_0$ into two components: a magnitude vector $m$ and a directional matrix $V$. It applies the LoRA update *only* to the directional matrix $V$, while allowing the magnitude vector $m$ to be trained independently. This subtle geometric decoupling allows DoRA to closely mimic the learning dynamics of Full Fine-Tuning, often achieving superior accuracy on complex reasoning tasks without increasing the parameter count at inference time.
+This configuration is a starting point, not a universal recipe. Verify kernel/backend support, normalization and output-head dtypes, peak memory, trainable parameter names, and that gradient checkpointing interacts correctly with caches. Quantization error can change the best learning rate and rank.
 
 ---
 
-## The "Unifying View" and the Bias-Only Paradox
+## Choosing and Shipping an Adapter
 
-As the PEFT literature exploded, hundreds of new methods claimed State-of-the-Art (SOTA) status. However, a critical 2025 CVPR study by Mai et al. [[2]](#ref-2) provided a much-needed reality check on the perceived complexity of PEFT methods.
+Compare at least a cheap LoRA baseline, a higher-capacity target-module/rank setting, and full fine-tuning only when the budget permits. Keep data order, token budget, evaluation, and tuning effort equal. DoRA, prompt tuning, and other variants can be useful, but evidence from one architecture or vision benchmark does not establish a universal LLM ranking.
 
-### The Tuning Fairness Problem
-The study revealed that many complex PEFT methods appeared superior simply because they received extensive hyperparameter tuning, while baselines were neglected. When simple **Selective PEFT** methods—like **BitFit** (tuning only the bias terms of the network)—were given the same "hyperparameter love," they routinely matched or exceeded the performance of sophisticated methods like LoRA or Adapters. 
+Version the deployment as one artifact bundle:
 
-### Inductive Biases & Mistake Diversity
-If a simple Bias-tuning method achieves 85% accuracy and a complex LoRA method also achieves 85% accuracy, are they identical? The study proved they are not. Even when overall accuracy is identical, different PEFT methods **make completely different mistakes**. 
+- base checkpoint revision and hash;
+- tokenizer files, chat template, special-token map, and generation config;
+- adapter method/config/weights and library versions;
+- precision and quantization configuration;
+- dataset manifest, code/config/container, and evaluation report.
 
-This implies that PEFT architectures impose distinct **inductive biases** on the model. Additive methods prioritize retaining pre-trained features intact, while reparameterized methods prioritize shifting the geometric space of the features. 
-
-> **Expert Insight:** The frontier of PEFT engineering isn't necessarily finding a single "best" method. Because different PEFT techniques fail on different data distributions, engineers are increasingly deploying **Weight-Space Ensembles**—training multiple cheap adapters (e.g., one LoRA, one Prompt Tuner) and averaging their weights or outputs to achieve superior robustness against distribution shifts.
-
----
-
-## An Exploratory Frontier: Logarithmic Scaling via Quantum-PEFT
-
-Traditional PEFT methods like LoRA scale linearly with the model's dimension ($O(d)$). As Foundation Models scale to extreme widths, even the lowest-rank LoRA matrices begin to consume gigabytes of memory. 
-
-A 2025 preprint by Koike-Akino et al. [[3]](#ref-3) explores **Quantum-PEFT**, proposing a shift from linear to **logarithmic scaling**.
-
-Instead of using standard matrix multiplication, Quantum-PEFT utilizes quantum unitary parameterization (specifically, Pauli parameterization). By mapping the weight updates into a highly structured quantum tensor space, the number of trainable parameters grows logarithmically with the ambient dimension ($O(\log d)$). 
-
-In the authors' formulation, Quantum-PEFT can in principle represent a **full-rank update** while using far fewer trainable parameters than a rank-1 LoRA baseline. If that behavior proves robust in broader practice, it would make the approach especially interesting for severely resource-constrained adaptation settings.
-
----
-
-## Interactive Visualizer: The VRAM Impact
-
-Use the interactive component below to simulate the parameter footprint of a single square weight matrix ($W \in \mathbb{R}^{d \times d}$) during Full Fine-Tuning versus LoRA. Notice how drastically the parameter count drops, yet performance remains remarkably similar.
+Loading the right adapter on the wrong base can produce plausible but invalid output. Add an explicit compatibility guard. For merged deployment, merge into an explicitly selected floating-point dtype, save a new immutable checkpoint, and compare logits/generations against unmerged inference. Do not assume merging directly into 4-bit weights is lossless or reversible. Retain the original base and adapter for rollback.
 
 <LoRAParameterVisualizer client:load />
 
 ---
 
-## Summary & Next Steps
+## Run and Release Gates
 
-Parameter-Efficient Fine-Tuning has evolved from a memory-saving trick into a fundamental pillar of Foundation Model engineering. From the simple elegance of bias-tuning to the geometric precision of DoRA and the logarithmic scaling of Quantum-PEFT, these techniques allow us to mold massive models without destroying their pre-trained generalizations.
+Monitor token-normalized loss, trainable/frozen parameter counts, gradient norms by adapter module, nonfinite values, peak allocated/reserved memory, tokens per second, data wait, and domain/length slices. Save adapter plus optimizer, scheduler, scaler, RNG, sampler, and data cursor for exact continuation.
 
-However, adjusting weights—even efficiently—is still a gradient-based optimization process requiring datasets and compute. What if we could adapt a model to a new task without computing a single gradient? In the next section, **9.4 Prompt Engineering as SFT**, we will explore how carefully constructed Few-Shot prompts and Chain-of-Thought structures can temporarily "fine-tune" a model's behavior entirely in the activation space during inference.
+Abort on unexpected trainable base parameters, missing target modules, persistent overflow, memory beyond the declared headroom, or held-out regression beyond the gate. Release only after paired domain, base-retention, safety, format/tool, latency, and cost evaluation. Exercise both adapter unload and last-known-good base switching.
 
 ---
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: Why is LoRA preferred over Additive Adapters for production serving, despite both reducing training memory?</summary>
-*Additive Adapters introduce new neural network layers into the forward pass, which increases inference latency. LoRA, on the other hand, allows the learned low-rank matrices (B and A) to be mathematically multiplied and added directly to the original frozen weights ($W_{new} = W_0 + BA$) post-training. This results in zero additional latency during inference.*
+<summary>Quiz 1: Why can a LoRA run still run out of memory even though less than one percent of parameters are trainable?</summary>
+*LoRA greatly reduces trainable gradients and optimizer states, but the frozen weights, activations, temporary kernels, communication buffers, and evaluation still consume memory. Long sequences and microbatch size can dominate activation memory.*
 </details>
 
 <details>
-<summary>Quiz 2: According to the 2025 CVPR "Unifying View" study, why did simple methods like BitFit (Bias-tuning) historically appear inferior to complex methods in literature?</summary>
-*Due to a lack of "Tuning Fairness." Researchers often spent significant compute tuning the hyperparameters (learning rate, weight decay, etc.) of their novel, complex PEFT methods while using default, unoptimized hyperparameters for simple baselines like BitFit. When tuned equally, BitFit is highly competitive.*
+<summary>Quiz 2: What is the difference between QLoRA's storage dtype and compute dtype?</summary>
+*Frozen base weights are stored in 4-bit NF4, while matrix operations use dequantized floating-point values such as BF16. Adapter weights and optimizer state are also trained in floating-point representations.*
 </details>
 
 <details>
-<summary>Quiz 3: If LoRA and Prompt Tuning achieve the exact same accuracy on a validation set, why might an engineer still choose to train both?</summary>
-*Because different PEFT methods impose different inductive biases, causing them to make different mistakes on edge cases. By training both cheap adapters and ensembling them (e.g., via weight-space averaging or routing), the engineer can achieve higher overall robustness and generalization than using a single method.*
+<summary>Quiz 3: Why must merge be idempotent?</summary>
+*A second merge must not add the same delta again. Explicit merged state plus tested unmerge behavior prevents silent weight corruption and makes deployment rollback auditable.*
 </details>
 
 <details>
-<summary>Quiz 4: What scaling advantage is Quantum-PEFT aiming for relative to LoRA?</summary>
-*LoRA's parameter count scales linearly with the model's dimension ($O(d)$). Quantum-PEFT explores Pauli parameterization (quantum unitary structures) to push parameter growth toward logarithmic scaling ($O(\log d)$). In the authors' formulation, that structure can in principle approximate full-rank updates with far fewer trainable parameters, though the idea remains exploratory.*
+<summary>Quiz 4: Which files identify a deployable adapter?</summary>
+*At minimum: exact base revision, tokenizer and chat template, special-token and generation configuration, adapter config and weights, precision/quantization settings, code/library versions, and the evaluation report.*
 </details>
 
 ---
 
 ## References
 
-1. <a id="ref-1"></a>Wang, Y., et al. (2024). *Parameter-Efficient Fine-Tuning in Large Models: A Survey of Methodologies*. [arXiv:2410.19878](https://arxiv.org/abs/2410.19878).
-2. <a id="ref-2"></a>Mai, Z., et al. (2025). *Lessons and Insights from a Unifying Study of Parameter-Efficient Fine-Tuning (PEFT) in Visual Recognition*. CVPR 2025. [arXiv:2403.14771](https://arxiv.org/abs/2403.14771).
-3. <a id="ref-3"></a>Koike-Akino, T., et al. (2025). *Quantum-PEFT: Ultra parameter-efficient fine-tuning*. [arXiv:2503.05431](https://arxiv.org/abs/2503.05431).
+1. <a id="ref-1"></a>Hu, E. J., et al. (2021). *LoRA: Low-Rank Adaptation of Large Language Models.* [arXiv:2106.09685](https://arxiv.org/abs/2106.09685).
+2. <a id="ref-2"></a>Dettmers, T., et al. (2023). *QLoRA: Efficient Finetuning of Quantized LLMs.* [arXiv:2305.14314](https://arxiv.org/abs/2305.14314).
+3. <a id="ref-3"></a>Hugging Face. *PEFT documentation.* [Documentation](https://huggingface.co/docs/peft/).

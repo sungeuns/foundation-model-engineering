@@ -81,11 +81,11 @@ During this editorial overhaul, every English/Korean sub-chapter pair was review
 
 ## Chapter 9
 
-- `dataset-quality-vs-quantity`: reviewed; no additional edits required; notes: no further changes were necessary after the pass.
-- `parameter-efficient-fine-tuning-peft`: reviewed; edits applied; notes: softened overly absolute wording and kept EN/KO parity.
+- `dataset-quality-vs-quantity`: reviewed 2026-08-16; replaced universal quality/duplication claims with immutable manifests, evaluation quarantine, grouped splits, calibrated judges, and pilot acceptance tests.
+- `parameter-efficient-fine-tuning-peft`: reviewed 2026-08-16; added QLoRA memory semantics, target-module sweeps, idempotent merge/unmerge, artifact compatibility guards, and release gates.
 - `prompt-engineering-as-sft`: reviewed; edits applied; notes: reduced over-strong claims and improved calibration.
-- `sft-fundamentals`: reviewed; edits applied; notes: normalized Korean quiz-label drift and checked page flow.
-- `synthetic-instructions-and-self-instruct`: reviewed; edits applied; notes: tightened framing around synthetic data and aligned EN/KO tone.
+- `sft-fundamentals`: reviewed 2026-08-16; corrected prompt-mask memory claims and added tokenizer-native multi-turn masks, EOS/truncation, packing isolation, observability, checkpoint, and release contracts.
+- `synthetic-instructions-and-self-instruct`: reviewed 2026-08-16; replaced hand-written role tokens and arbitrary reward thresholds with native templates, stop boundaries, lineage, contamination checks, verifiers, and human-gold audits.
 
 ## Chapter 10
 

@@ -6,173 +6,150 @@ lang: ko
 
 # 9.1 Supervised Fine-Tuning (SFT) Fundamentals
 
-거대한 사전 학습(Pre-training) 단계를 거친 파운데이션 모델은 방대한 세계 지식과 복잡한 통사적 이해력을 갖춘 언어의 대가입니다. 하지만 본질적으로 이 모델은 여전히 다음 토큰을 예측하는 모델일 뿐입니다. 가공되지 않은 베이스 모델에 "어떻게 케이크를 굽나요?"라고 프롬프트를 입력하면, 질문에 답하는 대신 "어떻게 파이를 굽나요? 어떻게 빵을 굽나요?"와 같이 웹에서 본 목록의 구조를 모방하여 계속해서 질문을 나열할 수 있습니다.
+베이스 모델은 토큰 예측을 통해 폭넓은 통계적 구조를 학습합니다. **Supervised Fine-Tuning (SFT)** 은 엄선한 시범 데이터로 행동을 바꿉니다. 특정 요청에 어떤 형식으로 답할지, 도구 스키마를 어떻게 지킬지, 위험한 요청을 어떻게 거절할지를 가르칩니다. 예시에 지식이 담겨 있으면 과업 지식도 학습할 수 있지만, 자주 바뀌거나 출처가 필요한 사실에는 retrieval을 대신하기 어렵습니다.
 
-가공되지 않은 텍스트 예측기를 유용하고 대화식인 어시스턴트로 전환하려면 **Supervised Fine-Tuning (SFT)** 을 거쳐야 합니다. 이는 사후 학습 파이프라인의 첫 번째 단계로, 모델에게 지시를 따르고 특정 페르소나를 채택하는 방법을 가르칩니다.
-
----
-
-## 비유: 학자와 인턴
-
-사전 학습된 베이스 모델을 세계의 모든 책을 읽은 똑똑한 학자로 생각해보세요. 그들은 모든 것에 대한 사실을 알고 있지만 사회적 기술이 없으며 질문에 직접 답하는 방법을 모릅니다. 그들에게 질문을 던지면 관련 시를 읊기 시작할 수도 있습니다.
-
-Supervised Fine-Tuning은 이 학자를 데려다가 유용한 인턴이 되도록 교육 프로그램에 참여시키는 것과 같습니다. 우리는 그들에게 질문과 이상적인 답변의 수천 가지 예시("사용자가 X를 물으면 Y라고 답해야 한다")를 보여줍니다. 학자는 새로운 사실을 배우지 않지만(그들은 이미 모든 것을 알고 있습니다), 유용한 어시스턴트가 되는 *형식*을 배웁니다.
+목적함수는 단순하지만 데이터 계약은 단순하지 않습니다.
 
 ---
 
-## SFT의 메커니즘
+## 목적함수와 손실 마스크
 
-수학적으로 SFT는 단순히 고도로 큐레이션된 데이터 분포에서 계속해서 사전 학습을 하는 것입니다. 그러나 손실을 계산하는 방식에는 결정적인 차이가 있습니다.
+메시지를 $z_1,\dots,z_T$ 토큰으로 직렬화하고, 학습할 assistant 구간에만 $m_t=1$을 둔다고 합시다. Completion-only SFT 손실은 다음과 같습니다.
 
-사전 학습 중에는 시퀀스의 *모든* 토큰에 대해 손실을 계산합니다. 반면 SFT에서는 일반적으로 모델이 프롬프트 토큰이 아닌 **응답 토큰** 에 대해서만 손실을 계산하도록 합니다. 우리는 모델이 사용자의 질문을 예측하는 것이 아니라 답변을 생성하는 법을 배우기를 원하기 때문입니다.
+$$
+\mathcal{L}_{\text{SFT}} = -\frac{1}{\sum_t m_t}\sum_{t=1}^{T}m_t\log p_\theta(z_t\mid z_{<t}).
+$$
 
-### 마스킹된 손실 함수 (Masked Loss Function)
+시스템 프롬프트, 사용자 턴, 패딩, 학습에서 제외할 도구 구간의 label은 `-100`으로 둡니다. 이 위치는 cross-entropy에 직접 기여하지 않습니다. 그러나 프롬프트는 여전히 forward pass의 문맥이며 assistant 예측이 그 activation에 attention합니다. 따라서 prompt masking만으로 프롬프트 길이에 비례한 activation memory가 절감되지는 않습니다. 실제 메모리는 sequence length, checkpointing, attention 구현, packing 정책이 좌우합니다.
 
-입력 시퀀스를 프롬프트 $X$와 응답 $Y$의 연결로 나타내겠습니다. 토큰 시퀀스는 $x_1, x_2, ..., x_t$ (프롬프트)에 이어 $y_1, y_2, ..., y_m$ (응답)이 됩니다.
-
-SFT 손실은 표준 자기회귀 교차 엔트로피(Cross-Entropy) 손실이지만 응답 토큰에 대해서만 합산하도록 마스킹됩니다.
-
-$$ \mathcal{L}_{SFT} = - \sum_{i=1}^{m} \log P_\theta(y_i \mid y_{<i}, X) $$
-
-프롬프트 토큰 $X$를 손실에서 제외함으로써 모델이 훈련 세트에 있는 질문의 특정 문구를 “정답처럼” 예측하도록 학습되는 것을 방지하고, 고품질 답변을 생성하는 데 학습 신호를 집중할 수 있습니다. 단, 표준 causal LM 학습에서는 프롬프트 토큰도 순전파와 역전파의 문맥으로 사용됩니다. `labels=-100`은 손실 항을 제거할 뿐, 그 토큰들의 활성화 메모리를 자동으로 없애 주지는 않습니다.
+베이스 모델을 구조화된 transcript 분포에 적응시키는 경우에는 full-sequence loss가 의도적일 수 있습니다. 어느 역할에 손실을 주는지 명시해야 하며, 한 정책을 보편적인 정답으로 부르면 안 됩니다.
 
 ---
 
-## 표면적 정렬 가설 (The Superficial Alignment Hypothesis)
+## 토크나이저와 템플릿도 모델의 일부다
 
-SFT를 이해하는 데 있어 중요한 개념은 **표면적 정렬 가설 (Superficial Alignment Hypothesis)** 입니다 [[1]](#ref-1). 이 가설은 모델의 지식과 능력은 거의 전적으로 사전 학습(Pre-training) 중에 습득되는 반면, 정렬(SFT)은 모델이 사용자와 상호작용할 때 어떤 형식의 *하위 분포(sub-distribution)*를 사용해야 하는지 가르칠 뿐이라고 가정합니다.
+다른 모델에서 복사한 `<|user|>` 문자열을 직접 이어 붙이지 마십시오. 체크포인트의 tokenizer-native `chat_template`을 사용하고 정확한 바이트 또는 해시를 학습 artifact에 고정합니다. 학습·평가·서빙은 같은 템플릿, BOS/EOS 동작, generation configuration을 사용해야 합니다.
 
-다시 말해, SFT는 모델을 더 똑똑하게 만드는 것이 아니라, 단지 유용한 어시스턴트처럼 행동하도록 가르칠 뿐입니다. 이는 SFT를 위해 수백만 개의 예시가 필요하지 않음을 시사합니다. LIMA 논문 [[1]](#ref-1)에서 보여주었듯이, 고품질의 다양한 인스트럭션-응답 쌍으로 구성된 소규모 데이터셋만으로도 모델을 정렬하기에 충분합니다.
+실행 전 실제 인코딩 예시를 확인합니다.
 
----
+- 완성된 학습 대화에는 `add_generation_prompt=False`를 쓰고, 추론 시 값은 별도로 검증합니다.
+- BOS가 중복되지 않고 학습할 completion이 의도한 EOS 또는 end-of-turn 토큰으로 끝나는지 봅니다.
+- 마지막 턴만이 아니라 모든 assistant 턴에 의도한 loss mask가 적용되는지 확인합니다.
+- system, user, padding, 제외한 tool-result 토큰이 모두 `-100`인지 확인합니다.
+- truncation이 답변 전체를 잘라 프롬프트만 남기지 않는지 확인합니다.
+- 서빙 prefix와 학습 prefix가 토큰 단위로 같은지 확인합니다.
 
-## 챗 템플릿 및 대화 구조 (Chat Templates and Conversation Structure)
+일부 토크나이저는 Jinja 템플릿에 generation block이 있을 때만 assistant mask를 반환합니다. 신뢰할 수 있는 mask를 제공하지 않으면 tokenizer offset이나 template-aware collator로 span을 만들고 테스트해야 합니다. delimiter가 본문에 나타날 수 있으므로 특정 token ID를 검색해 경계를 찾는 방식은 위험합니다.
 
-프로덕션 환경의 SFT에서는 단순히 원시 문자열을 이어 붙이지 않습니다. 사용자(User), 어시스턴트(Assistant), 그리고 시스템 프롬프트(System prompt)를 구분하기 위해 구조화된 형식을 사용합니다. 업계 표준은 **ChatML** 이나 Hugging Face의 특정 Jinja 템플릿과 같은 형식으로 이동하고 있습니다.
-
-일반적인 학습 시퀀스는 다음과 같습니다:
-```text
-<|im_start|>system
-You are a helpful AI assistant.<|im_end|>
-<|im_start|>user
-How do I bake a cake?<|im_end|>
-<|im_start|>assistant
-To bake a cake, follow these steps...<|im_end|>
-```
-`<|im_start|>` 및 `<|im_end|>` (또는 Llama 3의 `<|begin_of_text|>`, `<|start_header_id|>` 등)와 같은 특수 토큰이 어휘 사전에 추가됩니다. SFT 동안에는 이러한 특수 토큰이 올바르게 처리되는지, 그리고 손실(Loss)이 종료 태그를 포함하여 오직 어시스턴트의 응답에 대해서만 계산되는지 확인해야 합니다.
+새 special token 추가는 단순 포맷 변경이 아니라 migration입니다. embedding resize와 초기화, `lm_head` tie 여부, 새 행의 학습, 체크포인트 호환성을 모두 다뤄야 합니다.
 
 ---
 
-## SFT 데이터셋을 설계하는 법
+## 마스크를 검사할 수 있는 Collator
 
-SFT의 성패는 학습 알고리즘보다 데이터셋 설계에서 더 자주 갈립니다. 좋은 SFT 데이터는 “정답이 긴 데이터”가 아니라, 모델이 제품에서 보여야 할 행동을 압축해서 보여주는 데이터입니다.
-
-실무에서는 다음 축을 분리해서 관리하는 것이 좋습니다.
-
-| 데이터 축 | 왜 중요한가 | 흔한 실패 |
-| :--- | :--- | :--- |
-| instruction following | 사용자의 명령을 정확히 따르는 능력 | 질문 일부만 답하거나, 요구한 형식을 무시함 |
-| domain style | 회사 문서, 고객지원, 법률, 의료, 코드 리뷰 등 도메인별 말투 | 일반 챗봇 말투로 답해 전문성이 떨어짐 |
-| refusal / safety | 답하면 안 되는 요청을 짧고 명확하게 거부 | 과잉 거부 또는 장황한 설교체 |
-| tool-call format | JSON schema, function name, argument type 준수 | 유효하지 않은 JSON, 없는 tool 호출 |
-| multi-turn repair | 사용자가 정정했을 때 이전 답을 고치는 능력 | 이전 실수를 고집하거나 문맥을 잃음 |
-| concision / verbosity | 제품에 맞는 답변 길이 | 모든 답을 블로그 글처럼 길게 씀 |
-
-특히 enterprise assistant는 “친절한 범용 답변”보다 “정확한 형식과 경계”가 더 중요할 때가 많습니다. 예를 들어 비용 정산 봇은 재미있는 설명보다 금액, 근거 문서, 승인 상태를 정확한 JSON으로 반환하는 편이 훨씬 가치 있습니다.
-
-### Packing, EOS, Loss Masking의 함정
-
-SFT를 돌릴 때 데이터 로더 최적화를 위해 여러 짧은 대화를 하나의 긴 시퀀스로 packing하는 경우가 많습니다. 이때 세 가지 실수가 자주 나옵니다.
-
-1. **대화 사이 attention 누수:** 서로 다른 샘플을 한 시퀀스에 붙였는데 attention mask를 막지 않으면, 두 번째 대화가 첫 번째 대화 내용을 문맥으로 볼 수 있습니다.
-2. **EOS 누락:** assistant 응답 끝에 EOS나 turn boundary를 제대로 학습시키지 않으면 모델이 답변을 멈추지 못하거나 다음 사용자 발화까지 생성합니다.
-3. **마스킹 범위 오류:** system/user 토큰까지 loss에 포함하면 모델이 사용자 질문을 흉내 내는 방향으로 학습됩니다. 반대로 assistant의 종료 태그까지 모두 마스킹하면 멈추는 법을 덜 배웁니다.
-
-간단한 검증 방법은 학습 배치 하나를 사람이 읽을 수 있는 텍스트로 디코딩하고, loss가 걸린 토큰만 색칠해 보는 것입니다. SFT 버그는 loss curve보다 이 시각화에서 더 빨리 잡히는 경우가 많습니다.
-
-### SFT 이후 바로 봐야 할 평가
-
-SFT가 끝났다고 바로 RLHF/DPO로 넘어가면 안 됩니다. 먼저 아래 지표를 확인해야 합니다.
-
-- **format exact match:** JSON, Markdown table, function call처럼 구조가 있는 출력이 정확한가.
-- **instruction coverage:** 여러 조건이 있는 요청에서 빠뜨린 조건이 없는가.
-- **refusal calibration:** 위험한 요청은 거부하되, 정상적인 보안/의학/법률 설명까지 막지는 않는가.
-- **verbosity drift:** 답변 길이가 제품 요구에 맞는가.
-- **base capability retention:** 코딩, 수학, 번역, 요약 같은 기본 능력이 SFT 후 떨어지지 않았는가.
-- **tool-call dry run:** 실제 tool 실행 전 schema validation과 mock execution을 통과하는가.
-
-SFT는 모델에게 제품의 “말하는 방식”을 입히는 단계입니다. 이 단계에서 포맷과 경계를 제대로 잡아두면 이후 preference tuning이 훨씬 안정적입니다.
-
----
-
-## SFT 루프 엔지니어링 (PyTorch)
-
-아래는 손실 계산 중에 프롬프트 토큰을 무시하기 위해 마스크를 적용하는 방법을 보여주는 현실적인 PyTorch 구현입니다. 이는 Hugging Face의 TRL (Transformer Reinforcement Learning)과 같은 프레임워크에서 표준적으로 사용되는 방식입니다.
+아래 코드는 의도적으로 작게 만든 교육용 예시입니다. chat template이 `return_assistant_tokens_mask`를 지원하는 최근 Transformers 토크나이저를 가정합니다. API 세부 사항은 토크나이저와 라이브러리 버전에 따라 달라지므로, 실제 실행 전에 고정한 artifact로 검증해야 합니다.
 
 ```python
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
 
-class SFTTrainer:
-    def __init__(self, model, tokenizer):
-        self.model = model
-        self.tokenizer = tokenizer
-        self.criterion = nn.CrossEntropyLoss(ignore_index=-100) # -100은 표준 무시 인덱스입니다
+IGNORE_INDEX = -100
 
-    def train_step(self, prompt, response, optimizer):
-        self.model.train()
-        optimizer.zero_grad()
+def encode_conversation(tokenizer, messages, max_length=4096):
+    encoded = tokenizer.apply_chat_template(
+        messages,
+        tokenize=True,
+        add_generation_prompt=False,
+        return_dict=True,
+        return_assistant_tokens_mask=True,
+        truncation=True,
+        max_length=max_length,
+    )
+    input_ids = torch.tensor(encoded["input_ids"], dtype=torch.long)
+    assistant_mask = torch.tensor(encoded["assistant_masks"], dtype=torch.bool)
+    attention_mask = torch.ones_like(input_ids)
 
-        # 1. 프롬프트와 응답 토큰화
-        prompt_ids = self.tokenizer.encode(prompt, add_special_tokens=False)
-        response_ids = self.tokenizer.encode(response, add_special_tokens=False)
+    labels = input_ids.clone()
+    labels[~assistant_mask] = IGNORE_INDEX
+    if labels.ne(IGNORE_INDEX).sum() == 0:
+        raise ValueError("truncation이 모든 supervision token을 제거했습니다")
+    if tokenizer.eos_token_id is not None:
+        learned = input_ids[assistant_mask]
+        if learned[-1].item() != tokenizer.eos_token_id:
+            raise ValueError("assistant span이 예상 EOS로 끝나지 않습니다")
+    return {"input_ids": input_ids, "attention_mask": attention_mask, "labels": labels}
 
-        # 2. 연결 및 레이블 생성
-        # 우리는 응답을 예측하기를 원하므로 프롬프트에 대한 레이블은 무시됩니다 (-100)
-        input_ids = torch.tensor([prompt_ids + response_ids]).to(self.model.device)
-        
-        # 레이블: 프롬프트 토큰 무시, 응답 토큰 유지
-        labels = torch.tensor([[-100] * len(prompt_ids) + response_ids]).to(self.model.device)
-
-        # 3. 순전파 (Forward pass)
-        outputs = self.model(input_ids)
-        logits = outputs.logits
-
-        # 4. 마스킹된 손실 계산
-        # 자기회귀 예측을 위해 로짓과 레이블을 시프트합니다
-        shift_logits = logits[..., :-1, :].contiguous()
-        shift_labels = labels[..., 1:].contiguous()
-        
-        loss = self.criterion(
-            shift_logits.view(-1, shift_logits.size(-1)), 
-            shift_labels.view(-1)
-        )
-
-        # 5. 역전파 (Backward pass)
-        loss.backward()
-        optimizer.step()
-
-        return loss.item()
+def pad_batch(tokenizer, examples):
+    if tokenizer.pad_token_id is None:
+        raise ValueError("명시적인 padding 정책이 필요합니다")
+    width = max(x["input_ids"].numel() for x in examples)
+    batch = {}
+    for key, pad_value in (
+        ("input_ids", tokenizer.pad_token_id),
+        ("attention_mask", 0),
+        ("labels", IGNORE_INDEX),
+    ):
+        rows = []
+        for item in examples:
+            pad = width - item[key].numel()
+            rows.append(torch.nn.functional.pad(item[key], (0, pad), value=pad_value))
+        batch[key] = torch.stack(rows)
+    return batch
 ```
+
+실제 multi-turn, tool-use, 긴 문서, 빈 응답, 다국어 예시에서 `convert_ids_to_tokens` 결과와 boolean mask를 나란히 시각화하십시오. tensor shape만 확인하는 것보다 훨씬 강한 검증입니다.
+
+---
+
+## Packing과 Truncation
+
+짧은 대화를 한 sequence에 packing하면 활용률이 좋아지지만, 보통의 causal attention에서는 뒤 샘플이 앞 샘플을 볼 수 있습니다. 다음 중 하나를 계약으로 정합니다.
+
+1. 명시적 EOS로 문서를 연결하고 cross-sample context를 학습 분포의 일부로 받아들입니다.
+2. block-diagonal 또는 sequence-ID-aware attention으로 샘플을 격리합니다.
+3. 어느 동작도 입증할 수 없다면 packing을 끕니다.
+
+EOS는 학습된 토큰일 뿐 attention barrier가 아닙니다. packing 효율, supervision token 비율, prompt/response 길이 꼬리, truncation으로 버린 예시, supervision token이 0개인 샘플을 기록합니다.
+
+---
+
+## 실행 계약과 평가
+
+베이스 체크포인트, 토크나이저, chat template, dataset manifest와 split hash, 코드/container, optimizer, precision, sequence length, packing 정책, seed를 고정합니다. weight, gradient, optimizer state, adapter, activation, temporary buffer, checkpoint, 평가 비용을 분리해 계산합니다. 재시작 시 샘플을 건너뛰거나 반복하지 않도록 model/adapter, optimizer, scheduler, scaler, RNG, sampler, data cursor를 저장합니다.
+
+작은 pilot부터 시작하고 token-normalized train/validation loss, gradient norm, nonfinite count, throughput, data wait, prompt/response 길이, domain별 loss를 관측합니다. mask가 비었거나 EOS coverage가 바뀌거나, validation 회귀가 선언한 범위를 넘거나, nonfinite가 반복되거나, safety-critical slice가 실패하면 중단하고 조사합니다.
+
+즉시 수행할 offline evaluation에는 다음이 포함됩니다.
+
+- held-out instruction following과 정확한 format/tool-schema 유효성
+- base capability retention과 domain slice
+- safety/refusal과 over-refusal 짝 평가
+- truncation 정책과 같은 long-context·multi-turn 사례
+- 고정 decoding 설정과 frozen baseline을 이용한 paired comparison
+
+게이트를 통과한 immutable artifact bundle만 승격합니다. 이전 bundle은 last-known-good로 유지하고 트래픽 투입 전 rollback을 연습합니다.
 
 ---
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: 인과 관계 LLM 파인튜닝 환경에서 프롬프트 마스킹(Prompt-masking)을 적용하면 표준 구현에서 활성화 메모리가 얼마나 절약됩니까?</summary>
-*일반적인 causal LM SFT에서 `labels=-100` 프롬프트 마스킹은 손실 계산에서 프롬프트 토큰을 제외할 뿐입니다. 프롬프트 토큰은 여전히 응답 토큰을 예측하기 위한 문맥으로 순전파에 들어가고, attention 계산과 hidden state 저장에도 참여합니다. 따라서 표준 full fine-tuning 구현에서는 활성화 메모리가 거의 절약되지 않습니다. 메모리 절약을 얻으려면 prefix 부분을 별도 no-grad로 처리하거나, KV 재사용, prefix-LM 전용 최적화, sequence packing 최적화처럼 별도의 시스템 기법이 필요합니다.*
+<summary>Quiz 1: 프롬프트 label을 -100으로 바꿔도 프롬프트 길이에 비례한 activation memory가 절약되지 않는 이유는 무엇인가요?</summary>
+*응답 토큰이 프롬프트를 attention하므로 프롬프트는 causal forward graph에 남습니다. 마스크는 프롬프트 위치의 직접적인 cross-entropy 항만 제거하며, 프롬프트 activation이나 응답 gradient에 대한 기여를 제거하지 않습니다.*
 </details>
 
 <details>
-<summary>Quiz 2: SFT 모델이 SFT 데이터셋에 없는 작업에 대해 제로샷(Zero-shot) 능력을 일부 잃을 수 있다는 관찰이 있습니다 (Alignment Tax). "Superficial Alignment Hypothesis"는 이를 어떻게 설명할까요?</summary>
-*Superficial Alignment Hypothesis는 SFT가 모델에게 새로운 능력을 가르치는 것이 아니라 새로운 형식의 하위 분포(예: 어시스턴트가 되는 방법)를 가르칠 뿐이라고 말합니다. SFT 데이터셋이 좁거나 잘못된 형식을 포함하고 있다면 모델은 출력을 너무 엄격하게 제한하도록 학습하여 사전 학습 중에 획득한 방대한 세계 지식을 효과적으로 숨기거나 억제할 수 있습니다.*
+<summary>Quiz 2: SFT 파이프라인이 체크포인트의 tokenizer-native chat template을 사용해야 하는 이유는 무엇인가요?</summary>
+*역할 표식, BOS/EOS 규칙, generation prefix가 모델별로 다르기 때문입니다. 직접 만든 근사 템플릿은 train/serve 분포 차이와 잘못된 supervision을 만들 수 있지만, 고정한 native template은 토큰 수준 동등성을 검사할 수 있습니다.*
 </details>
 
 <details>
-<summary>Quiz 3: 시스템 관점에서 볼 때 데이터셋이 작더라도(예: 1,000개 예시) 전체 70B 파라미터 모델에 대한 SFT가 계산적으로 비싼 이유는 무엇일까요?</summary>
-*Full Fine-Tuning은 모든 파라미터를 업데이트해야 하기 때문입니다. 시스템은 모델 가중치뿐만 아니라 모든 70B 파라미터에 대한 옵티마이저 상태(예: Adam의 모멘트)와 그래디언트를 저장해야 하므로 방대한 VRAM(1TB 이상)이 필요합니다. 작은 데이터셋 크기는 훈련 시간(단계 수)을 줄여주지만 단계당 필요한 최대 메모리를 줄여주지는 않습니다.*
+<summary>Quiz 3: packed sample 사이에 EOS를 넣으면 attention leakage가 막히나요?</summary>
+*아닙니다. EOS는 토큰 분포의 경계를 표시하지만 attention barrier는 아닙니다. 격리하려면 block-diagonal 또는 sequence-aware attention mask가 필요하며, 그렇지 않으면 cross-sample attention을 명시적으로 허용한 것입니다.*
+</details>
+
+<details>
+<summary>Quiz 4: training loss가 내려가도 SFT 실행을 멈춰야 하는 조건은 무엇인가요?</summary>
+*assistant mask가 비거나 이동한 경우, EOS 또는 truncation 정책이 바뀐 경우, nonfinite가 반복되는 경우, held-out 회귀가 선언한 범위를 넘은 경우, 핵심 safety·format·tool-use slice가 실패한 경우가 해당합니다.*
 </details>
 
 ---
@@ -181,3 +158,4 @@ class SFTTrainer:
 
 1. <a id="ref-1"></a>Zhou, C., et al. (2023). *LIMA: Less Is More for Alignment.* [arXiv:2305.11206](https://arxiv.org/abs/2305.11206).
 2. <a id="ref-2"></a>Ouyang, L., et al. (2022). *Training language models to follow instructions with human feedback.* [arXiv:2203.02155](https://arxiv.org/abs/2203.02155).
+3. <a id="ref-3"></a>Hugging Face. *Chat templates.* [Transformers documentation](https://huggingface.co/docs/transformers/chat_templating).
