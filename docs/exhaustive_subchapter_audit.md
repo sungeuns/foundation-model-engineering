@@ -77,6 +77,7 @@ During this editorial overhaul, every English/Korean sub-chapter pair was review
 - `over-training-vs-optimal-training`: reviewed; no additional edits required; notes: structure and parity were acceptable.
 - `power-law`: reviewed; no additional edits required; notes: no further edits needed after audit.
 - `transfer-learning-and-generalization`: reviewed; no additional edits required; notes: no blocking issues found.
+- `continued-pretraining-and-domain-adaptation`: reviewed 2026-08-16; added an EN/KO practitioner runbook covering intervention selection, replay, tokenizer compatibility, pilots, checkpoint recovery, evaluation, and rollback.
 
 ## Chapter 9
 

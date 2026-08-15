@@ -81,6 +81,7 @@ export const chapters = [
       { id: "8-2", title: { en: "8.2 Chinchilla Optimality", ko: "8.2 친칠라 최적성" }, path: "/chapter-8/chinchilla-optimality" },
       { id: "8-3", title: { en: "8.3 Over-training vs Optimal-training", ko: "8.3 과도한 학습 vs 최적 학습" }, path: "/chapter-8/over-training-vs-optimal-training" },
       { id: "8-4", title: { en: "8.4 Transfer Learning & Generalization", ko: "8.4 전이 학습 및 일반화" }, path: "/chapter-8/transfer-learning-and-generalization" },
+      { id: "8-5", title: { en: "8.5 Continued Pre-training & Domain Adaptation", ko: "8.5 지속 사전 학습 및 도메인 적응" }, path: "/chapter-8/continued-pretraining-and-domain-adaptation" },
     ]
   },
   {

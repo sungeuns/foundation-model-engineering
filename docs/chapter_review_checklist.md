@@ -57,6 +57,7 @@ Date: 2026-04-20
 - [x] 8.2 `chinchilla-optimality` reviewed (EN, KO)
 - [x] 8.3 `over-training-vs-optimal-training` reviewed (EN, KO)
 - [x] 8.4 `transfer-learning-and-generalization` reviewed (EN, KO)
+- [x] 8.5 `continued-pretraining-and-domain-adaptation` reviewed (EN, KO; practitioner review 2026-08-16)
 
 ## Chapter 9
 - [x] 9.1 `sft-fundamentals` reviewed (EN, KO)

@@ -1,0 +1,177 @@
+---
+layout: ../../layouts/BookLayout.astro
+title: 8.5 Continued Pre-training & Domain Adaptation
+lang: en
+---
+
+# 8.5 Continued Pre-training & Domain Adaptation
+
+Pre-training from random initialization is not the only way to change what a language model can represent. **Continued pre-training (CPT)** resumes the self-supervised next-token objective from an existing checkpoint, usually on a new domain, language, time period, or data mixture. It can be far cheaper than training a new foundation model, but it is still a training-system project: the data lineage, optimizer trajectory, tokenizer contract, distributed checkpoint, and regression gates matter as much as the loss curve.
+
+The useful mental model is not “CPT teaches knowledge and SFT teaches behavior.” That is only a heuristic. CPT changes the model's token distribution and representations; SFT can also teach factual patterns, and retrieval can supply changing facts without changing weights. The engineering question is which intervention produces the required behavior with the least irreversible risk.
+
+## Decision Gate: CPT, RAG, or SFT?
+
+Start from the failure observed on a private held-out set, not from the technique you want to deploy.
+
+| Observed gap | First intervention to test | Why | Escalate to CPT when |
+| :--- | :--- | :--- | :--- |
+| Facts change frequently or must be cited | Retrieval-augmented generation (RAG) | Updates are reversible and sources remain inspectable | The model cannot parse, rank, or synthesize the domain text even with good retrieval |
+| Output format, tool protocol, tone, or task policy is wrong | SFT | Directly supervises the desired input-output behavior | Errors trace to missing domain representations rather than response policy |
+| Domain language has unfamiliar syntax, jargon, or long-form structure | CPT | Exposes every token to the domain distribution | A retrieval or SFT pilot cannot close the representation gap |
+| Both domain fluency and interaction behavior are missing | CPT, then SFT | Separates distribution adaptation from behavioral supervision | Only after cheaper RAG/SFT baselines and retention gates are measured |
+
+Run a controlled baseline for each plausible intervention. A lower domain perplexity is not sufficient evidence that users will receive better answers; compare the downstream task, retrieval-grounded baseline, cost, latency, and regression risk.
+
+## DAPT, TAPT, and Continual Pre-training
+
+The terminology identifies the data stream and operational intent:
+
+- **Domain-adaptive pre-training (DAPT)** continues on a broad domain corpus, such as biomedical literature or source code. The original DAPT experiments showed gains for particular RoBERTa classification settings, not a universal guarantee for every generative model [[1]](#ref-1).
+- **Task-adaptive pre-training (TAPT)** continues on the unlabeled text distribution of a specific downstream task. It is narrower than DAPT and can follow it.
+- **Continual pre-training** processes a sequence of domains or time slices while trying to retain earlier capabilities. It introduces explicit stability-plasticity and replay decisions [[2]](#ref-2).
+- **Continued pre-training** is the broader operational term used in this chapter: resume the pre-training objective from an existing artifact. A single DAPT run is one form of CPT.
+
+Write the intended sequence in the run specification. “Base checkpoint → DAPT → SFT → preference optimization” and “instruction checkpoint → temporal update” have different failure modes and cannot share an unqualified recipe.
+
+## Choose the Starting Checkpoint
+
+Prefer a **base checkpoint** when the objective is broad distribution adaptation and a later SFT stage is available. It preserves a clean next-token-training contract and avoids depending on an undisclosed instruction-tuning mixture. Starting from an **instruction-tuned checkpoint** can preserve an already useful interface, but sustained CPT may weaken chat formatting, refusal behavior, tool use, and calibration. The risk must be measured rather than assumed.
+
+Freeze one immutable input bundle before the pilot:
+
+| Artifact | Required identity |
+| :--- | :--- |
+| Model | provider/repository, revision, config, weight hashes, license |
+| Tokenizer | files and hash, normalization rules, vocabulary size, special-token IDs |
+| Prompting contract | chat template bytes, BOS/EOS policy, generation prompt behavior |
+| Data | manifest version, source/license/consent, filters, shard hashes, deletion lineage |
+| Training system | code commit, resolved config, container, CUDA/framework/kernel versions |
+| Evaluation | frozen task and retention sets, prompt/rubric versions, decoding configuration |
+
+Load the checkpoint and run the complete baseline evaluation before the first update. If the baseline cannot be reproduced, a later regression cannot be attributed to CPT.
+
+## Build the Data Mixture
+
+A domain-only stream maximizes adaptation pressure and often maximizes forgetting pressure. Define a mixture over domain data and representative general replay data:
+
+$$
+p(x) = \lambda p_{\text{domain}}(x) + (1-\lambda)p_{\text{replay}}(x),
+$$
+
+where $\lambda$ is a tunable sampling weight, not the physical fraction of bytes on disk. Record realized tokens by source after filtering, tokenization, packing, and sampling. A mixture configured as 80/20 at the document level may not remain 80/20 at the token level.
+
+The immutable dataset manifest should contain source URI or internal ID, license or consent basis, collection time, PII/secrets policy, deletion lineage, language/domain labels, filter versions, exact and near-duplicate cluster IDs, shard checksum, tokenizer hash, and sample ID. Perform deduplication and semantic clustering **before** assigning train/dev/test splits. Quarantine public benchmarks, private release prompts, rubrics, semantic neighbors, and synthetic variants from both domain and replay corpora.
+
+Choose $\lambda$ with a pilot sweep. Compare at least a domain-heavy mixture, a balanced mixture, and a replay-heavy control. The goal is a Pareto point: required domain gain with acceptable base-capability and safety retention. Replay is not a guarantee against forgetting, and very aggressive replay may prevent useful adaptation.
+
+Document boundaries are part of the objective. Insert the tokenizer's intended EOS/document separator, mask padding, and record whether packed documents may attend across boundaries. Cross-document attention can be deliberate for throughput, but it must be identical in training, evaluation, and any continuation-equivalence test.
+
+## Tokenizer and Vocabulary Decisions
+
+Default to the original tokenizer. Changing tokenization changes sequence lengths, document boundaries, embedding identities, and checkpoint compatibility. Before deciding, measure:
+
+- byte or character round-trip behavior and unknown/fallback rate;
+- tokens per byte and the long tail of tokens per document by language/domain;
+- fragmentation of code, formulas, identifiers, and domain terms;
+- collisions and frequencies for reserved and special tokens;
+- encode/decode offsets and BOS/EOS behavior.
+
+Do not add tokens merely because domain words are split. Subword composition may be adequate, and vocabulary changes add deployment and recovery risk. If the acceptance test shows a material throughput or representation problem, append tokens without reassigning existing IDs, initialize the new embedding and output rows deliberately, call the framework's embedding-resize operation, and train those rows. The Hugging Face tokenizer contract explicitly requires resizing model embeddings after adding tokens [[3]](#ref-3). Version the tokenizer and model as an inseparable artifact; an old serving tokenizer must be rejected at load time.
+
+## Pilot Before Scaling
+
+Treat hyperparameters as experimental decisions, not book constants. Begin with a short run on a small model or a small token budget using the exact data path and evaluation harness intended for scale. Sweep learning rate, warmup, domain/replay weight, effective tokens per update, sequence length, and—if applicable—full-parameter versus adapter training.
+
+Before launch, write a resource worksheet that separates:
+
+- parameters, gradients, optimizer states, master weights, adapters;
+- activations under the selected sequence length, microbatch, checkpointing, and attention kernel;
+- temporary buffers and peak collective/all-gather memory;
+- checkpoint staging and evaluation memory;
+- achieved FLOP/s, tokens/s/GPU, data-wait time, checkpoint bandwidth, restart overhead, and expected wall-clock cost.
+
+Use the smallest learning rate that produces a meaningful, repeatable domain improvement within the pilot budget. A common fine-tuning learning rate is not automatically safe for CPT. Set warmup and decay in tokens, because gradient accumulation and variable-length packing can make “steps” incomparable. Scale only after one-worker, one-node, and multi-node smoke tests agree on loss masking, sample IDs, token counts, and checkpoint restoration.
+
+### Observable run contract
+
+The dashboard should include global and token-normalized training/validation loss, domain and replay loss, fixed downstream probes, global and per-layer gradient/weight/activation norms, nonfinite and overflow counts, clipping fraction, learning rate, throughput, MFU, data-wait time, p50/p95 step time, collective time, stragglers, and reconstructable batch/sample IDs.
+
+Define abort conditions before launch. Examples include any nonfinite parameter, repeated loss spikes that reproduce from a known-good checkpoint, a critical safety-slice failure, checksum mismatch, unexplained sample duplication, or domain progress accompanied by retention loss beyond the approved bound. The actual numeric thresholds must come from the pilot and product risk level.
+
+## Checkpoint and Exact Continuation Contract
+
+A recoverable CPT checkpoint is more than model weights. Save sharded model and optimizer state, scheduler, gradient scaler or FP8 scaling state, global step and consumed tokens, every relevant RNG state, sampler state, and the exact data cursor. Bind them to dataset, tokenizer, model, code, and resolved-config hashes.
+
+The data cursor should identify at least dataset version, epoch or stream generation, global rank and worker partitioning rule, deterministic permutation seed, shard ID, and sample or token offset. A worker-local counter is not sufficient: `IterableDataset` workers are separate processes, and the saved state must be consolidated with the model checkpoint.
+
+Use a two-phase publish:
+
+1. Each rank writes to a unique temporary checkpoint location and records checksums.
+2. The coordinator verifies the expected shards and metadata, then atomically publishes a completion marker or manifest.
+
+Readers load only completed checkpoints. Distributed checkpoint libraries can parallelize save/load and support load-time resharding, but their guarantees and APIs must be verified for the deployed framework version [[4]](#ref-4). Run restore drills at the original world size and, when supported, a changed world size. A continuation-equivalence test should compare sample IDs, learning rate, and the next several losses/updates against an uninterrupted control within a declared numerical tolerance. At large scale, promise statistical equivalence unless the complete stack actually guarantees bitwise replay [[5]](#ref-5).
+
+## Evaluation and Release Gates
+
+Evaluate checkpoints during training, not only at the end. Keep generation seeds, decoding parameters, prompt templates, evaluator versions, and baseline artifact hashes fixed.
+
+| Gate | Minimum evidence | Example failure action |
+| :--- | :--- | :--- |
+| Domain modeling | held-out domain perplexity/loss by source and language | inspect mixture, tokenizer, or contaminated split |
+| Domain utility | private task metrics and blinded human or verifier review | stop if lower perplexity does not transfer |
+| Base retention | general capability suite and replay-domain loss | increase replay, reduce LR/tokens, or roll back |
+| Behavior retention | format, instruction, tool-use, and refusal tests | rerun SFT only after root-cause analysis |
+| Safety/privacy | toxicity, memorization, PII, jailbreak, and policy slices | block release and quarantine offending data |
+| Operations | latency, memory, error/OOM rate, cost, artifact compatibility | reject incompatible or uneconomic artifact |
+
+Use paired comparisons and uncertainty intervals where possible. Define minimum samples for critical slices; a global average must not offset a privacy or safety failure. Promote the CPT artifact only if it meets the domain target and every retention/release gate. Otherwise keep the last-known-good bundle.
+
+## Failure Modes and Runbook
+
+**Domain loss improves while downstream quality does not.** Check contamination, tokenization, and whether the task needs retrieval or labeled behavior rather than more language modeling. Compare against the frozen RAG and SFT baselines.
+
+**General ability or safety regresses.** Reproduce the change on fixed slices, inspect the domain/replay realized token mix, reduce learning rate or training duration, and sweep more representative replay. Do not blindly reset optimizer moments; that changes the optimization trajectory and may create another instability.
+
+**A loss spike appears.** Freeze the artifact IDs and suspect batch IDs, confirm all ranks agree on the step and nonfinite state, replay the batch from a known-good checkpoint, compare skip/replay/control branches, and bisect data, optimizer/numerics, and hardware. Quarantine a shard only with evidence and preserve it for diagnosis.
+
+**Resume diverges.** Reject incomplete checkpoint manifests; compare world size, code/config hashes, RNG and sampler states, data cursor, packing order, and learning-rate/token counters. A model-only checkpoint is a warm start, not an exact resume.
+
+**Serving behavior changes unexpectedly.** Verify the complete artifact bundle—base, CPT weights or adapter, tokenizer, chat template, generation config, tool schema, and safety configuration. Roll traffic back with the predeclared feature flag and last-known-good bundle, then rehearse the repaired path before ramp-up.
+
+The deliverable from CPT is therefore not a weight file. It is a versioned artifact plus evidence that the model learned the intended distribution, retained required capabilities, can resume deterministically enough for the operating environment, and can be rolled back safely before later SFT or preference optimization.
+
+## Quizzes
+
+<details>
+<summary>Quiz 1: A model answers current regulations incorrectly but can summarize a retrieved regulation accurately. Should CPT be the first intervention?</summary>
+*No. The facts change and require provenance, while the model can already interpret the text. A retrieval baseline is more reversible and keeps sources inspectable. CPT becomes relevant only if controlled evaluation shows that the model cannot process the domain material even with good retrieval.*
+</details>
+
+<details>
+<summary>Quiz 2: Why is an 80/20 document mixture not necessarily an 80/20 training mixture?</summary>
+*Documents have different lengths and may be filtered, tokenized, packed, or resampled differently. Engineers must record realized tokens by source; the sampling weight $\lambda$ and the physical corpus fraction are not interchangeable.*
+</details>
+
+<details>
+<summary>Quiz 3: When is adding domain tokens to the tokenizer justified?</summary>
+*Only after an acceptance test shows a material problem such as poor fallback behavior, harmful fragmentation, or unacceptable sequence inflation. New tokens require stable existing IDs, deliberate embedding/output-row initialization, resized embeddings, retraining, a new tokenizer hash, and serving compatibility checks.*
+</details>
+
+<details>
+<summary>Quiz 4: Why is saving model and optimizer weights insufficient for exact continuation?</summary>
+*The next update also depends on scheduler and precision-scaler state, global tokens, RNG states, sampler partitioning, packing order, and the exact data cursor. Missing any of these can change samples or updates even when the weights are identical.*
+</details>
+
+<details>
+<summary>Quiz 5: Domain perplexity falls significantly, but the private task metric is flat and a safety slice regresses. Can the checkpoint be released?</summary>
+*No. Perplexity is a diagnostic rather than the product objective, and a critical safety failure cannot be averaged away. The run should remain behind the release gate while the team checks whether RAG/SFT is the better intervention and investigates the data mixture and regression.*
+</details>
+
+## References
+
+1. <a id="ref-1"></a>Gururangan, S., et al. (2020). *Don't Stop Pretraining: Adapt Language Models to Domains and Tasks*. [ACL Anthology](https://aclanthology.org/2020.acl-main.740/).
+2. <a id="ref-2"></a>Cossu, A., et al. (2022). *Continual Pre-training Mitigates Forgetting in Language and Vision*. [arXiv:2205.09357](https://arxiv.org/abs/2205.09357).
+3. <a id="ref-3"></a>Hugging Face. *Tokenizer documentation: adding tokens and resizing embeddings*. [Transformers documentation](https://huggingface.co/docs/transformers/main_classes/tokenizer).
+4. <a id="ref-4"></a>PyTorch. *Distributed Checkpoint documentation*. [PyTorch documentation](https://docs.pytorch.org/docs/main/distributed.checkpoint.html).
+5. <a id="ref-5"></a>PyTorch. *Reproducibility*. [PyTorch developer notes](https://docs.pytorch.org/docs/stable/notes/randomness.html).

@@ -66,6 +66,7 @@
 * **8.2 Chinchilla Optimality:** 주어진 연산 자원 내에서 가장 효율적인 파라미터-데이터 비율.
 * **8.3 Over-training vs Optimal-training:** Llama 3처럼 가이드라인 이상으로 학습시키는 이유.
 * **8.4 Transfer Learning & Generalization:** 사전 학습 지식이 전이되는 원리.
+* **8.5 Continued Pre-training & Domain Adaptation:** 기존 체크포인트를 도메인에 적응시키는 데이터 혼합, 파일럿, 복구, 망각 방지 실무.
 * **Summary:** 무작정 키우는 것이 아닌, 수학적 근거를 바탕으로 자원을 배분하는 '스케일링의 과학'을 설명합니다.
 
 ### **Chapter 9: Post-training: SFT & Instruction Tuning**

@@ -136,6 +136,7 @@ Review completed on 2026-04-16 for every EN/KO sub-chapter pair below.
 - [x] over-training-vs-optimal-training (EN/KO pair)
 - [x] power-law (EN/KO pair)
 - [x] transfer-learning-and-generalization (EN/KO pair)
+- [x] continued-pretraining-and-domain-adaptation (EN/KO pair; 2026-08-16 practitioner review)
 
 ### chapter-9
 - [x] dataset-quality-vs-quantity (EN/KO pair)

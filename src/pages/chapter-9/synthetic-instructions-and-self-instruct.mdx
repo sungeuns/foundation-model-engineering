@@ -186,29 +186,11 @@ To prevent model collapse, engineers must ensure **Data Diversity** by injecting
 
 ## 7. A Common Misuse: Synthetic Instructions Are Not a Substitute for Domain Adaptation
 
-One of the easiest mistakes to make is to ask synthetic instruction data to do the job of missing pre-training knowledge. Supervised Fine-Tuning (SFT) focuses on teaching the model *how* to respond (format, persona, safety), but it is not designed to inject massive amounts of new, specialized knowledge. If you need a model to become an expert in a specific domain (e.g., legal analysis of Korean law, medical records in a specific hospital system, or a company's internal codebase), standard SFT will often fail or hallucinate because the core knowledge was not acquired during the initial pre-training phase.
+One of the easiest mistakes is to use synthetic instruction data without first diagnosing the actual capability gap. SFT can teach both behavioral and factual patterns, but it is a poor substitute for retrieval when facts change or require citations, and a small instruction set may not repair a broad domain-representation gap.
 
-This is where **Continued Pre-training** (also known as Domain Adaptation or Incremental Pre-training) becomes critical for practitioners.
+Compare three controlled baselines: retrieval-augmented generation for changing or attributable knowledge, SFT for supervised task behavior, and continued pre-training for broad distribution adaptation. The choice should follow held-out task results, not the slogan that one method teaches “what” while another teaches “how.”
 
-### What is Continued Pre-training?
-Continued Pre-training is the process of taking an already pre-trained base model (or even an instruction-tuned model) and continuing the self-supervised training process (next-token prediction) on a large corpus of domain-specific unlabeled text. 
-
-### Continued Pre-training vs. SFT
-
-| Feature | Continued Pre-training | Supervised Fine-Tuning (SFT) |
-| :--- | :--- | :--- |
-| **Objective** | Inject new domain knowledge / adapt vocabulary | Teach instruction-following and format |
-| **Data Type** | Massive, unlabeled domain-specific text | Curated, labeled instruction-response pairs |
-| **Loss Function** | Standard Autoregressive Cross-Entropy (all tokens) | Masked Cross-Entropy (response tokens only) |
-| **Compute Scale** | High (requires substantial compute and data) | Low to Moderate |
-| **Risk** | Catastrophic forgetting of general knowledge | Overfitting to specific prompt styles |
-
-### Real-World Implementation & Provider Services
-In practice, many AI providers offer Continued Pre-training as a premium service because it requires significant engineering effort to prevent the model from forgetting its base capabilities.
-- **Enterprise Platforms**: Companies like OpenAI, Anthropic, and Google often provide custom model training services where enterprises can upload massive datasets for continued pre-training in secure environments.
-- **Open Source Ecosystem**: Platforms like Hugging Face and frameworks like `llama-factory` allow engineers to perform continued pre-training locally or on private clouds using techniques like LoRA (Parameter-Efficient) or full fine-tuning if compute permits.
-
-For practitioners, the rule of thumb is: **Use Continued Pre-training to teach the model *what* to know (domain knowledge), and use SFT to teach it *how* to act (interaction style).**
+The complete practitioner workflow—including base-versus-instruction checkpoint selection, replay mixtures, tokenizer changes, pilot scaling, exact continuation, forgetting evaluation, and rollback—is covered in [Chapter 8.5: Continued Pre-training & Domain Adaptation](/chapter-8/continued-pretraining-and-domain-adaptation).
 
 ---
 
