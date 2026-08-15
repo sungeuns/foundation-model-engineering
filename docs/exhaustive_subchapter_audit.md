@@ -58,11 +58,11 @@ During this editorial overhaul, every English/Korean sub-chapter pair was review
 
 ## Chapter 6
 
-- `data-engineering-at-scale`: reviewed; edits applied; notes: normalized Korean first-quiz formatting.
+- `data-engineering-at-scale`: reviewed 2026-08-16; rebuilt EN/KO around immutable manifests, evaluation quarantine, deterministic rank/worker partitioning, coordinated cursor recovery, loader acceptance, and approval-gated automation.
 - `infrastructure`: reviewed; edits applied; notes: normalized Korean quiz-label drift.
-- `large-scale-training-stability`: reviewed; no additional edits required; notes: no material issues found in this pass.
+- `large-scale-training-stability`: reviewed 2026-08-16; corrected cross-entropy gradient causality and added mask-correct causal/z-loss code, observability, evidence-preserving triage, complete checkpoint recovery, MoE and FP8 caveats.
 - `synthetic-data-for-pre-training`: reviewed; edits applied; notes: normalized Korean quiz-label drift.
-- `tokenization-science`: reviewed; edits applied; notes: normalized Korean first-quiz formatting.
+- `tokenization-science`: reviewed 2026-08-16; corrected SentencePiece/Mamba descriptions and added multilingual acceptance, normalization, special-token, evaluation-quarantine, and checkpoint-compatibility contracts.
 
 ## Chapter 7
 

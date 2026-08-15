@@ -8,234 +8,198 @@ import LossSpikeSimulator from '../../components/chapter-6/LossSpikeSimulator.ts
 
 # 6.3 Large-scale Training Stability
 
-Training a 1B parameter model is like driving a sports car on a closed track; you might spin out, but recovery is easy. Training a 100B+ parameter model across tens of thousands of GPUs is like flying a supersonic jet. A microscopic anomaly—a corrupted batch of data, a slight numerical overflow in a single attention head, or a sudden gradient variance—can trigger a catastrophic failure known as a **Loss Spike**.
+A loss spike is an incident signal, not a root cause. The same curve can be produced by a malformed batch, a mask or label-shift bug, activation growth, low-precision overflow, an optimizer transition, a desynchronized rank, a bad checkpoint, or hardware/storage corruption. A useful stability system preserves enough evidence to distinguish these hypotheses before changing the run.
 
-Historically, large-scale training was heavily *reactive*. During the training of models like OPT-175B or early LLaMA iterations, engineers had to monitor dashboards 24/7. When a loss spike occurred, the standard operating procedure was to pause training, roll back to a checkpoint from a few hundred steps prior, skip the offending data batch, and restart. This "rollback tax" wasted millions of dollars in idle GPU compute.
+Provider reports can show that a particular training stack completed a long run without an unrecoverable spike—for example, the DeepSeek-V3 report describes its own FP8 training outcome [[1]](#ref-1). That is evidence about the reported system, not a guarantee that QK normalization, FP8, or one recipe makes another model rollback-free.
 
-By 2024-2025, the paradigm shifted toward **proactive (or passive) stability**. State-of-the-art models like DeepSeek-V3 [[1]](#ref-1) achieved a remarkable engineering milestone: zero irrecoverable loss spikes and zero rollbacks throughout the training of 14.8 trillion tokens, even while utilizing aggressive FP8 mixed precision.
+## 1. What the Loss Can and Cannot Explain
 
-This section dives into the anatomy of training instability and the architectural interventions required to keep multi-billion parameter models well-conditioned from initialization to convergence.
-
-<div style="background-color: #f8f9fa; border-left: 5px solid #0d6efd; padding: 15px; margin: 20px 0; border-radius: 4px;">
-  <h4 style="margin-top: 0; color: #0d6efd;">🔍 Case Study: The Battle Against Training Instability (OPT-175B)</h4>
-  
-  <p>Meta AI's training of <strong>OPT-175B</strong> was a monumental engineering feat, documented in an unprecedented open logbook. The team encountered over <strong>70 major loss spikes</strong>, where the model's loss would suddenly diverge.</p>
-  
-  <p><strong>Technical Deep Dive:</strong></p>
-  <ul>
-    <li><strong>The Trigger</strong>: Many spikes were traced back to specific "toxic" data clusters—highly repetitive sequences (e.g., "the the the...") or malformed HTML. These patterns caused sudden gradient explosions in the early layers of the Transformer.</li>
-    <li><strong>Hardware Factors</strong>: GPU ECC errors and network timeouts during All-Reduce operations often led to corrupted gradients, which slowly poisoned the model state before manifesting as a spike.</li>
-  </ul>
-  
-  <p><strong>Engineering Mitigations:</strong></p>
-  <ol>
-    <li><strong>Checkpoint Rollback &amp; Data Skipping</strong>: The most common fix. The team would revert to a checkpoint ~100 steps prior and skip the data batch that caused the spike.</li>
-    <li><strong>Learning Rate Manipulation</strong>: Reducing the learning rate by 10x temporarily to "smooth over" a rough loss landscape.</li>
-    <li><strong>Optimizer Reset</strong>: Crucially, restarting from a checkpoint often required resetting the Adam optimizer's moments. The moving averages of gradients would otherwise carry the "momentum" of the bad directions into the resumed training.</li>
-  </ol>
-  
-  <p><strong>Key Lesson</strong>: Large-scale training is as much about data and hardware management as it is about model architecture.</p>
-  
-  <p><em>Reference: Zhang, S., et al. (2022). "OPT: Open Pre-trained Transformer Language Models."</em></p>
-</div>
-
----
-
-## 1. The Anatomy of a Loss Spike
-
-To prevent instability, we must first understand its mechanical origin. A loss spike is rarely instantaneous; it is the terminal symptom of a silent, compounding numerical disease.
-
-Recent analyses [[2]](#ref-2) have shown that training divergence is almost always preceded by the uncontrolled growth of $L_2$ norms in the outputs of specific linear layers—namely the Query/Key projections, the output Projection layer, and the second Fully Connected layer (FC2) in the Feed-Forward Network.
-
-![loss_spike_anatomy](../../assets/images/chapter-6/loss_spike_anatomy.png)
-
-### The Logit Growth Problem
-As training progresses, the model becomes more confident. To minimize the cross-entropy loss, the network pushes the logits of the correct tokens to extreme positive values. 
-
-1. **Attention Saturation**: If the $L_2$ norm of the Query and Key vectors grows unchecked, the dot product $Q \cdot K^T$ produces massive scalars. 
-2. **Softmax Collapse**: When these massive scalars are passed through the softmax function, the distribution collapses into a near one-hot vector (e.g., `[0.0001, 0.9998, 0.0001]`). 
-3. **Gradient Starvation & Explosion**: The gradients for the non-target tokens vanish, while the gradient for the target token becomes hyper-sensitive. A single noisy or out-of-distribution token in the next batch will generate an astronomical gradient, which propagates backward, corrupting the momentum buffers in the AdamW optimizer and permanently destroying the weight distributions.
-
----
-
-## 2. Architectural Stabilizers
-
-Rather than relying on hyperparameter tuning (like lowering the learning rate, which hurts final performance), modern foundation models modify the architecture to strictly bound internal activations.
-
-### 2.1 QK Layer Normalization
-Standard Transformers apply LayerNorm (or RMSNorm) to the input of the attention block. However, the $Q$ and $K$ projections can still drift. By applying an additional normalization directly to the Query and Key vectors *before* the dot product, we force the attention logits to be strictly bounded by the hidden dimension size.
+For one target class $y$, softmax cross-entropy has logit derivative
 
 $$
-\text{Attention}(Q, K, V) = \text{softmax}\left( \frac{\text{RMSNorm}(Q) \cdot \text{RMSNorm}(K)^T}{\sqrt{d_k}} \right) V
+\frac{\partial \mathcal{L}}{\partial z_i}=p_i-\mathbf{1}[i=y].
 $$
 
-This prevents the attention entropy from collapsing, allowing engineers to safely increase the learning rate by up to 1.5x without divergence [[2]](#ref-2).
+Each component lies in $[-1,1]$. Therefore, one out-of-distribution target token does not directly create an “astronomical” gradient with respect to its final logit. Parameter gradients can still become large because the bounded logit gradient is multiplied by large activations and network Jacobians; accumulation, optimizer state, numerical overflow, or distributed corruption can amplify the effect. This distinction determines what to inspect.
 
-### 2.2 Softmax Capping (Logit Capping)
-Even with QK Norm, the final logits fed into the cross-entropy loss can grow too large. Models like Gemma and Grok utilize **Softmax Capping**, which bounds the pre-softmax logits to a fixed range $[-c, c]$ using a scaled hyperbolic tangent function.
+![Signals that can precede a training loss spike](../../assets/images/chapter-6/loss_spike_anatomy.png)
+*Source: AI-generated illustration. Treat the shown trajectory as intuition, not a universal causal sequence.*
+
+Separate four incident classes:
+
+- **Data/objective:** corrupted text, extreme repetition, wrong labels, lost EOS boundaries, attention or padding-mask mistakes, duplicated packs, unexpected mixture drift.
+- **Optimization:** learning-rate discontinuity, insufficient warmup, clipping regime change, optimizer-state mismatch, excessive effective batch or stale gradients.
+- **Numerics/model:** nonfinite activations, attention or LM-logit growth, unstable reductions, low-precision overflow/underflow, initialization or normalization defects.
+- **Systems:** desynchronized ranks, collective failure, silent data corruption, incorrect checkpoint shards, kernel/compiler regression, storage retry returning wrong content.
+
+Do not infer the class from the loss plot alone. Preserve batch IDs, artifact hashes, rank-level metrics, and a known-good checkpoint so the event can be replayed.
+
+## 2. Stabilizers and Their Scope
+
+### QK normalization
+
+Normalizing query and key vectors before their dot product can control attention-logit scale:
 
 $$
-\text{logits}_{\text{capped}} = c \cdot \tanh\left(\frac{\text{logits}}{c}\right)
+A=\operatorname{softmax}\left(\frac{\operatorname{Norm}(Q)\operatorname{Norm}(K)^T}{\sqrt{d_k}}+M\right),
 $$
 
-Typically, $c$ is set to a value like 30.0. In the linear region of $\tanh$ (near zero), the gradients flow normally. As logits approach $c$, the gradient naturally decays, acting as an automatic, differentiable gradient clipper that prevents the model from becoming overconfident.
+where $M$ contains causal and padding constraints. This may reduce attention saturation in some architectures, but it does not bound feed-forward activations, the final language-model logits, optimizer state, or bad data. Learning-rate claims must be re-established for the actual model and initialization rather than copied as a universal multiplier.
 
-### 2.3 The $z$-loss (Auxiliary Logit Penalty)
-Introduced during the training of PaLM [[3]](#ref-3), the $z$-loss is an auxiliary objective added to the primary cross-entropy loss. It penalizes the logarithm of the partition function (the denominator of the softmax), encouraging the maximum logit to remain close to zero.
+### Attention-logit and LM-logit capping
+
+A bounded transform such as
 
 $$
-\mathcal{L}_z = \alpha \cdot \log^2 \left( \sum_{i} \exp(x_i) \right)
+\hat z=c\tanh(z/c)
 $$
 
-Where $\alpha$ is typically a very small constant (e.g., $10^{-4}$). This prevents the exponential moving averages in the optimizer from being corrupted by massive logit gradients.
+can be applied to attention scores or to final LM logits. These are different interventions with different gradients and quality trade-offs. Name the tensor, cap value, precision, masking order, and ablation result. Capping can hide a growth symptom; it does not replace finding why the uncapped tensor drifts.
 
----
+### The $z$-loss
 
-## 3. Engineering Stable PyTorch Components
+The auxiliary $z$-loss penalizes the squared log partition,
 
-Let's implement these stability mechanisms in a realistic PyTorch setting. The following code demonstrates a robust Attention layer and a custom Cross-Entropy loss function designed for 100B+ scale training.
+$$
+\mathcal{L}_z=\alpha\left(\log\sum_i e^{z_i}\right)^2,
+$$
+
+and has been used to discourage logit-scale drift in large language models [[2]](#ref-2). Compute it in adequate precision and only on valid causal target positions. Applying it to padding or ignored prompt positions changes the effective objective and makes its magnitude batch-shape dependent.
+
+## 3. Mask-Correct Causal Loss
+
+The following is a smoke-testable loss helper, not a complete training loop. It assumes `logits` has shape `(batch, sequence, vocabulary)`, labels contain the input token IDs with padding or excluded positions set to `ignore_index`, and the model has already applied causal attention and the correct padding mask.
 
 ```python
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 
-class RMSNorm(nn.Module):
-    def __init__(self, dim: int, eps: float = 1e-6):
-        super().__init__()
-        self.eps = eps
-        self.weight = nn.Parameter(torch.ones(dim))
+def causal_cross_entropy_with_z_loss(
+    logits: torch.Tensor,
+    labels: torch.Tensor,
+    *,
+    ignore_index: int = -100,
+    z_loss_weight: float = 1e-4,
+):
+    if logits.ndim != 3 or labels.shape != logits.shape[:2]:
+        raise ValueError("expected logits (B, L, V) and labels (B, L)")
 
-    def forward(self, x):
-        variance = x.pow(2).mean(-1, keepdim=True)
-        x_norm = x * torch.rsqrt(variance + self.eps)
-        return self.weight * x_norm
+    # Token t predicts token t+1.
+    shift_logits = logits[:, :-1, :].float().contiguous()
+    shift_labels = labels[:, 1:].contiguous()
+    valid = shift_labels.ne(ignore_index)
+    if not torch.any(valid):
+        raise ValueError("batch has no supervised causal targets")
 
-class StableAttention(nn.Module):
-    def __init__(self, d_model: int, num_heads: int, logit_cap: float = 30.0):
-        super().__init__()
-        self.num_heads = num_heads
-        self.head_dim = d_model // num_heads
-        self.logit_cap = logit_cap
-        
-        self.q_proj = nn.Linear(d_model, d_model, bias=False)
-        self.k_proj = nn.Linear(d_model, d_model, bias=False)
-        self.v_proj = nn.Linear(d_model, d_model, bias=False)
-        self.o_proj = nn.Linear(d_model, d_model, bias=False)
-        
-        # Stability: QK Normalization
-        self.q_norm = RMSNorm(self.head_dim)
-        self.k_norm = RMSNorm(self.head_dim)
+    ce_sum = F.cross_entropy(
+        shift_logits.view(-1, shift_logits.size(-1)),
+        shift_labels.view(-1),
+        ignore_index=ignore_index,
+        reduction="sum",
+    )
+    ce = ce_sum / valid.sum()
 
-    def forward(self, x):
-        B, L, D = x.size()
-        
-        q = self.q_proj(x).view(B, L, self.num_heads, self.head_dim).transpose(1, 2)
-        k = self.k_proj(x).view(B, L, self.num_heads, self.head_dim).transpose(1, 2)
-        v = self.v_proj(x).view(B, L, self.num_heads, self.head_dim).transpose(1, 2)
-        
-        # Apply RMSNorm to Q and K independently per head
-        q = self.q_norm(q)
-        k = self.k_norm(k)
-        
-        # Scaled Dot-Product
-        scores = torch.matmul(q, k.transpose(-2, -1)) / (self.head_dim ** 0.5)
-        
-        # Stability: Softmax Capping (Logit Capping)
-        if self.logit_cap > 0:
-            scores = self.logit_cap * torch.tanh(scores / self.logit_cap)
-            
-        attn_weights = F.softmax(scores, dim=-1)
-        out = torch.matmul(attn_weights, v)
-        
-        out = out.transpose(1, 2).contiguous().view(B, L, D)
-        return self.o_proj(out)
+    log_z = torch.logsumexp(shift_logits, dim=-1)
+    z_loss = log_z.square()[valid].mean()
+    total = ce + z_loss_weight * z_loss
+    return total, {"cross_entropy": ce.detach(), "z_loss": z_loss.detach()}
 
-def cross_entropy_with_zloss(logits: torch.Tensor, targets: torch.Tensor, z_loss_weight: float = 1e-4):
-    """
-    Computes Cross Entropy Loss with an auxiliary z-loss to prevent logit drift.
-    """
-    # Standard Cross Entropy
-    ce_loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1))
-    
-    # Compute z-loss: log^2(sum(exp(logits)))
-    # We use logsumexp for numerical stability
-    log_z = torch.logsumexp(logits, dim=-1)
-    z_loss = (log_z ** 2).mean()
-    
-    return ce_loss + (z_loss_weight * z_loss)
+# Shape, masking, dtype, and finite-value smoke test.
+torch.manual_seed(7)
+toy_logits = torch.randn(2, 5, 11, dtype=torch.bfloat16, requires_grad=True)
+toy_labels = torch.tensor([[1, 2, 3, 4, 5], [6, 7, -100, -100, -100]])
+toy_loss, parts = causal_cross_entropy_with_z_loss(toy_logits, toy_labels)
+toy_loss.backward()
+assert torch.isfinite(toy_loss)
+assert toy_logits.grad is not None and torch.isfinite(toy_logits.grad).all()
 ```
 
----
+In distributed training, normalize by the **global valid-token count**, not the average of unequal per-rank means. Otherwise padding and variable-length batches change rank weights. If using sequence/context parallelism, verify which process owns each target and which collective produces the numerator and denominator.
 
-## 4. Advanced Stability: MoE and Decoupling
+## 4. Observability Before Intervention
 
-### Auxiliary-Loss-Free Load Balancing
-In Mixture-of-Experts (MoE) models, routing tokens to experts unevenly causes hardware bottlenecks (expert collapse). Historically, an *auxiliary loss* was added to the training objective to force even distribution. However, this auxiliary loss physically alters the model's gradients, often conflicting with the language modeling objective and causing instability.
+Log signals at a cadence that can resolve a spike without overwhelming the telemetry path:
 
-DeepSeek-V3 [[1]](#ref-1) introduced **Auxiliary-Loss-Free Load Balancing**. Instead of modifying the loss function, they dynamically adjust a bias term added to the routing logits. 
-Crucially, this bias is mathematically **detached from the gradient tape** (`bias.detach()`). The routing mechanism achieves perfect balance during the forward pass, but the backward pass only updates the router weights based on pure token-expert affinity, entirely eliminating a major source of MoE training divergence.
+| Layer | Required signals |
+| :--- | :--- |
+| Objective | token-normalized train/validation loss, valid tokens, per-domain loss, $z$-loss, label/mask counts |
+| Model | global/per-layer gradient, weight, activation, Q/K, attention-logit and LM-logit norms; attention entropy |
+| Optimizer/precision | learning rate, clipping fraction, update/weight ratio, nonfinite/overflow count, loss scale or FP8 amax/scale |
+| MoE | tokens per expert, load imbalance, capacity drops, router entropy, communication time |
+| Systems | tokens/s/GPU, MFU, data wait, p50/p95 step and collective time, stragglers, ECC/NCCL/storage/kernel events |
+| Evidence | sample/pack IDs, data-manifest hash, model/config/code/container hashes, checkpoint generation |
 
-### Scale-Distribution Decoupling (SDD)
-In very deep Post-Norm architectures, the variance of the residual stream grows linearly with depth, leading to gradient explosion. Wang et al. (2025) proposed **Scale-Distribution Decoupling (SDD)** [[4]](#ref-4). 
-SDD explicitly separates the scale (magnitude) and distribution (direction) of weight matrices in fully-connected layers. By applying a normalization mechanism directly to the pre-activations and relying on a learnable scaling vector, SDD ensures that gradients remain well-conditioned, allowing Post-Norm Transformers to scale stably without needing complex initialization tricks.
+Histograms and per-layer tails often reveal a localized failure hidden by global means. Keep telemetry overhead bounded and test that alerts still arrive during a collective or storage incident.
 
----
+## 5. Loss-Spike Triage Runbook
 
-## 5. Interactive: The Loss Spike Simulator
+1. **Freeze evidence.** Record the last known-good checkpoint, current artifact hashes, global step/token count, learning rate, sample/pack IDs, rank logs, and hardware events. Do not overwrite the suspect checkpoint or data shard.
+2. **Check synchronization and finiteness.** Confirm every rank agrees on step, token count, checkpoint generation, and nonfinite status. Identify the first layer/rank where values diverge.
+3. **Replay from known good.** Restore the complete checkpoint and run the suspect batch with identical code/config/world size. A non-reproducible event shifts suspicion toward nondeterminism, system state, or hardware.
+4. **Compare controlled branches.** Run replay, skip, and clean-control batches. Change one factor at a time; do not simultaneously skip data, reduce the learning rate, and discard optimizer state.
+5. **Bisect the class.** Validate shard checksums and masks; compare higher-precision or safer kernels; inspect optimizer and scheduler identity; move the workload away from suspect hardware.
+6. **Choose a repair and gate it.** Resume only after a short continuation matches expected loss, update norms, throughput, and held-out metrics. Record why the repair is causal rather than merely correlated.
 
-To build intuition for how these architectural choices prevent divergence, interact with the simulator below. It models the internal $L_2$ norm growth of a hypothetical training run. Notice how enabling QK-Norm and Softmax Capping acts as a "shock absorber" against noisy data batches.
+Skipping a batch can hide a deterministic model or mask bug. Discarding optimizer state changes the training trajectory and may destabilize the restart. Both are experiments, not default remedies.
+
+## 6. Checkpoint and Recovery Signals
+
+A recovery checkpoint contains sharded model and optimizer state, scheduler, gradient scaler or FP8 state, global step and consumed tokens, RNG states, sampler and exact data cursor, plus dataset/tokenizer/model/code/config hashes. Publish it with checksums and a completion marker; load only completed generations.
+
+Choose checkpoint cadence from failure economics. If checkpoints take $C$ minutes and the observed mean time between recoverable failures is $F$, the best interval depends on write interference, restart time, and expected lost compute—not a universal number of steps. Measure background checkpoint impact and restore bandwidth.
+
+Run periodic drills:
+
+- restore at the original world size and compare next batch IDs and updates;
+- restore at a changed world size only if the format and data sampler support resharding;
+- corrupt or omit a checkpoint shard and confirm the loader fails closed;
+- restore the last-known-good artifact and execute the production rollback path;
+- distinguish bitwise replay from statistically equivalent continuation under the actual kernels and framework version.
+
+## 7. MoE and Low-Precision Stability
+
+MoE training adds routing imbalance, token drops, expert-parallel collectives, and router-objective interactions. Bias-based load-balancing methods reported by DeepSeek-V3 are one design point [[1]](#ref-1); “auxiliary-loss-free” does not mean balance is perfect or that the router has no operational state. Measure quality and load together and keep the implementation tied to the cited algorithm.
+
+FP8 adds tensor-specific range and scaling state. The E4M3 maximum and chosen block/tensor scaling scheme alone do not determine stability. Log amax histories, saturation/underflow, scaling delays, accumulation/reduction dtype, fallback tensors, and kernel version. Save scaling state in checkpoints and compare BF16 controls during pilots. A numerically stable run must also meet quality and throughput gates.
+
+## 8. Interactive: The Loss Spike Simulator
+
+The simulator illustrates how internal norm growth and stabilizers can affect a hypothetical run. It is not an incident classifier; use the evidence and replay workflow above on real training jobs.
 
 <LossSpikeSimulator client:load />
 
----
-
-## 6. Mixed Precision (FP8) Stability
-
-As models scale to the trillion-parameter regime, training in BF16 becomes bottlenecked by memory bandwidth. The industry is aggressively moving to **FP8 (8-bit floating point)** mixed precision. 
-
-FP8 severely restricts dynamic range (the maximum representable value is 448 in E4M3 format). If the $L_2$ norms of activations grow, they will immediately overflow FP8 bounds, resulting in `NaN` gradients. 
-
-To train stably in FP8, modern frameworks employ **Fine-grained Quantization**. Instead of quantizing an entire tensor with a single scale factor, tensors are blocked (e.g., $1 \times 128$ tiles), and each block receives its own FP32 scale factor. Furthermore, critical "bottleneck" tensors—such as the latent vectors in Multi-head Latent Attention (MLA)—are kept in higher precision (BF16) because their variance is too high for FP8 to capture without catastrophic information loss.
-
----
-
-## Summary and Next Steps
-
-Stability is no longer a dark art of hyperparameter tuning; it is a rigorous architectural discipline. By strictly controlling the magnitude of internal representations via QK Norm, Softmax Capping, and decoupled routing, engineers can safely push learning rates higher and utilize aggressive low-precision formats like FP8.
-
-With the model architecture now stable, the next challenge is mapping this massive computational graph onto physical hardware. In **Chapter 7: Training Optimization & Systems**, we will explore how 3D Parallelism, ZeRO optimization, and Flash Attention physically distribute these stable matrices across tens of thousands of GPUs.
-
----
+Stability engineering is successful when the team can detect, localize, reproduce, repair, and safely resume an incident—not merely when a dashboard looks smooth.
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: Why does QK LayerNorm prevent loss spikes more effectively than simply lowering the global learning rate?</summary>
-*Lowering the learning rate slows down the entire learning process uniformly, degrading final model performance and convergence speed. QK LayerNorm acts locally and dynamically; it specifically bounds the entropy of the attention mechanism regardless of the global step size, preventing the specific condition (attention collapse) that triggers the spike without penalizing the learning of other layers.*
+<summary>Quiz 1: Why does one surprising target token not directly create an unbounded cross-entropy gradient with respect to its logit?</summary>
+*The derivative is $p_i-\mathbf{1}[i=y]$, whose components lie in $[-1,1]$. Large parameter gradients can still arise through large activations/Jacobians, accumulation, optimizer dynamics, or numerical/system faults, so those mechanisms must be inspected.*
 </details>
 
 <details>
-<summary>Quiz 2: In Softmax Capping, how does the $\tanh$ function affect the backward pass (gradient flow) when logits become extremely large?</summary>
-*The derivative of $\tanh(x)$ is $1 - \tanh^2(x)$. As the input logits become very large (approaching the cap $c$), $\tanh(x/c)$ approaches 1 or -1, and its derivative approaches 0. Therefore, when logits are extreme, the gradient is naturally scaled down to near zero, acting as a differentiable, automatic gradient clipper that prevents overconfident predictions from causing massive weight updates.*
+<summary>Quiz 2: Why must an engineer distinguish attention-logit capping from final LM-logit capping?</summary>
+*They operate on different tensors and affect attention routing versus token probabilities. Their masking, gradients, hyperparameters, and quality trade-offs differ, so saying only “logit cap” makes an experiment irreproducible.*
 </details>
 
 <details>
-<summary>Quiz 3: In DeepSeek-V3's auxiliary-loss-free balancing, why MUST the dynamic bias be detached (`.detach()`) from the gradient tape?</summary>
-*If the dynamic bias were not detached, the backward pass would calculate gradients with respect to the bias to minimize the main language modeling loss. The optimizer would naturally try to undo the bias (since the bias is artificially forcing tokens to sub-optimal experts for the sake of load balancing). By detaching it, the bias acts purely as a forward-pass routing intervention, while the router network learns purely from the objective function without conflicting gradient signals.*
+<summary>Quiz 3: What two masking details make the z-loss helper suitable for a causal language model batch?</summary>
+*It shifts logits and labels so token $t$ predicts token $t+1$, and it computes both cross-entropy and z-loss only on labels not equal to `ignore_index`, excluding padding or deliberately masked positions.*
 </details>
 
 <details>
-<summary>Quiz 4: What is the primary cause of instability in Deep Post-Norm Transformers that Scale-Distribution Decoupling (SDD) attempts to solve?</summary>
-*In Post-Norm architectures, the output of the residual branch is added directly to the main residual stream without subsequent normalization. As the network gets deeper, the variance (scale) of the residual stream grows linearly. This unbounded growth leads to gradient explosion during the backward pass. SDD solves this by explicitly decoupling the scale and distribution of the weights, ensuring the variance is controlled mathematically rather than relying on vanishing initialization schemes.*
+<summary>Quiz 4: A spike disappears when the suspect batch is skipped. Has the root cause been proven to be data?</summary>
+*No. A mask, model, optimizer, kernel, or hardware fault may be state dependent and also disappear. Compare replay, skip, and clean-control branches from the same complete checkpoint and inspect synchronized evidence.*
 </details>
 
----
+<details>
+<summary>Quiz 5: Why must FP8 scaling state be included in a checkpoint?</summary>
+*The next quantized operations depend on amax histories and scale choices. Restoring weights without that state changes the numerical trajectory and can create overflow, underflow, or a false continuation mismatch.*
+</details>
 
 ## References
 
 1. <a id="ref-1"></a>DeepSeek-AI. (2024). *DeepSeek-V3 Technical Report*. [arXiv:2412.19437](https://arxiv.org/abs/2412.19437).
-2. <a id="ref-2"></a>Anonymous. (2024). *Methods of Improving LLM Training Stability*. [arXiv:2410.16682](https://arxiv.org/abs/2410.16682).
-3. <a id="ref-3"></a>Chowdhery, A., et al. (2022). *PaLM: Scaling Language Modeling with Pathways*. [arXiv:2204.02311](https://arxiv.org/abs/2204.02311).
-4. <a id="ref-4"></a>Wang, Y., Zhuo, Z., Zeng, Y., Zhou, X., Yang, J., & Li, X. (2025). *Scale-Distribution Decoupling: Enabling Stable and Effective Training of Large Language Models.* [arXiv:2502.15499](https://arxiv.org/abs/2502.15499).
-
+2. <a id="ref-2"></a>Chowdhery, A., et al. (2022). *PaLM: Scaling Language Modeling with Pathways*. [arXiv:2204.02311](https://arxiv.org/abs/2204.02311).
+3. <a id="ref-3"></a>PyTorch. *Numerical Accuracy*. [PyTorch developer notes](https://docs.pytorch.org/docs/stable/notes/numerical_accuracy.html).
+4. <a id="ref-4"></a>PyTorch. *Reproducibility*. [PyTorch developer notes](https://docs.pytorch.org/docs/stable/notes/randomness.html).

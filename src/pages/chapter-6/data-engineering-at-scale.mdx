@@ -8,204 +8,170 @@ import DataPipelineEvolution from '../../components/chapter-6/DataPipelineEvolut
 
 # 6.1 Data Engineering at Scale
 
-In the previous chapter, we dissected the routing mechanisms of trillion-parameter Mixture of Experts (MoE) architectures. We saw how models like DeepSeek-V3 and Grok-1 decouple computational cost from parameter count, allowing them to absorb staggering amounts of world knowledge. But an architecture with infinite capacity is useless without the data to fill it. 
+A foundation-model run consumes a versioned sequence of tokens, not an abstract “dataset.” If two jobs use the same source URLs but different crawl snapshots, filters, tokenizer revisions, packing rules, or sampling weights, they did not train on the same data. At scale, data engineering is therefore part of the optimization algorithm and the recovery system.
 
-To train a state-of-the-art foundation model in 2026, you do not just need a large dataset; you need an industrial-grade data supply chain capable of streaming tens of trillions of tokens into thousands of GPUs simultaneously, without a single bottleneck. 
+The production objective is broader than peak storage bandwidth: deliver the intended token mixture without starving an accelerator, reconstruct any suspect batch, resume from a coordinated checkpoint, and prove that evaluation material was excluded.
 
-Historically, data engineering was about writing manual Extract, Transform, Load (ETL) pipelines to move static records into data warehouses. In the era of foundation models, this paradigm has collapsed. The sheer volume (petabytes of text, images, and audio) and the complexity of the data have forced a fundamental shift. Today, data engineering is the art of building **autonomous, self-adapting systems**. As AI models converge in their architectural capabilities, the primary differentiator—the true "moat" for any AI enterprise—is the proprietary data pipeline.
+## 1. From Sources to an Immutable Training Snapshot
 
----
+A practical pipeline separates four states:
 
-## 1. The Three-Tiered Evolution of Data Pipelines
+1. **Raw evidence:** immutable source objects plus collection time, origin, license or consent basis, and deletion identifier.
+2. **Curated documents:** normalized records with quality, language, safety, PII/secrets, and exact/near-duplicate decisions.
+3. **Tokenized shards:** tokenizer-bound records with document boundaries, sample IDs, token counts, and checksums.
+4. **Run view:** a frozen manifest that selects shards, mixture weights, epoch/stream policy, deterministic seed, and packing semantics.
 
-The transition from traditional ETL to AI-native data orchestration can be categorized into a three-tiered evolutionary model. Understanding this progression is crucial for engineering systems that scale to foundation model requirements.
-
-### Level 1: Optimized Pipelines
-This is the traditional big data era (e.g., Apache Spark, Hadoop). Engineers focus on the manual composition and parameterization of operators to maximize throughput. If a schema changes upstream or a data distribution shifts (e.g., a massive influx of a new language in a web crawl), the pipeline breaks. Human intervention is required to rewrite the transformation logic.
-
-### Level 2: Self-Aware Pipelines
-As data volume outpaced human capacity to monitor it, pipelines became "self-aware." These systems continuously monitor their internal states and data distributions. Using statistical profiling, they detect "context rot" or schema drift before downstream failures occur. They do not fix the problem, but they generate high-signal alerts, preventing poisoned data from ruining a multi-million-dollar pre-training run.
-
-### Level 3: Self-Adapting Pipelines (SOTA 2026)
-The current state-of-the-art. In a Level 3 system, data pipelines automatically react to changes in incoming data without human intervention. If an upstream source changes its schema, an AI agent intercepts the anomaly, generates the required SQL or Python transformation code, tests it in a sandbox, and deploys the fix dynamically. Data engineers have transitioned from writing pipeline code to **supervising agentic orchestrators**.
+Do not overwrite an old snapshot when a filter changes. Publish a new version, retain the transformation lineage, and make deletions propagate through derived artifacts. This is what allows an engineer to explain a capability regression, satisfy a deletion request, or reproduce the batch associated with a loss spike.
 
 <DataPipelineEvolution client:load />
 
----
+## 2. Dataset Manifest and Evaluation Quarantine
 
-## 2. Architectural Shifts for AI Workloads
+The manifest is the data control plane. At minimum, each run records:
 
-To support Level 3 autonomy and the massive throughput required by GPU clusters, the underlying infrastructure of data engineering has been radically re-architected.
+| Contract field | Required evidence |
+| :--- | :--- |
+| Source and rights | source ID/URI, collection time, license or consent, policy tag, deletion lineage |
+| Transform lineage | normalization, language/quality/PII filters and versions, rejection reason |
+| Identity | stable sample ID, exact and near-duplicate cluster ID, shard checksum |
+| Tokenization | tokenizer hash, normalization policy, BOS/EOS and document-boundary policy |
+| Mixture | configured sampling weight and realized tokens by source/language/domain |
+| Split | cluster-level train/dev/test assignment and split seed |
+| Packaging | sequence length, packing algorithm/version, cross-document attention policy |
 
-### Metadata as the Control Plane
-In legacy systems, metadata was used passively for data discovery (e.g., data catalogs). Today, metadata is the active control plane. By abstracting metadata from storage and compute, systems can achieve unified access across heavily fragmented environments. The orchestrator queries the metadata layer to determine exactly which data shards a specific GPU node should process, enabling deterministic, reproducible training runs even across distributed clusters.
+Perform exact/near deduplication and semantic clustering before split assignment so document variants, conversations, entities, and synthetic siblings remain in one split. Create an **evaluation quarantine** containing public benchmarks, private release prompts, rubrics, semantic neighbors, and teacher-generated variants. Match every candidate training sample against that quarantine before publishing the run view. A clean exact-string search is not enough for paraphrases or generated derivatives.
 
-### Open Table Formats (OTFs)
-Formats like **Apache Iceberg** [[1]](#ref-1), Delta Lake [[2]](#ref-2), and Apache Hudi have become the default foundation for AI data lakes. They provide ACID (Atomicity, Consistency, Isolation, Durability) transactions directly on top of raw object storage. 
+Validate mixture classifiers before trusting their labels. Report language and domain precision/recall on a human-audited set, plus the “unknown” slice. A sampling configuration such as 30% code and 10% Korean is a hyperparameter; log realized post-tokenization proportions because document counts and token counts differ.
 
-For foundation model training, OTFs are critical because they eliminate the need for a centralized database engine. A cluster of 10,000 GPUs can concurrently read the exact same snapshot of a petabyte-scale dataset directly from storage using the metadata manifest, completely bypassing traditional database bottlenecks.
+## 3. Storage, Caching, and Throughput
 
-### S3 as the Network
-A counter-intuitive shift in large-scale AI engineering is treating cloud object storage (like Amazon S3 or Google Cloud Storage) as the primary network exchange medium. Traditional distributed systems rely heavily on direct network protocols (TCP/RPC) to shuffle data. However, at the scale of foundation models, point-to-point networking becomes a fragile bottleneck. 
+Open table formats such as Apache Iceberg and Delta Lake can provide snapshot metadata and transactional publication over object storage [[1]](#ref-1) [[2]](#ref-2). They are useful options, not mandatory formats for every training corpus. Object storage is durable and horizontally scalable, but its usable throughput is bounded by request limits, network topology, throttling, object sizes, decompression, and tail latency.
 
-Instead, upstream processing nodes write heavily compressed, serialized tensor shards directly to object storage. Downstream training nodes pull these shards asynchronously. Object storage offers virtually infinite aggregate read bandwidth, effectively replacing complex network topologies with highly durable, parallelized HTTP GET requests.
+![Object storage and cache architecture for training data](../../assets/images/chapter-6/s3_as_network_architecture.png)
+*Source: AI-generated illustration. Measure the actual object-store, network, and cache path rather than assuming unlimited bandwidth.*
 
-![s3_as_network_architecture](../../assets/images/chapter-6/s3_as_network_architecture.png)
+A typical path is object storage → node-local NVMe cache → asynchronous prefetch/decode/token read → pinned host buffers → accelerator. Choose where to tokenize or decode from measurements. Pre-tokenization saves repeated CPU work but couples shards to a tokenizer and packing policy; on-the-fly processing preserves flexibility but consumes CPU and may increase jitter. `.safetensors`, Parquet, WebDataset-style archives, and custom indexed binary formats solve different problems—none is a universal dataset format.
 
----
+Capacity planning starts from the measured payload and step time:
 
-## 3. Tensors and Vectors as First-Class Citizens
+$$
+B_{\text{required}} = \frac{\text{global bytes consumed per step}}{T_{\text{step}} \times \eta},
+$$
 
-Traditional data pipelines were built for strings, integers, and timestamps. Pre-training a multimodal foundation model requires handling multi-dimensional arrays (tensors) and high-dimensional embeddings natively.
+where $T_{\text{step}}$ is the target step time and $\eta < 1$ reserves headroom for tail latency, retries, and other traffic. Compare this demand with achieved, not advertised, bandwidth during a multi-node soak test.
 
-If you store images or audio as raw BLOBs and decode them on the GPU during training, you will instantly bottleneck your compute. The GPUs will idle while the CPUs struggle to decode JPEGs or MP3s. 
+## 4. Deterministic Sharding and Resume Contract
 
-Modern data engineering pushes this compute upstream. The data pipeline pre-processes, tokenizes, and serializes the data into raw tensor formats (e.g., `.safetensors` or optimized Parquet with tensor extensions) long before it reaches the training cluster. 
+An `IterableDataset` object is copied into each DataLoader worker. Mutating fields inside those worker copies does not create a coordinated global cursor. A worker-local JSON file can be overwritten by another worker, omit rank state, or lag because code after `yield` has not run. Such a loader is not exactly resumable.
 
-### Engineering Durable Execution for Tensor Streams
-
-When streaming terabytes of tensors to GPUs, network interruptions or node failures are inevitable. We must implement **durable execution**—the ability for a data loader to checkpoint its exact state and resume seamlessly without feeding duplicate data to the model (which would cause loss spikes).
-
-Below is a PyTorch implementation of a simplified, durable `IterableDataset` designed to read tensor shards from object storage. It tracks its internal state so that if the training job crashes, it can resume exactly where it left off.
+Instead, make assignment a pure function of immutable run state. The following deliberately small example demonstrates the partition invariant; production readers must add authenticated storage, retries, prefetch, decoding, and a distributed checkpoint coordinator.
 
 ```python
-import torch
-import os
+from dataclasses import dataclass, asdict
+import hashlib
 import json
-from torch.utils.data import IterableDataset, DataLoader
-from typing import Iterator, List, Dict
 
-class DurableTensorStreamer(IterableDataset):
-    """
-    A durable, stateful dataset designed for large-scale pre-training.
-    Streams pre-tokenized tensor shards and maintains a precise checkpoint of its state.
-    """
-    def __init__(self, shard_uris: List[str], checkpoint_path: str, batch_size: int):
-        super().__init__()
-        self.shard_uris = shard_uris
-        self.checkpoint_path = checkpoint_path
-        self.batch_size = batch_size
-        
-        # State tracking for durable execution
-        self.current_shard_idx = 0
-        self.current_sample_idx = 0
-        
-        self._load_checkpoint()
+@dataclass(frozen=True)
+class DataCursor:
+    dataset_version: str
+    epoch: int
+    permutation_seed: int
+    world_size: int
+    workers_per_rank: int
+    shard_position: int
+    sample_offset: int
 
-    def _load_checkpoint(self):
-        """Loads the dataset state if a previous training run crashed."""
-        if os.path.exists(self.checkpoint_path):
-            with open(self.checkpoint_path, 'r') as f:
-                state = json.load(f)
-                self.current_shard_idx = state.get('shard_idx', 0)
-                self.current_sample_idx = state.get('sample_idx', 0)
-                print(f"Resuming data stream from Shard {self.current_shard_idx}, Sample {self.current_sample_idx}")
+def partition_shards(shard_ids, *, epoch, seed, rank, world_size,
+                     worker_id, workers_per_rank):
+    """Deterministic, remainder-safe assignment for one rank/worker."""
+    keyed = sorted(
+        shard_ids,
+        key=lambda shard: hashlib.sha256(
+            f"{seed}:{epoch}:{shard}".encode()
+        ).digest(),
+    )
+    partition_id = rank * workers_per_rank + worker_id
+    partitions = world_size * workers_per_rank
+    return keyed[partition_id::partitions]
 
-    def save_checkpoint(self):
-        """Called by the training loop after a successful model checkpoint."""
-        state = {
-            'shard_idx': self.current_shard_idx,
-            'sample_idx': self.current_sample_idx
-        }
-        # In production, this would write atomically to object storage
-        with open(self.checkpoint_path, 'w') as f:
-            json.dump(state, f)
+def encode_cursor(cursor: DataCursor) -> bytes:
+    return json.dumps(asdict(cursor), sort_keys=True).encode()
 
-    def _download_and_load_shard(self, uri: str) -> torch.Tensor:
-        """Simulates downloading a chunk of pre-tokenized data from S3."""
-        # In reality, use boto3 or cloud storage SDKs to pull .safetensors or .pt files
-        # Here, we simulate a shard of 10,000 sequences of length 4096
-        return torch.randint(0, 50257, (10000, 4096), dtype=torch.long)
-
-    def __iter__(self) -> Iterator[torch.Tensor]:
-        worker_info = torch.utils.data.get_worker_info()
-        
-        # Handle multi-processing data loading by sharding the shards
-        if worker_info is not None:
-            per_worker = len(self.shard_uris) // worker_info.num_workers
-            worker_id = worker_info.id
-            start_idx = worker_id * per_worker
-            end_idx = start_idx + per_worker
-            worker_shards = self.shard_uris[start_idx:end_idx]
-        else:
-            worker_shards = self.shard_uris[self.current_shard_idx:]
-
-        for shard_idx, uri in enumerate(worker_shards):
-            # Absolute index for checkpointing
-            actual_shard_idx = self.current_shard_idx + shard_idx 
-            
-            # Load the tensor block into memory
-            tensor_block = self._download_and_load_shard(uri)
-            
-            # Fast-forward if resuming from a crash mid-shard
-            start_sample = self.current_sample_idx if actual_shard_idx == self.current_shard_idx else 0
-            
-            for i in range(start_sample, len(tensor_block), self.batch_size):
-                batch = tensor_block[i : i + self.batch_size]
-                
-                # Yield the batch. The training loop must call save_checkpoint() periodically.
-                yield batch
-                
-                # Update state
-                self.current_sample_idx = i + self.batch_size
-            
-            # Reset sample index for the next shard
-            self.current_sample_idx = 0
-            self.current_shard_idx = actual_shard_idx + 1
-
-# Example Usage:
-# shards = [f"s3://bucket/dataset/shard_{i}.pt" for i in range(1000)]
-# dataset = DurableTensorStreamer(shards, "./data_checkpoint.json", batch_size=32)
-# dataloader = DataLoader(dataset, batch_size=None, num_workers=4) # batch_size=None because dataset yields batches
+# Smoke-test the ownership invariant.
+shards = [f"shard-{i:03d}" for i in range(17)]
+owners = [
+    partition_shards(shards, epoch=2, seed=7, rank=rank, world_size=2,
+                     worker_id=worker, workers_per_rank=3)
+    for rank in range(2) for worker in range(3)
+]
+flat = [shard for owned in owners for shard in owned]
+assert sorted(flat) == sorted(shards)
+assert len(flat) == len(set(flat))
 ```
 
----
+The checkpoint must atomically bind the data cursor to sharded model and optimizer state, scheduler, precision-scaler/FP8 state, global step and tokens, RNG states, sampler state, and dataset/tokenizer/code/config hashes. Each rank writes a unique temporary shard; a coordinator verifies checksums and expected writers before publishing a completion marker. Readers ignore incomplete generations.
 
-## 4. Agentic Orchestration: The 630-Line Paradigm
+State the delivery semantics honestly. If a crash can occur after an optimizer update but before the paired cursor is committed, the system may replay data from the last completed checkpoint. “Exactly once” requires a transaction boundary that couples the accepted model update and cursor; many training systems instead provide deterministic **at-least-once replay from the last checkpoint**. Measure whether that replay is acceptable.
 
-As data engineering scales, human intervention becomes the primary bottleneck. At KubeCon 2026, Kelsey Hightower famously remarked, *"Everyone is a junior engineer when it comes to AI."* This highlighted the steep learning curve as infrastructure shifted from declarative configurations to agentic workflows.
+Changing world size changes ownership. Only claim elastic resume if the checkpoint format and sampler can reshard from the global cursor without skipping or duplicating samples. Verify it with a restore drill and compare the next sample IDs, token counter, learning rate, and several updates with an uninterrupted control.
 
-Consider an anecdote shared by Andrej Karpathy regarding modern AI engineering: A single 630-line Python script, utilizing an LLM agent, was able to spin up infrastructure, run 50 distinct data processing experiments overnight, analyze the failure logs, rewrite its own data transformation SQL, and push the cleaned data to the training cluster—all without human input. 
+## 5. Data Loader Acceptance Test
 
-This is the power of a "closed-loop" autonomous system. Data engineers are no longer writing the SQL joins to clean the Common Crawl dataset. Instead, they are defining the strict validation parameters and reward functions for the AI agents that write, test, and execute the SQL. The engineer's role has elevated from builder to supervisor, focusing on the architectural integrity and security of the pipeline rather than the syntax of the transformations.
+Run the real loader before reserving the full cluster. Test one worker, one node, and the target multi-node topology with the actual storage endpoint and security policy.
 
----
+- **Integrity:** validate manifest and shard checksums; quarantine corrupt objects without silently substituting data.
+- **Coverage:** prove every assigned sample appears once per declared epoch/stream policy and no partition overlaps.
+- **Boundaries:** inspect EOS/document separators, padding masks, packing boundaries, and cross-sample attention behavior.
+- **Performance:** record tokens/s/GPU, data-wait fraction, cache hit rate, p50/p95/p99 shard latency, decompression time, retries, and stragglers.
+- **Auditability:** persist sample and pack IDs with the training step so a suspect batch can be reconstructed.
+- **Recovery:** kill ranks and workers during a soak test, restore only completed checkpoints, and run continuation-equivalence checks.
+- **Backpressure:** verify bounded queues and disk usage when object storage slows; prefetch must not exhaust host RAM or local NVMe.
 
-## 5. Summary & Next Steps
+An acceptance threshold should be expressed relative to model demand—for example, a bounded data-wait fraction at the target token rate—not as a generic GB/s number.
 
-Data engineering at the scale of foundation models is a masterclass in distributed systems design. We have moved from manual ETL scripts to self-adapting, agent-orchestrated pipelines. We have decoupled storage from compute using Open Table Formats, elevated metadata to the control plane, and re-architected our datasets to treat tensors as first-class citizens. 
+## 6. Agentic Automation with Approval Boundaries
 
-However, before we can stream these tensors into the GPUs, we must confront a fundamental question: How do we convert human language, code, and raw bytes into the dense integer sequences that a neural network can actually process? 
+Agents can summarize logs, propose SQL or filter patches, and prepare quality reports. They should not silently change a production data snapshot. A safe workflow records the agent input, proposed diff, tool outputs, reviewer identity, dry-run metrics, and rollback artifact. Schema changes, filter-threshold relaxation, deletion-policy changes, and run-mixture publication require explicit approval.
 
-In the next section, **6.2 Tokenization Science**, we will dive into the mathematics and engineering of token compression. We will explore why Byte-level BPE won the tokenization war, how vocabulary size impacts model efficiency, and why a poorly optimized tokenizer can artificially cripple a model's reasoning capabilities.
+| Candidate automation | Safe default | Prohibited default |
+| :--- | :--- | :--- |
+| Failure analysis | link evidence and draft a diagnosis | repeatedly retry an unknown corrupt shard |
+| Code/SQL generation | open a reviewed patch and run on a sample | write directly to the published snapshot |
+| Quality monitoring | report drift and affected sample IDs | relax a gate to make the alert disappear |
+| Mixture exploration | calculate candidate token budgets | alter a scheduled training run without approval |
 
----
+The practical output of the data pipeline is therefore an immutable, auditable run view plus a loader whose identity, throughput, and recovery properties were measured. Only then can an optimizer curve be interpreted as evidence about the model rather than an unknown data stream.
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: A distributed training cluster of $N = 1024$ GPUs processes a micro-batch of $M = 4$ sequences of length $L = 8192$ for multimodal pre-training. Each sequence includes text tokens (4 bytes/token) and pre-processed vision embeddings of dimension $D = 1152$ with $K = 256$ vision tokens (float16, 2 bytes). Calculate the minimum aggregate network bandwidth (in Gbps) required from the data lake to sustain a step time of $T = 1.2\text{s}$ without GPU starvation.</summary>
-*First, calculate the data size per sequence: Text bytes = $8192 \times 4 = 32,768\text{ bytes}$. Vision bytes = $256 \times 1152 \times 2\text{ bytes} = 589,824\text{ bytes}$. Total per sequence = $622,592\text{ bytes}$. Total global batch size in bytes = $1024 \text{ GPUs} \times 4 \text{ sequences/GPU} \times 622,592\text{ bytes} = 2,550,136,832\text{ bytes} \approx 2.55\text{ GB}$. Required aggregate bandwidth = $2.55\text{ GB} / 1.2\text{s} = 2.125\text{ GB/s}$. In Gbps (Gigabits per second) = $2.125 \times 8 = 17\text{ Gbps}$.*
+<summary>Quiz 1: Two runs use the same source documents but different tokenizer hashes and packing policies. Are they using the same dataset?</summary>
+*No. The optimizer consumes token sequences, boundaries, and masks. A run view must bind the source snapshot to tokenizer and packing identities; otherwise token budgets and examples are not reproducible.*
 </details>
 
 <details>
-<summary>Quiz 2: In a Level 3 "Self-Adapting" pipeline, what is the primary role of the human data engineer?</summary>
-*In a Level 3 pipeline, the system automatically detects anomalies (like schema drift) and uses AI agents to generate and deploy code fixes. The human data engineer transitions from manually writing ETL code to acting as a supervisor. They focus on defining validation parameters, setting up the guardrails/reward functions for the AI agents, and ensuring the overall architectural integrity and security of the system.*
+<summary>Quiz 2: Why must near-duplicate clustering happen before train/dev/test assignment?</summary>
+*If splitting happens first, variants of one document can land in both training and evaluation. Clustering first lets the entire related group receive one split and reduces contamination and overly optimistic evaluation.*
 </details>
 
 <details>
-<summary>Quiz 3: Why is it a critical anti-pattern to store raw multimodal data (like JPEGs or MP3s) in the data lake and decode them directly on the GPU nodes during foundation model pre-training?</summary>
-*GPUs are optimized for massive parallel matrix multiplications, not sequential file decoding. If raw files are sent to the training cluster, the CPUs on the training nodes will become a severe bottleneck trying to decode the media, causing the highly expensive GPUs to idle (starvation). Modern pipelines push this compute upstream, decoding and serializing the data into raw multi-dimensional tensors (e.g., .safetensors) before it ever reaches the training cluster.*
+<summary>Quiz 3: Why does the deterministic partition example use strided ownership rather than floor-sized contiguous slices?</summary>
+*Striding assigns remainder shards naturally. Floor division can leave shards unassigned, while the rank-plus-worker partition ID also prevents different data-parallel ranks from reading the same shard.*
 </details>
 
 <details>
-<summary>Quiz 4: How do Open Table Formats (OTFs) like Apache Iceberg solve the centralized database bottleneck for distributed GPU training?</summary>
-*OTFs abstract the metadata from the storage and compute layers, allowing ACID transactions directly on raw object storage. Because the metadata manifest explicitly maps out exactly where all data shards live, a distributed cluster of 10,000 GPUs can concurrently read the exact same snapshot of a dataset directly from storage. This entirely bypasses the need for a centralized database engine, which would crash under the concurrent connection load.*
+<summary>Quiz 4: A job checkpoints every 30 minutes and crashes after an optimizer step but before the next checkpoint. Can it claim exactly-once data delivery?</summary>
+*Not without a transaction coupling that update and cursor. On restart it normally replays from the last completed checkpoint, which is deterministic at-least-once behavior. The contract and its effect must be measured honestly.*
 </details>
 
----
+<details>
+<summary>Quiz 5: Average loader bandwidth exceeds demand, but one rank has high p99 shard latency. Is the loader ready?</summary>
+*Not necessarily. Synchronous training waits for stragglers, so tail latency can dominate step time even when average throughput is high. A multi-node soak test must meet data-wait and tail-latency gates.*
+</details>
+
 ## References
 
-1. <a id="ref-1"></a>Apache Software Foundation. (2024). *Apache Iceberg: A Table Format for Huge Analytic Datasets*. [Link](https://iceberg.apache.org/).
-2. <a id="ref-2"></a>Armbrust, M., et al. (2020). *Delta Lake: High-Performance ACID Table Storage over Cloud Object Stores*. Proceedings of the VLDB Endowment. [arXiv:2008.06750](https://arxiv.org/abs/2008.06750).
-
+1. <a id="ref-1"></a>Apache Software Foundation. *Apache Iceberg: A Table Format for Huge Analytic Datasets*. [Official documentation](https://iceberg.apache.org/).
+2. <a id="ref-2"></a>Armbrust, M., et al. (2020). *Delta Lake: High-Performance ACID Table Storage over Cloud Object Stores*. [arXiv:2008.06750](https://arxiv.org/abs/2008.06750).
+3. <a id="ref-3"></a>PyTorch. *Data Loading Order and `IterableDataset` behavior*. [PyTorch documentation](https://docs.pytorch.org/docs/stable/data.html).
+4. <a id="ref-4"></a>PyTorch. *Distributed Checkpoint*. [PyTorch documentation](https://docs.pytorch.org/docs/main/distributed.checkpoint.html).

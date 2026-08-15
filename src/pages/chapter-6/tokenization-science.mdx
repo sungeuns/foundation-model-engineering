@@ -6,143 +6,138 @@ lang: "en"
 
 # 6.2 Tokenization Science
 
-Before a Foundation Model can process human language, code, or pixels, it must convert the raw continuous stream of data into a sequence of discrete integers. This process is **Tokenization**. 
+A tokenizer is a versioned model interface. It determines sequence length, embedding identities, document boundaries, loss positions, and how much compute each language or domain receives. Changing it after pre-training starts is an architecture migration, not a harmless preprocessing edit.
 
-While often treated as a trivial pre-processing step, tokenization is actually a critical component of model architecture. A poorly designed tokenizer can artificially cripple a model's reasoning capabilities, inflate compute costs, and introduce severe biases against non-English languages.
+The engineering goal is not the highest average compression. It is a tokenizer that represents every supported input, behaves consistently under normalization and special tokens, allocates acceptable sequence budgets across critical slices, and remains bound to the correct checkpoint and serving stack.
 
-In this section, we explore the science of tokenization, comparing the dominant algorithms—**Byte-level BPE**, **WordPiece**, and **SentencePiece**—and analyzing the engineering trade-offs of vocabulary size and compression.
+## 1. Subword and Byte Representations
 
----
+Word-level vocabularies have an open-ended unknown-token problem. Character or byte representations cover arbitrary input but often produce longer sequences. Subword tokenization balances embedding-table size against sequence length by keeping frequent strings intact and decomposing rarer strings.
 
-## 1. The Subword Evolution
+- **BPE** repeatedly merges symbol pairs according to a learned rule. Byte-level BPE begins from 256 byte values, so arbitrary byte input has a representable fallback path [[1]](#ref-1).
+- **WordPiece** uses a likelihood-inspired merge score and is associated with models such as BERT [[2]](#ref-2).
+- **SentencePiece** is a tokenizer toolkit that can train Unigram or BPE models directly from raw sentences without a required language-specific pre-tokenizer [[3]](#ref-3). Its common whitespace marker is `▁`, not an underscore.
 
-Early NLP models relied on **Word-level tokenization** (splitting by spaces and punctuation). This led to massive vocabularies and the dreaded `[UNK]` (Unknown) token problem whenever the model encountered a word not in its dictionary (e.g., "AI-driven").
+“Byte-level model” and “state-space model” describe different axes. Mamba is an architecture and is not inherently byte-level. Likewise, using bytes does not eliminate segmentation policy: patching, pooling, and sequence-length limits still determine what the model processes. Byte-level systems such as MEGABYTE use architecture-specific hierarchy to manage longer sequences [[4]](#ref-4).
 
-**Character-level tokenization** solved the unknown token problem but resulted in extremely long sequence lengths, making it impossible for models with quadratic attention complexity to process long documents.
+## 2. Vocabulary and Compute Trade-offs
 
-The breakthrough was **Subword Tokenization**. The goal is to break rare words into meaningful subwords (e.g., `["token", "ization"]`) while keeping frequent words intact. This balances vocabulary size and sequence length.
+For hidden width $d$ and vocabulary size $V$, an untied input embedding and output projection contain approximately $2Vd$ parameters. A larger vocabulary may reduce sequence length but increases parameter, optimizer, checkpoint, and softmax costs; rare rows may receive too few updates. A smaller vocabulary reduces those matrices but can allocate far more tokens—and therefore attention/activation compute—to some languages, code styles, or identifiers.
 
----
+Measure the complete distribution rather than a single English average:
 
-## 2. Core Algorithms
+- tokens per byte/character and tokens per document, including p50/p95/p99;
+- fragmentation of Korean, other supported languages, code, math, URLs, identifiers, and domain terms;
+- frequency and document coverage of every vocabulary row;
+- byte fallback or unknown-token rate and the inputs that trigger it;
+- sequence truncation rate at the intended context window;
+- embedding/output parameter and optimizer-state cost under the selected precision and sharding.
 
-Three algorithms dominate the modern foundation model landscape.
+A “glitch token” is an operational symptom, not a universal story about one corpus. Reserved, malformed, or extremely rare token IDs can have poorly trained embeddings or unusual behavior. Audit token frequency against the actual pre-training manifest and probe rare/special tokens before launch.
 
-### 2.1 Byte-Pair Encoding (BPE)
-Originally a data compression algorithm introduced by Philip Gage in 1994, BPE was adapted for NLP by Sennrich et al. (2015) [[1]](#ref-1). 
-- **Mechanism**: It starts with a vocabulary of individual characters. It iteratively counts all symbol pairs and replaces the most frequent pair with a new symbol (e.g., merging `e` and `s` to `es`).
-- **Byte-level BPE**: Introduced in GPT-2 [[2]](#ref-2), this variant operates on **raw bytes** rather than Unicode characters. Since there are only 256 possible byte values, the base vocabulary is tiny, and *any* text (including emojis and complex scripts) can be represented without ever producing an unknown token.
+## 3. Normalization and Special-Token Contract
 
-### 2.2 WordPiece
-Used in BERT [[3]](#ref-3) and developed by Google, WordPiece is similar to BPE but differs in the merge criteria.
-- **Mechanism**: Instead of merging the most *frequent* pair, WordPiece chooses the merge that maximizes the likelihood of the training data. It evaluates whether merging `u` and `g` is better than merging `u` and `n` based on a language model score.
+Normalization can erase distinctions that matter in code, identifiers, accents, or security-sensitive text. Record Unicode normalization, whitespace handling, control-character policy, byte fallback, and invalid-input behavior. Test encode → decode round trips at the byte or declared text-normalization level and retain offset mappings for tasks that point back to source spans.
 
-### 2.3 SentencePiece
-Developed by Kudo & Richardson (2018) [[4]](#ref-4), SentencePiece is the default choice for modern open models like LLaMA and T5.
-- **Mechanism**: Traditional BPE and WordPiece require *pre-tokenization* (splitting text by spaces) before learning subwords. SentencePiece treats the input as a raw stream, treating spaces as a normal character (usually replaced by a special symbol like `_`). This makes it truly language-agnostic, as many languages (like Chinese or Japanese) do not use spaces to separate words.
+Reserve BOS, EOS, padding, unknown/fallback, mask, role, tool, and document-boundary tokens deliberately. The same numeric ID must never mean different things across tokenizer versions. Check whether the model expects BOS, whether EOS closes every document or conversation, whether padding aliases EOS, and which tokens contribute to the loss. A chat template is part of this contract even for a base model that will later be instruction-tuned.
 
----
+## 4. Tokenizer Acceptance Test
 
-## 3. The Frontier: Token-Free and Byte-Level Models
+Build the acceptance corpus before training the tokenizer. It should be a fixed, licensed, human-audited sample from every supported language/domain plus adversarial inputs: empty strings, whitespace variants, combining characters, emoji, invalid bytes under the declared policy, long identifiers, code indentation, formulas, URLs, and every special token. Keep public benchmarks and private release prompts in **evaluation quarantine**; acceptance examples should test the same phenomena without copying protected evaluation items.
 
-While subword tokenization is the standard, it introduces a "tokenization tax"—information loss, language bias, and vulnerability to typos. Recent research has focused on eliminating tokenizers entirely or making them more robust.
-
-### 3.1 MEGABYTE (Multi-Scale Byte-Level Modeling)
-Developed by Meta AI, this architecture processes raw bytes directly, removing the need for a fixed tokenizer vocabulary. It employs a multi-scale decoder where a "global" model handles patches of bytes and a "local" model processes individual bytes within those patches, allowing it to handle extremely long sequences efficiently.
-
-### 3.2 Byte-Level State Space Models (e.g., Mamba)
-The emergence of architectures like Mamba (State Space Models) has made byte-level modeling practical. Because these models scale linearly ($O(n)$) with sequence length, they can handle the $5\times$ to $10\times$ increase in sequence length that occurs when switching from tokens to bytes, avoiding the quadratic bottleneck of attention.
-
-### 3.3 Stochastic Tokenization (BPE-Dropout)
-This technique introduces randomness into the subword merging process during training. Instead of always selecting the most frequent merge, the model is trained on multiple valid tokenization paths for the same text, significantly improving robustness against typos and misspellings.
-
----
-
-## 4. The Vocabulary Size Trade-off & Glitch Tokens
-
-Choosing the vocabulary size ($V$) is a critical hyperparameter.
-
-*   **Small Vocabulary ($V \approx 30k$)**: Results in smaller embedding matrices (saving memory) but produces longer sequence lengths for the same text, increasing the cost of self-attention ($O(L^2)$).
-*   **Large Vocabulary ($V \approx 100k+$)**: Compresses text into fewer tokens (saving attention compute) but results in massive embedding layers. If $V$ is too large, rare tokens will not be trained sufficiently.
-
-**💡 Behind the Scenes: The "SolidGoldMagikarp" Anomaly**
-In early 2023, researchers discovered bizarre behavior in GPT models: when prompted to repeat certain nonsensical words like "SolidGoldMagikarp", the model would completely break down, hallucinating strange responses or evading the prompt entirely. 
-
-This was a pure tokenization artifact known as a **Glitch Token**. OpenAI had trained their tokenizer on a massive dataset that included Reddit usernames and Twitch emotes (where "SolidGoldMagikarp" was a prominent user). Thus, it was assigned its own single token. However, this token never appeared in the *actual language model training corpus*. The token embedding was initialized randomly and never updated via gradient descent. When forced to process this "untrained" token, the model's neural network effectively received garbage noise, resulting in catastrophic hallucinations.
-
-To mitigate such issues, modern architectures (like Llama 3 with its 128k `tiktoken`-based vocabulary) carefully align their tokenizer training data with their pre-training data, ensuring all tokens receive adequate gradient updates.
-
----
-
-## 5. PyTorch & Transformers Integration
-
-Let's see how tokenization maps to PyTorch embeddings. We will use the `transformers` library to load a tokenizer and pass the generated token IDs to a PyTorch `nn.Embedding` layer.
+The following deliberately small test checks interface invariants for an already loaded tokenizer. Production acceptance also needs large slice reports and manual inspection.
 
 ```python
-import torch
-import torch.nn as nn
-from transformers import AutoTokenizer
+from collections import Counter
 
-# 1. Load a pre-trained tokenizer (e.g., Llama style or GPT style)
-# We use BERT's WordPiece tokenizer for this example
-tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
+def audit_tokenizer(tokenizer, samples):
+    lengths = []
+    token_counts = Counter()
+    unk_id = tokenizer.unk_token_id
 
-text = "Tokenization science is fascinating!"
+    for sample in samples:
+        encoded = tokenizer(
+            sample,
+            add_special_tokens=False,
+            return_offsets_mapping=True,
+        )
+        ids = encoded["input_ids"]
+        offsets = encoded["offset_mapping"]
+        decoded = tokenizer.decode(ids, skip_special_tokens=False)
 
-# 2. Tokenize the text
-# This returns token IDs, attention masks, etc.
-encoded_input = tokenizer(text, return_tensors="pt")
-token_ids = encoded_input["input_ids"]
+        assert len(ids) == len(offsets)
+        assert all(0 <= start <= end <= len(sample) for start, end in offsets)
+        assert unk_id is None or unk_id not in ids, f"unexpected UNK: {sample!r}"
+        # Compare after the tokenizer's documented normalization, not blindly.
+        assert decoded == sample, (sample, decoded)
 
-print(f"Original Text: {text}")
-print(f"Token IDs: {token_ids}")
-print(f"Decoded Tokens: {tokenizer.convert_ids_to_tokens(token_ids[0])}\n")
+        lengths.append(len(ids))
+        token_counts.update(ids)
 
-# 3. Map Token IDs to Continuous Embeddings in PyTorch
-vocab_size = tokenizer.vocab_size
-embedding_dim = 768
+    assert lengths and max(lengths) > 0
+    return {"lengths": lengths, "token_counts": token_counts}
 
-# Create a random embedding layer (usually loaded from pre-trained weights)
-embedding_layer = nn.Embedding(vocab_size, embedding_dim)
-
-# Pass token IDs through the embedding layer
-with torch.no_grad():
-    embedded_vectors = embedding_layer(token_ids)
-
-print(f"Input Shape (Batch, Seq_Len): {token_ids.shape}")
-print(f"Output Shape (Batch, Seq_Len, Hidden_Dim): {embedded_vectors.shape}")
+samples = ["한국어와 English", "def f(x):\n    return x + 1", "é é 🙂"]
+# report = audit_tokenizer(tokenizer, samples)
 ```
 
----
+Some tokenizers intentionally normalize text, so the exact round-trip assertion must be replaced with a comparison against the documented normalized form. Do not weaken the test silently; encode the policy explicitly. Verify offsets using the framework's exact offset unit, which may be characters or bytes.
 
-## Next Steps
+Set slice-specific gates before choosing a vocabulary. Compare candidate tokenizers on the same corpus and include uncertainty or multiple samples where the corpus is small. Reject a candidate for unexpected unknowns/fallback failures, special-token collision, unacceptable critical-slice truncation, missing offsets, excessive tail fertility, or vocabulary rows with implausibly low exposure.
 
-Now that we understand how text is efficiently compressed and transformed into numerical representations, we must explore how to keep the model stable when processing these massive sequences across thousands of GPUs. In **Chapter 6.3**, we will dive into **Large-scale Training Stability**, examining why models suddenly diverge and how techniques like z-loss keep training runs alive.
+## 5. Checkpoint Compatibility Contract
 
----
+The model, tokenizer, and template form one immutable artifact bundle. Store tokenizer files and hash, vocabulary size, token-to-ID map hash, special-token IDs, normalization policy, chat template, BOS/EOS/padding policy, and model embedding/output shapes. Serving should fail closed when these identities do not match.
+
+Default to preserving the original tokenizer during continued pre-training or fine-tuning. Adding tokens is justified only by measured coverage or efficiency failures. Append new IDs without reassigning existing ones, initialize their input and output rows deliberately, call `resize_token_embeddings`, and ensure the new rows are trainable. Hugging Face explicitly requires resizing model embeddings after vocabulary expansion [[5]](#ref-5).
+
+Do not load an old checkpoint into a reordered vocabulary merely because the matrix shape matches. The rows would refer to different strings. For tied embeddings, verify the tie remains intact after resizing; for untied heads, initialize and checkpoint both matrices. Record merge/export behavior for adapters and quantized models, where resizing may require returning to an appropriate floating-point base artifact.
+
+## 6. Training and Release Runbook
+
+Before a large run:
+
+1. Freeze the tokenizer-training data manifest, code/config, seed, and license/PII decisions.
+2. Train multiple vocabulary/normalization candidates on comparable data.
+3. Run the acceptance report by language/domain and manually audit tails and rare tokens.
+4. Estimate parameter, optimizer, activation, sequence-length, checkpoint, and serving costs.
+5. Run a small pre-training pilot; measure validation loss by slice, rare-token exposure, throughput, truncation, and downstream probes.
+6. Freeze the chosen tokenizer hash before producing final tokenized shards.
+7. Gate every model load and deployment on the tokenizer/template artifact identity.
+
+Abort or re-tokenize before scale if a critical domain depends on unknown tokens, special IDs collide, source reconstruction fails under the declared normalization, the token budget materially violates the compute plan, or the serving artifact cannot prove compatibility. Once a large model has learned token identities, replacement is normally more expensive and risky than accepting a modestly imperfect tokenizer.
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: A model with untied embedding and output layers has a hidden dimension $D = 8192$. The developers consider increasing the vocabulary size $V$ from 32,000 to 128,000. Calculate the increase in total parameters (in millions) for these layers. Furthermore, calculate the additional VRAM (in GB) required to store these parameters in float16 precision (2 bytes).</summary>
-*Total parameter count for untied embeddings and output layer is $2 \times V \times D$. The increase in vocabulary size is $\Delta V = 128,000 - 32,000 = 96,000$. The parameter increase is $2 \times 96,000 \times 8192 = 1,572,864,000$ parameters $\approx 1,573\text{ Million}$ parameters. In float16 precision (2 bytes/parameter), the additional VRAM is $1,572,864,000 \times 2\text{ bytes} = 3,145,728,000\text{ bytes} \approx 3.15\text{ GB}$ (or $2.93\text{ GiB}$).*
+<summary>Quiz 1: Why is the lowest average tokens-per-character tokenizer not automatically the best choice?</summary>
+*An average can hide severe language or domain tails, rare untrained rows, special-token mistakes, larger embedding/softmax costs, and changed normalization. Selection must use slice distributions, correctness, compute, and compatibility gates.*
 </details>
 
 <details>
-<summary>Quiz 2: What is the main difference between BPE and WordPiece in how they decide which tokens to merge?</summary>
-*BPE is purely frequency-based; it merges the most frequently occurring pair of symbols in the corpus. WordPiece is likelihood-based; it chooses the merge that increases the likelihood of the training data the most according to a probabilistic model. It asks: "How much more likely is the pair compared to the individual symbols appearing independently?"*
+<summary>Quiz 2: Is SentencePiece a single alternative to BPE?</summary>
+*No. SentencePiece is a toolkit and raw-sentence training approach that supports algorithms including BPE and Unigram. The algorithm, normalization, byte fallback, vocabulary, and special-token settings must all be identified.*
 </details>
 
 <details>
-<summary>Quiz 3: Why is SentencePiece particularly beneficial for languages like Chinese or Japanese compared to traditional BPE?</summary>
-*Traditional BPE requires pre-tokenization, usually splitting by spaces, to identify word boundaries before learning subwords. Languages like Chinese and Japanese do not use spaces to separate words, making pre-tokenization difficult and often requiring complex language-specific heuristic rules. SentencePiece treats the entire text as a raw stream of characters including spaces, bypassing the need for space-based pre-tokenization and making it natively applicable to any language.*
+<summary>Quiz 3: Why should benchmark prompts be absent from the tokenizer acceptance corpus?</summary>
+*The tokenizer may be trained or selected using that corpus. Benchmark and private release material must remain quarantined so tokenization decisions do not leak protected evaluation text; equivalent synthetic phenomena can test coverage instead.*
 </details>
 
----
+<details>
+<summary>Quiz 4: A vocabulary is expanded by 1,000 tokens, and the model loads because the old IDs still fit. What else is required?</summary>
+*Resize the input and output embeddings, deliberately initialize and train the new rows, preserve existing IDs and any weight tying, version the tokenizer and model together, and reject serving with the old tokenizer.*
+</details>
+
+<details>
+<summary>Quiz 5: Why must encode/decode tests mention normalization?</summary>
+*Some tokenizers intentionally normalize input, so byte-identical decoding is not always the declared contract. The test must compare with the documented normalized form and verify offsets; silently accepting arbitrary differences hides data loss.*
+</details>
 
 ## References
 
-1. <a id="ref-1"></a>Sennrich, R., Haddow, B., & Birch, A. (2015). *Neural machine translation of rare words with subword units*. [arXiv:1508.07909](https://arxiv.org/abs/1508.07909).
-2. <a id="ref-2"></a>Radford, A., et al. (2019). *Language models are unsupervised multitask learners*. OpenAI blog.
-3. <a id="ref-3"></a>Devlin, J., et al. (2018). *BERT: Pre-training of deep bidirectional transformers for language understanding*. [arXiv:1810.04805](https://arxiv.org/abs/1810.04805).
-4. <a id="ref-4"></a>Kudo, T., & Richardson, J. (2018). *SentencePiece: A simple and language independent subword tokenizer and detokenizer for neural text processing*. [arXiv:1808.06226](https://arxiv.org/abs/1808.06226).
+1. <a id="ref-1"></a>Radford, A., et al. (2019). *Language Models are Unsupervised Multitask Learners*. [OpenAI report](https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf).
+2. <a id="ref-2"></a>Devlin, J., et al. (2019). *BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding*. [ACL Anthology](https://aclanthology.org/N19-1423/).
+3. <a id="ref-3"></a>Kudo, T., & Richardson, J. (2018). *SentencePiece: A Simple and Language Independent Subword Tokenizer and Detokenizer for Neural Text Processing*. [ACL Anthology](https://aclanthology.org/D18-2012/).
+4. <a id="ref-4"></a>Yu, L., et al. (2023). *MEGABYTE: Predicting Million-byte Sequences with Multiscale Transformers*. [arXiv:2305.07185](https://arxiv.org/abs/2305.07185).
+5. <a id="ref-5"></a>Hugging Face. *Tokenizer documentation*. [Transformers documentation](https://huggingface.co/docs/transformers/main_classes/tokenizer).

@@ -119,11 +119,11 @@ Review completed on 2026-04-16 for every EN/KO sub-chapter pair below.
 - [x] sparse-vs-dense-models (EN/KO pair)
 
 ### chapter-6
-- [x] data-engineering-at-scale (EN/KO pair)
+- [x] data-engineering-at-scale (EN/KO pair; 2026-08-16 practitioner rewrite)
 - [x] infrastructure (EN/KO pair)
-- [x] large-scale-training-stability (EN/KO pair)
+- [x] large-scale-training-stability (EN/KO pair; 2026-08-16 practitioner rewrite)
 - [x] synthetic-data-for-pre-training (EN/KO pair)
-- [x] tokenization-science (EN/KO pair)
+- [x] tokenization-science (EN/KO pair; 2026-08-16 practitioner rewrite)
 
 ### chapter-7
 - [x] data-parallelism (EN/KO pair)

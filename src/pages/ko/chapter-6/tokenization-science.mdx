@@ -4,130 +4,140 @@ title: "6.2 토큰화의 과학"
 lang: "ko"
 ---
 
-# 6.2 토큰화의 과학 (Tokenization Science)
+# 6.2 토큰화의 과학
 
-파운데이션 모델이 인간의 언어, 코드 또는 픽셀을 처리하기 전에 가장 먼저 해야 할 일은 연속적인 원시 데이터 스트림을 이산적인 정수(Integer) 시퀀스로 변환하는 것입니다. 이 과정을 **토큰화(Tokenization)**라고 합니다.
+토크나이저는 버전이 있는 모델 인터페이스입니다. 시퀀스 길이, 임베딩 식별자, 문서 경계, 손실 위치, 언어·도메인별 연산 배분을 결정합니다. 사전 학습이 시작된 뒤 토크나이저를 바꾸는 일은 단순한 전처리 수정이 아니라 아키텍처 마이그레이션입니다.
 
-토큰화는 종종 단순한 전처리 단계로 치부되지만, 실제로는 모델 아키텍처의 핵심 구성 요소입니다. 잘못 설계된 토크나이저는 모델의 추론 능력을 인위적으로 손상시키고, 컴퓨팅 비용을 증가시키며, 영어가 아닌 언어(한국어 등)에 대해 심각한 편향을 유발할 수 있습니다.
+엔지니어링 목표는 평균 압축률이 가장 높은 토크나이저가 아닙니다. 지원하는 모든 입력을 표현하고, 정규화와 특수 토큰 아래에서 일관되게 동작하며, 중요 슬라이스에 허용 가능한 시퀀스 예산을 배분하고, 올바른 체크포인트·서비스 스택과 묶이는 토크나이저가 목표입니다.
 
-이 섹션에서는 **Byte-level BPE**, **WordPiece**, **SentencePiece** 등 주요 알고리즘을 비교하고 어휘 사전 크기(Vocabulary Size)와 압축 효율성의 엔지니어링 트레이드오프를 분석하며 토큰화의 과학을 탐구합니다.
+## 1. 서브워드와 바이트 표현
 
----
+단어 수준 어휘에는 끝이 없는 미등록 토큰 문제가 있습니다. 문자·바이트 표현은 임의 입력을 포괄하지만 시퀀스가 길어지기 쉽습니다. 서브워드 토큰화는 빈번한 문자열을 유지하고 드문 문자열을 분해하여 임베딩 표 크기와 시퀀스 길이 사이를 조절합니다.
 
-## 1. 서브워드(Subword)의 진화
+- **BPE** 는 학습한 규칙에 따라 기호 쌍을 반복 병합합니다. 바이트 수준 BPE는 256개 바이트 값에서 시작하므로 임의 바이트 입력을 표현할 폴백 경로가 있습니다 [[1]](#ref-1).
+- **WordPiece** 는 우도에 기반한 병합 점수를 사용하며 BERT 같은 모델과 연결됩니다 [[2]](#ref-2).
+- **SentencePiece** 는 언어별 사전 토크나이저 없이 원시 문장에서 Unigram이나 BPE 모델을 학습할 수 있는 토크나이저 도구 모음입니다 [[3]](#ref-3). 흔히 쓰는 공백 표시는 밑줄이 아니라 `▁`입니다.
 
-초기 자연어 처리(NLP) 모델은 공백과 구두점을 기준으로 분할하는 **단어 수준 토큰화(Word-level tokenization)**에 의존했습니다. 이는 어휘 사전의 크기를 기하급수적으로 키웠고, 모델이 사전에 없는 단어(예: "AI-driven")를 만날 때마다 끔찍한 `[UNK]` (Unknown) 토큰 문제가 발생했습니다.
+“바이트 수준 모델”과 “상태 공간 모델”은 서로 다른 축을 설명합니다. Mamba는 아키텍처이며 본질적으로 바이트 수준인 것은 아닙니다. 바이트를 사용한다고 분할 정책이 사라지는 것도 아닙니다. 패치, 풀링, 시퀀스 길이 제한이 모델이 처리하는 대상을 계속 결정합니다. MEGABYTE 같은 바이트 수준 시스템은 더 긴 시퀀스를 다루기 위해 아키텍처 고유의 계층 구조를 사용합니다 [[4]](#ref-4).
 
-이를 해결하기 위해 등장한 **문자 수준 토큰화(Character-level tokenization)**는 `[UNK]` 문제는 해결했지만, 시퀀스 길이가 극단적으로 길어지는 부작용을 낳았습니다. 시퀀스 길이의 제곱($O(L^2)$)에 비례하여 연산량이 증가하는 트랜스포머 모델에게 이는 치명적이었습니다.
+## 2. 어휘와 연산의 트레이드오프
 
-진정한 돌파구는 **서브워드 토큰화(Subword Tokenization)**였습니다. 희귀한 단어는 의미 있는 하위 단어(예: `["토큰", "화"]`)로 쪼개고, 자주 쓰이는 단어는 원형을 유지하는 방식입니다. 이를 통해 어휘 사전 크기와 시퀀스 길이 사이의 완벽한 균형을 찾았습니다.
+은닉 차원 $d$, 어휘 크기 $V$인 모델에서 묶이지 않은 입력 임베딩과 출력 프로젝션은 약 $2Vd$개의 파라미터를 가집니다. 큰 어휘는 시퀀스 길이를 줄일 수 있지만 파라미터, 옵티마이저, 체크포인트, 소프트맥스 비용을 늘리고 드문 행은 업데이트가 부족할 수 있습니다. 작은 어휘는 이 행렬을 줄이지만 일부 언어, 코드 형식, 식별자에 훨씬 많은 토큰과 어텐션·활성화 연산을 배분할 수 있습니다.
 
----
+영어 평균 하나가 아니라 전체 분포를 측정합니다.
 
-## 2. 핵심 알고리즘
+- 바이트/문자당 토큰, 문서당 토큰의 p50/p95/p99
+- 한국어와 지원 언어, 코드, 수학, URL, 식별자, 전문 용어의 분절
+- 모든 어휘 행의 빈도와 문서 커버리지
+- 바이트 폴백 또는 미등록 토큰 비율과 이를 유발한 입력
+- 목표 컨텍스트 창에서의 시퀀스 절단률
+- 선택한 정밀도·샤딩에서 임베딩/출력 파라미터와 옵티마이저 상태 비용
 
-현대 파운데이션 모델 생태계는 크게 세 가지 알고리즘이 지배하고 있습니다.
+“글리치 토큰”은 특정 말뭉치에 대한 보편적 서사가 아니라 운영 증상입니다. 예약되거나 잘못 형성됐거나 매우 드문 토큰 ID는 임베딩 학습이 부족하고 특이한 동작을 보일 수 있습니다. 실제 사전 학습 매니페스트에서 토큰 빈도를 감사하고 실행 전에 희귀·특수 토큰을 조사합니다.
 
-### 2.1 Byte-Pair Encoding (BPE)
-원래 1994년 Philip Gage가 제안한 데이터 압축 알고리즘이었던 BPE는 2015년 Sennrich 등에 의해 NLP용으로 개조되었습니다 [[1]](#ref-1).
-- **작동 원리**: 개별 문자(Character)로 구성된 기본 어휘 사전에서 시작합니다. 말뭉치에서 모든 기호 쌍의 빈도를 세고, 가장 자주 등장하는 쌍을 새로운 기호로 병합합니다(예: `e`와 `s`를 `es`로 병합).
-- **Byte-level BPE**: GPT-2에서 도입된 이 방식은 유니코드 문자가 아닌 **원시 바이트(Raw Bytes)** 단위로 작동합니다 [[2]](#ref-2). 바이트 값은 256개뿐이므로, 기본 어휘 사전은 매우 작지만 이모지나 복잡한 문자를 포함한 *어떤* 텍스트든 `[UNK]` 토큰 없이 표현할 수 있습니다.
+## 3. 정규화와 특수 토큰 계약
 
-### 2.2 WordPiece
-Google이 개발하여 BERT에 사용한 WordPiece는 BPE와 유사하지만 병합 기준이 다릅니다 [[3]](#ref-3).
-- **작동 원리**: 단순히 가장 *자주* 등장하는 쌍을 병합하는 대신, 학습 데이터의 **우도(Likelihood)**를 최대로 높이는 병합을 선택합니다. 확률 모델을 기반으로 `u`와 `g`를 병합하는 것이 `u`와 `n`을 병합하는 것보다 언어 모델링 관점에서 더 유리한지 평가합니다.
+정규화는 코드, 식별자, 악센트, 보안상 민감한 텍스트의 중요한 차이를 지울 수 있습니다. 유니코드 정규화, 공백 처리, 제어 문자 정책, 바이트 폴백, 잘못된 입력 처리 방식을 기록합니다. 바이트 또는 선언한 텍스트 정규화 수준에서 인코딩 → 디코딩 왕복을 시험하고, 원문 위치를 가리키는 과업을 위해 오프셋 매핑을 보존합니다.
 
-### 2.3 SentencePiece
-Kudo & Richardson(2018)이 개발한 SentencePiece는 LLaMA, T5 등 현대 오픈소스 모델의 표준입니다 [[4]](#ref-4).
-- **작동 원리**: 기존 BPE나 WordPiece는 서브워드를 학습하기 전에 텍스트를 공백 기준으로 나누는 사전 토큰화(Pre-tokenization)가 필요합니다. 하지만 SentencePiece는 공백조차 일반 문자로 취급하여(일반적으로 `_` 기호로 치환) 입력 전체를 하나의 원시 스트림으로 처리합니다. 덕분에 띄어쓰기가 없거나 불규칙한 언어(중국어, 일본어, 한국어 등)에서도 완벽하게 언어 독립적으로 작동합니다.
+BOS, EOS, 패딩, 미등록/폴백, 마스크, 역할, 도구, 문서 경계 토큰을 의도적으로 예약합니다. 동일한 숫자 ID가 토크나이저 버전마다 다른 의미를 가져서는 안 됩니다. 모델이 BOS를 요구하는지, EOS가 모든 문서·대화를 닫는지, 패딩과 EOS가 같은지, 어떤 토큰이 손실에 기여하는지 확인합니다. 나중에 인스트럭션 튜닝할 베이스 모델에도 채팅 템플릿은 이 계약의 일부입니다.
 
----
+## 4. 토크나이저 수용 시험
 
-## 3. 어휘 사전 크기의 트레이드오프 & 글리치 토큰 (Glitch Tokens)
+토크나이저를 학습하기 전에 수용 말뭉치를 만듭니다. 지원하는 모든 언어·도메인에서 라이선스가 확인되고 사람이 감사한 고정 표본과 빈 문자열, 공백 변형, 결합 문자, 이모지, 선언한 정책 아래의 잘못된 바이트, 긴 식별자, 코드 들여쓰기, 수식, URL, 모든 특수 토큰을 포함합니다. 공개 벤치마크와 비공개 릴리스 프롬프트는 **평가 격리** 영역에 둡니다. 보호된 평가 항목을 복사하지 않고 같은 현상을 시험하는 예제를 사용해야 합니다.
 
-어휘 사전의 크기($V$)를 정하는 것은 모델의 성능과 직결되는 중요한 하이퍼파라미터입니다.
-
-*   **작은 어휘 사전 ($V \approx 30k$)**: 임베딩 행렬 크기가 작아져 메모리를 절약할 수 있습니다. 하지만 동일한 텍스트를 표현할 때 더 많은 토큰으로 쪼개져 시퀀스 길이가 길어지므로, Self-Attention 연산 비용($O(L^2)$)이 크게 증가합니다.
-*   **큰 어휘 사전 ($V \approx 100k+$)**: 텍스트를 더 적은 토큰으로 압축하여 어텐션 연산을 줄여줍니다. 하지만 임베딩 레이어가 거대해지며, $V$가 너무 크면 드물게 등장하는 토큰들은 충분한 경사하강법(Gradient Descent) 업데이트를 받지 못해 제대로 학습되지 않습니다.
-
-**💡 비하인드 스토리: "SolidGoldMagikarp"의 저주**
-2023년 초, 연구자들은 GPT 모델에서 기이한 현상을 발견했습니다. 모델에게 "SolidGoldMagikarp"와 같은 특정 무의미한 단어를 반복하라고 지시하면, 모델이 갑자기 횡설수설하거나 프롬프트를 회피하며 완전히 붕괴해버리는 것이었습니다.
-
-이는 **글리치 토큰(Glitch Token)**이라고 불리는 순수한 토큰화 아티팩트(Artifact)였습니다. OpenAI는 Reddit 사용자 이름이나 Twitch 이모티콘이 다수 포함된 방대한 데이터셋으로 토크나이저를 학습시켰습니다. 그래서 "SolidGoldMagikarp"(유명 Reddit 유저명)라는 고유 토큰이 사전에 등록되었습니다. 
-하지만 정작 *실제 언어 모델의 사전 학습(Pre-training) 말뭉치*에는 이 단어가 거의 등장하지 않았습니다. 결과적으로 이 토큰의 임베딩 벡터는 무작위로 초기화된 상태에서 단 한 번도 업데이트되지 않았습니다. 사용자가 이 "학습되지 않은" 토큰을 입력하자, 신경망은 그저 무작위 쓰레기(Garbage) 노이즈를 전달받은 꼴이 되었고 치명적인 환각(Hallucination)을 일으킨 것입니다.
-
-이런 문제를 방지하기 위해 Llama 3(128k `tiktoken` 기반 어휘 사전 사용)와 같은 최신 아키텍처는 토크나이저 학습 데이터와 사전 학습 데이터를 철저히 일치시켜 모든 토큰이 충분한 가중치 업데이트를 받도록 설계합니다.
-
----
-
-## 4. PyTorch & Transformers 통합 구현
-
-실제로 토큰화가 PyTorch 임베딩으로 어떻게 매핑되는지 살펴보겠습니다. Hugging Face의 `transformers` 라이브러리를 사용하여 토큰 ID를 생성하고 PyTorch `nn.Embedding` 레이어에 통과시켜 보겠습니다.
+다음의 의도적으로 작은 테스트는 이미 로드한 토크나이저의 인터페이스 불변식을 확인합니다. 프로덕션 수용 시험에는 큰 슬라이스 보고서와 수동 검사도 필요합니다.
 
 ```python
-import torch
-import torch.nn as nn
-from transformers import AutoTokenizer
+from collections import Counter
 
-# 1. 사전 학습된 토크나이저 불러오기 (예: BERT의 WordPiece)
-tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
+def audit_tokenizer(tokenizer, samples):
+    lengths = []
+    token_counts = Counter()
+    unk_id = tokenizer.unk_token_id
 
-text = "Tokenization science is fascinating!"
+    for sample in samples:
+        encoded = tokenizer(
+            sample,
+            add_special_tokens=False,
+            return_offsets_mapping=True,
+        )
+        ids = encoded["input_ids"]
+        offsets = encoded["offset_mapping"]
+        decoded = tokenizer.decode(ids, skip_special_tokens=False)
 
-# 2. 텍스트 토큰화 수행
-# token_ids, attention_masks 등을 반환합니다.
-encoded_input = tokenizer(text, return_tensors="pt")
-token_ids = encoded_input["input_ids"]
+        assert len(ids) == len(offsets)
+        assert all(0 <= start <= end <= len(sample) for start, end in offsets)
+        assert unk_id is None or unk_id not in ids, f"unexpected UNK: {sample!r}"
+        # 토크나이저가 명시한 정규화 결과와 비교해야 합니다.
+        assert decoded == sample, (sample, decoded)
 
-print(f"Original Text: {text}")
-print(f"Token IDs: {token_ids}")
-print(f"Decoded Tokens: {tokenizer.convert_ids_to_tokens(token_ids[0])}\n")
+        lengths.append(len(ids))
+        token_counts.update(ids)
 
-# 3. 토큰 ID를 PyTorch 연속 임베딩으로 매핑
-vocab_size = tokenizer.vocab_size
-embedding_dim = 768
+    assert lengths and max(lengths) > 0
+    return {"lengths": lengths, "token_counts": token_counts}
 
-# 랜덤 임베딩 레이어 생성 (실제로는 사전 학습된 가중치를 불러옴)
-embedding_layer = nn.Embedding(vocab_size, embedding_dim)
-
-# 토큰 ID를 임베딩 레이어에 통과시킴
-with torch.no_grad():
-    embedded_vectors = embedding_layer(token_ids)
-
-print(f"Input Shape (Batch, Seq_Len): {token_ids.shape}")
-print(f"Output Shape (Batch, Seq_Len, Hidden_Dim): {embedded_vectors.shape}")
+samples = ["한국어와 English", "def f(x):\n    return x + 1", "é é 🙂"]
+# report = audit_tokenizer(tokenizer, samples)
 ```
 
----
+일부 토크나이저는 의도적으로 텍스트를 정규화하므로 정확한 왕복 단언을 문서화된 정규화 결과와의 비교로 바꿔야 합니다. 테스트를 조용히 약화하지 말고 정책을 명시적으로 코드화합니다. 프레임워크가 오프셋을 문자와 바이트 중 어떤 단위로 반환하는지도 확인합니다.
 
-## 다음 단계 (Next Steps)
+어휘를 선택하기 전에 슬라이스별 게이트를 정합니다. 같은 말뭉치에서 후보 토크나이저를 비교하고, 표본이 적으면 불확실성이나 여러 표본을 포함합니다. 예상하지 못한 미등록/폴백 실패, 특수 토큰 충돌, 중요 슬라이스의 과도한 절단, 오프셋 부재, 심각한 꼬리 fertility, 노출이 지나치게 적은 어휘 행이 있으면 후보를 거부합니다.
 
-지금까지 텍스트가 어떻게 효율적으로 압축되고 수치화된 벡터로 변환되는지 이해했습니다. 이제 우리는 이 거대한 시퀀스 데이터를 수천 개의 GPU에서 처리할 때 모델이 붕괴하지 않도록 유지하는 방법을 알아야 합니다. 다음 장인 **Chapter 6.3 대규모 학습 안정성**에서는 모델이 학습 중 갑자기 발산하는 이유와 z-loss 같은 기술이 어떻게 학습을 구출하는지 깊이 있게 파헤쳐 보겠습니다.
+## 5. 체크포인트 호환성 계약
 
----
+모델, 토크나이저, 템플릿은 하나의 불변 아티팩트 묶음입니다. 토크나이저 파일과 해시, 어휘 크기, 토큰-ID 매핑 해시, 특수 토큰 ID, 정규화 정책, 채팅 템플릿, BOS/EOS/패딩 정책, 모델 임베딩·출력 형상을 저장합니다. 서비스에서는 이 식별자가 맞지 않을 때 닫힌 방식으로 실패해야 합니다.
+
+지속 사전 학습이나 미세 조정에서는 원래 토크나이저 유지가 기본값입니다. 토큰 추가는 측정된 커버리지나 효율 결함이 있을 때만 정당화됩니다. 기존 ID를 재배정하지 않고 새 ID를 뒤에 추가하며, 입력·출력 행을 의도적으로 초기화하고 `resize_token_embeddings`를 호출하여 새 행을 학습 가능하게 만듭니다. Hugging Face도 어휘 확장 뒤 모델 임베딩 크기 조정을 명시적으로 요구합니다 [[5]](#ref-5).
+
+행렬 형상이 맞는다는 이유만으로 재정렬된 어휘에 오래된 체크포인트를 불러오면 안 됩니다. 같은 행이 다른 문자열을 뜻하게 됩니다. 임베딩을 묶었다면 크기 조정 후에도 묶임이 유지되는지 확인하고, 묶지 않았다면 두 행렬 모두 초기화·저장합니다. 어댑터·양자화 모델은 크기 변경을 위해 적절한 부동소수점 베이스 아티팩트로 돌아가야 할 수 있으므로 병합·내보내기 동작을 기록합니다.
+
+## 6. 학습과 릴리스 실행 절차
+
+대규모 실행 전에 다음을 수행합니다.
+
+1. 토크나이저 학습 데이터 매니페스트, 코드/설정, 시드, 라이선스/PII 결정을 고정합니다.
+2. 비교 가능한 데이터에서 여러 어휘·정규화 후보를 학습합니다.
+3. 언어·도메인별 수용 보고서를 실행하고 꼬리·희귀 토큰을 수동 감사가 검토합니다.
+4. 파라미터, 옵티마이저, 활성화, 시퀀스 길이, 체크포인트, 서비스 비용을 추정합니다.
+5. 작은 사전 학습 파일럿에서 슬라이스별 검증 손실, 희귀 토큰 노출, 처리량, 절단률, 다운스트림 프로브를 측정합니다.
+6. 최종 토큰화 샤드를 만들기 전에 선택한 토크나이저 해시를 고정합니다.
+7. 모든 모델 로드·배포를 토크나이저/템플릿 아티팩트 식별자로 게이트합니다.
+
+중요 도메인이 미등록 토큰에 의존하거나, 특수 ID가 충돌하거나, 선언한 정규화 아래에서 원문 복원이 실패하거나, 토큰 예산이 연산 계획을 크게 위반하거나, 서비스 아티팩트의 호환성을 증명할 수 없으면 확장 전에 중단하고 다시 토큰화합니다. 대형 모델이 토큰 식별자를 학습한 뒤에는 토크나이저 교체가 다소 불완전한 토크나이저를 유지하는 것보다 대개 더 비싸고 위험합니다.
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: 임베딩 레이어와 출력 프로젝션 레이어의 가중치가 묶여있지 않은(Untied) 모델의 히든 차원은 $D = 8192$입니다. 개발진은 어휘 사전 크기 $V$를 32,000에서 128,000으로 확장하고자 합니다. 이 레이어들에서 발생하는 총 파라미터 증가량(백만 단위)을 계산하세요. 또한 이 파라미터들을 float16 정밀도(2바이트)로 저장하기 위해 추가적으로 요구되는 VRAM 용량(GB 단위)을 구하세요.</summary>
-*가중치가 묶이지 않은 경우 임베딩과 출력 레이어의 총 파라미터 수는 $2 \times V \times D$입니다. 어휘 사전 크기의 증가분은 $\Delta V = 128,000 - 32,000 = 96,000$입니다. 파라미터 증가량은 $2 \times 96,000 \times 8192 = 1,572,864,000$ 파라미터 $\approx 1,573\text{ 백만}$ 파라미터입니다. float16 정밀도(파라미터당 2바이트)에서 추가적인 VRAM 용량은 $1,572,864,000 \times 2\text{ 바이트} = 3,145,728,000\text{ 바이트} \approx 3.15\text{ GB}$ (또는 $2.93\text{ GiB}$)입니다.*
+<summary>Quiz 1: 평균 문자당 토큰 수가 가장 작은 토크나이저가 자동으로 최선이 아닌 이유는 무엇인가요?</summary>
+*평균은 심각한 언어·도메인 꼬리, 드물고 학습이 부족한 행, 특수 토큰 오류, 더 큰 임베딩·소프트맥스 비용, 정규화 변경을 숨길 수 있습니다. 슬라이스 분포, 정확성, 연산, 호환성 게이트로 선택해야 합니다.*
 </details>
 
 <details>
-<summary>Quiz 2: 병합할 토큰을 결정하는 방식에서 BPE와 WordPiece의 가장 큰 차이점은 무엇입니까?</summary>
-*BPE는 순전히 **빈도(Frequency)** 기반입니다. 말뭉치에서 가장 자주 나타나는 기호 쌍을 병합합니다. 반면 WordPiece는 **우도(Likelihood)** 기반입니다. 개별 기호가 독립적으로 나타날 확률과 비교하여 두 기호가 함께 나타날 확률이 얼마나 더 높은지를 계산하는 언어 모델을 기반으로, 학습 데이터의 우도를 가장 크게 증가시키는 쌍을 병합합니다.*
+<summary>Quiz 2: SentencePiece는 BPE와 대립하는 하나의 알고리즘인가요?</summary>
+*아닙니다. SentencePiece는 BPE와 Unigram 등을 지원하는 도구 모음이자 원시 문장 학습 방식입니다. 알고리즘, 정규화, 바이트 폴백, 어휘, 특수 토큰 설정을 모두 식별해야 합니다.*
 </details>
 
 <details>
-<summary>Quiz 3: 한국어, 중국어, 일본어와 같은 언어에서 기존 BPE보다 SentencePiece가 특히 유리한 이유는 무엇입니까?</summary>
-*기존 BPE는 서브워드를 학습하기 전에 띄어쓰기(공백)를 기준으로 단어의 경계를 나누는 사전 토큰화(Pre-tokenization) 과정이 필수적입니다. 하지만 한/중/일 언어는 공백으로 단어를 명확하게 구분하지 않으므로 복잡한 언어 종속적 휴리스틱이 필요합니다. SentencePiece는 공백을 포함한 전체 텍스트를 하나의 원시 문자열 스트림으로 처리하므로, 띄어쓰기 기반의 사전 토큰화 없이 모든 언어에 보편적으로 적용할 수 있습니다.*
+<summary>Quiz 3: 벤치마크 프롬프트가 토크나이저 수용 말뭉치에 들어가면 안 되는 이유는 무엇인가요?</summary>
+*그 말뭉치가 토크나이저 학습이나 선택에 사용될 수 있기 때문입니다. 보호된 평가 텍스트가 토큰화 결정에 새지 않도록 공개 벤치마크와 비공개 릴리스 자료를 격리하고, 같은 현상을 다룬 별도의 예제로 커버리지를 시험합니다.*
 </details>
 
----
+<details>
+<summary>Quiz 4: 어휘를 1,000개 확장했고 기존 ID가 모두 들어가므로 모델이 로드됩니다. 이 외에 무엇이 필요한가요?</summary>
+*입력·출력 임베딩 크기를 조정하고 새 행을 의도적으로 초기화·학습하며, 기존 ID와 가중치 묶임을 보존하고, 토크나이저와 모델을 함께 버전 관리하며, 오래된 토크나이저를 쓰는 서비스를 거부해야 합니다.*
+</details>
+
+<details>
+<summary>Quiz 5: 인코딩/디코딩 시험에 정규화 정책을 명시해야 하는 이유는 무엇인가요?</summary>
+*일부 토크나이저는 입력을 의도적으로 정규화하므로 바이트 단위 동일성이 항상 계약은 아닙니다. 문서화된 정규화 결과와 비교하고 오프셋을 검증해야 하며, 임의의 차이를 조용히 허용하면 데이터 손실이 숨겨집니다.*
+</details>
 
 ## References
 
-1. <a id="ref-1"></a>Sennrich, R., Haddow, B., & Birch, A. (2015). *Neural machine translation of rare words with subword units*. [arXiv:1508.07909](https://arxiv.org/abs/1508.07909).
-2. <a id="ref-2"></a>Radford, A., et al. (2019). *Language models are unsupervised multitask learners*. OpenAI blog.
-3. <a id="ref-3"></a>Devlin, J., et al. (2018). *BERT: Pre-training of deep bidirectional transformers for language understanding*. [arXiv:1810.04805](https://arxiv.org/abs/1810.04805).
-4. <a id="ref-4"></a>Kudo, T., & Richardson, J. (2018). *SentencePiece: A simple and language independent subword tokenizer and detokenizer for neural text processing*. [arXiv:1808.06226](https://arxiv.org/abs/1808.06226).
+1. <a id="ref-1"></a>Radford, A., et al. (2019). *Language Models are Unsupervised Multitask Learners*. [OpenAI 보고서](https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf).
+2. <a id="ref-2"></a>Devlin, J., et al. (2019). *BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding*. [ACL Anthology](https://aclanthology.org/N19-1423/).
+3. <a id="ref-3"></a>Kudo, T., & Richardson, J. (2018). *SentencePiece: A Simple and Language Independent Subword Tokenizer and Detokenizer for Neural Text Processing*. [ACL Anthology](https://aclanthology.org/D18-2012/).
+4. <a id="ref-4"></a>Yu, L., et al. (2023). *MEGABYTE: Predicting Million-byte Sequences with Multiscale Transformers*. [arXiv:2305.07185](https://arxiv.org/abs/2305.07185).
+5. <a id="ref-5"></a>Hugging Face. *Tokenizer documentation*. [Transformers 문서](https://huggingface.co/docs/transformers/main_classes/tokenizer).

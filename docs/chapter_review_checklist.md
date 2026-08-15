@@ -40,9 +40,9 @@ Date: 2026-04-20
 - [x] 5.5 `case-study` reviewed (EN, KO)
 
 ## Chapter 6
-- [x] 6.1 `data-engineering-at-scale` reviewed (EN, KO)
-- [x] 6.2 `tokenization-science` reviewed (EN, KO)
-- [x] 6.3 `large-scale-training-stability` reviewed (EN, KO)
+- [x] 6.1 `data-engineering-at-scale` reviewed (EN, KO; practitioner review 2026-08-16)
+- [x] 6.2 `tokenization-science` reviewed (EN, KO; practitioner review 2026-08-16)
+- [x] 6.3 `large-scale-training-stability` reviewed (EN, KO; practitioner review 2026-08-16)
 - [x] 6.4 `infrastructure` reviewed (EN, KO)
 - [x] 6.5 `synthetic-data-for-pre-training` reviewed (EN, KO)
 
