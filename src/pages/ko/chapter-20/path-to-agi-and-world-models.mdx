@@ -1,216 +1,156 @@
 ---
 layout: ../../../layouts/BookLayout.astro
-title: 20.7 AGI로 가는 길과 World Models
+title: "20.7 AGI로 가는 길과 World Models"
 lang: ko
 ---
 
 # 20.7 AGI로 가는 길과 World Models
 
-AGI로 가는 길은 하나의 정답이 정해진 로드맵이 아닙니다. 현재의 language model이 무엇을 놓치고 있는지, 그리고 어떤 부족분이 가장 중요한지에 대한 분야 전체의 논쟁에 가깝습니다. 그중 하나의 영향력 있는 관점은, 아무리 크게 scale한 next-token prediction만으로는 충분하지 않을 수 있다는 주장입니다. 이 관점에서는 미래 시스템이 시간이 지나면서 행동이 환경을 어떻게 바꾸는지에 대한 더 풍부한 내부 모델도 필요하다고 봅니다.
+AGI를 만드는 확립된 엔지니어링 레시피는 없습니다. 이 용어는 추론, 학습, 계획, 행동, 감독처럼 서로 다른 역량을 묶으며, 연구자마다 각 요소의 중요성을 다르게 봅니다. **world model** 은 이 논쟁에서 유용한 시스템 개념입니다. 특히 에이전트가 행동할 때 환경이 어떻게 변할지 예측하는 모델을 뜻합니다.
 
-바로 이 지점에서 **world model** 이라는 개념이 유용해집니다. world model은 단순히 그럴듯한 출력을 생성하는 시스템이 아니라, 어떤 환경이 다양한 행동이나 조건 아래에서 어떻게 변할지 예측할 수 있을 만큼의 구조를 학습하려는 시스템이라는 뜻에 가깝습니다.
-
----
-
-## 1. 왜 world-model 아이디어가 매력적인가
-
-language model은 어떤 상황을 유창하게 설명할 수 있어도, 그 상황을 실제로 시뮬레이션하는 것은 아닐 수 있습니다. 그래서 많은 연구자들이 world-model 프레이밍을 꺼내 듭니다.
-
-짧은 비유로 보면:
-
-- 대형 언어 모델은 수많은 대본을 본 즉흥 연기자에 가까울 수 있습니다
-- world model은 결과를 앞으로 굴려 보며 시뮬레이션하는 내부 엔진에 더 가깝습니다
-
-이 비유가 완벽한 것은 아니지만, 핵심 직관은 잘 보여 줍니다. 유창함과 시뮬레이션은 겹치는 부분이 있어도 완전히 같은 것은 아닙니다.
+이 정의는 시스템이 “세계를 이해한다”는 말보다 좁고 시험하기 쉽습니다. 상태, 행동, 전이 오차, 계획 범위, 불확실성, 제어에 관한 엔지니어링 질문으로 이어집니다.
 
 ---
 
-## 2. JEPA: 영향력 있는 대안적 프레이밍
+## 1. 시퀀스 예측에서 행동 조건부 예측으로
 
-Yann LeCun의 **Joint Embedding Predictive Architecture (JEPA)** 는 이런 관점을 대표적으로 보여 주는 예입니다 [[1]](#ref-1). 핵심은 모든 저수준 세부사항을 그대로 복원하려 하기보다, **representation space** 에서 예측한다는 점입니다.
-
-즉, 다음 픽셀이나 다음 토큰을 정확히 맞히도록 강제하는 대신, 미래 예측에 중요한 압축 표현을 학습하게 하려는 것입니다. 동기는 분명합니다. 어떤 세부사항은 본질적으로 잡음에 가깝고, 더 고수준의 구조가 계획과 이해를 지탱할 수 있기 때문입니다.
-
-```python
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-
-class JEPACore(nn.Module):
-    def __init__(self, input_dim=1024, hidden_dim=512, rep_dim=256):
-        super().__init__()
-        self.encoder = nn.Sequential(
-            nn.Linear(input_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, rep_dim)
-        )
-        self.predictor = nn.Sequential(
-            nn.Linear(rep_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, rep_dim)
-        )
-
-    def forward(self, x, y):
-        rep_x = self.encoder(x)
-        rep_y = self.encoder(y).detach()
-        pred_rep_y = self.predictor(rep_x)
-        return F.mse_loss(pred_rep_y, rep_y)
-```
-
-이 예제는 교육용입니다. 실제 시스템은 훨씬 더 복잡한 구조가 필요하지만, 학습 목표를 표면적 복원이 아니라 잠재 표현으로 둘 수 있다는 점을 이해하는 데는 충분합니다.
-
----
-
-## 3. World model의 계보: 게임, 로봇, 비디오, 언어
-
-World model이라는 표현은 새 유행어처럼 들리지만, 아이디어 자체는 오래되었습니다. model-based reinforcement learning에서는 에이전트가 환경의 동역학 $p(s_{t+1} \mid s_t, a_t)$ 를 학습하고, 그 모델 안에서 행동을 미리 굴려 보는 방식을 사용해 왔습니다. Ha와 Schmidhuber의 *World Models* [[2]](#ref-2), Dreamer 계열 [[3]](#ref-3) 은 이런 흐름의 대표적인 예입니다.
-
-최근의 차이는 스케일과 모달리티입니다. 과거의 world model은 특정 게임이나 시뮬레이터 안에서 동작하는 경우가 많았습니다. 최신 연구는 텍스트, 이미지, 비디오, action, physical interaction을 하나의 거대한 예측 문제로 묶으려 합니다. 즉, world model은 단순히 “다음 프레임 생성기”가 아니라, **행동 조건부 미래 예측(action-conditioned prediction)** 과 **계획(planning)** 을 위한 내부 시뮬레이터가 되어야 합니다.
-
-### Genie 3: 구체적인 world-model 사례
-
-Google DeepMind는 **Genie 3** 를 표준적인 text-only language model이 아니라 general-purpose world model로 소개합니다 [[4]](#ref-4). DeepMind의 공식 설명에 따르면, Genie 3는 text prompt로 photorealistic interactive environment를 생성하고, 720p 해상도에서 20-24fps 수준의 실시간 상호작용을 지원하며, 몇 분 동안 환경 일관성을 유지하도록 설계되었습니다. 2026년에는 Project Genie 형태로 미국 Google AI Ultra 사용자를 대상으로 실험적 접근도 시작되었습니다 [[5]](#ref-5).
-
-이 설명이 중요한 이유는 모델을 one-shot video generation이 아니라 simulation과 interaction의 관점에서 위치시킨다는 점입니다. 사용자의 action이 세계를 바꾸고, 모델은 그 변화가 다음 순간에 어떤 관측으로 이어질지 예측합니다. 물론 이것이 곧 “world model이 AGI의 유일한 길”이라는 뜻은 아닙니다. 다만 frontier lab이 실제로 world model이라는 용어를 어떤 의미로 쓰는지 보여 주는 구체적인 사례로는 충분합니다.
-
-### World model이 LLM과 다른 질문
-
-LLM은 주로 $p(\text{text}_{t+1} \mid \text{text}_{\le t})$ 를 모델링합니다. World model은 더 넓은 조건부 예측을 요구합니다.
+언어 모델링은 $p(x_{t+1}\mid x_{\le t})$ 같은 분포를 추정합니다. world-model 목적은 관측 $o$, 행동 $a$, 보상이나 성공 신호 $r$, 목표 $g$를 포함할 수 있습니다.
 
 $$
 p(o_{t+1:t+k}, r_{t+1:t+k} \mid o_{\le t}, a_{t:t+k}, g)
 $$
 
-여기서 $o$ 는 관측(observation), $a$ 는 행동(action), $r$ 은 보상이나 성공 신호, $g$ 는 목표(goal)입니다. 중요한 차이는 action입니다. World model은 “무엇이 일어날 것인가”뿐 아니라 “내가 이렇게 행동하면 무엇이 달라질 것인가”를 배워야 합니다.
+핵심적으로 추가되는 것은 행동 변수입니다. 시스템은 무엇이 일어날지뿐 아니라 에이전트가 다른 행동을 골랐을 때 결과가 어떻게 달라지는지도 추정해야 합니다. 그럴듯한 비디오를 생성하면서도 행동 조건부 시뮬레이터로서는 형편없을 수 있으므로 시각 품질만으로는 world model을 평가할 수 없습니다.
+
+world model은 model-based reinforcement learning에서 오랜 계보를 가집니다. *World Models* 와 Dreamer는 잠재 동역학을 학습하고 상상한 trajectory를 제어 개선에 활용한 대표 사례입니다 [[1]](#ref-1), [[2]](#ref-2). 최근의 멀티모달 연구는 더 풍부한 관측과 개방형 환경으로 이 설정을 확장합니다.
 
 ---
 
-## 4. AGI 논의에서 빠지지 않는 네 가지 축
+## 2. JEPA와 표현 공간 예측
 
-AGI로 가는 길을 하나의 아키텍처로 정리하는 것은 성급합니다. 하지만 최근 연구와 제품 흐름을 보면 반복해서 등장하는 축은 있습니다.
+JEPA는 표면의 모든 세부사항을 복원하는 대신 유용한 표현을 예측하자는 영향력 있는 제안입니다 [[3]](#ref-3). 픽셀이나 토큰이 중요하지 않다는 뜻은 아닙니다. 예측할 수 없는 세부사항에 비용을 쓰는 대신 안정적이고 의사결정에 중요한 구조를 표현하는 편이 에이전트에 유리할 수 있다는 동기입니다.
 
-### 4.1 Scale과 test-time compute
+이는 일반 지능에 표현 예측만으로 충분하다는 증명이 아니라 설계 계열입니다. 실제 구현에는 representation collapse 방지, context와 target 정의, 시간·행동 조건화, 학습한 상태가 후속 의사결정에 도움이 된다는 평가가 필요합니다.
 
-사전학습 scale은 여전히 중요하지만, 최근에는 **test-time compute** 의 역할이 커졌습니다. 모델이 한 번에 답을 내는 대신, 여러 후보를 만들고, 검증하고, 도구를 쓰고, 반성하고, 다시 시도하는 방식입니다. 코딩 에이전트, 수학 추론 모델, 검색 기반 agent가 모두 이 방향을 씁니다.
+---
 
-실무적으로는 모델 파라미터 수만 볼 것이 아니라, “한 문제에 얼마만큼의 추론 예산을 쓸 것인가”를 설계해야 합니다. 고객지원 챗봇은 1초 안에 답해야 하지만, 보안 코드 리뷰나 복잡한 데이터 분석은 2분을 써도 괜찮을 수 있습니다.
+## 3. 단일 아키텍처를 넘어선 역량 축
 
-### 4.2 Tool use와 verifiable reasoning
+AGI 논의는 역량 축으로 나누면 더 구체적이 됩니다.
 
-미래 모델은 모든 것을 가중치 안에서 해결하지 않을 가능성이 큽니다. 계산은 Python에게, 검색은 DB에게, 형식 검증은 parser에게, 코드 검증은 test runner에게 맡기는 쪽이 더 안전하고 정확합니다. 중요한 것은 모델이 도구를 호출하는 능력뿐 아니라, 도구 결과를 신뢰할지 재검증할지 판단하는 능력입니다.
-
-### 4.3 Embodiment와 world modeling
-
-로봇, 자율주행, 게임 에이전트, 가상 환경 학습에서는 텍스트 설명만으로 충분하지 않습니다. 행동이 환경을 바꾸고, 그 결과가 다시 다음 행동의 조건이 됩니다. 여기서 world model은 planning과 data generation의 기반이 됩니다.
-
-### 4.4 Alignment, oversight, governance
-
-능력이 커질수록 평가와 통제가 더 중요해집니다. 18장에서 본 red teaming, scalable oversight, hallucination verification은 AGI 논의의 부록이 아니라 핵심입니다. 강한 world model이나 agent가 있더라도, 목표를 잘못 이해하거나 권한 경계를 넘으면 실제 피해가 커집니다.
-
-## 5. AI engineer를 위한 World Model 설계 관점
-
-World model을 연구 주제로만 보지 말고, 제품 설계 관점으로 나누면 훨씬 명확해집니다.
-
-| 구성요소 | 질문 | 구현 예 |
+| 축 | 엔지니어링 질문 | 측정 예 |
 | :--- | :--- | :--- |
-| State representation | 세계의 현재 상태를 무엇으로 표현할까? | latent vector, scene graph, memory store, simulator state |
-| Action conditioning | 어떤 행동을 조건으로 받을까? | keyboard/mouse action, robot action, tool call, natural language command |
-| Dynamics model | 행동 후 세계가 어떻게 바뀔까? | video predictor, latent dynamics, environment simulator |
-| Reward / objective | 무엇이 좋은 상태인가? | task success signal, human preference, verifier score |
-| Planner | 어떤 행동 시퀀스를 고를까? | search, MPC, tree search, policy model, LLM agent |
-| Verifier | 시뮬레이션이 믿을 만한가? | consistency check, physical constraints, external tests |
+| 학습·기억 | 기존 능력을 지우지 않고 새 기술을 얻는가? | forward transfer, retention, forgetting curve |
+| 추론·검증 | 여러 단계의 작업을 풀고 확인하는가? | 실행 또는 사람이 검증한 held-out task |
+| 상태·world modeling | 행동에 따른 변화를 예측하는가? | 다단계 rollout 오차와 counterfactual 정확도 |
+| 계획·도구 | 제약 아래에서 행동을 고르고 수정하는가? | 작업 성공, 도구 오류, 복구율, 비용 |
+| grounding·embodiment | 실제 관측과 개입에서도 행동이 유효한가? | simulator-to-real 전이와 개입 테스트 |
+| alignment·oversight | 사람이 제한하고 검사하며 중단할 수 있는가? | 정책 준수, escalation, audit, rollback 훈련 |
 
-이 표를 보면 world model은 단일 모델 이름이 아니라 시스템 아키텍처입니다. LLM이 planner 역할을 하고, diffusion/video model이 dynamics를 맡고, symbolic verifier가 제약 조건을 확인하는 식의 하이브리드 구성이 자연스럽습니다.
+scale과 test-time compute는 여러 축을 개선할 수 있지만 다른 축을 보장하지 않습니다. 도구 사용은 부족한 사실·계산 능력을 보완하면서도 권한, prompt injection, 부작용, 복구 문제를 만듭니다. 따라서 파라미터 수나 단일 benchmark에서 추론하지 말고 시스템으로 평가해야 합니다.
 
-### 작은 예: 업무 자동화 agent도 world model을 가진다
+---
 
-꼭 3D 환경만 world model이 아닙니다. 기업 업무 agent도 작은 world model을 가집니다.
+## 4. 시스템 엔지니어링 관점의 World Model
 
-- 현재 고객 티켓 상태
-- 주문/환불 정책
-- 사용 가능한 tool과 권한
-- 이메일을 보내면 고객과 내부 시스템이 어떻게 바뀌는지
-- 잘못된 action의 비용
+world model은 통제된 시스템의 구성요소로 보는 것이 좋습니다.
 
-이 관점으로 보면 agent 설계가 더 명확해집니다. 좋은 agent는 “그럴듯한 다음 답변”을 내는 모델이 아니라, action의 결과를 예측하고 위험한 action을 피하며 목표 상태로 이동하는 시스템입니다.
+| 구성요소 | 계약 | 시험할 실패 |
+| :--- | :--- | :--- |
+| 상태 표현 | 어떤 사실이 유지·만료되며 불확실한가? | 오래되거나 모순된 상태 |
+| 행동 schema | 어떤 행동과 parameter가 허용되는가? | 잘못되거나 과도한 권한의 행동 |
+| 동역학 모델 | 행동 뒤 상태가 어떻게 변하는가? | 누적되는 rollout 오차 |
+| planner 또는 policy | 후보 행동을 어떻게 고르는가? | reward hacking 또는 취약한 search |
+| 관측 갱신 | 실제 피드백과 예측을 어떻게 조정하는가? | 도구 오류나 새 근거 무시 |
+| verifier | 어떤 제약이 계획이나 결과를 거부하는가? | 자신감 있지만 잘못된 전이 |
+| 복구 제어 | pause, retry, rollback, escalation을 어떻게 하는가? | 되돌릴 수 없는 부작용 |
 
-## 6. 무엇이 비교적 확립됐고, 무엇이 아직 추측에 가까운가?
+이 관점은 로봇에만 적용되지 않습니다. 고객지원 agent의 상태에는 티켓 상태, 정책, 권한, 이전 행동이 포함됩니다. 이 agent의 “world model”에는 환불, 데이터베이스 쓰기, 이메일이 무엇을 바꿀지에 대한 예측이 들어갑니다. 고위험 행동은 모델이 상상한 상태에만 의존하지 말고 preview, dry run, idempotency key, 승인 경계, 외부 source of truth를 사용해야 합니다.
+
+---
+
+## 5. Genie와 frontier 주장에 대한 근거 경계
+
+Google DeepMind는 Genie 3를 텍스트로 interactive environment를 생성하고 실시간으로 실행하는 general-purpose world model로 설명합니다 [[4]](#ref-4). 같은 공식 페이지는 제한된 행동 공간, 불완전한 multi-agent interaction, 일관성 실패, 수 분 규모의 상호작용 범위라는 중요한 한계도 공개합니다. 이것이 AGI로 가는 디딤돌이 될 수 있다는 DeepMind의 표현은 **공급자의 연구 주장** 이며, AGI가 달성됐거나 이것이 유일한 경로라는 증거가 아닙니다.
+
+OpenAI의 초기 Sora 연구는 비디오 생성을 “world simulators”라는 표현으로 설명했습니다 [[5]](#ref-5). 이 연구는 scale한 비디오 모델이 유용한 시뮬레이션 행동을 보일 수 있다는 근거이지만, 모든 생성 장면에서 신뢰할 수 있는 인과 모델, 지속 상태, 행동 조건부 계획을 확립하지는 않습니다.
+
+frontier 시스템에는 학습 데이터, 행동 인터페이스, 파라미터 수, 개입 protocol, 평가셋, 실패 분포, 접근 조건 가운데 무엇이 공개됐고 무엇이 **공개되지 않았는지** 기록합니다. 데모에서 내부 아키텍처를 추론하지 않습니다.
 
 ### 비교적 확립된 것
 
-- world model은 robotics, simulated environment, model-based control에서 의미 있는 연구 방향이다
-- 정확한 표면 복원보다 representation learning이 더 적절한 과업이 실제로 존재한다
+- model-based control과 latent dynamics는 확립된 연구 영역입니다.
+- 정확한 표면 복원만이 유용한 예측 목적은 아닙니다.
+- 긴 상상 rollout에서는 오차가 누적되므로 이를 측정해야 합니다.
 
 ### 떠오르는 것
 
-- generation, simulation, agent training loop를 결합한 대형 multimodal system
-- 더 강한 에이전트를 훈련하기 위한 simulated world의 활용
-- test-time compute, tool use, verifier, memory를 결합한 agentic workflow
-- text-only LLM과 video/world model의 결합
+- 생성, 상호작용, agent 학습을 결합한 대형 멀티모달 모델
+- 학습 curriculum과 counterfactual data를 만드는 learned simulator
+- LLM이 계획하고 simulator가 예측하며 외부 도구가 검증하는 하이브리드 시스템
 
-### 여전히 추측에 가까운 것
+### 여전히 추측인 것
 
-- world model이 현재 LLM에 빠진 **결정적인** 한 가지 요소라는 주장
-- 특정 아키텍처 하나가 이미 AGI의 길을 보여 줬다는 주장
-- scaling만으로 모든 planning/grounding 문제가 자연스럽게 해결된다는 주장
-- 시뮬레이션 환경에서 잘한 agent가 현실 세계에서도 같은 방식으로 안전하게 일반화된다는 주장
-
-이 구분은 톤에서 중요합니다. 아이디어 자체는 중요하지만, 결과는 아직 열려 있습니다.
-
-## 7. Practical Roadmap: 지금 팀이 해볼 수 있는 것
-
-AGI를 직접 만들지 않더라도, world-model 관점은 AI 제품을 더 견고하게 만드는 데 도움이 됩니다.
-
-1. **상태를 명시하라:** agent가 암묵적으로 대화 기록만 보게 하지 말고, 현재 작업 상태, 완료 조건, 남은 권한, 위험 플래그를 구조화합니다.
-2. **행동 전 예측을 요구하라:** tool call 전에 “이 action이 어떤 상태 변화를 만들 것인가”를 모델이 짧게 쓰게 합니다.
-3. **실행 후 관측을 업데이트하라:** tool result를 단순 텍스트로 붙이지 말고 state store에 반영합니다.
-4. **시뮬레이션 가능한 것은 먼저 시뮬레이션하라:** SQL은 dry-run, 결제는 preview, 이메일은 draft, 코드 수정은 test sandbox에서 먼저 실행합니다.
-5. **planner와 executor를 분리하라:** 고위험 action은 planner 모델의 제안만으로 실행하지 말고, executor policy와 권한 시스템을 따로 둡니다.
-6. **counterfactual eval을 만들라:** “이 tool 결과가 실패했다면?”, “검색 문서가 악성이라면?”, “사용자가 중간에 목표를 바꾸면?” 같은 케이스를 평가셋에 넣습니다.
-
-이런 설계는 거창한 AGI 연구가 아니라, 오늘의 엔터프라이즈 AI agent를 안전하게 만드는 실용적인 engineering입니다.
+- 하나의 world-model 아키텍처가 AGI에 빠진 결정적 요소라는 주장
+- 생성 환경에서의 성공이 물리 세계로 안전하게 전이된다는 주장
+- scale만으로 grounding, 장기 계획, oversight가 해결된다는 주장
 
 ---
 
-## 8. Practical Takeaway
+## 6. 실전 엔지니어링 로드맵
 
-world-model 논의의 가치는 AGI 논쟁을 끝낸다는 데 있지 않습니다. 오히려 질문을 더 날카롭게 만든다는 데 있습니다. 현재 시스템이 유창하지만 취약하다면, 더 풍부한 시뮬레이션, environment modeling, action-conditioned prediction이 다음 탐색 지점이 되는 것은 충분히 자연스럽습니다. 다만 그것이 충분조건인지 여부는 아직 해결되지 않았습니다.
+AGI를 만든다고 주장하지 않아도 엔지니어링 팀은 world-model 관점을 활용할 수 있습니다.
+
+1. **상태와 source of truth를 정의합니다.** field, freshness, 불확실성, owner, 권위 있는 외부 시스템을 명시합니다.
+2. **행동 계약을 정의합니다.** 각 도구의 typed schema, 권한, 비용, idempotency, timeout, 가역성 여부를 기록합니다.
+3. **실행 전에 예측합니다.** 예상 상태 변화와 위험을 쓰게 하고 실행 후 실제 관측과 비교합니다.
+4. **안전한 simulator를 사용합니다.** SQL dry run, 결제 preview, 이메일 draft, code sandbox를 부작용 전에 실행합니다.
+5. **다단계 오차를 측정합니다.** 한 단계 정확도, rollout 열화, calibration, 예상 밖 관측 뒤 복구, 목표 완수를 평가합니다.
+6. **counterfactual test를 만듭니다.** 도구 실패, 악성 관측, 누락 데이터, 지연 결과, 사용자 목표 변경을 변형합니다.
+7. **부작용에 gate를 둡니다.** 자금 이동, 삭제, 외부 통신, 권한 변경에 사람 승인과 자동 중단 임계값을 둡니다.
+8. **복구를 연습합니다.** artifact bundle을 고정하고 모든 상태 전이를 기록하며 last-known-good policy와 rollback을 시험합니다.
+
+release gate에는 작업 성공률, 핵심 slice 최소치, 위험 행동률, tool-call 유효성, 상태 일관성 오류, 복구율, 지연 시간, 비용이 포함되어야 합니다. 선별한 몇 trajectory가 아니라 paired trial과 불확실성으로 후보를 비교합니다.
+
+---
+
+## 7. Practical Takeaway
+
+world model은 행동이 상태를 어떻게 바꾸는지 예측하고, 불확실성을 드러내며, 실제 관측으로 예측을 교정하라는 엔지니어링 문제를 선명하게 만듭니다. 중요한 연구·시스템 설계 방향이지만 AGI 논쟁을 끝내지는 않습니다. 실무 기준은 관찰 가능한 역량, 문서화된 한계, 통제된 행동, 복구 가능한 운영입니다.
 
 ---
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: 연구자들이 모든 진보를 단순한 더 큰 language modeling으로 보지 않고 “world model”이라는 표현을 쓰는 이유는 무엇인가요?</summary>
-*이 용어가 단순히 그럴듯한 시퀀스를 생성하는 것을 넘어, 특히 행동 아래에서 환경이 어떻게 변하는지 예측할 수 있을 만큼의 구조를 학습하는 목표를 강조하기 때문입니다.*
+<summary>Quiz 1: 행동 조건부 world-model 목적은 일반적인 next-token prediction과 무엇이 다른가요?</summary>
+*후보 행동을 미래 관측이나 결과의 조건으로 명시하여, 선택한 행동이 상태를 어떻게 바꾸는지 counterfactual 질문을 할 수 있습니다.*
 </details>
 
 <details>
-<summary>Quiz 2: JEPA식 예측의 핵심 직관은 무엇인가요?</summary>
-*모든 저수준 세부사항을 복원하려 하기보다 representation space에서 예측함으로써, 계획과 이해에 더 중요한 압축 구조를 학습하려는 것입니다.*
+<summary>Quiz 2: 시각적으로 설득력 있는 비디오 모델이 계획용 world model로는 형편없을 수 있는 이유는 무엇인가요?</summary>
+*그럴듯한 픽셀이 올바른 인과 전이, 지속 상태, 보정된 불확실성, 여러 단계 개입에 대한 정확한 반응을 보장하지 않기 때문입니다.*
 </details>
 
 <details>
-<summary>Quiz 3: Google DeepMind의 공개 설명 기준으로 Genie 3가 world-model 논의에서 의미 있는 이유는 무엇인가요?</summary>
-*text prompt로 interactive environment를 생성하고 일정 시간 유지하는 시스템으로 소개되기 때문입니다. 이는 one-shot generation만이 아니라 simulation의 성격을 띱니다.*
+<summary>Quiz 3: JEPA식 표현 예측의 실용적 동기는 무엇인가요?</summary>
+*예측하기 어려운 모든 표면 세부를 복원하는 대신 안정적이고 의사결정에 중요한 구조에 용량을 집중할 수 있다는 것입니다. 다만 후속 과업의 유용성은 따로 증명해야 합니다.*
 </details>
 
 <details>
-<summary>Quiz 4: AGI 논의에서 비교적 확립된 주장과 추측에 가까운 주장을 분리하는 것이 왜 중요한가요?</summary>
-*실제 기술 진전과 강한 전망이 뒤섞여 있기 때문입니다. 이를 구분하지 않으면 불확실한 아이디어가 이미 정착한 사실처럼 들릴 수 있습니다.*
+<summary>Quiz 4: Genie 3의 AGI 프레이밍을 공급자 주장으로 표시해야 하는 이유는 무엇인가요?</summary>
+*공식 페이지가 연구 방향과 중요한 한계를 함께 제시하기 때문입니다. 이 시스템이 AGI이거나, 접근법이 충분하거나, 다른 경로가 불가능하다는 증거는 아닙니다.*
 </details>
 
 <details>
-<summary>Quiz 5: 업무 자동화 agent를 world-model 관점으로 설계하면 어떤 점이 달라지나요?</summary>
-*agent를 단순한 답변 생성기가 아니라 상태를 업데이트하고 action의 결과를 예측하는 시스템으로 보게 됩니다. 따라서 현재 작업 상태, tool 권한, 예상 상태 변화, 실행 후 관측, rollback 조건을 명시적으로 설계하게 되어 더 안전하고 검증 가능한 workflow를 만들 수 있습니다.*
+<summary>Quiz 5: 업무 agent를 단순한 텍스트 생성기가 아니라 작은 world-model 시스템으로 만드는 요소는 무엇인가요?</summary>
+*운영 상태를 추적하고, 도구 행동의 효과를 예측하며, 실제 관측으로 예측을 수정하고, 권한·검증·rollback을 사용해 안전하게 목표로 이동하는 것입니다.*
 </details>
-
----
 
 ## References
 
-1. <a id="ref-1"></a>LeCun, Y. (2022). *A Path Towards Autonomous Machine Intelligence.* [arXiv:2206.14176](https://arxiv.org/abs/2206.14176).
-2. <a id="ref-2"></a>Ha, D., & Schmidhuber, J. (2018). *World Models.* [arXiv:1803.10122](https://arxiv.org/abs/1803.10122).
-3. <a id="ref-3"></a>Hafner, D., et al. (2020). *Dream to Control: Learning Behaviors by Latent Imagination.* [arXiv:1912.01603](https://arxiv.org/abs/1912.01603).
-4. <a id="ref-4"></a>Google DeepMind. (2025). *Genie 3: A New Frontier for World Models.* [Google DeepMind Blog](https://deepmind.google/blog/genie-3-a-new-frontier-for-world-models/), [Model page](https://deepmind.google/models/genie/).
-5. <a id="ref-5"></a>Google. (2026). *Project Genie: Experimenting with infinite, interactive worlds.* [Google Blog](https://blog.google/innovation-and-ai/models-and-research/google-deepmind/project-genie/).
+1. <a id="ref-1"></a>Ha, D., & Schmidhuber, J. (2018). *World Models*. [arXiv:1803.10122](https://arxiv.org/abs/1803.10122).
+2. <a id="ref-2"></a>Hafner, D., et al. (2020). *Dream to Control: Learning Behaviors by Latent Imagination*. [arXiv:1912.01603](https://arxiv.org/abs/1912.01603).
+3. <a id="ref-3"></a>LeCun, Y. (2022). *A Path Towards Autonomous Machine Intelligence*. [OpenReview](https://openreview.net/forum?id=BZ5a1r-kVsf).
+4. <a id="ref-4"></a>Google DeepMind. (2026). *Genie*. [Official model page](https://deepmind.google/models/genie/).
+5. <a id="ref-5"></a>OpenAI. (2024). *Video generation models as world simulators*. [OpenAI](https://openai.com/index/video-generation-models-as-world-simulators/).

@@ -6,121 +6,151 @@ lang: en
 
 # 20.7 Path to AGI & World Models
 
-The path to AGI is not one settled roadmap. It is a field-wide argument about what current language models are missing and which missing ingredients matter most. One influential view says that next-token prediction, even at enormous scale, is not the whole story. According to this view, future systems also need richer internal models of how actions change environments over time.
+There is no established engineering recipe for AGI. The term bundles different capabilities—reasoning, learning, planning, acting, and oversight—and different researchers assign different importance to each. A **world model** is one useful system concept in this debate: a model that predicts how an environment may change, especially when an agent takes an action.
 
-That is where the idea of a **world model** becomes useful. A world model is not just a generator of plausible outputs. It is a system that tries to capture enough structure about an environment that it can predict what may happen next under different actions or conditions.
-
----
-
-## 1. Why the World-Model Idea Is Appealing
-
-A language model can often describe a situation fluently without actually simulating it. This is one reason people reach for the world-model framing.
-
-A simple analogy helps:
-
-- a large language model can resemble a talented improviser that has seen many scripts
-- a world model aims to behave more like an internal simulator that can roll forward consequences
-
-The analogy is imperfect, but it captures the main intuition. Fluency and simulation are related, yet not identical.
+That definition is narrower and more testable than saying a system “understands the world.” It leads to engineering questions about state, actions, transition error, planning horizon, uncertainty, and control.
 
 ---
 
-## 2. JEPA as an Influential Alternative Framing
+## 1. From Sequence Prediction to Action-Conditioned Prediction
 
-Yann LeCun’s **Joint Embedding Predictive Architecture (JEPA)** is one of the clearest examples of this line of thinking [[1]](#ref-1). The key idea is to predict in **representation space** rather than reconstructing every low-level detail.
+Language modeling estimates a distribution such as $p(x_{t+1}\mid x_{\le t})$. A world-model objective may instead include observations $o$, actions $a$, rewards or success signals $r$, and a goal $g$:
 
-Instead of forcing the model to predict the exact next pixel or token, JEPA-style systems try to learn a compressed representation of what matters for future prediction. The motivation is that some details are inherently noisy, while higher-level structure is what supports planning and understanding.
+$$
+p(o_{t+1:t+k}, r_{t+1:t+k} \mid o_{\le t}, a_{t:t+k}, g)
+$$
 
-```python
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
+The action variable is the key addition. The system must estimate not only what is likely to happen, but how outcomes differ when an agent chooses another action. A model can generate plausible video while being a poor action-conditioned simulator, so visual quality alone is not an adequate world-model metric.
 
-class JEPACore(nn.Module):
-    def __init__(self, input_dim=1024, hidden_dim=512, rep_dim=256):
-        super().__init__()
-        self.encoder = nn.Sequential(
-            nn.Linear(input_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, rep_dim)
-        )
-        self.predictor = nn.Sequential(
-            nn.Linear(rep_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, rep_dim)
-        )
-
-    def forward(self, x, y):
-        rep_x = self.encoder(x)
-        rep_y = self.encoder(y).detach()
-        pred_rep_y = self.predictor(rep_x)
-        return F.mse_loss(pred_rep_y, rep_y)
-```
-
-This example is illustrative. Real systems require far richer structure, but the educational point remains useful: the learning target can be a latent representation instead of a surface-level reconstruction.
+World models have a long lineage in model-based reinforcement learning. *World Models* and Dreamer are influential examples of learning latent dynamics and using imagined trajectories to improve control [[1]](#ref-1), [[2]](#ref-2). Modern multimodal work extends the setting to richer observations and larger, more open-ended environments.
 
 ---
 
-## 3. Genie 3 as a Concrete World-Model Example
+## 2. JEPA and Representation-Space Prediction
 
-Google DeepMind presents **Genie 3** as a general-purpose world model rather than as a standard text-only language model [[2]](#ref-2). In DeepMind’s official description, Genie 3 can generate **interactive environments from text prompts**, render them in real time, and maintain consistency for a limited duration. That framing is important because it emphasizes simulation and interaction, not just one-shot generation.
+JEPA is an influential proposal for predicting useful representations instead of reconstructing every surface detail [[3]](#ref-3). The motivation is not that pixels or tokens never matter. It is that an agent may benefit from representing stable, decision-relevant structure while avoiding the cost of predicting unpredictable detail.
 
-This does **not** prove that world models are the single path to AGI. It does show what the term looks like when a frontier lab uses it in practice: a model that tries to generate and maintain a navigable environment rather than only a standalone sequence.
+This remains a design family, not a proof that representation prediction is sufficient for general intelligence. An implementation still needs safeguards against representation collapse, a definition of what context and target contain, temporal and action conditioning, and evaluations showing that the learned state supports downstream decisions.
 
 ---
 
-## 4. What Is Established, Emerging, and Speculative?
+## 3. Capability Axes Beyond One Architecture
+
+AGI discussions become more concrete when separated into capability axes.
+
+| Axis | Engineering question | Example measurement |
+| :--- | :--- | :--- |
+| Learning and retention | Can the system acquire new skills without erasing old ones? | Forward transfer, retention, and forgetting curves |
+| Reasoning and verification | Can it solve and check multi-step work? | Held-out tasks with executable or human-verified outcomes |
+| State and world modeling | Can it predict action-conditioned changes? | Multi-step rollout error and counterfactual accuracy |
+| Planning and tools | Can it choose and revise actions under constraints? | Task success, tool errors, recovery rate, and cost |
+| Grounding and embodiment | Does behavior remain valid under real observations and interventions? | Simulator-to-real transfer and intervention tests |
+| Alignment and oversight | Can people constrain, inspect, and stop it? | Policy compliance, escalation, auditability, and rollback drills |
+
+Scale and test-time compute can improve several axes, but neither guarantees the others. Tool use can compensate for missing factual or computational capability, while also introducing permissions, prompt injection, side effects, and recovery problems. Capability must therefore be evaluated as a system, not inferred from parameter count or one benchmark.
+
+---
+
+## 4. World Models as an Engineering View
+
+A world model is best treated as a component in a controlled system.
+
+| Component | Contract | Failure to test |
+| :--- | :--- | :--- |
+| State representation | Which facts persist, expire, or remain uncertain? | Stale or contradictory state |
+| Action schema | Which actions and parameters are legal? | Invalid or over-privileged action |
+| Dynamics model | How does state change after an action? | Compounding rollout error |
+| Planner or policy | How are candidate actions selected? | Reward hacking or brittle search |
+| Observation update | How is real feedback reconciled with prediction? | Ignoring tool errors or new evidence |
+| Verifier | Which constraints can reject a plan or result? | Confident but invalid transition |
+| Recovery control | How are pause, retry, rollback, and escalation handled? | Irreversible side effects |
+
+This view applies beyond robotics. A support agent has a state consisting of ticket status, policy, permissions, and prior actions. Its “world model” includes predictions about what a refund, database write, or email will change. High-risk actions should use previews, dry runs, idempotency keys, approval boundaries, and an external source of truth rather than relying on the model's imagined state.
+
+---
+
+## 5. Evidence Boundaries: Genie and Other Frontier Claims
+
+Google DeepMind describes Genie 3 as a general-purpose world model that generates interactive environments from text and runs them in real time [[4]](#ref-4). The same official page reports important limits: restricted action spaces, imperfect multi-agent interaction, consistency failures, and interaction horizons measured in minutes. DeepMind's statement that this could be a stepping stone toward AGI is a **provider research claim**, not evidence that AGI has been achieved or that this is the only path.
+
+OpenAI's earlier Sora research used the “world simulators” framing for video generation [[5]](#ref-5). That work is evidence that scaled video models can show useful simulated behaviors; it does not establish a reliable causal model, persistent state, or action-conditioned planning in every generated scene.
+
+For frontier systems, record what is disclosed and what is **undisclosed**: training data, action interface, parameter count, intervention protocol, evaluation set, failure distribution, and access conditions. Do not infer internal architecture from a demo.
 
 ### Established
 
-- World models are a meaningful research direction in robotics, simulated environments, and model-based control.
-- Representation learning matters when exact reconstruction is not the best learning objective.
+- Model-based control and latent dynamics are established research areas.
+- Exact surface reconstruction is not the only useful prediction objective.
+- Error compounds across long imagined rollouts and must be measured.
 
 ### Emerging
 
-- Large multimodal systems that combine generation, simulation, and agent training loops.
-- Using simulated worlds as training grounds for more capable agents.
+- Large multimodal models that combine generation, interaction, and agent training.
+- Learned simulators used to create training curricula and counterfactual data.
+- Hybrid systems in which an LLM plans, a simulator predicts, and external tools verify.
 
 ### Speculative
 
-- The claim that world models are *the* decisive ingredient missing from current LLMs.
-- The claim that one specific architecture has already shown the path to AGI.
-
-That distinction matters for tone. The idea is important. The outcome is still open.
+- One world-model architecture is the decisive missing ingredient for AGI.
+- Success in a generated environment transfers safely to the physical world.
+- Scaling alone resolves grounding, long-horizon planning, and oversight.
 
 ---
 
-## 5. Practical Takeaway
+## 6. Practical Engineering Roadmap
 
-The value of the world-model discussion is not that it settles the AGI debate. It is that it sharpens the question. If current systems are fluent but brittle, then richer simulation, environment modeling, and action-conditioned prediction become reasonable places to look next. Whether those ingredients are sufficient is still unresolved.
+An engineering team can use the world-model view without claiming to build AGI.
+
+1. **Define the state and source of truth.** Specify fields, freshness, uncertainty, ownership, and which external system is authoritative.
+2. **Define action contracts.** Give each tool a typed schema, permissions, cost, idempotency behavior, timeout, and reversible or irreversible classification.
+3. **Predict before execution.** Ask for the expected state delta and risk, then compare it with the real observation after execution.
+4. **Use safe simulators.** Run SQL dry runs, payment previews, email drafts, and code sandboxes before side effects.
+5. **Measure multi-step error.** Evaluate one-step accuracy, rollout degradation, calibration, recovery after an unexpected observation, and goal completion.
+6. **Build counterfactual tests.** Vary tool failures, malicious observations, missing data, delayed results, and user goal changes.
+7. **Gate side effects.** Set human approval and automated abort thresholds for money movement, deletion, external communication, and privilege changes.
+8. **Rehearse recovery.** Pin the artifact bundle, log every state transition, maintain a last-known-good policy, and test rollback.
+
+A release gate should include task success, critical-slice minima, unsafe-action rate, tool-call validity, state-consistency errors, recovery rate, latency, and cost. Compare candidates with paired trials and uncertainty rather than a few curated trajectories.
+
+---
+
+## 7. Practical Takeaway
+
+World models sharpen an engineering problem: predict how actions change state, expose uncertainty, and correct predictions from real observations. They are a valuable research and system-design direction, but they do not settle the AGI debate. The practical standard is observable capability, documented limitations, controlled actions, and recoverable operation.
 
 ---
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: Why do researchers use the term “world model” instead of treating all progress as just larger language modeling?</summary>
-*Because the term highlights a different goal: learning enough structure about an environment to predict how it changes, especially under actions, rather than only generating plausible sequences.*
+<summary>Quiz 1: What distinguishes an action-conditioned world-model objective from ordinary next-token prediction?</summary>
+*It explicitly conditions future observations or outcomes on candidate actions, allowing counterfactual questions about how a chosen action changes the state.*
 </details>
 
 <details>
-<summary>Quiz 2: What is the main intuition behind JEPA-style prediction?</summary>
-*It predicts in representation space rather than reconstructing every low-level detail, on the assumption that compact, meaningful structure can be more useful for planning and understanding.*
+<summary>Quiz 2: Why can a visually convincing video model still be a poor world model for planning?</summary>
+*Plausible pixels do not guarantee correct causal transitions, persistent state, calibrated uncertainty, or accurate responses to interventions over multiple steps.*
 </details>
 
 <details>
-<summary>Quiz 3: According to Google DeepMind’s public description, what makes Genie 3 relevant to the world-model discussion?</summary>
-*DeepMind presents it as a system that generates interactive environments from text prompts and maintains them over time, which fits the idea of simulation rather than one-shot generation alone.*
+<summary>Quiz 3: What is the practical motivation for JEPA-style representation prediction?</summary>
+*It may focus capacity on stable, decision-relevant structure instead of reconstructing every unpredictable surface detail, but downstream usefulness still has to be demonstrated.*
 </details>
 
 <details>
-<summary>Quiz 4: Why is it important to separate established claims from speculative ones in AGI discussions?</summary>
-*Because the field contains real technical progress alongside strong forecasts. Mixing them makes uncertain ideas sound more settled than they are.*
+<summary>Quiz 4: Why should Genie 3's AGI framing be labeled a provider claim?</summary>
+*The official page presents both a research direction and significant limitations. It does not prove that the system is AGI, that the approach is sufficient, or that alternatives cannot work.*
 </details>
 
----
+<details>
+<summary>Quiz 5: What makes a business agent a small world-model system rather than only a text generator?</summary>
+*It tracks operational state, predicts the effects of tool actions, reconciles predictions with real observations, and uses permissions, verification, and rollback to move toward a goal safely.*
+</details>
 
 ## References
 
-1. <a id="ref-1"></a>LeCun, Y. (2022). *A Path Towards Autonomous Machine Intelligence.* [arXiv:2206.14176](https://arxiv.org/abs/2206.14176).
-2. <a id="ref-2"></a>Google DeepMind. (2026). *Genie 3: A New Frontier for World Models.* [Google DeepMind Blog](https://deepmind.google/blog/genie-3-a-new-frontier-for-world-models/).
+1. <a id="ref-1"></a>Ha, D., & Schmidhuber, J. (2018). *World Models*. [arXiv:1803.10122](https://arxiv.org/abs/1803.10122).
+2. <a id="ref-2"></a>Hafner, D., et al. (2020). *Dream to Control: Learning Behaviors by Latent Imagination*. [arXiv:1912.01603](https://arxiv.org/abs/1912.01603).
+3. <a id="ref-3"></a>LeCun, Y. (2022). *A Path Towards Autonomous Machine Intelligence*. [OpenReview](https://openreview.net/forum?id=BZ5a1r-kVsf).
+4. <a id="ref-4"></a>Google DeepMind. (2026). *Genie*. [Official model page](https://deepmind.google/models/genie/).
+5. <a id="ref-5"></a>OpenAI. (2024). *Video generation models as world simulators*. [OpenAI](https://openai.com/index/video-generation-models-as-world-simulators/).
