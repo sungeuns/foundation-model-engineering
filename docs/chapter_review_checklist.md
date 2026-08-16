@@ -119,11 +119,11 @@ Date: 2026-04-20
 - [x] 16.6 `agent-reliability-recovery-and-guardrails` reviewed (EN, KO)
 
 ## Chapter 17
-- [x] 17.1 `academic-benchmarks` reviewed (EN, KO)
+- [x] 17.1 `academic-benchmarks` reviewed (EN, KO; practitioner review 2026-08-16)
 - [x] 17.2 `llm-as-a-judge` reviewed (EN, KO)
 - [x] 17.3 `elo-rating-and-leaderboards` reviewed (EN, KO)
-- [x] 17.4 `contamination-issues` reviewed (EN, KO)
-- [x] 17.5 `production-evaluation-and-release-gates` reviewed (EN, KO)
+- [x] 17.4 `contamination-issues` reviewed (EN, KO; practitioner review 2026-08-16)
+- [x] 17.5 `production-evaluation-and-release-gates` reviewed (EN, KO; practitioner review 2026-08-16)
 - [ ] 17.6 `commercial-model-benchmarks` pending current snapshot verification (EN, KO)
 
 ## Chapter 18

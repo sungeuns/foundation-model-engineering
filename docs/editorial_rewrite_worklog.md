@@ -198,11 +198,11 @@ Review completed on 2026-04-16 for every EN/KO sub-chapter pair below.
 - [ ] self-improving-agents (EN/KO pair; current evidence review pending)
 
 ### chapter-17
-- [x] academic-benchmarks (EN/KO pair)
-- [x] contamination-issues (EN/KO pair)
+- [x] academic-benchmarks (EN/KO pair; 2026-08-16 practitioner rewrite)
+- [x] contamination-issues (EN/KO pair; 2026-08-16 practitioner rewrite)
 - [x] elo-rating-and-leaderboards (EN/KO pair)
 - [x] llm-as-a-judge (EN/KO pair)
-- [x] production-evaluation-and-release-gates (EN/KO pair)
+- [x] production-evaluation-and-release-gates (EN/KO pair; 2026-08-16 practitioner rewrite)
 - [ ] commercial-model-benchmarks (EN/KO pair; current snapshot verification pending)
 
 ### chapter-18

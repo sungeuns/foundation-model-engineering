@@ -6,129 +6,117 @@ lang: en
 
 # 17.5 Production Evaluation and Release Gates
 
-Consider a candidate model that wins judge-based comparisons in the lab, then increases support tickets after rollout because its refusals became less predictable and its tool calls slowed down a critical workflow. That gap between "bench better" and "ship better" is the reason release gates exist.
-
-Production evaluation is not merely a scoreboard. It is a decision system that connects research metrics to deployment decisions: what must improve, what is allowed to stay flat, which regressions block release, and which signals only become visible after rollout.
+A model is ready when a specific immutable artifact passes predeclared offline and online gates—not when one benchmark score rises. The release process must make the decision reproducible, identify who can approve it, and switch back safely when reality differs from the lab.
 
 ---
 
-## 1. Offline Evaluation Is a Gate, Not the Whole Decision
+## Immutable Artifact Bundle
 
-Offline evaluation is still essential. It is where teams detect large regressions cheaply and repeatedly.
+Evaluate and deploy one **immutable artifact bundle** containing hashes for:
 
-Typical offline checks include:
+- base model and every adapter or merged checkpoint;
+- tokenizer, special-token map, chat template, and generation config;
+- tool schemas, retrieval/index revision, safety policy, and prompt assets;
+- code commit, resolved config, container, CUDA/framework/kernel versions;
+- training/evaluation data manifests, objective, and decoding seeds.
 
-- benchmark suites
-- task-specific regression sets
-- safety tests
-- tool-use or workflow tests
-- judge-based pairwise comparisons
-
-But offline scores do not tell the whole story. They rarely capture freshness, user patience, or how a model behaves under real product traffic.
-
-### Build a Release Packet, Not a Single Score
-
-A practical release review usually combines four views at once:
-
-- **benchmark regressions:** broad capability changes
-- **private workflow evals:** product-specific tasks that actually matter
-- **judge packet:** pairwise or rubric-based comparisons with calibration checks
-- **systems packet:** latency, cost, and tool-use reliability
-
-Thinking this way prevents a single impressive leaderboard number from dominating the decision.
+A champion/candidate registry records bundle identity, owner, intended traffic, approvals, evaluation report, and last-known-good predecessor. Reject base/adapter/tokenizer/template incompatibility before loading. A model-name string is not an artifact identity.
 
 ---
 
-## 2. Judge Calibration and Benchmark Hygiene
+## Release Packet and Statistical Decision
 
-If LLM-as-a-Judge is used in release decisions, the judge itself must be monitored.
+Freeze the baseline hash, prompts, rubrics, judge/verifier artifacts, tool state, fixed seeds, and decoding settings. The packet reports raw per-example results and:
 
-### Practical Rules
+- target/domain, base-retention, safety/over-refusal, format/tool, privacy/security slices;
+- response length, entropy, calibration, hallucination/citation evidence;
+- latency **p50, p95, p99**, throughput, cost, OOM/error/tool-retry rates;
+- slice sample counts and critical failures that an average must not hide.
 
-- maintain a calibration set with human labels
-- track agreement drift over time
-- avoid relying on a single related model family as the only judge
-- audit position bias and verbosity bias regularly
+For paired outcomes, use a **paired bootstrap** confidence interval or paired permutation/randomization test. Predeclare minimum effect, alpha/error tolerance, **sample size** or power rationale, tie handling, and slice minimums. Inspect disagreements and adjudicate a sample; statistical significance does not establish product significance.
 
-Benchmark hygiene matters just as much:
-
-- version eval sets
-- record model training cutoff dates
-- keep holdout sets private when possible
-- check for contamination before declaring progress
-
-Freshness-aware and contamination-aware benchmarks such as LiveBench are useful because they reduce the chance that offline progress is mostly memorization [[3]](#ref-3). But they still complement, rather than replace, private regression sets tied to your own product.
-
-Another recent warning is **Preference Leakage**: if the judge and the synthetic-data pipeline are too closely related, release decisions can quietly favor familiar model families instead of genuinely better behavior [[2]](#ref-2).
+LLM judges require human calibration on the target rubric, position randomization, and agreement/error analysis by slice. Executable or rule-based verifiers take precedence when they directly test the requirement.
 
 ---
 
-## 3. Release Gates Need Clear Blocking Criteria
+## Gate Decision Table
 
-A release gate is useful only when it is explicit.
+Every metric maps to an action, not merely a dashboard color.
 
-### Example Gate Structure
+| Gate | Pass | Review | Block |
+|---|---|---|---|
+| Target quality | lower confidence bound clears the minimum effect | uncertain or slice-limited | material regression |
+| Retention | all protected slices within bounds | noncritical borderline slice | critical capability regression |
+| Safety/privacy | no critical failure; rates within bounds | adjudication needed | any severity-defined blocker |
+| Format/tools | schema and side-effect tests pass | recoverable warning | invalid action or unauthorized effect |
+| Systems | latency/cost/error within SLO | capacity plan required | OOM, retry storm, or SLO breach |
 
-1. No critical safety regression
-2. No statistically meaningful regression on core workflows
-3. Judge-based win rate above threshold on target tasks
-4. Latency and cost remain inside budget
-5. Canary rollout metrics stay healthy
-
-This turns evaluation from a vague “the new model looks better” discussion into an operational contract.
-
----
-
-## 4. Canary Releases Close the Loop
-
-Offline evaluation reduces risk. Canary releases reveal reality.
-
-Typical canary metrics include:
-
-- refusal rate drift
-- answer-quality complaints
-- latency regressions
-- tool-call failure rate
-- user retention or conversion on the affected workflow
-
-Many teams also add **shadow traffic** before a user-facing canary so they can inspect latency, tool behavior, and refusal changes without exposing the full workflow to end users.
-
-The main idea is simple: do not expose the full user base before the new model proves itself under live traffic.
+The gate definition includes owner, data window, threshold, confidence rule, missing-data behavior, and exception approver. Missing evidence is not a zero and not a pass.
 
 ---
 
-## 5. Practical Takeaway
+## Shadow, Canary, and Ramp-up
 
-Production evaluation is the bridge between benchmark culture and product engineering. Offline tests catch obvious regressions, judges scale qualitative review, and canaries reveal real-world behavior. Release decisions should be based on all three, not on leaderboard movement alone.
+These stages answer different questions:
+
+1. **Shadow:** candidate receives mirrored inputs but cannot produce user-visible output or external side effects. Compare outputs, latency, and tool plans.
+2. **Canary:** a small randomized eligible cohort receives the candidate. Log exposure/propensity and compare against champion concurrently.
+3. **Ramp-up:** increase traffic in explicit steps only after each observation window passes.
+
+Use a traffic feature flag or registry pointer, not an ad hoc redeploy. Configure **automatic abort** thresholds for safety, error, latency, cost, and critical task failures. Add an observation window and **hysteresis** so noise neither flips versions repeatedly nor delays a severe stop.
+
+---
+
+## Rollback Runbook
+
+Rollback means switching to the **last-known-good** complete bundle, not just replacing weights. The runbook names the incident owner and approval path and covers:
+
+- routing switch and cache invalidation;
+- incompatible adapter/base or tokenizer state;
+- **stateful tool side effects**, partially completed workflows, and external transactions;
+- queued jobs, conversation/session state, and outputs already delivered;
+- audit trail, affected cohort reconstruction, notification, and follow-up evaluation.
+
+Some side effects cannot be undone by a model rollback. Use idempotency keys, dry-run/shadow tool calls, compensating actions, and queue version tags. Conduct a periodic **rollback rehearsal** that measures detection and recovery time and verifies the prior bundle still loads.
+
+---
+
+## Evaluation-Set Maintenance
+
+**Eval-set maintenance** is a controlled data lifecycle. Assign stable evaluation IDs and cluster IDs, provenance, creation reason, owner, severity, rubric version, access class, and retirement state. Deduplicate and quarantine semantic neighbors from every training and synthetic pipeline.
+
+When a production badcase appears, freeze it as evaluation evidence and create evaluation-only sibling holdouts before training on related examples. Add fresh slices for distribution drift, but keep a stable anchor set for longitudinal comparison. Version changes and rerun both champion and candidate when prompts, graders, tools, or schemas change.
+
+Audit evaluation access and contamination regularly. Rotate secret cases when exposure is suspected; never silently rewrite answers to preserve a trend line.
 
 ---
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: Why is offline evaluation insufficient by itself for model release decisions?</summary>
-*Because offline datasets rarely capture all of the conditions that matter in production, such as real user behavior, freshness requirements, latency tolerance, and live failure patterns.*
+<summary>Quiz 1: Why must tokenizer, template, tools, and safety configuration be in the artifact bundle?</summary>
+*They change rendered inputs and system behavior. Deploying only a weight hash can reproduce neither the evaluated distribution nor the actual tool and safety decisions.*
 </details>
 
 <details>
-<summary>Quiz 2: Why does judge calibration matter when using LLM-as-a-Judge in release gates?</summary>
-*Because the judge can drift, inherit bias, or favor related model families. Without calibration against human labels, judge scores can create false confidence.*
+<summary>Quiz 2: Why use paired statistics for candidate-versus-champion evaluation?</summary>
+*Both systems answer the same cases, so per-case differences contain the relevant signal and control case difficulty. Paired bootstrap or permutation methods preserve that structure.*
 </details>
 
 <details>
-<summary>Quiz 3: What makes a release gate operationally useful?</summary>
-*It must define explicit blocking criteria, such as safety thresholds, workflow regression tolerances, latency budgets, and canary health checks.*
+<summary>Quiz 3: What distinguishes shadow from canary?</summary>
+*Shadow traffic is not user-visible and must not create external side effects. Canary traffic affects a small randomized real cohort and therefore needs automatic abort and rollback controls.*
 </details>
 
 <details>
-<summary>Quiz 4: Why are canary releases important even after strong offline results?</summary>
-*Because they expose the model to real traffic and real workflows, where hidden regressions in latency, tool use, safety, or user satisfaction often appear for the first time.*
+<summary>Quiz 4: Why can changing model weights back fail to reverse an incident?</summary>
+*The candidate may already have created stateful tool side effects, external transactions, queued jobs, or session state. Those need idempotency, compensation, and queue/session handling beyond weight rollback.*
 </details>
 
 ---
 
 ## References
 
-1. <a id="ref-1"></a>Liu, Y., et al. (2023). *G-Eval: NLG Evaluation using GPT-4 with Better Human Alignment.* [arXiv:2303.16634](https://arxiv.org/abs/2303.16634).
-2. <a id="ref-2"></a>Li, D., et al. (2025). *Preference Leakage: A Contamination Problem in LLM-as-a-Judge.* [arXiv:2502.01534](https://arxiv.org/abs/2502.01534).
-3. <a id="ref-3"></a>Gu, A., et al. (2024). *LiveBench: A Challenging, Contamination-Free LLM Benchmark.* [arXiv:2406.19314](https://arxiv.org/abs/2406.19314).
+1. <a id="ref-1"></a>Liang, P., et al. (2022). *Holistic Evaluation of Language Models.* [arXiv:2211.09110](https://arxiv.org/abs/2211.09110).
+2. <a id="ref-2"></a>Demšar, J. (2006). *Statistical Comparisons of Classifiers over Multiple Data Sets.* [JMLR](https://www.jmlr.org/papers/v7/demsar06a.html).
+3. <a id="ref-3"></a>Kohavi, R., Tang, D., & Xu, Y. (2020). *Trustworthy Online Controlled Experiments.* Cambridge University Press.

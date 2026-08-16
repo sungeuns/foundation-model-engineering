@@ -4,175 +4,119 @@ title: 17.5 Production Evaluation and Release Gates
 lang: ko
 ---
 
-# 17.5 프로덕션 평가와 릴리스 게이트
+# 17.5 Production Evaluation and Release Gates
 
-랩에서는 judge 기반 비교에서 이겼는데, 막상 롤아웃 후에는 거절 응답이 덜 예측 가능해지고 핵심 워크플로우의 tool call이 느려져 지원 티켓이 증가하는 모델을 생각해 봅시다. "벤치에서 더 좋아졌다"와 "실제로 배포하기 좋아졌다" 사이의 이 간극 때문에 release gate가 필요합니다.
-
-프로덕션 평가는 단순한 점수판이 아닙니다. 연구용 지표를 실제 릴리스 의사결정으로 연결하는 결정 시스템입니다. 무엇은 반드시 좋아져야 하고, 무엇은 유지되어도 되며, 어떤 회귀는 즉시 릴리스를 막아야 하고, 어떤 신호는 롤아웃 이후에만 보이는지를 정하는 일입니다.
+모델은 특정한 불변 artifact가 사전에 선언한 offline·online gate를 통과했을 때 준비됩니다. 하나의 benchmark score가 올랐다고 준비된 것이 아닙니다. Release process는 의사결정을 재현 가능하게 만들고 승인자를 식별하며, 실제 환경이 실험실과 다를 때 안전하게 되돌릴 수 있어야 합니다.
 
 ---
 
-## 1. Offline evaluation은 게이트이지 전부가 아니다
+## 불변 Artifact Bundle
 
-offline evaluation은 여전히 필수입니다. 큰 회귀를 빠르고 싸게 찾는 데 가장 효율적이기 때문입니다.
+다음 hash를 포함하는 하나의 **불변 artifact bundle(immutable artifact bundle)** 을 평가하고 배포합니다.
 
-보통 아래 항목들을 봅니다.
+- base model과 모든 adapter 또는 merged checkpoint
+- tokenizer, special-token map, chat template, generation config
+- tool schema, retrieval/index revision, safety policy, prompt asset
+- code commit, resolved config, container, CUDA/framework/kernel version
+- training/evaluation data manifest, objective, decoding seed
 
-- benchmark suite
-- task-specific regression set
-- safety test
-- tool-use 또는 workflow test
-- judge 기반 pairwise 비교
-
-하지만 offline score만으로는 충분하지 않습니다. 실제 사용자 행동, 최신성 요구, 지연 시간에 대한 인내심, live traffic에서의 failure pattern은 잘 드러나지 않기 때문입니다.
-
-### 단일 점수가 아니라 release packet을 봐야 한다
-
-실무의 릴리스 리뷰는 보통 네 가지 묶음을 함께 봅니다.
-
-- **benchmark regression:** 넓은 범위의 능력 변화
-- **private workflow eval:** 실제 제품에서 중요한 과업
-- **judge packet:** calibration이 포함된 pairwise 또는 rubric 기반 비교
-- **systems packet:** latency, cost, tool-use reliability
-
-이렇게 봐야 어떤 인상적인 leaderboard 숫자 하나가 판단 전체를 지배하지 않게 됩니다.
+Champion/candidate registry에 bundle identity, owner, target traffic, approval, evaluation report, last-known-good predecessor를 기록합니다. Base/adapter/tokenizer/template incompatibility는 load 전에 차단합니다. Model-name 문자열은 artifact identity가 아닙니다.
 
 ---
 
-## 2. Judge calibration과 benchmark hygiene
+## Release Packet과 통계적 결정
 
-LLM-as-a-Judge를 release decision에 쓰려면 judge 자체도 관리해야 합니다.
+Baseline hash, prompt, rubric, judge/verifier artifact, tool state, fixed seed, decoding setting을 고정합니다. Packet에는 raw per-example 결과와 다음을 포함합니다.
 
-### 실무 규칙
+- target/domain, base-retention, safety/over-refusal, format/tool, privacy/security slice
+- response length, entropy, calibration, hallucination/citation evidence
+- latency **p50, p95, p99**, throughput, cost, OOM/error/tool-retry 비율
+- slice별 표본 크기(sample size)와 평균으로 숨기면 안 되는 critical failure
 
-- human label이 있는 calibration set 유지
-- 시간에 따른 agreement drift 추적
-- 관련된 모델 family 하나만 judge로 쓰지 않기
-- position bias와 verbosity bias 정기 점검
+Paired outcome에는 **대응 bootstrap(paired bootstrap)** confidence interval 또는 paired permutation/randomization test를 사용합니다. Minimum effect, alpha/error tolerance, sample size 또는 power 근거, tie 처리, slice minimum을 사전에 정합니다. 불일치 사례를 확인하고 일부를 adjudication합니다. Statistical significance가 product significance를 보장하지 않습니다.
 
-benchmark hygiene도 중요합니다.
-
-- eval set version 관리
-- model training cutoff date 기록
-- 가능한 경우 holdout set은 비공개 유지
-- 성능 향상을 선언하기 전에 contamination 점검
-
-LiveBench 같은 freshness-aware, contamination-aware benchmark는 오프라인 성능 향상이 단순 암기에 가깝지 않은지 보는 데 유용합니다 [[3]](#ref-3). 하지만 이런 벤치마크도 제품 특화 private regression set을 대체하는 것이 아니라 보완하는 역할에 가깝습니다.
-
-또 하나의 최신 경고는 **Preference Leakage** 입니다. judge와 synthetic-data pipeline이 너무 가깝게 연결되어 있으면, release decision이 실제로 더 좋은 모델이 아니라 익숙한 모델 계열을 조용히 편애할 수 있습니다 [[2]](#ref-2).
+LLM judge는 target rubric의 human calibration, position randomization, slice별 agreement/error 분석이 필요합니다. Requirement를 직접 검사하는 executable·rule-based verifier가 있으면 우선합니다.
 
 ---
 
-## 3. Release gate에는 명확한 blocking criteria가 있어야 한다
+## Gate Decision Table
 
-release gate는 명시적일 때만 쓸모가 있습니다.
+모든 metric은 단순한 dashboard 색이 아니라 action으로 연결됩니다.
 
-### 예시 게이트
+| Gate | Pass | Review | Block |
+|---|---|---|---|
+| Target quality | lower confidence bound가 minimum effect 통과 | uncertain 또는 제한된 slice | material regression |
+| Retention | 모든 protected slice가 범위 안 | noncritical borderline | critical capability regression |
+| Safety/privacy | critical failure 없음 | adjudication 필요 | severity-defined blocker |
+| Format/tools | schema·side-effect test 통과 | 복구 가능한 warning | invalid action 또는 unauthorized effect |
+| Systems | latency/cost/error SLO 통과 | capacity plan 필요 | OOM, retry storm, SLO breach |
 
-1. critical safety regression이 없을 것
-2. 핵심 workflow에서 통계적으로 의미 있는 회귀가 없을 것
-3. 대상 과업에서 judge 기반 승률이 threshold 이상일 것
-4. latency와 cost가 예산 안에 있을 것
-5. canary rollout 지표가 안정적일 것
-
-이렇게 해야 “새 모델이 왠지 더 좋아 보인다”가 아니라 운영 계약처럼 판단할 수 있습니다.
-
-### Gate는 metric이 아니라 의사결정 규칙이다
-
-좋은 release gate는 아래처럼 “측정값”과 “행동”이 함께 정의되어 있습니다.
-
-| 신호 | 예시 기준 | 실패 시 행동 |
-| :--- | :--- | :--- |
-| Critical safety | high-severity policy violation이 0건 | 릴리스 중단, red-team case 재학습 |
-| Core workflow | private eval에서 기존 모델 대비 -1%p 이상 회귀 없음 | 해당 workflow owner 리뷰 |
-| RAG faithfulness | claim-level unsupported rate가 예산 이하 | retrieval/prompt/verifier 원인 분리 |
-| Tool reliability | tool-call JSON schema 오류율과 retry율이 증가하지 않음 | tool schema 또는 planner prompt 롤백 |
-| Cost/latency | p95 latency와 cost/token이 예산 안 | 라우팅 또는 batch 설정 조정 |
-| User-visible quality | canary complaint rate가 baseline 대비 상승하지 않음 | rollout pause, 샘플 분석 |
-
-이 표의 핵심은 평균 점수가 아니라 **막아야 할 실패를 미리 합의** 하는 데 있습니다. 특히 엔터프라이즈 AI에서는 한두 개의 치명적인 샘플이 평균 개선보다 더 중요할 때가 많습니다.
+Gate에는 owner, data window, threshold, confidence rule, missing-data behavior, exception approver가 포함됩니다. Evidence가 없으면 0도 pass도 아닙니다.
 
 ---
 
-## 4. Canary release가 마지막 고리를 닫는다
+## Shadow, Canary, Ramp-up
 
-offline evaluation은 위험을 줄여 주지만, canary release는 현실을 보여 줍니다.
+세 단계는 서로 다른 질문에 답합니다.
 
-보통 아래 지표를 같이 봅니다.
+1. **Shadow:** candidate가 mirrored input을 받지만 user-visible output이나 external side effect를 만들 수 없습니다. Output, latency, tool plan을 비교합니다.
+2. **Canary:** 작고 무작위화한 eligible cohort가 candidate를 사용합니다. Exposure/propensity를 기록하고 champion과 동시에 비교합니다.
+3. **Ramp-up:** 각 observation window가 통과한 뒤 명시적인 단계로 traffic을 늘립니다.
 
-- refusal rate drift
-- answer-quality complaint
-- latency regression
-- tool-call failure rate
-- 해당 workflow의 retention 또는 conversion
-
-많은 팀은 사용자에게 노출되는 canary 전에 **shadow traffic** 단계도 둡니다. 이렇게 하면 실제 사용자에게 영향을 주지 않고도 latency, tool behavior, refusal 패턴 변화를 먼저 점검할 수 있습니다.
-
-핵심은 간단합니다. live traffic에서 새 모델이 버티는지 보기 전에는 전체 사용자에게 바로 열지 않는 것입니다.
-
-### Shadow, canary, ramp-up의 차이
-
-- **Shadow traffic:** 실제 요청을 새 모델에도 복제해서 보내지만, 사용자에게는 기존 모델 답변만 보여 줍니다. latency, tool call, safety classifier drift를 안전하게 봅니다.
-- **Canary:** 작은 사용자 집단이나 낮은 위험 workflow에 새 모델을 실제 노출합니다. complaint, conversion, human escalation, retry behavior를 봅니다.
-- **Ramp-up:** 1%, 5%, 25%, 50%, 100%처럼 단계적으로 확대합니다. 각 단계마다 자동 rollback 조건이 있어야 합니다.
-
-운영에서 자주 하는 실수는 canary를 “작게 배포했으니 안전하다”고 여기는 것입니다. canary도 rollback 기준이 없으면 그냥 느린 전체 배포일 뿐입니다.
+Ad hoc redeploy가 아니라 traffic feature flag 또는 registry pointer를 사용합니다. Safety, error, latency, cost, critical task failure에 **자동 중단(automatic abort)** threshold를 둡니다. Observation window와 **히스테리시스(hysteresis)** 를 두어 noise 때문에 버전이 반복 전환되거나 심각한 중단이 늦어지지 않게 합니다.
 
 ---
 
-## 5. 모델 교체보다 어려운 것은 평가셋 유지보수다
+## Rollback Runbook
 
-프로덕션 평가셋은 한 번 만들고 끝나는 산출물이 아닙니다. 제품이 바뀌고, 고객 질문이 바뀌고, 모델이 새로운 실패 방식을 배우면서 평가셋도 낡습니다.
+Rollback은 weight만 교체하는 것이 아니라 **last-known-good** complete bundle로 전환하는 것입니다. Runbook은 incident owner와 approval path를 지정하고 다음을 다룹니다.
 
-실무에서는 다음 루프가 필요합니다.
+- routing switch와 cache invalidation
+- incompatible adapter/base 또는 tokenizer state
+- **상태를 가진 tool side effect(stateful tool side effect)**, 부분 완료 workflow, external transaction
+- queued job, conversation/session state, 이미 전달한 output
+- audit trail, affected cohort 재구성, notification, follow-up evaluation
 
-1. production incident와 support ticket에서 새 eval case를 추출합니다.
-2. 중복, 개인정보, 저작권, 보안 정보를 제거합니다.
-3. expected behavior와 grading rubric을 사람이 작성합니다.
-4. 새 모델뿐 아니라 현재 production baseline에도 다시 실행합니다.
-5. 너무 쉬워져 변별력이 사라진 case는 regression set으로 남기고, 프론티어 비교용 set은 더 어렵게 갱신합니다.
-
-이렇게 하면 평가셋이 논문 벤치마크처럼 고정된 시험지가 아니라, 제품의 실제 실패를 계속 흡수하는 운영 자산이 됩니다.
+일부 side effect는 model rollback으로 취소할 수 없습니다. Idempotency key, dry-run/shadow tool call, compensating action, queue version tag를 사용합니다. Detection·recovery time을 측정하고 이전 bundle이 여전히 load되는지 확인하는 정기 **rollback 리허설(rollback rehearsal)** 을 수행합니다.
 
 ---
 
-## 6. Practical Takeaway
+## 평가셋 유지보수
 
-프로덕션 평가는 benchmark 문화와 제품 엔지니어링을 이어 주는 다리입니다. offline test는 큰 회귀를 걸러내고, judge는 정성 평가를 확장하며, canary는 실제 사용자 환경의 반응을 드러냅니다. 릴리스 판단은 이 셋을 함께 봐야지, leaderboard의 이동만으로 내려서는 안 됩니다.
+**평가셋 유지보수(eval-set maintenance)** 는 통제된 data lifecycle입니다. Stable evaluation ID와 cluster ID, provenance, creation reason, owner, severity, rubric version, access class, retirement state를 부여합니다. Semantic neighbor를 deduplicate하고 모든 human·synthetic training pipeline에서 격리합니다.
+
+Production badcase가 나타나면 evaluation evidence로 먼저 고정하고 관련 예시를 학습하기 전에 evaluation-only sibling holdout을 만듭니다. Distribution drift에는 fresh slice를 더하지만 longitudinal comparison을 위한 stable anchor set을 유지합니다. Prompt, grader, tool, schema가 바뀌면 version을 올리고 champion과 candidate를 모두 재실행합니다.
+
+Evaluation access와 contamination을 정기 감사합니다. Exposure가 의심되면 secret case를 회전하되 trend line을 유지하려고 정답을 조용히 다시 쓰면 안 됩니다.
 
 ---
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: 모델 릴리스 판단에서 offline evaluation만으로는 부족한 이유는 무엇인가요?</summary>
-*offline 데이터셋은 실제 사용자 행동, 최신성 요구, 지연 시간 허용 범위, live failure pattern 같은 프로덕션 조건을 모두 담지 못하기 때문입니다.*
+<summary>Quiz 1: Tokenizer, template, tool, safety configuration이 artifact bundle에 있어야 하는 이유는 무엇인가요?</summary>
+*이 요소들이 rendered input과 system behavior를 바꿉니다. Weight hash만 배포하면 평가한 분포나 실제 tool·safety 결정을 재현할 수 없습니다.*
 </details>
 
 <details>
-<summary>Quiz 2: release gate에 LLM-as-a-Judge를 쓸 때 judge calibration이 중요한 이유는 무엇인가요?</summary>
-*judge 자체가 drift 하거나 편향을 가질 수 있고, 관련된 모델 family를 편애할 수도 있기 때문입니다. human label 기준 보정 없이 judge score만 믿으면 잘못된 자신감이 생길 수 있습니다.*
+<summary>Quiz 2: Candidate와 champion 비교에 paired statistics를 쓰는 이유는 무엇인가요?</summary>
+*두 system이 같은 case에 답하므로 case별 차이가 관련 signal이며 case difficulty를 통제합니다. Paired bootstrap이나 permutation이 이 구조를 보존합니다.*
 </details>
 
 <details>
-<summary>Quiz 3: release gate가 운영적으로 유용하려면 무엇이 필요하나요?</summary>
-*안전성, 핵심 workflow 회귀, judge threshold, latency budget, canary health check처럼 릴리스를 실제로 막을 수 있는 명확한 기준이 필요합니다.*
+<summary>Quiz 3: Shadow와 canary의 차이는 무엇인가요?</summary>
+*Shadow traffic은 사용자에게 보이지 않고 external side effect를 만들면 안 됩니다. Canary는 작은 randomized real cohort에 영향을 주므로 automatic abort와 rollback이 필요합니다.*
 </details>
 
 <details>
-<summary>Quiz 4: offline 결과가 좋아도 canary release가 중요한 이유는 무엇인가요?</summary>
-*실제 트래픽과 실제 workflow에서는 latency, tool use, safety, 사용자 만족도에서 숨어 있던 회귀가 처음 드러나는 경우가 많기 때문입니다.*
-</details>
-
-<details>
-<summary>Quiz 5: release gate에서 평균 judge 승률이 높아졌는데도 릴리스를 막아야 하는 대표적인 경우는 무엇인가요?</summary>
-*평균 품질은 좋아졌지만 critical safety, 결제, 의료/법률, 보안, 핵심 tool workflow 같은 high-severity 영역에서 회귀가 발견된 경우입니다. 프로덕션 릴리스에서는 평균 개선보다 치명적 실패의 존재 여부가 더 우선합니다.*
+<summary>Quiz 4: Model weight를 되돌려도 incident가 취소되지 않을 수 있는 이유는 무엇인가요?</summary>
+*Candidate가 이미 stateful tool side effect, external transaction, queued job, session state를 만들 수 있습니다. Weight rollback 외에 idempotency, compensation, queue/session 처리가 필요합니다.*
 </details>
 
 ---
 
 ## References
 
-1. <a id="ref-1"></a>Liu, Y., et al. (2023). *G-Eval: NLG Evaluation using GPT-4 with Better Human Alignment.* [arXiv:2303.16634](https://arxiv.org/abs/2303.16634).
-2. <a id="ref-2"></a>Li, D., et al. (2025). *Preference Leakage: A Contamination Problem in LLM-as-a-Judge.* [arXiv:2502.01534](https://arxiv.org/abs/2502.01534).
-3. <a id="ref-3"></a>Gu, A., et al. (2024). *LiveBench: A Challenging, Contamination-Free LLM Benchmark.* [arXiv:2406.19314](https://arxiv.org/abs/2406.19314).
+1. <a id="ref-1"></a>Liang, P., et al. (2022). *Holistic Evaluation of Language Models.* [arXiv:2211.09110](https://arxiv.org/abs/2211.09110).
+2. <a id="ref-2"></a>Demšar, J. (2006). *Statistical Comparisons of Classifiers over Multiple Data Sets.* [JMLR](https://www.jmlr.org/papers/v7/demsar06a.html).
+3. <a id="ref-3"></a>Kohavi, R., Tang, D., & Xu, Y. (2020). *Trustworthy Online Controlled Experiments.* Cambridge University Press.

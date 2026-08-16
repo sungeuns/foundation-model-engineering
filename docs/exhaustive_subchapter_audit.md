@@ -148,11 +148,11 @@ During this editorial overhaul, every English/Korean sub-chapter pair was review
 
 ## Chapter 17
 
-- `academic-benchmarks`: reviewed; no additional edits required; notes: no further edits required after audit.
-- `contamination-issues`: reviewed; no additional edits required; notes: no blocking issues found.
+- `academic-benchmarks`: reviewed 2026-08-16; rebuilt EN/KO parity around benchmark families, multimodal evaluation, metric contracts, paired statistics, contamination, and a practical checklist.
+- `contamination-issues`: reviewed 2026-08-16; added protected evaluation lineage, calibrated multi-representation scans, synthetic ancestry, final-corpus checks, and qualified dynamic evaluation.
 - `elo-rating-and-leaderboards`: reviewed; no additional edits required; notes: no material issues found in this pass.
 - `llm-as-a-judge`: reviewed; no additional edits required; notes: no further edits needed after audit.
-- `production-evaluation-and-release-gates`: reviewed; edits applied; notes: new production-focused sub-chapter added in EN/KO.
+- `production-evaluation-and-release-gates`: reviewed 2026-08-16; added immutable bundles, paired statistical gates, shadow/canary/ramp-up, automatic abort, stateful rollback, rehearsal, and eval-set maintenance.
 - `commercial-model-benchmarks`: present in the current inventory; pending current-snapshot verification in the 2026-08-14 pass.
 
 ## Chapter 18
