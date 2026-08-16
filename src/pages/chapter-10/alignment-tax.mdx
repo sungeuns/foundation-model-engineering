@@ -6,180 +6,122 @@ lang: en
 
 import { AlignmentTaxVisualizer } from '../../components/chapter-10/AlignmentTaxVisualizer.tsx';
 
-# 10.5 Alignment Tax: The Cost of Playing it Safe
+# 10.5 Alignment Tax: Measuring Trade-offs
 
-Pre-training endows a Foundation Model with vast world knowledge, raw reasoning capabilities, and linguistic diversity. Alignment (via RLHF, DPO, or KTO) restricts how that knowledge is expressed to ensure the model is helpful, honest, and harmless. However, this restriction is not free. 
-
-In the pursuit of safety and human preference, engineers consistently observe a measurable degradation in the model's core capabilities—a phenomenon known as the **Alignment Tax**. As we force the model to adopt a specific persona or avoid certain topics, it begins to forget how to solve complex math problems, loses its creative entropy, and becomes dangerously overconfident.
-
-In this section, we will dissect the physical symptoms of the alignment tax, explore the mathematical reasons behind it, and implement state-of-the-art engineering techniques to mitigate it.
+An **alignment tax** is a regression in capabilities, calibration, diversity, latency, or cost caused by a post-training intervention. It is not inevitable and not universal. A well-designed intervention can improve both target behavior and some capabilities; the term is useful only when a frozen baseline and matched evaluation show a trade-off.
 
 ---
 
-## 1. The Symptoms of the Tax
+## What Can Regress?
 
-The alignment tax manifests in three distinct failure modes during post-training.
+- **Capability retention:** code, math, multilingual, long-context, domain, or tool performance can move when the post-training distribution is narrow.
+- **Diversity and style:** optimizing a limited preference signal can concentrate responses around verbose or templated modes.
+- **Safety calibration:** refusal can expand beyond unsafe cases, or unsafe compliance can remain in underrepresented slices.
+- **Confidence calibration:** some post-trained models have shown worse calibration on particular evaluations. The GPT-4 report, for example, observed a calibration change after post-training [[1]](#ref-1). This does not establish that base models are naturally calibrated, that RLHF always destroys calibration, or that annotators have one universal causal role.
 
-### A. Catastrophic Forgetting (Capability Degradation)
-The most obvious symptom is a drop in zero-shot performance on standard NLP and reasoning benchmarks (e.g., MMLU, HumanEval, GSM8K). A base model might successfully write a complex Python script, but after RLHF, the same model might refuse the prompt, output a truncated version, or wrap the code in so much conversational boilerplate ("*Certainly! Here is the code you requested...*") that the context window is exhausted. The model trades logical rigor for conversational politeness.
-
-### B. Preference Collapse
-Base models are probabilistic simulators; they can generate text in the style of Shakespeare, a 4chan user, or a Linux terminal. Aligned models can suffer from a related failure mode that recent work describes as **preference collapse** [[1]](#ref-1). Their output distribution collapses onto a narrow, reward-exploiting subset of modes.
-Because the reward model heavily favors a specific, sterile "AI assistant" tone, the policy model's entropy plummets. It loses creative variety, defaulting to repetitive structures and predictable vocabulary, regardless of the prompt's requested persona.
-
-### C. Calibration Destruction
-Base models are naturally well-calibrated. If a base model assigns a 70% probability to a token, it is historically correct about 70% of the time. It "knows what it knows."
-During the development of GPT-4, researchers discovered that RLHF completely destroyed the model's calibration [[2]](#ref-2). Because human annotators penalize models for expressing uncertainty (e.g., "I'm not sure, but I think the answer is..."), the reward model incentivizes authoritative language. Consequently, the aligned model learns to state hallucinations with absolute 100% mathematical confidence, decoupling its internal probability distribution from its external output.
+Separate an observed metric change from a causal explanation. Calibration depends on task, prompt, decoding, confidence extraction, and distribution shift.
 
 ---
 
-## 2. The Root Causes
+## Causes Are Hypotheses to Test
 
-Why does tweaking the output style destroy underlying reasoning? The answers lie in optimization dynamics and network geometry.
+Possible mechanisms include narrow-data interference, reward over-optimization, template or length bias, reference drift, optimizer scale, and evaluation mismatch. A capability score can also fall because serving formatting or refusal policy changed rather than because knowledge was erased.
 
-1. **Reward Over-Optimization (Goodhart's Law)**: The reward model is merely a low-dimensional proxy for complex human preferences. As the RL algorithm (e.g., PPO) optimizes against this proxy, it inevitably finds "hacks." It discovers that generating longer responses or using specific polite keywords artificially inflates the reward score, and it sacrifices logical accuracy to maximize these surface-level traits.
-2. **Continual Learning Interference**: From a systems perspective, alignment is a continual learning problem. The distribution of the safety dataset (conversational turns, refusals) is radically different from the pre-training dataset (web scrapes, GitHub code). When we apply gradient descent during RLHF, the safety updates physically overwrite the weight matrices in the Transformer layers that were previously responsible for logical deduction [[3]](#ref-3).
-
----
-
-## 3. Engineering Mitigations
-
-AI researchers have developed several techniques to flatten the trade-off curve between safety and capability. 
-
-### A. The KL Divergence Penalty
-The first line of defense is the KL penalty, which we explored in earlier sections. By adding $-\beta \text{KL}(\pi_\theta || \pi_{\text{ref}})$ to the reward, we force the aligned policy ($\pi_\theta$) to remain close to the base model ($\pi_{\text{ref}}$). While this prevents extreme mode collapse, it is a blunt instrument. It restricts the model globally, rather than protecting specific capabilities.
-
-### B. Pre-Training Mix (PTX)
-Introduced in the original InstructGPT paper [[4]](#ref-4), PTX involves mixing a small percentage of the original pre-training data back into the RLHF training loop. 
-During the PPO update, the model computes the RL gradient for the conversational prompt, but simultaneously computes a standard next-token prediction (Cross-Entropy) gradient on a batch of pre-training data. 
-$$ \mathcal{L}_{\text{total}} = \mathcal{L}_{\text{RLHF}} + \gamma \mathcal{L}_{\text{PTX}} $$
-This forces the model to maintain its general language modeling capabilities while learning to follow instructions.
-
-### C. Model Averaging (Weight Interpolation)
-A surprisingly effective, zero-compute mitigation is **Weight Interpolation** [[5]](#ref-5). If $\theta_{\text{base}}$ are the weights of the pre-trained model and $\theta_{\text{align}}$ are the weights after RLHF, we can create a new model by linearly interpolating between them:
-$$ \theta_{\text{final}} = (1 - \alpha) \theta_{\text{base}} + \alpha \theta_{\text{align}} $$
-Because fine-tuning typically occurs in a convex basin near the pre-trained weights, averaging them restores feature diversity and recovers reasoning capabilities while preserving most of the alignment properties.
-
-### D. Orthogonal Gradient Projection
-Another family of mitigations borrows from projection-based continual-learning methods [[6]](#ref-6).
-Instead of blindly applying safety gradients and hoping they do not overwrite reasoning capabilities, these methods geometrically isolate updates. They compute the gradient for a general capability task ($g_{\text{cap}}$) and the gradient for the safety task ($g_{\text{saf}}$), then project the safety gradient into the orthogonal complement of the capability gradient.
-
-In the idealized case, this makes the update move at a right angle to the protected capability direction, reducing direct interference with the model's core reasoning features.
-
-![orthogonal_gradient_projection](../../assets/images/chapter-10/orthogonal_gradient_projection.png)
-*Source: AI-generated illustration.*
+Use ablations: SFT-only versus preference optimization, different KL/$\beta$, replay mixtures, adapter versus full update, frozen versus updated tokenizer/template, and matched inference settings. Inspect examples and intermediate metrics before attributing the cause.
 
 ---
 
-## 4. PyTorch Implementation: Orthogonal Gradient Projection
+## Mitigation Portfolio
 
-Let's look at how an orthogonal gradient projection scheme is implemented in PyTorch. This technique requires computing two separate backward passes, extracting the flattened gradients, performing the vector projection, and repopulating the parameter gradients before the optimizer steps.
-
-```python
-import torch
-import torch.nn as nn
-
-def orthogonal_gradient_projection(
-    model: nn.Module,
-    safety_loss: torch.Tensor,
-    capability_loss: torch.Tensor
-):
-    """
-    Projects the safety gradient onto the orthogonal complement of the capability gradient.
-    Modifies the model's gradients in-place to prevent the Alignment Tax.
-    """
-    # 1. Compute capability gradients (The "Do Not Disturb" direction)
-    model.zero_grad()
-    capability_loss.backward(retain_graph=True)
-    
-    cap_grads = []
-    for param in model.parameters():
-        if param.grad is not None:
-            cap_grads.append(param.grad.view(-1))
-            
-    if not cap_grads:
-        return # No gradients to project
-        
-    g_cap = torch.cat(cap_grads)
-    
-    # 2. Compute safety gradients (The Alignment Update)
-    model.zero_grad()
-    safety_loss.backward()
-    
-    saf_grads = []
-    for param in model.parameters():
-        if param.grad is not None:
-            saf_grads.append(param.grad.view(-1))
-            
-    g_saf = torch.cat(saf_grads)
-    
-    # 3. Orthogonal Projection: g_saf_proj = g_saf - proj_{g_cap}(g_saf)
-    # Mathematics: proj_u(v) = (v dot u / ||u||^2) * u
-    dot_product = torch.dot(g_saf, g_cap)
-    norm_sq = torch.dot(g_cap, g_cap) + 1e-8 # Add epsilon for numerical stability
-    
-    projection = (dot_product / norm_sq) * g_cap
-    g_saf_projected = g_saf - projection
-    
-    # 4. Apply the projected gradients back to the model parameters
-    idx = 0
-    for param in model.parameters():
-        if param.grad is not None:
-            numel = param.numel()
-            # Reshape the flat projected gradient back to the original tensor shape
-            param.grad.copy_(g_saf_projected[idx:idx + numel].view_as(param))
-            idx += numel
-            
-    # The optimizer (e.g., AdamW) can now be stepped safely.
-```
-
----
-
-## 5. Interactive: The Alignment Tax Trade-off
-
-Use the visualizer below to simulate how different mitigation strategies affect the Pareto frontier of a Foundation Model. Notice how increasing the Pre-Training Mix (PTX) helps preserve general capability, but requires more optimization steps to reach the same level of safety.
+1. **Smaller or parameter-efficient updates:** reduce interference but do not guarantee retention.
+2. **KL/reference control:** constrain policy drift while monitoring whether the reference itself is appropriate.
+3. **Replay or PTX mixture:** mix representative general/domain data with explicit weights and evaluation quarantine.
+4. **Early stopping and checkpoint selection:** choose on a multi-objective held-out gate, not training reward.
+5. **Weight interpolation:** evaluate a sweep between compatible checkpoints; linear connectivity is an empirical condition, not a guaranteed convex basin.
+6. **Gradient surgery:** reduce conflict with protected-task gradients, while recognizing that a finite probe set cannot span every capability.
 
 <AlignmentTaxVisualizer client:load />
 
+The visualizer illustrates a Pareto trade-off; it does not predict a model's actual frontier.
+
 ---
 
-## Summary and Next Steps
+## Safe Gradient Projection Semantics
 
-The Alignment Tax represents the fundamental engineering trade-off of the modern AI era: balancing raw intelligence with human safety. We have explored how the tax manifests as mode collapse and catastrophic forgetting, and how sophisticated techniques like PTX mixing and Orthogonal Gradient Projection allow us to bypass these limitations. 
+The following educational function uses the **same parameter** list for both objectives and represents every `None` gradient as a zero tensor. This prevents vector offsets from changing when one loss does not touch a parameter. It still requires two backward-equivalent gradient computations and can be too expensive at foundation-model scale.
 
-This concludes **Chapter 10: Alignment**. We have journeyed from the basics of Human Feedback to the mathematical elegance of DPO and the intricate geometry of the Alignment Tax. 
+```python
+import torch
 
-In **Chapter 11: Multimodal Learning**, we will leave the text-only domain behind. We will explore how Foundation Models bridge the gap between distinct data modalities, learning to "see" via Vision-Language architectures like CLIP, and learning to "hear" natively.
+def flattened_grads(loss, params, retain_graph=False):
+    grads = torch.autograd.grad(
+        loss,
+        params,
+        retain_graph=retain_graph,
+        allow_unused=True,
+    )
+    dense = [torch.zeros_like(p) if g is None else g for p, g in zip(params, grads)]
+    return dense, torch.cat([g.reshape(-1) for g in dense])
+
+def project_safety_gradient(model, capability_loss, safety_loss, eps=1e-12):
+    params = [p for p in model.parameters() if p.requires_grad]
+    cap_parts, g_cap = flattened_grads(capability_loss, params, retain_graph=True)
+    saf_parts, g_saf = flattened_grads(safety_loss, params)
+
+    denom = torch.dot(g_cap, g_cap)
+    if denom <= eps:
+        projected = g_saf
+    else:
+        projected = g_saf - torch.dot(g_saf, g_cap) / denom * g_cap
+
+    offset = 0
+    for p in params:
+        count = p.numel()
+        p.grad = projected[offset:offset + count].view_as(p).clone()
+        offset += count
+    assert offset == projected.numel()
+```
+
+This projects against one minibatch direction. Validate on fixed protected suites, inspect whether safety learning stalls, and compare with cheaper replay or adapter baselines. Distributed training must reduce both objectives consistently before projection.
+
+---
+
+## Measurement and Release Gate
+
+Freeze the pre-intervention artifact bundle and evaluation manifest. Use fixed prompts, templates, decoding, tools, and seeds. Report paired confidence intervals or a justified randomization/bootstrap test, slice minimums, sample counts, and adjudicated examples.
+
+Track target preference/safety, base and domain retention, calibration error and selective accuracy, response length/entropy, refusal and over-refusal, tool/schema validity, latency, cost, error rate, and privacy/security tests. Select a checkpoint on predeclared constraints rather than a single weighted average.
+
+Abort when a critical slice fails, a regression exceeds its confidence-bound threshold, reward rises without held-out benefit, or artifact compatibility changes. Promote by shadow/canary/ramp-up with automatic windows and hysteresis; preserve and rehearse last-known-good rollback.
+
+---
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: Why does RLHF destroy a model's calibration, making it overconfident even when hallucinating?</summary>
-*Human annotators inherently prefer authoritative, confident-sounding answers and tend to penalize responses that express uncertainty or hesitation. The reward model learns this bias and incentivizes the policy model to output text with absolute certainty. Consequently, the model's external tone becomes decoupled from its internal probability distribution, destroying its natural calibration.*
+<summary>Quiz 1: Why is alignment tax not an inevitable scalar quantity?</summary>
+*Post-training changes multiple objectives and can improve some simultaneously. A tax is an observed, evaluation-specific regression relative to a matched baseline, not a universal constant.*
 </details>
 
 <details>
-<summary>Quiz 2: How does Model Averaging (Weight Interpolation) mitigate the alignment tax without requiring additional training compute?</summary>
-*Fine-tuning (like RLHF) typically occurs in a convex loss basin near the pre-trained weights. By linearly interpolating between the pre-trained weights and the aligned weights, we effectively average the feature representations. This restores the diverse feature spaces of the base model (recovering core capabilities) while retaining enough of the safety vectors to maintain alignment, all through simple scalar multiplication.*
+<summary>Quiz 2: Why does a calibration regression not prove that annotators punished uncertainty?</summary>
+*It is an observation compatible with several causes, including data, reward, decoding, prompts, and distribution shift. Establishing annotator causality requires targeted evidence or ablation.*
 </details>
 
 <details>
-<summary>Quiz 3: In Orthogonal Gradient Projection, what happens mathematically if the safety gradient is perfectly parallel to the capability gradient?</summary>
-*If the two vectors are perfectly parallel, the projection of the safety gradient onto the capability gradient is equal to the safety gradient itself. In the equation `g_saf_projected = g_saf - projection`, the result will be a zero vector. The model will make zero updates to the weights, perfectly preserving the capability at the cost of learning no safety on that specific batch.*
+<summary>Quiz 3: Why must unused gradients become zeros before flattening?</summary>
+*The capability and safety losses may touch different parameters. Dropping None entries changes vector length or offsets; zero-filling a common ordered parameter list preserves alignment.*
 </details>
 
 <details>
-<summary>Quiz 4: Why is the standard KL divergence penalty often insufficient to prevent the alignment tax on logical reasoning tasks?</summary>
-*The KL penalty is a global, distribution-level constraint. It forces the aligned model's overall output probabilities to remain close to the base model's, but it does not differentiate between "style" tokens and "reasoning" tokens. A model can satisfy the KL constraint by matching the base model's vocabulary distribution while still physically overwriting the specific network weights required for multi-step logical deduction.*
+<summary>Quiz 4: What is wrong with selecting the checkpoint with the highest reward?</summary>
+*Reward is a proxy and can improve through length or style exploitation while capability, calibration, safety slices, or cost regress. Selection needs predeclared multi-objective held-out gates.*
 </details>
 
 ---
 
 ## References
 
-1. <a id="ref-1"></a>Xiao, J., Li, Z., Xie, X., Getzen, E., Fang, C., Long, Q., & Su, W. J. (2024). *On the Algorithmic Bias of Aligning Large Language Models with RLHF: Preference Collapse and Matching Regularization.* [arXiv:2405.16455](https://arxiv.org/abs/2405.16455).
-2. <a id="ref-2"></a>OpenAI. (2023). *GPT-4 Technical Report*. [arXiv:2303.08774](https://arxiv.org/abs/2303.08774).
-3. <a id="ref-3"></a>Lin, Y., et al. (2024). *Mitigating the Alignment Tax of RLHF*. [arXiv:2309.06256](https://arxiv.org/abs/2309.06256).
-4. <a id="ref-4"></a>Ouyang, L., et al. (2022). *Training language models to follow instructions with human feedback*. [arXiv:2203.02155](https://arxiv.org/abs/2203.02155).
-5. <a id="ref-5"></a>Askell, A., et al. (2021). *A General Language Assistant as a Laboratory for Alignment*. [arXiv:2112.00861](https://arxiv.org/abs/2112.00861).
-6. <a id="ref-6"></a>Lin, S., Yang, L., Fan, D., & Zhang, J. (2022). *TRGP: Trust Region Gradient Projection for Continual Learning.* [arXiv:2202.02931](https://arxiv.org/abs/2202.02931).
+1. <a id="ref-1"></a>OpenAI. (2023). *GPT-4 Technical Report.* [arXiv:2303.08774](https://arxiv.org/abs/2303.08774).
+2. <a id="ref-2"></a>Ouyang, L., et al. (2022). *Training language models to follow instructions with human feedback.* [arXiv:2203.02155](https://arxiv.org/abs/2203.02155).
+3. <a id="ref-3"></a>Lopez-Paz, D., & Ranzato, M. (2017). *Gradient Episodic Memory for Continual Learning.* [NeurIPS](https://papers.nips.cc/paper_files/paper/2017/hash/f87522788a2be2d171666752f97ddebb-Abstract.html).

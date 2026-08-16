@@ -1,195 +1,159 @@
 ---
 layout: ../../../layouts/BookLayout.astro
-title: 10.2 PPO (Proximal Policy Optimization)
+title: 10.2 PPO for Language-Model Alignment
 lang: ko
 ---
 
-# 10.2 PPO (Proximal Policy Optimization)
-
-10.1절에서 우리는 궤적(Trajectory)을 생성, 필터링 및 검증하는 비동기식 인프라인 '피드백-데이터 팩토리(Feedback-Data Factory)'를 구축했습니다. 하지만 고품질의 선호도 데이터를 수집하는 것은 정렬(Alignment)을 위한 전제 조건일 뿐입니다. 모델의 행동을 근본적으로 변화시키려면, 이렇게 검증된 궤적을 물리적인 가중치 업데이트로 변환해야 합니다.
-
-역사적으로 강화 학습(RL, Reinforcement Learning)을 심층 신경망에 적용하는 것은 극도로 불안정한 과정이었습니다. 단 한 번의 공격적인 가중치 업데이트만으로도 모델이 사전 학습된 문법을 잊어버리고 의미 없는 텍스트를 생성하는 **정책 붕괴** (Policy collapse) 가 발생할 수 있습니다. PPO (Proximal Policy Optimization) 는 바로 이러한 안정성 문제를 해결하기 위해 도입되었습니다.
-
-전통적인 PPO가 2017년 이후 정렬 기술의 핵심 엔진으로 자리 잡았지만, 최신 파운데이션 모델의 방대한 규모는 기존 PPO의 수학적 한계를 드러냈습니다. 2024년과 2025년에 등장한 최신 연구들은 PPO를 근본적으로 해체하여, 경직된 단일 알고리즘에서 모듈화된 그래디언트 추정(Gradient-estimation) 프레임워크로 진화시켰습니다.
-
----
-
-## 1. 신뢰 영역(Trust Region)과 클리핑(Clipping) 메커니즘
-
-현대의 PPO를 이해하려면 먼저 이 알고리즘이 원래 해결하고자 했던 수학적 병목 현상을 살펴봐야 합니다. 정책 $\pi_\theta$ 를 업데이트할 때, 우리의 목표는 기대 보상을 극대화하는 것입니다. 그러나 새로운 정책이 이전 정책 $\pi_{\theta_{old}}$ 에서 너무 멀리 벗어나면, 어드밴티지(Advantage) $\hat{A}_t$ 를 추정하는 데 사용된 수학적 가정이 무너집니다.
-
-TRPO (Trust Region Policy Optimization) 는 이전 정책과 새로운 정책 간의 쿨백-라이블러 발산(KL Divergence)을 엄격하게 제한하여 이 문제를 해결했습니다. 하지만 이는 수십억 개의 파라미터를 가진 LLM에서는 연산 비용이 감당할 수 없을 정도로 높은 2차 미분(피셔 정보 행렬, Fisher Information Matrix) 계산을 요구했습니다.
-
-PPO [[1]](#ref-1) 는 연산 비용이 저렴한 1차 근사 방식인 **클리핑 메커니즘** 을 사용하여 이 신뢰 영역(Trust Region)을 근사합니다. 이 방식은 확률 비율(Probability ratio) $r_t(\theta)$ 에 의존합니다:
-
-$$
-r_t(\theta) = \frac{\pi_\theta(a_t|s_t)}{\pi_{\theta_{old}}(a_t|s_t)}
-$$
-
-PPO는 복잡한 KL 페널티 대신, 다음과 같은 비관적 대리 목적 함수(Pessimistic surrogate objective)를 최적화합니다:
-
-$$
-L^{CLIP}(\theta) = \hat{\mathbb{E}}_t \left[ \min(r_t(\theta)\hat{A}_t, \text{clip}(r_t(\theta), 1-\epsilon, 1+\epsilon)\hat{A}_t) \right]
-$$
-
-클리핑되지 않은 값과 클리핑된 값 중 최솟값을 취함으로써, PPO는 목적 함수가 무한정 커지는 것을 방지합니다. 만약 특정 행동이 긍정적인 어드밴티지($\hat{A}_t > 0$)를 산출하더라도, $r_t(\theta) > 1+\epsilon$ 이 되는 순간 목적 함수의 증가는 멈춥니다. 즉, 그래디언트가 0이 되어 단일한 '운 좋은' 궤적에 정책이 과도하게 업데이트되는 것을 막아줍니다.
-
-### 인터랙티브 시각화: PPO 대리 목적 함수
-
-아래의 시각화 도구를 사용하여 클리핑 메커니즘이 긍정적 및 부정적 어드밴티지에 어떻게 반응하는지 탐색해 보십시오. $\hat{A}_t < 0$ 일 때, 함수는 오직 $r_t(\theta) < 1-\epsilon$ 일 때만 클리핑됩니다. $r_t(\theta)$ 가 1보다 클 때는 클리핑되지 **않는데** , 나쁜 행동의 확률을 낮추는 것은 그래디언트가 정확히 수행해야 할 역할이기 때문입니다.
-
 import PPOClippingVisualizer from '../../../components/chapter-10/PPOClippingVisualizer.tsx';
 
-<PPOClippingVisualizer lang="ko" client:load />
+# 10.2 PPO for Language-Model Alignment
+
+Proximal Policy Optimization (PPO)은 고전적인 RLHF system에서 사용된 online reinforcement-learning 방법입니다 [[1]](#ref-1) [[2]](#ref-2). Language-model PPO에서는 policy가 response를 생성하고, 보상 모델(reward model)이 점수를 주고, value 헤드(value head)가 return을 추정하며, frozen reference policy가 drift를 제한합니다. 이 중 하나를 빼면 다른 알고리즘이 됩니다.
 
 ---
 
-## 2. 2024년의 패러다임 전환: 구조적 분해 (Outer-PPO)
+## 네 모델 관점
 
-수년 동안 RL 커뮤니티는 PPO 업데이트를 단일한 원자적 연산으로 취급했습니다. $L^{CLIP}$ 을 계산하고, `.backward()` 를 호출한 다음, Adam 최적화기의 스텝을 밟는 방식이었습니다.
+실무 RLHF PPO 실행은 다음을 구분합니다.
 
-하지만 최근 연구(Tan et al., 2024) [[2]](#ref-2) 는 이러한 모놀리식(Monolithic) 접근 방식의 치명적인 결함을 밝혀냈습니다. 표준 PPO 구현은 실제 정책 스텝에서 **1.0의 학습률(Unity learning rate)** 과 모멘텀(Momentum) 0을 암묵적으로 강제합니다. 연구진은 PPO를 두 개의 고유한 루프로 분해할 것을 제안했습니다:
+1. **policy:** SFT checkpoint에서 시작해 update합니다.
+2. **reference policy:** token-level KL 제어에 쓰는 frozen snapshot입니다.
+3. **보상 모델(RM):** prompt/response를 terminal 또는 shaped reward로 바꿉니다.
+4. **value head/critic:** 생성한 response 각 위치의 return을 예측합니다.
 
-1. **내부 루프 (추정, Estimation):** 표준 PPO의 클리핑된 목적 함수를 데이터 배치에 대해 반복적으로 최적화하여 최적의 "업데이트 벡터"(유사 그래디언트, Pseudo-gradient)를 추정합니다.
-2. **외부 루프 (적용, Application):** 이렇게 추정된 업데이트 벡터를 임의의 최적화기(예: AdamW 또는 모멘텀이 있는 SGD)를 사용하여 실제 모델 가중치에 적용합니다.
+Policy와 value가 backbone을 공유하거나 reference/RM을 offload할 수 있습니다. Revision, tokenizer/chat template, precision, quantization, 공유 parameter를 기록합니다. 평가 artifact에는 decoding, tool, reward preprocessing도 포함됩니다.
 
-추정(Estimation)과 적용(Application)을 분리함으로써, 엔지니어는 **외부** 루프에 1.0이 아닌 학습률과 모멘텀을 적용할 수 있게 되었습니다. 이러한 "Outer-PPO" 프레임워크는 핵심 대리 목적 함수를 변경하지 않고도, 특히 고차원 연속 제어 및 복잡한 추론 태스크에서 샘플 효율성과 학습 안정성을 통계적으로 유의미하게 향상시킵니다.
+---
 
-![ppo_architecture](../../../assets/images/chapter-10/ppo_architecture.png)
-*출처: AI 생성 이미지. (그래디언트 추정과 가중치 적용을 분리한 Outer-PPO의 디커플링 아키텍처).*
+## Rollout과 Reward Shaping
 
-### 엔지니어링: 디커플링된 업데이트 구현
+Tokenizer-native chat template과 `add_generation_prompt=True`로 prompt를 rendering합니다. Variable-length response를 생성하고 EOS를 보존하며, padding 전 실제 생성 token에만 1인 **응답 마스크(response mask)** 를 만듭니다. Prompt, padding, terminal EOS 뒤 token에는 policy/value loss를 주지 않습니다.
 
-다음 PyTorch 구현은 이 디커플링된 업데이트를 어떻게 구조화하는지 보여줍니다. 내부 루프가 복제된 정책(Cloned policy)에서 작동하여 업데이트 벡터를 추정한 다음, 이를 외부 최적화기로 전달하는 방식에 주목하십시오.
+Response token $t$의 일반적인 shaped reward는
+
+$$
+r_t = -\beta\left(\log\pi_{\text{old}}(a_t\mid s_t)-
+\log\pi_{\text{ref}}(a_t\mid s_t)\right)
+$$
+
+이며 마지막 유효 response token에 RM score를 더합니다. 이 **토큰별 KL(per-token KL)** sample penalty가 모든 analytic KL estimator와 같은 것은 아니므로 구현을 문서화합니다. Reward hacking을 볼 수 있도록 raw RM reward, KL penalty, final shaped reward를 분리해 기록합니다.
+
+RM은 자체적으로 고정한 tokenizer/template과 보정한 domain을 사용해야 합니다. Scalar reward에는 length, position, style bias가 있을 수 있습니다. 최적화를 믿기 전에 slice별 reward distribution과 human agreement를 평가합니다.
+
+---
+
+## Return, Value Head, GAE
+
+Value prediction $V_t$와 temporal-difference residual
+
+$$
+\delta_t = r_t + \gamma V_{t+1} - V_t,
+$$
+
+**Generalized Advantage Estimation (GAE)** 은
+
+$$
+A_t = \delta_t + \gamma\lambda(1-d_t)A_{t+1},
+$$
+
+입니다. $d_t$는 terminal/padded 위치를 표시합니다. Recursion은 response mask 안에서만 계산합니다. Return target은 $R_t=A_t+V_t$입니다. 많은 system이 rollout batch에 masked **어드밴티지 정규화(advantage whitening)** 를 적용합니다. Distributed 구현은 일관된 global statistic을 사용하고 padding zero를 포함하지 않아야 합니다.
+
+Masked value loss와 선택적인 value clipping으로 value head를 학습하고 PPO clipped surrogate로 policy를 학습합니다.
+
+$$
+L^{\text{clip}}_t=\min\left(r_t(\theta)A_t,
+\operatorname{clip}(r_t(\theta),1-\epsilon,1+\epsilon)A_t\right),
+$$
+
+여기서 $r_t(\theta)=\exp(\log\pi_\theta-\log\pi_{\text{old}})$는 probability ratio이며 위 reward와 다른 기호입니다.
+
+<PPOClippingVisualizer client:load />
+
+---
+
+## Canonical Update Skeleton
+
+아래 pseudocode는 tensor 의미론을 보여 줍니다. Model wrapper, generation backend, distributed rollout store가 다르므로 runnable이라고 표시하지 않습니다.
 
 ```python
-import torch
-import torch.nn as nn
-import torch.optim as optim
+rollout = generate_with_old_policy(prompts)
+response_mask = rollout.response_mask
 
-def outer_ppo_step(
-    policy: nn.Module,
-    old_policy: nn.Module,
-    states: torch.Tensor,
-    actions: torch.Tensor,
-    advantages: torch.Tensor,
-    outer_optimizer: optim.Optimizer,
-    clip_epsilon: float = 0.2,
-    inner_epochs: int = 4
-):
-    """
-    Decoupled 'Outer-PPO' 업데이트(Tan et al., 2024)의 구현 예시입니다.
-    Shapes: states (B, SeqLen, Dim), actions (B, SeqLen), advantages (B, SeqLen)
-    """
-    # 1. 내부 루프 (Inner Loop): 업데이트 벡터 추정
-    # '내부' 탐색 지점 역할을 할 정책을 복제합니다.
-    inner_policy = type(policy)(policy.config) 
-    inner_policy.load_state_dict(policy.state_dict())
-    
-    # 순수 추정을 위해 내부 최적화기는 모멘텀 없이 학습률 1.0을 사용합니다.
-    inner_optimizer = optim.SGD(inner_policy.parameters(), lr=1.0)
-    
-    for _ in range(inner_epochs):
-        inner_optimizer.zero_grad()
-        
-        # 확률 비율 r_t(theta) 계산
-        current_logits = inner_policy(states).logits
-        old_logits = old_policy(states).logits.detach()
-        
-        current_dist = torch.distributions.Categorical(logits=current_logits)
-        old_dist = torch.distributions.Categorical(logits=old_logits)
-        
-        log_probs = current_dist.log_prob(actions)
-        old_log_probs = old_dist.log_prob(actions)
-        ratio = torch.exp(log_probs - old_log_probs)
-        
-        # 클리핑된 대리 목적 함수(Surrogate objective) 계산
-        surr1 = ratio * advantages
-        surr2 = torch.clamp(ratio, 1.0 - clip_epsilon, 1.0 + clip_epsilon) * advantages
-        
-        # 목적 함수 극대화 -> 음의 목적 함수 극소화
-        loss = -torch.min(surr1, surr2).mean()
-        
-        loss.backward()
-        inner_optimizer.step()
-        
-    # 2. 외부 루프 (Outer Loop): 추정된 업데이트 벡터를 실제 정책에 적용
-    outer_optimizer.zero_grad()
-    
-    # 외부 최적화기를 위한 유사 그래디언트(Pseudo-gradient) 계산
-    with torch.no_grad():
-        for param, inner_param in zip(policy.parameters(), inner_policy.parameters()):
-            # pseudo-gradient = current_weight - optimized_inner_weight
-            param.grad = param.data - inner_param.data
-            
-    # 외부 최적화기를 사용하여 업데이트 적용 (예: 튜닝된 LR/모멘텀을 가진 AdamW)
-    outer_optimizer.step()
-    
-    # 다음 롤아웃 페이즈를 위해 이전 정책(old_policy) 동기화
-    old_policy.load_state_dict(policy.state_dict())
+with no_grad():
+    old_logp = completion_logp(old_policy, rollout, response_mask)
+    ref_logp = completion_logp(reference, rollout, response_mask)
+    rm_score = reward_model_score(rollout)
+    old_values = value_head(rollout)
+
+token_rewards = -kl_beta * (old_logp - ref_logp)
+token_rewards[rollout.last_valid_index] += rm_score
+advantages, returns = masked_gae(
+    token_rewards, old_values, response_mask, gamma, gae_lambda
+)
+advantages = masked_global_whiten(advantages, response_mask)
+
+for _ in range(ppo_epochs):
+    new_logp = completion_logp(policy, rollout, response_mask)
+    new_values = value_head(rollout)
+    ratio = (new_logp - old_logp).exp()
+    policy_loss = masked_clipped_surrogate(ratio, advantages, response_mask)
+    value_loss = masked_clipped_value_loss(new_values, old_values, returns, response_mask)
+    entropy = masked_entropy(policy, rollout, response_mask)
+    optimize(policy_loss + value_coef * value_loss - entropy_coef * entropy)
 ```
 
----
-
-## 3. 샘플 비효율성 극복: HP3O (Hybrid-Policy PPO)
-
-표준 PPO의 근본적인 단점은 엄격하게 **On-policy** 로 작동한다는 것입니다. 한 배치의 궤적이 업데이트에 사용되면 즉시 폐기됩니다. 대규모 LLM 정렬에서, 비싸고 검증된 궤적을 단 한 번의 업데이트 후에 버리는 것은 매우 비효율적입니다.
-
-그렇다고 해서 단순히 오래된 궤적(Off-policy 데이터)을 주입하면 신뢰 영역(Trust region)의 수학적 경계가 무너져 높은 분산과 분포 이동(Distribution drift)이 발생합니다.
-
-이러한 격차를 해소하기 위해 **HP3O (Hybrid-Policy Proximal Policy Optimization)** [[3]](#ref-3) 와 같은 최근의 발전은 궤적 인지 리플레이(Trajectory-aware Replay) 메커니즘을 도입했습니다. HP3O는 엄격한 FIFO (First-In, First-Out) 궤적 리플레이 버퍼를 활용합니다. 업데이트 단계에서 알고리즘은 다음과 같이 구성된 하이브리드 배치를 샘플링합니다:
-1. 최근 기록 중 **가장 성능이 좋았던 궤적** (Best-performing trajectory).
-2. FIFO 버퍼에서 무작위로 선택된 최근 궤적들.
-
-업데이트를 가장 최근의 "성공" 사례에 고정시키는 동시에 FIFO를 통해 버퍼의 연한(Age)을 엄격하게 제한함으로써, HP3O는 데이터 분포 이동을 완화합니다. 이는 경험적으로 그래디언트 추정기의 분산을 줄이고, 복잡한 추론 행동을 정렬하는 데 필요한 샘플 복잡성(Sample complexity)을 크게 낮춥니다.
-
-### 클래식 PPO vs 최신 SOTA PPO 비교
-
-| 특징 | Classic PPO (2017) | Modern SOTA (2024-2025) |
-| :--- | :--- | :--- |
-| **업데이트 로직** | 대리 손실에 대한 단일 스텝 그래디언트 상승. | 디커플링된 내부(추정) 및 외부(적용) 루프. |
-| **외부 최적화기** | 암묵적인 학습률 1.0, 모멘텀 없음. | 명시적으로 튜닝된 LR 및 모멘텀 활용 (예: AdamW/Nesterov). |
-| **데이터 사용** | 순수 On-policy; 사용 후 궤적 폐기. | 하이브리드 Off/On-policy 학습을 위한 궤적 인지 FIFO 버퍼 (HP3O). |
-| **안정성 확보** | 순수하게 $\epsilon$ 클리핑 메커니즘에 의해 제한됨. | 클리핑 + 외부 루프 모멘텀 + 궤적 최신성(Recency)에 의해 제한됨. |
+모든 rollout에 sampling policy revision과 old log probability를 저장합니다. Epoch가 너무 많거나 consumer가 늦으면 **정책 지연(policy lag)** 이 커집니다. 데이터가 현재 policy에 비해 stale해져 importance ratio를 신뢰하기 어렵습니다. 최대 rollout age를 정하고 stale batch는 버리거나 다시 생성합니다.
 
 ---
 
+## 안정성과 시스템 계약
 
+SFT policy, reference, RM, value initialization, tokenizer/template, dataset manifest, generation setting, reward normalization, KL controller, $\gamma$, $\lambda$, clipping coefficient, response-token 기준 batch, seed, distributed topology를 고정합니다. 네 모델 identity와 optimizer, scheduler, scaler/FP8 state, RNG, rollout cursor/store state, global token을 저장합니다.
 
-## 요약 및 다음 단계
+다음을 관측합니다.
 
-PPO (Proximal Policy Optimization) 는 더 이상 단순하고 정적인 알고리즘이 아닙니다; 이는 안정적인 그래디언트 추정을 위한 프레임워크입니다. 내부 추정 루프를 외부 적용 루프에서 분리하고(Outer-PPO), 궤적 인지 리플레이 버퍼(HP3O)를 활용함으로써 엔지니어는 정책 붕괴에 빠지지 않고 비동기식 피드백-데이터 팩토리에서 최대의 가치를 추출할 수 있습니다.
+- raw RM reward, non-score reward, per-token KL, shaped reward
+- policy/value loss, value explained variance, advantage mean/std, entropy
+- clip fraction, ratio distribution, response length/EOS, truncation, padding
+- nonfinite/overflow, gradient norm, rollout/train throughput, queue age, policy lag
+- held-out human preference, capability retention, safety, format/tool, cost slice
 
-그러나 PPO는 여전히 여러 모델(정책, 참조, 보상 및 가치 모델)을 메모리에 유지해야 하므로 메모리 부하가 극도로 높습니다. 다음 섹션인 **10.3 DPO (Direct Preference Optimization)** 에서는 보상 모델과 RL 루프를 완전히 우회하여, 지도 학습(Supervised learning) 손실에 대해 직접 선호도를 최적화하는 수학적 혁신을 탐구해 보겠습니다.
+Nonfinite가 반복되거나 value가 발산하거나, KL/entropy/length가 범위를 벗어나거나, clip fraction 또는 stale rollout이 과도하거나, held-out 개선 없이 reward만 오르거나, critical safety가 회귀하면 중단합니다. Frozen pre-PPO bundle을 last-known-good로 유지합니다.
+
+---
+
+## 신흥 Variant
+
+Decoupled rollout, 대안 trust region, replay, Outer-PPO나 HP3O 같은 hybrid-policy 방법이 연구되고 있습니다. 이는 **신흥(emerging)** 설계점이며 canonical loop를 이해하는 일을 대신하지 않습니다. Model, RM, rollout budget, data, evaluation이 같은 조건에서 비교하고 maturity와 구현 공개 여부를 명시합니다.
 
 ---
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: PPO가 TRPO처럼 하드(Hard)한 KL-발산 제약 조건을 사용하지 않고 확률 비율 $r_t(\theta)$ 를 클리핑하는 이유는 무엇입니까?</summary>
-*이전 정책과 새로운 정책 간의 KL-발산 제약 조건을 강제하려면 2차 미분(피셔 정보 행렬)을 계산해야 하는데, 이는 대규모 신경망에서는 연산 비용이 너무 높아 불가능에 가깝습니다. 클리핑은 연산 비용을 저렴하게 유지하면서도 대규모 정책 이동을 방지하는 1차 근사치를 제공합니다.*
+<summary>Quiz 1: LLM PPO에 value head가 필요한 이유는 무엇인가요?</summary>
+*Value head는 각 유효 response 위치의 baseline과 return을 추정합니다. GAE는 이를 사용해 variance를 낮추고 생성 trajectory에 credit을 배분합니다.*
 </details>
 
 <details>
-<summary>Quiz 2: "Outer-PPO" 프레임워크에서 노출되고 튜닝되는 표준 PPO의 암묵적인 하이퍼파라미터는 무엇입니까?</summary>
-*표준 PPO는 추정된 업데이트 벡터를 외부 루프 학습률 1.0 및 모멘텀 0으로 암묵적으로 적용합니다. Outer-PPO는 이를 노출시켜, 엔지니어가 업데이트의 '적용' 단계에 튜닝된 학습률과 모멘텀을 가진 표준 최적화기를 사용할 수 있게 해줍니다.*
+<summary>Quiz 2: Padding에 EOS token을 써도 response mask가 필요한 이유는 무엇인가요?</summary>
+*EOS와 padding ID가 같을 수 있고 sequence 길이가 다릅니다. 명시적 mask가 prompt, padding, terminal 뒤 위치를 KL, advantage, policy, value, entropy reduction에서 제외합니다.*
 </details>
 
 <details>
-<summary>Quiz 3: 만약 어떤 행동이 부정적인 어드밴티지($\hat{A}_t < 0$)를 산출하고 확률 비율 $r_t(\theta)$ 가 1.5라면, PPO 목적 함수는 그래디언트를 클리핑합니까?</summary>
-*아니요. 어드밴티지가 음수라면 우리는 해당 행동의 확률을 낮추기를 원합니다. $r_t(\theta)$ 가 1.5라는 것은 정책이 실제로 이 나쁜 행동의 확률을 증가시켰음을 의미합니다. 클리핑 함수 $\min(rA, \text{clip}(r)A)$ 는 클리핑되지 않은 $rA$ 로 평가되어, 그래디언트가 확률을 다시 공격적으로 낮출 수 있도록 허용합니다.*
+<summary>Quiz 3: PPO의 reward hacking을 어떤 신호로 찾을 수 있나요?</summary>
+*Raw RM reward는 오르지만 held-out human preference, correctness, safety는 오르지 않거나, length/style과 KL이 이동하거나, reward gain이 biased slice에 집중됩니다. Reward component와 fixed evaluation을 분리하면 드러납니다.*
 </details>
 
 <details>
-<summary>Quiz 4: HP3O가 DQN 스타일의 우선순위 경험 리플레이(PER, Prioritized Experience Replay) 대신 엄격한 FIFO 버퍼를 사용하는 이유는 무엇입니까?</summary>
-*PPO는 근접(Proximal, 신뢰 영역) 업데이트에 의존합니다. PER은 데이터 분포를 오차가 큰 트랜지션으로 심하게 편향시키며, 이는 On-policy 가정을 공격적으로 깨뜨리고 엄청난 분포 이동을 유발합니다. FIFO 버퍼는 최신성(Recency)을 보장하여 데이터의 "근접성"을 유지하면서도 샘플 효율성을 향상시킵니다.*
+<summary>Quiz 4: Policy lag가 위험한 이유는 무엇인가요?</summary>
+*오래된 policy가 만든 rollout은 점점 off-policy가 됩니다. Importance ratio가 퍼지고 clipping이 지배하며 stale behavior로 update합니다. Rollout age를 제한하고 데이터를 다시 생성해야 합니다.*
 </details>
 
 ---
 
 ## References
 
-1. <a id="ref-1"></a>Schulman, J., et al. (2017). *Proximal Policy Optimization Algorithms*. [arXiv:1707.06347](https://arxiv.org/abs/1707.06347).
-2. <a id="ref-2"></a>Tan, C. B., et al. (2024). *Beyond the Boundaries of Proximal Policy Optimization*. [arXiv:2411.00632](https://arxiv.org/abs/2411.00632).
-3. <a id="ref-3"></a>Liu, Q., et al. (2025). *Enhancing PPO with Trajectory-Aware Hybrid Policies*. [arXiv:2502.15579](https://arxiv.org/abs/2502.15579).
+1. <a id="ref-1"></a>Schulman, J., et al. (2017). *Proximal Policy Optimization Algorithms.* [arXiv:1707.06347](https://arxiv.org/abs/1707.06347).
+2. <a id="ref-2"></a>Ouyang, L., et al. (2022). *Training language models to follow instructions with human feedback.* [arXiv:2203.02155](https://arxiv.org/abs/2203.02155).
+3. <a id="ref-3"></a>Zheng, R., et al. (2023). *Secrets of RLHF in Large Language Models Part I: PPO.* [arXiv:2307.04964](https://arxiv.org/abs/2307.04964).

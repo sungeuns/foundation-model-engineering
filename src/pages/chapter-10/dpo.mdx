@@ -1,157 +1,117 @@
 ---
 layout: ../../layouts/BookLayout.astro
-title: Direct Preference Optimization (DPO)
+title: 10.3 Direct Preference Optimization (DPO)
 lang: en
 ---
 
-# Direct Preference Optimization (DPO)
+# 10.3 Direct Preference Optimization (DPO)
 
-Fine-tuning Large Language Models (LLMs) to align with human preferences is a critical step in making them useful and safe. Traditionally, this was achieved using Reinforcement Learning from Human Feedback (RLHF), a complex multi-stage process involving training a reward model and then using Reinforcement Learning (PPO) to optimize the policy.
+Direct Preference Optimization (DPO) trains a policy from pairs of responses without fitting a separate scalar reward model or running online rollouts [[1]](#ref-1). Its compact loss does not make the data pipeline compact: most DPO failures come from broken pair construction, mismatched templates, length effects, or an unpinned reference model.
 
-Direct Preference Optimization (DPO), introduced by Rafailov et al. [[1]](#ref-1), revolutionizes this process by showing that **your language model is secretly a reward model**. DPO eliminates the need for a separate reward model and reinforcement learning, solving the alignment problem with a simple classification loss.
+---
 
-## The Motivation: Why Move Beyond PPO?
+## Objective
 
-While RLHF with PPO has been successful (e.g., in ChatGPT), it is notoriously difficult to implement and stabilize. The standard RLHF pipeline requires:
-1.  **Supervised Fine-Tuning (SFT)** on high-quality demonstration data.
-2.  **Reward Modeling**: Training a separate model to predict human preferences from comparison data.
-3.  **Reinforcement Learning (PPO)**: Optimizing the SFT model to maximize the reward model's score while penalized for drifting too far from the original model (KL divergence).
+For the **same prompt** $x$, let $y_w$ be preferred and $y_l$ rejected. With policy $\pi_\theta$, frozen reference $\pi_{\text{ref}}$, and temperature-like coefficient $\beta$,
 
-This third step is the bottleneck. PPO is sensitive to hyperparameters, requires maintaining multiple large models in memory (policy, reference, reward, value), and is prone to instability.
+$$
+\mathcal{L}_{\text{DPO}} = -\log\sigma\left(
+\beta\left[
+\log\frac{\pi_\theta(y_w\mid x)}{\pi_{\text{ref}}(y_w\mid x)}-
+\log\frac{\pi_\theta(y_l\mid x)}{\pi_{\text{ref}}(y_l\mid x)}
+\right]
+\right).
+$$
 
-DPO asks a fundamental question: *Can we achieve the same optimization goal without the complexity of RL?*
+The bracketed quantity is an **implicit reward margin**. DPO increases the policy-reference relative score of the preferred completion compared with the rejected completion. $\beta$ controls how strongly deviations from the reference translate into preference logits; its practical effect depends on data, optimizer, and log-probability convention, so run a $\beta$ sweep.
 
-## The Core Concept: Language Model as Reward Model
+---
 
-The key insight of DPO is a mathematical equivalence between the mapping of reward functions to optimal policies and the mapping of policies to their corresponding reward functions.
+## Pair and Split Contract
 
-In standard RLHF, the objective is to maximize:
-$$\max_{\pi} \mathbb{E}_{x \sim \mathcal{D}, y \sim \pi(\cdot|x)} [r(x, y)] - \beta \mathbb{D}_{KL}(\pi(y|x) \| \pi_{ref}(y|x))$$
+Each record contains one prompt, chosen response, rejected response, preference strength or tie/skip state, annotator/rubric provenance, and stable IDs. Chosen and rejected must share byte- and token-identical prompt context after rendering. Do not construct pairs by joining unrelated high- and low-score answers.
 
-Where $r(x, y)$ is the reward model, $\pi$ is the policy being optimized, $\pi_{ref}$ is the reference policy (usually the SFT model), and $\beta$ controls the strength of the KL penalty.
+Split by prompt/conversation/entity **cluster before training**. Keep both completions, all annotations, paraphrases, and synthetic siblings in the same split. Randomize display position during annotation; track agreement, ties, abstentions, and length/verbosity differences. Quarantine public/private evaluations, rubrics, semantic neighbors, and teacher-generated variants.
 
-Rafailov et al. showed that the optimal solution to this objective can be expressed analytically:
-$$\pi_r(y|x) = \frac{1}{Z(x)} \pi_{ref}(y|x) \exp\left(\frac{1}{\beta} r(x, y)\right)$$
+---
 
-Where $Z(x)$ is a partition function. By rearranging this equation, we can express the reward $r(x, y)$ in terms of the optimal policy $\pi_r$ and reference policy $\pi_{ref}$:
-$$r(x, y) = \beta \log \frac{\pi_r(y|x)}{\pi_{ref}(y|x)} + \beta \log Z(x)$$
+## Tokenization and Log-Probability Contract
 
-This means the reward is implicitly defined by the policy's log probabilities relative to the reference policy!
-
-## The DPO Loss Function
-
-By substituting this implicit reward into the Bradley-Terry preference model, DPO derives a simple classification loss. Given a dataset of triples $(x, y_w, y_l)$ where $x$ is the prompt, $y_w$ is the preferred completion, and $y_l$ is the dispreferred completion, the loss is:
-
-$$\mathcal{L}_{\mathrm{DPO}}(\pi_\theta; \pi_{ref}) = -\mathbb{E}_{(x,y_w,y_l) \sim \mathcal{D}}\left[\log \sigma\left(\beta\log\frac{\pi_\theta(y_w|x)}{\pi_{ref}(y_w|x)} - \beta\log\frac{\pi_\theta(y_l|x)}{\pi_{ref}(y_l|x)}\right)\right]$$
-
-Where:
--   $\pi_\theta$ is the model we are training.
--   $\pi_{ref}$ is the frozen reference model (SFT).
--   $\sigma$ is the sigmoid function.
--   $\beta$ is a hyperparameter (typically $0.1$).
-
-This loss encourages the model to increase the probability of the preferred response $y_w$ relative to the reference model, while decreasing the probability of the rejected response $y_l$.
-
-## PyTorch Implementation
-
-Here is a clean, realistic implementation of the DPO loss in PyTorch. In practice, you would compute the log probabilities of the completion tokens given the prompt.
+Render both sides with the exact tokenizer artifact and `apply_chat_template`. Use the same system messages, role order, BOS/EOS behavior, prompt truncation, and `add_generation_prompt` policy. Include the intended EOS in each completion and compute log probabilities only on completion tokens.
 
 ```python
-import torch
-import torch.nn.functional as F
+def render_pair(tokenizer, prompt_messages, chosen, rejected):
+    def render(answer):
+        messages = [*prompt_messages, {"role": "assistant", "content": answer}]
+        return tokenizer.apply_chat_template(
+            messages,
+            tokenize=True,
+            add_generation_prompt=False,
+        )
+    return render(chosen), render(rejected)
 
-def compute_dpo_loss(policy_logps, ref_logps, beta=0.1):
-    """
-    Compute Direct Preference Optimization (DPO) loss.
-    
-    Args:
-        policy_logps: Tuple of (chosen_logps, rejected_logps) from the policy model.
-                      Each is a tensor of shape (batch_size,).
-        ref_logps: Tuple of (chosen_logps, rejected_logps) from the reference model.
-                     Each is a tensor of shape (batch_size,).
-        beta: Temperature parameter for DPO (hyperparameter).
-        
-    Returns:
-        loss: The scalar DPO loss.
-        chosen_rewards: Implicit rewards for chosen completions.
-        rejected_rewards: Implicit rewards for rejected completions.
-    """
-    policy_chosen_logps, policy_rejected_logps = policy_logps
-    ref_chosen_logps, ref_rejected_logps = ref_logps
-    
-    # Compute implicit rewards
-    chosen_rewards = beta * (policy_chosen_logps - ref_chosen_logps)
-    rejected_rewards = beta * (policy_rejected_logps - ref_rejected_logps)
-    
-    # DPO loss is negative log sigmoid of reward margin
-    logits = chosen_rewards - rejected_rewards
-    loss = -F.logsigmoid(logits).mean()
-    
-    return loss, chosen_rewards, rejected_rewards
-
-# Example usage with realistic tensor shapes
-batch_size = 4
-# Simulate log probabilities for a sequence of tokens
-policy_chosen_logps = torch.randn(batch_size)
-policy_rejected_logps = torch.randn(batch_size)
-ref_chosen_logps = torch.randn(batch_size)
-ref_rejected_logps = torch.randn(batch_size)
-
-loss, c_rew, r_rew = compute_dpo_loss(
-    (policy_chosen_logps, policy_rejected_logps),
-    (ref_chosen_logps, ref_rejected_logps),
-    beta=0.1
-)
-
-print(f"DPO Loss: {loss.item():.4f}")
-print(f"Chosen Rewards: {c_rew}")
-print(f"Rejected Rewards: {r_rew}")
+# The collator must produce, for each side:
+# input_ids, attention_mask, completion_mask, and labels (-100 outside completion).
 ```
 
-## Practical Application with Hugging Face TRL
+Test the token-level boundary rather than searching decoded delimiters. Padding must be excluded by `attention_mask`; prompt and special tokens excluded from the completion mask; variable-length batches must normalize over the intended positions.
 
-For real-world training, the `trl` library provides a high-level `DPOTrainer` that handles tokenization, reference model log-prob computation, and optimization.
+Sequence log probability is usually the **sum** of completion-token log probabilities, which matches the sequence likelihood in the derivation but can create response-length pressure. A **mean** changes the objective and is not a neutral fix. Log chosen/rejected lengths, compare sum and length-normalized diagnostics, control verbosity in the data, and choose the serving-relevant policy explicitly.
 
-```python
-from trl import DPOTrainer
-from datasets import load_dataset
+Truncation is pair-coupled: apply the same prompt budget to both sides, preserve the assistant boundary, and reject or flag pairs whose decisive span or EOS was cut. Never let one side keep more prompt context than the other.
 
-# Load a preference dataset (must have columns: prompt, chosen, rejected)
-dataset = load_dataset("trl-lib/ultrafeedback_binarized", split="train")
+---
 
-trainer = DPOTrainer(
-    model="Qwen/Qwen3-0.6B",
-    train_dataset=dataset,
-    # DPOTrainer will handle the reference model automatically if not provided
-)
+## Reference and PEFT Semantics
 
-trainer.train()
-```
+Freeze and record the exact **reference checkpoint hash**, tokenizer hash, template hash, precision, and log-probability implementation. A reference silently reconstructed from “the same model name” is not reproducible.
+
+With PEFT, define whether the reference is the base with the adapter disabled, a separate frozen adapter snapshot, or cached reference log probabilities. Verify equivalence on a fixed batch. Reference-free variants optimize a different objective and must be named and evaluated as such.
+
+---
+
+## Run Contract and Monitoring
+
+Start from an SFT checkpoint that already produces valid responses. Pin the pair manifest, code/container, optimizer, batch in completion tokens, precision, max lengths, gradient accumulation, $\beta$, and seeds. Save model/adapter, optimizer, scheduler, scaler, RNG, sampler, and data cursor.
+
+Monitor more than loss:
+
+- chosen and rejected policy log probabilities;
+- chosen and rejected reference log probabilities;
+- implicit reward margin and preference accuracy;
+- KL proxy to reference, entropy, response length, EOS and truncation rates;
+- held-out win rate with paired uncertainty;
+- domain, base-retention, safety, refusal, format/tool, latency, and cost slices.
+
+Stop when both chosen and rejected log probabilities collapse, KL/length leaves the declared band, held-out preference stalls while retention regresses, nonfinite values persist, or a critical slice fails. Release the complete artifact bundle only after a paired baseline comparison and rollback rehearsal.
+
+---
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: Why does DPO eliminate the need for a separate reward model?</summary>
-*DPO is based on the mathematical insight that the optimal policy in RLHF uniquely defines the reward function up to a partition function. By substituting this relationship into the Bradley-Terry preference model, DPO directly optimizes the policy based on preference data, bypassing the need to explicitly learn and store a separate reward model.*
+<summary>Quiz 1: Why must chosen and rejected responses use the same rendered prompt?</summary>
+*DPO attributes their likelihood difference to preference. Different system text, truncation, or template tokens introduce another cause, so the learned margin no longer isolates response preference.*
 </details>
 
 <details>
-<summary>Quiz 2: What is the role of the $\beta$ parameter in the DPO loss function?</summary>
-*The $\beta$ parameter controls the strength of the preference signal and acts as a temperature scale. It determines how much we trust the reference model vs. the preference data. A smaller $\beta$ allows the policy to deviate more from the reference model to satisfy preferences, while a larger $\beta$ keeps it closer to the reference model.*
+<summary>Quiz 2: Why is replacing summed completion log probability with a mean not a harmless length correction?</summary>
+*The derivation uses sequence likelihood, whose log is a sum. Averaging changes the objective. Engineers should diagnose length bias, curate/control verbosity, and evaluate both length and quality rather than silently changing semantics.*
 </details>
 
 <details>
-<summary>Quiz 3: In what scenario might DPO still face challenges despite its simplicity?</summary>
-*DPO assumes that the preference data is static and representative. If the preference data is noisy or contradictory, DPO might overfit to bad samples. Additionally, since it relies on the reference model's distribution, if the reference model has low probability for a good completion, DPO might struggle to upweight it efficiently.*
+<summary>Quiz 3: What must identify the DPO reference policy?</summary>
+*The exact checkpoint and tokenizer/template hashes, precision, adapter-enabled state or cached log-prob artifact, and log-probability implementation must be fixed and verified.*
 </details>
 
 <details>
-<summary>Quiz 4: Derive the analytical gradient of the DPO loss function with respect to the policy parameters $\theta$.</summary>
-*The DPO loss is defined as $\mathcal{L}_{\mathrm{DPO}}(\theta) = -\mathbb{E}\left[\log \sigma(\hat{r}_\theta(x, y_w) - \hat{r}_\theta(x, y_l))\right]$ where $\hat{r}_\theta(x, y) = \beta \log \frac{\pi_\theta(y|x)}{\pi_{ref}(y|x)}$. Using the chain rule and the property of the sigmoid derivative $\nabla_z \log \sigma(z) = 1 - \sigma(z) = \sigma(-z)$, we get $\nabla_\theta \mathcal{L}_{\mathrm{DPO}}(\theta) = -\mathbb{E}\left[ \sigma(\hat{r}_\theta(x, y_l) - \hat{r}_\theta(x, y_w)) \nabla_\theta (\hat{r}_\theta(x, y_w) - \hat{r}_\theta(x, y_l)) \right]$. Substituting the definition of $\hat{r}_\theta$, we obtain $\nabla_\theta \mathcal{L}_{\mathrm{DPO}}(\theta) = - \beta \mathbb{E}\left[ \sigma(\hat{r}_\theta(x, y_l) - \hat{r}_\theta(x, y_w)) \left( \nabla_\theta \log \pi_\theta(y_w|x) - \nabla_\theta \log \pi_\theta(y_l|x) \right) \right]$. This mathematically demonstrates that DPO scales the gradient update by the implicit reward error (sigmoid term), upweighting the winning response and downweighting the losing response.*
+<summary>Quiz 4: Why can falling DPO loss accompany a worse model?</summary>
+*The policy can exploit length/style confounds, drive both answer likelihoods down, move too far from the reference, or overfit annotator bias. Held-out wins, margins, KL, length, retention, safety, and format slices reveal those failures.*
 </details>
 
 ---
 
 ## References
 
-1. <a id="ref-1"></a>Rafailov, R., et al. (2023). *Direct Preference Optimization: Your Language Model is Secretly a Reward Model*. [arXiv:2305.18290](https://arxiv.org/abs/2305.18290).
+1. <a id="ref-1"></a>Rafailov, R., et al. (2023). *Direct Preference Optimization: Your Language Model is Secretly a Reward Model.* [arXiv:2305.18290](https://arxiv.org/abs/2305.18290).
+2. <a id="ref-2"></a>Hugging Face. *DPO Trainer.* [TRL documentation](https://huggingface.co/docs/trl/dpo_trainer).

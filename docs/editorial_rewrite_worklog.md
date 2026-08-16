@@ -146,11 +146,11 @@ Review completed on 2026-04-16 for every EN/KO sub-chapter pair below.
 - [x] synthetic-instructions-and-self-instruct (EN/KO pair; 2026-08-16 practitioner rewrite)
 
 ### chapter-10
-- [x] alignment-tax (EN/KO pair)
-- [x] dpo (EN/KO pair)
-- [x] human-feedback-loop (EN/KO pair)
-- [x] kto-and-ipo (EN/KO pair)
-- [x] ppo-proximal-policy-optimization (EN/KO pair)
+- [x] alignment-tax (EN/KO pair; 2026-08-16 practitioner rewrite)
+- [x] dpo (EN/KO pair; 2026-08-16 practitioner rewrite)
+- [x] human-feedback-loop (EN/KO pair; 2026-08-16 practitioner rewrite)
+- [x] kto-and-ipo (EN/KO pair; 2026-08-16 practitioner rewrite)
+- [x] ppo-proximal-policy-optimization (EN/KO pair; 2026-08-16 practitioner rewrite)
 
 ### chapter-11
 - [x] audio-and-speech-integration (EN/KO pair)

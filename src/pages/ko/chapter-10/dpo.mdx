@@ -1,157 +1,117 @@
 ---
 layout: ../../../layouts/BookLayout.astro
-title: 직접 선호도 최적화 (Direct Preference Optimization, DPO)
+title: 10.3 Direct Preference Optimization (DPO)
 lang: ko
 ---
 
-# 직접 선호도 최적화 (Direct Preference Optimization, DPO)
+# 10.3 Direct Preference Optimization (DPO)
 
-대규모 언어 모델(LLMs)을 인간의 선호도에 맞게 미세 조정(Fine-tuning)하는 것은 모델을 유용하고 안전하게 만드는 데 중요한 단계입니다. 전통적으로 이는 인간 피드백 기반 강화 학습(RLHF)을 통해 이루어졌는데, 이는 보상 모델(Reward Model)을 훈련한 다음 강화 학습(PPO)을 사용하여 정책(Policy)을 최적화하는 복잡한 다단계 프로세스였습니다.
+Direct Preference Optimization (DPO)은 별도의 scalar reward model을 학습하거나 online rollout을 수행하지 않고 응답 pair로 policy를 학습합니다 [[1]](#ref-1). Loss가 간결하다고 데이터 파이프라인도 간결한 것은 아닙니다. DPO 실패의 상당수는 잘못된 pair, 불일치 template, 길이 효과, 고정되지 않은 reference model에서 생깁니다.
 
-Rafailov 등이 제안한 직접 선호도 최적화(Direct Preference Optimization, DPO) [[1]](#ref-1) 는 **언어 모델 자체가 비밀리에 보상 모델** 임을 보여줌으로써 이 프로세스를 혁신합니다. DPO는 별도의 보상 모델과 강화 학습의 필요성을 제거하고 단순한 분류 손실(Classification Loss)로 정렬(Alignment) 문제를 해결합니다.
+---
 
-## 모티베이션: 왜 PPO를 넘어서야 하는가?
+## 목적함수
 
-PPO를 사용한 RLHF는 성공적이었지만(예: ChatGPT), 구현과 안정화가 극도로 어렵기로 유명합니다. 표준 RLHF 파이프라인은 다음을 요구합니다:
-1.  고품질 데모 데이터에 대한 **지도 미세 조정 (SFT)**.
-2.  **보상 모델링**: 비교 데이터로부터 인간의 선호도를 예측하기 위해 별도의 모델을 훈련합니다.
-3.  **강화 학습 (PPO)**: 원래 모델에서 너무 멀어지지 않도록(KL divergence) 패널티를 부여하면서 보상 모델의 점수를 극대화하도록 SFT 모델을 최적화합니다.
+**동일한 prompt** $x$에 preferred response $y_w$와 rejected response $y_l$이 있다고 합시다. Policy $\pi_\theta$, frozen reference $\pi_{\text{ref}}$, temperature와 비슷한 계수 $\beta$에 대해
 
-이 세 번째 단계가 병목입니다. PPO는 하이퍼파라미터에 민감하고, 메모리에 여러 개의 거대한 모델(Policy, Reference, Reward, Value)을 유지해야 하며, 불안정해지기 쉽습니다.
+$$
+\mathcal{L}_{\text{DPO}} = -\log\sigma\left(
+\beta\left[
+\log\frac{\pi_\theta(y_w\mid x)}{\pi_{\text{ref}}(y_w\mid x)}-
+\log\frac{\pi_\theta(y_l\mid x)}{\pi_{\text{ref}}(y_l\mid x)}
+\right]
+\right).
+$$
 
-DPO는 근본적인 질문을 던집니다: *강화 학습(RL)의 복잡성 없이 동일한 최적화 목표를 달성할 수 없을까?*
+대괄호 안은 **암묵적 reward margin (implicit reward margin)** 입니다. DPO는 rejected completion에 비해 preferred completion의 policy-reference 상대 점수를 높입니다. $\beta$는 reference에서의 이탈이 preference logit으로 바뀌는 강도를 조절하지만 실제 효과는 데이터·optimizer·log-probability 규약에 따라 달라지므로 $\beta$ sweep을 수행합니다.
 
-## 핵심 개념: 보상 모델로서의 언어 모델
+---
 
-DPO의 핵심 통찰은 보상 함수를 최적의 정책에 매핑하는 것과 정책을 해당 보상 함수에 매핑하는 것 사이의 수학적 동등성입니다.
+## Pair와 Split 계약
 
-표준 RLHF에서 목표는 다음을 극대화하는 것입니다:
-$$\max_{\pi} \mathbb{E}_{x \sim \mathcal{D}, y \sim \pi(\cdot|x)} [r(x, y)] - \beta \mathbb{D}_{KL}(\pi(y|x) \| \pi_{ref}(y|x))$$
+각 record에는 하나의 prompt, chosen response, rejected response, preference strength 또는 tie/skip 상태, annotator/rubric provenance, stable ID가 들어갑니다. Rendering 후 chosen과 rejected는 byte와 token이 같은 prompt context를 공유해야 합니다. 서로 무관한 high-score와 low-score 답을 합쳐 pair를 만들면 안 됩니다.
 
-여기서 $r(x, y)$ 는 보상 모델, $\pi$ 는 최적화되는 정책, $\pi_{ref}$ 는 참조 정책(일반적으로 SFT 모델)이며, $\beta$ 는 KL 패널티의 강도를 제어합니다.
+학습 전에 prompt/conversation/entity **클러스터 단위로 분할(cluster split)** 합니다. 두 completion, 모든 annotation, paraphrase, synthetic sibling을 같은 split에 둡니다. Annotation 화면 위치를 무작위화하고 평가자 일치도, tie, abstention, length/verbosity 차이를 기록합니다. Public/private evaluation, rubric, semantic neighbor, teacher-generated variant를 격리합니다.
 
-Rafailov 등은 이 목표에 대한 최적의 솔루션이 분석적으로 표현될 수 있음을 보여주었습니다:
-$$\pi_r(y|x) = \frac{1}{Z(x)} \pi_{ref}(y|x) \exp\left(\frac{1}{\beta} r(x, y)\right)$$
+---
 
-여기서 $Z(x)$ 는 분할 함수(Partition Function)입니다. 이 방정식을 재배열함으로써, 최적의 정책 $\pi_r$ 과 참조 정책 $\pi_{ref}$ 의 관점에서 보상 $r(x, y)$ 를 표현할 수 있습니다:
-$$r(x, y) = \beta \log \frac{\pi_r(y|x)}{\pi_{ref}(y|x)} + \beta \log Z(x)$$
+## Tokenization과 Log-Probability 계약
 
-이는 보상이 참조 정책에 대한 정책의 로그 확률(Log Probabilities)에 의해 암묵적으로 정의됨을 의미합니다!
-
-## DPO 손실 함수 (Loss Function)
-
-이 암묵적 보상을 Bradley-Terry 선호도 모델에 대입함으로써, DPO는 단순한 분류 손실을 도출합니다. $x$ 가 프롬프트, $y_w$ 가 선호되는 완료(Completion), $y_l$ 이 선호되지 않는 완료인 트리플 $(x, y_w, y_l)$ 데이터셋이 주어지면 손실은 다음과 같습니다:
-
-$$\mathcal{L}_{\mathrm{DPO}}(\pi_\theta; \pi_{ref}) = -\mathbb{E}_{(x,y_w,y_l) \sim \mathcal{D}}\left[\log \sigma\left(\beta\log\frac{\pi_\theta(y_w|x)}{\pi_{ref}(y_w|x)} - \beta\log\frac{\pi_\theta(y_l|x)}{\pi_{ref}(y_l|x)}\right)\right]$$
-
-여기서:
--   $\pi_\theta$ 는 우리가 훈련하는 모델입니다.
--   $\pi_{ref}$ 는 고정된 참조 모델(SFT)입니다.
--   $\sigma$ 는 시그모이드(Sigmoid) 함수입니다.
--   $\beta$ 는 하이퍼파라미터(일반적으로 $0.1$)입니다.
-
-이 손실은 모델이 참조 모델에 비해 선호되는 응답 $y_w$ 의 확률을 높이고, 거부된 응답 $y_l$ 의 확률을 낮추도록 유도합니다.
-
-## PyTorch 구현
-
-다음은 PyTorch에서 DPO 손실을 구현한 깔끔하고 현실적인 코드입니다. 실제로는 프롬프트가 주어졌을 때 완료 토큰의 로그 확률을 계산하게 됩니다.
+정확한 tokenizer artifact와 `apply_chat_template`로 양쪽을 rendering합니다. System message, role order, BOS/EOS, prompt truncation, `add_generation_prompt` 정책이 같아야 합니다. Completion에 의도한 EOS를 포함하고 completion token에만 log probability를 계산합니다.
 
 ```python
-import torch
-import torch.nn.functional as F
+def render_pair(tokenizer, prompt_messages, chosen, rejected):
+    def render(answer):
+        messages = [*prompt_messages, {"role": "assistant", "content": answer}]
+        return tokenizer.apply_chat_template(
+            messages,
+            tokenize=True,
+            add_generation_prompt=False,
+        )
+    return render(chosen), render(rejected)
 
-def compute_dpo_loss(policy_logps, ref_logps, beta=0.1):
-    """
-    Direct Preference Optimization (DPO) 손실을 계산합니다.
-    
-    Args:
-        policy_logps: 정책 모델의 (chosen_logps, rejected_logps) 튜플.
-                      각각은 (batch_size,) 형태의 텐서입니다.
-        ref_logps: 참조 모델의 (chosen_logps, rejected_logps) 튜플.
-                     각각은 (batch_size,) 형태의 텐서입니다.
-        beta: DPO의 온도 파라미터 (하이퍼파라미터).
-        
-    Returns:
-        loss: 스칼라 DPO 손실.
-        chosen_rewards: 선택된 완료에 대한 암묵적 보상.
-        rejected_rewards: 거부된 완료에 대한 암묵적 보상.
-    """
-    policy_chosen_logps, policy_rejected_logps = policy_logps
-    ref_chosen_logps, ref_rejected_logps = ref_logps
-    
-    # 암묵적 보상 계산
-    chosen_rewards = beta * (policy_chosen_logps - ref_chosen_logps)
-    rejected_rewards = beta * (policy_rejected_logps - ref_rejected_logps)
-    
-    # DPO 손실은 보상 마진의 음의 로그 시그모이드입니다.
-    logits = chosen_rewards - rejected_rewards
-    loss = -F.logsigmoid(logits).mean()
-    
-    return loss, chosen_rewards, rejected_rewards
-
-# 현실적인 텐서 형태를 사용한 예제
-batch_size = 4
-# 토큰 시퀀스에 대한 로그 확률 시뮬레이션
-policy_chosen_logps = torch.randn(batch_size)
-policy_rejected_logps = torch.randn(batch_size)
-ref_chosen_logps = torch.randn(batch_size)
-ref_rejected_logps = torch.randn(batch_size)
-
-loss, c_rew, r_rew = compute_dpo_loss(
-    (policy_chosen_logps, policy_rejected_logps),
-    (ref_chosen_logps, ref_rejected_logps),
-    beta=0.1
-)
-
-print(f"DPO Loss: {loss.item():.4f}")
-print(f"Chosen Rewards: {c_rew}")
-print(f"Rejected Rewards: {r_rew}")
+# Collator는 각 side에 input_ids, attention_mask,
+# completion_mask, labels(completion 밖은 -100)를 만들어야 합니다.
 ```
 
-## Hugging Face TRL을 이용한 실제 적용
+Decoded delimiter를 검색하지 말고 token-level boundary를 테스트합니다. Padding은 `attention_mask`로 제외하고 prompt와 special token은 completion mask에서 제외합니다. Variable-length batch는 의도한 token에 대해서만 normalize해야 합니다.
 
-실제 훈련을 위해 `trl` 라이브러리는 토큰화, 참조 모델 로그 확률 계산 및 최적화를 처리하는 고수준 `DPOTrainer` 를 제공합니다.
+Sequence log probability는 보통 completion token log probability의 **합(sum)** 이며 derivation의 sequence likelihood와 맞지만 response-length pressure를 만들 수 있습니다. **평균(mean)** 은 목적함수를 바꾸므로 중립적인 수정이 아닙니다. Chosen/rejected length를 기록하고 합과 length-normalized diagnostic을 함께 보고, 데이터의 verbosity를 통제하고, serving 목표에 맞는 정책을 명시합니다.
 
-```python
-from trl import DPOTrainer
-from datasets import load_dataset
+Truncation은 pair-coupled입니다. 양쪽에 같은 prompt budget을 적용하고 assistant boundary를 보존하며 결정적 span이나 EOS가 잘린 pair는 제거하거나 표시합니다. 한쪽만 더 많은 prompt context를 보게 하면 안 됩니다.
 
-# 선호도 데이터셋 로드 (prompt, chosen, rejected 컬럼이 있어야 함)
-dataset = load_dataset("trl-lib/ultrafeedback_binarized", split="train")
+---
 
-trainer = DPOTrainer(
-    model="Qwen/Qwen3-0.6B",
-    train_dataset=dataset,
-    # DPOTrainer는 참조 모델이 제공되지 않으면 자동으로 처리합니다.
-)
+## Reference와 PEFT 의미론
 
-trainer.train()
-```
+정확한 **reference checkpoint 해시**, tokenizer hash, template hash, precision, log-probability 구현을 고정하고 기록합니다. “같은 model name”으로 다시 불러온 reference는 재현 가능한 식별자가 아닙니다.
+
+PEFT에서는 reference가 adapter를 끈 base인지, 별도로 frozen한 adapter snapshot인지, cached reference log probability인지 정의합니다. 고정 batch에서 동등성을 검사합니다. Reference-free variant는 다른 목적함수이므로 이름과 평가를 구분합니다.
+
+---
+
+## 실행 계약과 관측
+
+유효한 응답을 이미 생성하는 SFT checkpoint에서 시작합니다. Pair manifest, code/container, optimizer, completion token 기준 batch, precision, max length, gradient accumulation, $\beta$, seed를 고정합니다. Model/adapter, optimizer, scheduler, scaler, RNG, sampler, data cursor를 저장합니다.
+
+Loss 외에도 다음을 관측합니다.
+
+- chosen/rejected policy log probability
+- chosen/rejected reference log probability
+- implicit reward margin과 preference accuracy
+- reference KL proxy, entropy, response length, EOS·truncation 비율
+- paired uncertainty가 있는 held-out win rate
+- domain, base-retention, safety, refusal, format/tool, latency, cost slice
+
+Chosen과 rejected log probability가 함께 붕괴하거나, KL/length가 선언한 범위를 벗어나거나, held-out preference가 정체되면서 retention이 회귀하거나, nonfinite가 반복되거나, critical slice가 실패하면 중단합니다. Paired baseline comparison과 rollback rehearsal 후 complete artifact bundle만 배포합니다.
+
+---
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: DPO가 별도의 보상 모델이 필요 없는 이유는 무엇인가요?</summary>
-*DPO는 RLHF의 최적 정책이 파티션 함수를 제외하고 보상 함수를 고유하게 정의한다는 수학적 통찰에 기반합니다. 이 관계를 Bradley-Terry 선호도 모델에 대입함으로써, DPO는 별도의 보상 모델을 명시적으로 학습하고 저장할 필요 없이 선호도 데이터에 기반하여 정책을 직접 최적화합니다.*
+<summary>Quiz 1: Chosen과 rejected가 동일하게 rendering된 prompt를 사용해야 하는 이유는 무엇인가요?</summary>
+*DPO는 likelihood 차이를 preference 때문이라고 해석합니다. System text, truncation, template token이 다르면 다른 원인이 섞여 학습 margin이 response preference를 분리하지 못합니다.*
 </details>
 
 <details>
-<summary>Quiz 2: DPO 손실 함수에서 $\beta$ 파라미터의 역할은 무엇인가요?</summary>
-*$\beta$ 파라미터는 선호도 신호의 강도를 제어하며 온도 스케일 역할을 합니다. 이는 참조 모델과 선호도 데이터 중 어느 것을 더 신뢰할지 결정합니다. $\beta$ 가 작을수록 정책이 선호도를 만족시키기 위해 참조 모델에서 더 많이 벗어날 수 있으며, $\beta$ 가 클수록 참조 모델에 더 가깝게 유지됩니다.*
+<summary>Quiz 2: Completion log probability의 합을 평균으로 바꾸는 것이 단순한 길이 보정이 아닌 이유는 무엇인가요?</summary>
+*Derivation은 sequence likelihood를 사용하며 그 log는 합입니다. 평균은 목적함수를 바꿉니다. 길이 편향을 진단하고 verbosity를 큐레이션하며 length와 quality를 함께 평가해야 합니다.*
 </details>
 
 <details>
-<summary>Quiz 3: DPO가 단순함에도 불구하고 여전히 어려움을 겪을 수 있는 시나리오는 무엇인가요?</summary>
-*DPO는 선호도 데이터가 정적이고 대표성이 있다고 가정합니다. 선호도 데이터에 노이즈가 있거나 모순이 있는 경우 DPO는 잘못된 샘플에 과적합될 수 있습니다. 또한 참조 모델의 분포에 의존하기 때문에, 참조 모델이 좋은 완료에 대해 매우 낮은 확률을 부여한 경우 DPO는 이를 효율적으로 가중치를 높이는 데 어려움을 겪을 수 있습니다.*
+<summary>Quiz 3: DPO reference policy를 식별하려면 무엇을 고정해야 하나요?</summary>
+*정확한 checkpoint와 tokenizer/template hash, precision, adapter 활성 상태 또는 cached log-prob artifact, log-probability 구현을 고정하고 검증해야 합니다.*
 </details>
 
 <details>
-<summary>Quiz 4: 정책 파라미터 $\theta$에 대한 DPO 손실 함수의 해석적 그래디언트(Gradient)를 유도하십시오.</summary>
-*DPO 손실 함수는 $\mathcal{L}_{\mathrm{DPO}}(\theta) = -\mathbb{E}\left[\log \sigma(\hat{r}_\theta(x, y_w) - \hat{r}_\theta(x, y_l))\right]$ 이며, 이때 암시적 보상은 $\hat{r}_\theta(x, y) = \beta \log \frac{\pi_\theta(y|x)}{\pi_{ref}(y|x)}$ 입니다. 연쇄 법칙(Chain rule)과 시그모이드 미분 성질 $\nabla_z \log \sigma(z) = 1 - \sigma(z) = \sigma(-z)$를 사용하면, $\nabla_\theta \mathcal{L}_{\mathrm{DPO}}(\theta) = -\mathbb{E}\left[ \sigma(\hat{r}_\theta(x, y_l) - \hat{r}_\theta(x, y_w)) \nabla_\theta (\hat{r}_\theta(x, y_w) - \hat{r}_\theta(x, y_l)) \right]$ 를 얻을 수 있습니다. 여기에 $\hat{r}_\theta$의 정의를 대입하면 $\nabla_\theta \mathcal{L}_{\mathrm{DPO}}(\theta) = - \beta \mathbb{E}\left[ \sigma(\hat{r}_\theta(x, y_l) - \hat{r}_\theta(x, y_w)) \left( \nabla_\theta \log \pi_\theta(y_w|x) - \nabla_\theta \log \pi_\theta(y_l|x) \right) \right]$ 를 도출할 수 있습니다. 이는 DPO가 암시적 보상의 오류(시그모이드 항)에 비례하여 그래디언트 가중치를 조절함으로써, 선호되는 응답의 확률을 높이고 거부된 응답의 확률을 낮춘다는 점을 수학적으로 보여줍니다.*
+<summary>Quiz 4: DPO loss가 내려가는데 모델이 나빠질 수 있는 이유는 무엇인가요?</summary>
+*Length/style confound를 이용하거나, 양쪽 답 likelihood를 함께 낮추거나, reference에서 너무 멀어지거나, annotator bias를 overfit할 수 있습니다. Held-out win, margin, KL, length, retention, safety, format slice로 이를 발견합니다.*
 </details>
 
 ---
 
 ## References
 
-1. <a id="ref-1"></a>Rafailov, R., et al. (2023). *Direct Preference Optimization: Your Language Model is Secretly a Reward Model*. [arXiv:2305.18290](https://arxiv.org/abs/2305.18290).
+1. <a id="ref-1"></a>Rafailov, R., et al. (2023). *Direct Preference Optimization: Your Language Model is Secretly a Reward Model.* [arXiv:2305.18290](https://arxiv.org/abs/2305.18290).
+2. <a id="ref-2"></a>Hugging Face. *DPO Trainer.* [TRL documentation](https://huggingface.co/docs/trl/dpo_trainer).

@@ -89,11 +89,11 @@ During this editorial overhaul, every English/Korean sub-chapter pair was review
 
 ## Chapter 10
 
-- `alignment-tax`: reviewed; edits applied; notes: fixed reference quality and code-example details in EN/KO.
-- `dpo`: reviewed; no additional edits required; notes: no blocking issues found in the final pass.
-- `human-feedback-loop`: reviewed; edits applied; notes: softened claims that were stronger than the cited evidence.
-- `kto-and-ipo`: reviewed; no additional edits required; notes: no further edits needed after audit.
-- `ppo-proximal-policy-optimization`: reviewed; no additional edits required; notes: structure and parity were acceptable.
+- `alignment-tax`: reviewed 2026-08-16; qualified calibration claims, fixed common-parameter gradient projection, and added multi-objective release gates.
+- `dpo`: reviewed 2026-08-16; added same-prompt pair construction, native tokenization and completion masks, reference identity, length diagnostics, split isolation, and monitoring.
+- `human-feedback-loop`: reviewed 2026-08-16; added exposure/propensity controls, randomized annotation, ties/abstentions, privacy, active-learning bias, sibling holdouts, and release gates.
+- `kto-and-ipo`: reviewed 2026-08-16; corrected the KTO KL reference point and cDPO gradient interpretation and documented estimator, sampling, and library-version semantics.
+- `ppo-proximal-policy-optimization`: reviewed 2026-08-16; restored the canonical RM/value/GAE/per-token-KL/masked PPO loop, rollout staleness controls, and demoted research variants to emerging.
 
 ## Chapter 11
 

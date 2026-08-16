@@ -67,11 +67,11 @@ Date: 2026-04-20
 - [x] 9.5 `synthetic-instructions-and-self-instruct` reviewed (EN, KO; practitioner review 2026-08-16)
 
 ## Chapter 10
-- [x] 10.1 `human-feedback-loop` reviewed (EN, KO)
-- [x] 10.2 `ppo-proximal-policy-optimization` reviewed (EN, KO)
-- [x] 10.3 `dpo` reviewed (EN, KO)
-- [x] 10.4 `kto-and-ipo` reviewed (EN, KO)
-- [x] 10.5 `alignment-tax` reviewed (EN, KO)
+- [x] 10.1 `human-feedback-loop` reviewed (EN, KO; practitioner review 2026-08-16)
+- [x] 10.2 `ppo-proximal-policy-optimization` reviewed (EN, KO; practitioner review 2026-08-16)
+- [x] 10.3 `dpo` reviewed (EN, KO; practitioner review 2026-08-16)
+- [x] 10.4 `kto-and-ipo` reviewed (EN, KO; practitioner review 2026-08-16)
+- [x] 10.5 `alignment-tax` reviewed (EN, KO; practitioner review 2026-08-16)
 
 ## Chapter 11
 - [x] 11.1 `vision-language-bridges` reviewed (EN, KO)
