@@ -46,7 +46,7 @@ During this editorial overhaul, every English/Korean sub-chapter pair was review
 - `encoder-decoder`: reviewed; edits applied; notes: improved the teaching flow and architecture comparison in EN/KO.
 - `encoder-only`: reviewed; edits applied; notes: added a more memorable lineage-oriented explanation and tightened parity.
 - `hybrid-prefix-lm`: reviewed; no additional edits required; notes: no blocking issues found.
-- `various-llm-architectures`: reviewed; edits applied; notes: improved narrative framing and normalized Korean quiz heading format.
+- `various-llm-architectures`: reviewed 2026-09-15; synchronized Kimi K3 and Qwen3.8 release evidence with the current open-weight artifacts while preserving undisclosed data and recipe boundaries in EN/KO.
 
 ## Chapter 5
 
@@ -61,7 +61,7 @@ During this editorial overhaul, every English/Korean sub-chapter pair was review
 - `data-engineering-at-scale`: reviewed 2026-08-16; rebuilt EN/KO around immutable manifests, evaluation quarantine, deterministic rank/worker partitioning, coordinated cursor recovery, loader acceptance, and approval-gated automation.
 - `infrastructure`: reviewed; edits applied; notes: normalized Korean quiz-label drift.
 - `large-scale-training-stability`: reviewed 2026-08-16; corrected cross-entropy gradient causality and added mask-correct causal/z-loss code, observability, evidence-preserving triage, complete checkpoint recovery, MoE and FP8 caveats.
-- `synthetic-data-for-pre-training`: reviewed; edits applied; notes: normalized Korean quiz-label drift.
+- `synthetic-data-for-pre-training`: reviewed 2026-09-15; replaced unsupported data-scarcity and collapse claims, corrected the Phi-1 mixture, repaired tokenizer-native generation code, and added provenance, quarantine, checkpoint, abort, evaluation, and rollback contracts in EN/KO.
 - `tokenization-science`: reviewed 2026-08-16; corrected SentencePiece/Mamba descriptions and added multilingual acceptance, normalization, special-token, evaluation-quarantine, and checkpoint-compatibility contracts.
 
 ## Chapter 7
@@ -144,7 +144,7 @@ During this editorial overhaul, every English/Korean sub-chapter pair was review
 - `function-calling-and-tool-use`: reviewed; no additional edits required; notes: no extra edits were needed after the full pass.
 - `long-term-memory-for-agents`: reviewed; edits applied; notes: recalibrated claims and improved evidence-based tone in EN/KO.
 - `multi-agent-collaboration`: reviewed; no additional edits required; notes: no blocking issues found in the final pass.
-- `self-improving-agents`: present in the current inventory; pending evidence review in the 2026-08-14 pass.
+- `self-improving-agents`: reviewed 2026-09-15; calibrated prototype claims against primary sources and added selection-bias mathematics, sealed-holdout/canary promotion contracts, provenance, and a bilingual promotion-gate interactive.
 
 ## Chapter 17
 
@@ -153,7 +153,7 @@ During this editorial overhaul, every English/Korean sub-chapter pair was review
 - `elo-rating-and-leaderboards`: reviewed; no additional edits required; notes: no material issues found in this pass.
 - `llm-as-a-judge`: reviewed; no additional edits required; notes: no further edits needed after audit.
 - `production-evaluation-and-release-gates`: reviewed 2026-08-16; added immutable bundles, paired statistical gates, shadow/canary/ramp-up, automatic abort, stateful rollback, rehearsal, and eval-set maintenance.
-- `commercial-model-benchmarks`: present in the current inventory; pending current-snapshot verification in the 2026-08-14 pass.
+- `commercial-model-benchmarks`: reviewed 2026-09-15; reverified the mutable snapshot against primary release/model-card sources, updated release states, pricing and context disclosures, and kept incompatible or unreported benchmark values out of the comparison.
 
 ## Chapter 18
 

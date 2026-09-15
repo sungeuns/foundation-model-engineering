@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 520" role="img" aria-labelledby="title desc">
+  <title id="title">Phi-1 training-data mixture reported by Textbooks Are All You Need</title>
+  <desc id="desc">Six billion tokens of filtered textbook-quality web data and one billion tokens of GPT-3.5-generated textbooks and exercises feed the Phi-1 training corpus. Evaluation occurs on coding benchmarks, with a warning that benchmark results do not isolate the causal value of each data source.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f8fafc"/><stop offset="1" stop-color="#eef2ff"/></linearGradient>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#475569"/></marker>
+  </defs>
+  <rect x="8" y="8" width="1184" height="504" rx="24" fill="url(#bg)" stroke="#cbd5e1" stroke-width="2"/>
+  <text x="60" y="68" font-family="system-ui,sans-serif" font-size="30" font-weight="700" fill="#172033">Phi-1: disclosed data mixture, not a one-source story</text>
+  <text x="60" y="104" font-family="system-ui,sans-serif" font-size="18" fill="#526078">Numbers are those reported in Textbooks Are All You Need (2023).</text>
+  <rect x="65" y="155" width="310" height="130" rx="16" fill="#e0f2fe" stroke="#0284c7" stroke-width="2"/>
+  <text x="220" y="202" text-anchor="middle" font-family="system-ui,sans-serif" font-size="25" font-weight="700" fill="#075985">~6B tokens</text>
+  <text x="220" y="238" text-anchor="middle" font-family="system-ui,sans-serif" font-size="19" fill="#0c4a6e">filtered “textbook-quality”</text>
+  <text x="220" y="266" text-anchor="middle" font-family="system-ui,sans-serif" font-size="19" fill="#0c4a6e">web code data</text>
+  <rect x="65" y="320" width="310" height="130" rx="16" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
+  <text x="220" y="367" text-anchor="middle" font-family="system-ui,sans-serif" font-size="25" font-weight="700" fill="#92400e">~1B tokens</text>
+  <text x="220" y="403" text-anchor="middle" font-family="system-ui,sans-serif" font-size="19" fill="#78350f">GPT-3.5-generated</text>
+  <text x="220" y="431" text-anchor="middle" font-family="system-ui,sans-serif" font-size="19" fill="#78350f">textbooks + exercises</text>
+  <path d="M375 220 C445 220 450 285 520 285" fill="none" stroke="#475569" stroke-width="4" marker-end="url(#arrow)"/>
+  <path d="M375 385 C445 385 450 315 520 315" fill="none" stroke="#475569" stroke-width="4" marker-end="url(#arrow)"/>
+  <rect x="535" y="220" width="265" height="165" rx="20" fill="#ede9fe" stroke="#7c3aed" stroke-width="3"/>
+  <text x="667" y="273" text-anchor="middle" font-family="system-ui,sans-serif" font-size="24" font-weight="700" fill="#4c1d95">Phi-1 corpus</text>
+  <text x="667" y="311" text-anchor="middle" font-family="system-ui,sans-serif" font-size="20" fill="#5b21b6">~7B tokens total</text>
+  <text x="667" y="347" text-anchor="middle" font-family="system-ui,sans-serif" font-size="17" fill="#526078">1.3B-parameter code model</text>
+  <path d="M800 302 L900 302" fill="none" stroke="#475569" stroke-width="4" marker-end="url(#arrow)"/>
+  <rect x="915" y="220" width="220" height="165" rx="20" fill="#dcfce7" stroke="#16a34a" stroke-width="3"/>
+  <text x="1025" y="270" text-anchor="middle" font-family="system-ui,sans-serif" font-size="23" font-weight="700" fill="#166534">Evaluation</text>
+  <text x="1025" y="310" text-anchor="middle" font-family="system-ui,sans-serif" font-size="19" fill="#166534">HumanEval</text>
+  <text x="1025" y="340" text-anchor="middle" font-family="system-ui,sans-serif" font-size="19" fill="#166534">MBPP</text>
+  <rect x="515" y="432" width="630" height="55" rx="12" fill="#fff" stroke="#cbd5e1"/>
+  <text x="830" y="466" text-anchor="middle" font-family="system-ui,sans-serif" font-size="16" fill="#526078">The aggregate result does not isolate the causal contribution of either source.</text>
+</svg>

@@ -7,6 +7,131 @@
   margin: 2rem 0;
 }
 
+.self-improvement-gate {
+  margin: 2rem 0;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 1.25rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #f8fafc, #eef2ff);
+  color: #172033;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.self-improvement-gate > header {
+  display: block;
+  margin: 0;
+  padding: 0 0 0.9rem;
+}
+
+.self-improvement-gate header h3 {
+  margin: 0 0 0.35rem;
+  color: #172033;
+}
+
+.self-improvement-gate header p,
+.self-improvement-source {
+  margin: 0;
+  color: #526078;
+  font-size: 0.9rem;
+}
+
+.self-improvement-controls {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 1.25rem 0;
+}
+
+.self-improvement-controls label {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.75rem;
+  border: 1px solid #dbe3f0;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.8);
+  font-size: 0.85rem;
+}
+
+.self-improvement-controls input {
+  width: 100%;
+  accent-color: #4f46e5;
+}
+
+.self-improvement-chart {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  contain: inline-size;
+  overflow-x: auto;
+  border: 1px solid #dbe3f0;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.self-improvement-chart svg {
+  display: block;
+  min-width: 620px;
+  width: 100%;
+}
+
+.self-improvement-grid { stroke: #e8edf5; stroke-width: 1; }
+.self-improvement-baseline { stroke: #64748b; stroke-width: 1.5; stroke-dasharray: 5 4; }
+.self-improvement-gap { stroke: #cbd5e1; stroke-width: 1; }
+.self-improvement-dev { fill: #ef7d32; }
+.self-improvement-holdout { fill: #2563eb; }
+.is-selected .self-improvement-gap { stroke: #7c3aed; stroke-width: 2.5; }
+.is-selected .self-improvement-dev,
+.is-selected .self-improvement-holdout { stroke: #4c1d95; stroke-width: 2; }
+.self-improvement-tick,
+.self-improvement-axis,
+.self-improvement-baseline-label { fill: #526078; font-size: 12px; }
+.self-improvement-baseline-label { font-weight: 700; }
+
+.self-improvement-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin: 0.65rem 0 1rem;
+  color: #526078;
+  font-size: 0.82rem;
+}
+
+.self-improvement-legend span { display: inline-flex; align-items: center; gap: 0.4rem; }
+.self-improvement-legend i { display: inline-block; width: 10px; height: 10px; }
+.dev-marker { background: #ef7d32; transform: rotate(45deg); }
+.holdout-marker { background: #2563eb; border-radius: 50%; }
+
+.self-improvement-stats {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.6rem;
+  margin: 0;
+}
+
+.self-improvement-stats div {
+  padding: 0.75rem;
+  border: 1px solid #dbe3f0;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.self-improvement-stats dt { color: #526078; font-size: 0.75rem; }
+.self-improvement-stats dd { margin: 0.25rem 0 0; font-size: 1rem; font-weight: 750; }
+.self-improvement-stats .gate-pass { border-color: #86efac; background: #f0fdf4; color: #166534; }
+.self-improvement-stats .gate-fail { border-color: #fca5a5; background: #fef2f2; color: #991b1b; }
+.self-improvement-rule { margin: 1rem 0 0.3rem; font-weight: 650; }
+.self-improvement-lesson { margin: 0 0 0.8rem; }
+
+@media (max-width: 760px) {
+  .self-improvement-controls { grid-template-columns: 1fr; }
+  .self-improvement-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .self-improvement-stats div:last-child { grid-column: 1 / -1; }
+}
+
 .lats-header {
   margin-bottom: 2rem;
   text-align: center;

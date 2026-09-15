@@ -30,7 +30,7 @@ Date: 2026-04-20
 - [x] 4.2 `decoder-only` reviewed (EN, KO)
 - [x] 4.3 `encoder-decoder` reviewed (EN, KO)
 - [x] 4.4 `hybrid-prefix-lm` reviewed (EN, KO)
-- [x] 4.5 `various-llm-architectures` reviewed (EN, KO)
+- [x] 4.5 `various-llm-architectures` reviewed (EN, KO; open-model snapshot reverified 2026-09-15)
 
 ## Chapter 5
 - [x] 5.1 `sparse-vs-dense-models` reviewed (EN, KO)
@@ -113,7 +113,7 @@ Date: 2026-04-20
 ## Chapter 16
 - [x] 16.1 `function-calling-and-tool-use` reviewed (EN, KO)
 - [x] 16.2 `autonomous-agents` reviewed (EN, KO)
-- [ ] 16.3 `self-improving-agents` pending current evidence review (EN, KO)
+- [x] 16.3 `self-improving-agents` reviewed (EN, KO; evidence and promotion-gate rewrite 2026-09-15)
 - [x] 16.4 `multi-agent-collaboration` reviewed (EN, KO)
 - [x] 16.5 `long-term-memory-for-agents` reviewed (EN, KO)
 - [x] 16.6 `agent-reliability-recovery-and-guardrails` reviewed (EN, KO)
@@ -124,7 +124,7 @@ Date: 2026-04-20
 - [x] 17.3 `elo-rating-and-leaderboards` reviewed (EN, KO)
 - [x] 17.4 `contamination-issues` reviewed (EN, KO; practitioner review 2026-08-16)
 - [x] 17.5 `production-evaluation-and-release-gates` reviewed (EN, KO; practitioner review 2026-08-16)
-- [ ] 17.6 `commercial-model-benchmarks` pending current snapshot verification (EN, KO)
+- [x] 17.6 `commercial-model-benchmarks` reviewed (EN, KO; primary-source snapshot verification 2026-09-15)
 
 ## Chapter 18
 - [x] 18.1 `red-teaming` reviewed (EN, KO)

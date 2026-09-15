@@ -12,7 +12,7 @@ The previous section asked how a team decides whether a model is safe enough and
 
 Think of the model landscape like a city map, not a medal table. One road shows raw reasoning ability. Another shows coding-agent reliability. Another shows price per token. Another shows speed. The "best" model depends on which road your product actually travels.
 
-The interactive map below is a **historical snapshot** of public model information available on **July 26, 2026**. It is not a current buying guide: every model status, score, price, and availability claim **must be reverified** against the cited primary source before publication or procurement. The default view shows the latest Artificial Analysis Intelligence Index values where they are available, and the release timeline starts in early 2024 so the acceleration is visible. Change the benchmark and x-axis to see the same models from different angles: performance over time, performance per token price, performance versus speed, or performance versus context window.
+The interactive map below is a **dated snapshot** of public model information verified on **September 15, 2026**. It is not a permanent buying guide: every model status, score, price, and availability claim **must be reverified** against the cited primary source before publication or procurement. The default view shows Artificial Analysis Intelligence Index values only where a compatible public result was available, and the release timeline starts in early 2024 so the acceleration is visible. Change the benchmark and x-axis to see the same models from different angles: performance over time, performance per token price, performance versus speed, or performance versus context window.
 
 <CommercialModelBenchmarkExplorer client:load />
 
@@ -131,7 +131,7 @@ That loop is harder to score than a multiple-choice answer. It also reveals prob
 
 Commercial release cadence has accelerated. In early 2024, Gemini 1.5 Pro made 1M-token long context a visible frontier feature [[15]](#ref-15), Claude 3 formalized the Opus/Sonnet/Haiku ladder [[16]](#ref-16), GPT-4o pushed low-latency multimodal interaction into the mainstream [[17]](#ref-17), Claude 3.5 Sonnet moved high capability into a cheaper mid-tier model [[18]](#ref-18), and OpenAI o1 made test-time reasoning a product category [[19]](#ref-19). Mistral Large 2, DeepSeek-V3, DeepSeek-R1, Qwen3, MiniMax-M1, and Kimi K2 then showed that the challenger lane was no longer just "smaller open models"; it was competing on MoE efficiency, reasoning, long context, and agentic coding [[20]](#ref-20) [[21]](#ref-21) [[22]](#ref-22) [[23]](#ref-23) [[24]](#ref-24) [[25]](#ref-25).
 
-By 2026, OpenAI's public sequence from GPT-5.3-Codex to GPT-5.4 to GPT-5.5 shows updates only weeks or months apart, each with a slightly different emphasis: coding-agent specialization, general professional work, computer use, and long-horizon task completion [[3]](#ref-3) [[4]](#ref-4) [[5]](#ref-5). Google's Gemini 2.5 to Gemini 3 to Gemini 3.1 Pro to Gemini 3.5 Flash sequence shows a similar pattern: reasoning behavior and multimodality have become the central product axis rather than optional features, and even the Flash tier is now marketed around agent scaffolds, coding, and workflow automation [[6]](#ref-6) [[7]](#ref-7) [[26]](#ref-26). Anthropic's Claude line now splits not only by Opus/Sonnet/Haiku economics, but also by effort level, computer-use reliability, safety posture, and gated access for unusually sensitive capabilities [[8]](#ref-8) [[9]](#ref-9).
+By 2026, OpenAI's public sequence from GPT-5.3-Codex through the GPT-5.6 tiers and GPT-6 Astra shows updates only weeks or months apart, each with a different emphasis: coding-agent specialization, cost tiers, general professional work, computer use, and long-horizon task completion [[3]](#ref-3) [[38]](#ref-38) [[48]](#ref-48). Google's Gemini 2.5 through Gemini 3.8 Flash sequence shows a similar pattern: reasoning behavior and multimodality have become the central product axis rather than optional features, and even the Flash tier is now marketed around agent scaffolds, coding, and workflow automation [[6]](#ref-6) [[7]](#ref-7) [[50]](#ref-50). Anthropic's Claude line now splits not only by Opus/Sonnet/Haiku economics, but also by effort level, computer-use reliability, safety posture, routed fallback, and gated access for unusually sensitive capabilities [[8]](#ref-8) [[52]](#ref-52).
 
 The visible gap between top models on old static tasks is often small. The real separation appears on harder harnesses:
 
@@ -141,24 +141,29 @@ The visible gap between top models on old static tasks is often small. The real 
 - adversarial safety settings where a model must ignore hidden instructions
 - cost-adjusted evaluations where a slightly weaker but cheaper model wins in production
 
-### The July 2026 compression wave
+### The mid-2026 compression wave and September handoff
 
 The newest releases make three different kinds of improvement visible.
 
 | Release | What improved | What not to overclaim |
 | :--- | :--- | :--- |
 | Gemini 3.6 Flash | Built from the 3.5 Flash line, Google reports 17% fewer output tokens on the AA Index, fewer tool loops, stronger coding/computer use, and a lower output-token price of $7.50/M versus $9/M [[36]](#ref-36) [[37]](#ref-37) | It is an efficiency-oriented Flash update, not proof that every reasoning benchmark exceeds the Pro tier |
-| GPT-5.6 Sol / Terra / Luna | One 1.05M-context family exposes flagship, balanced, and fast/cheap operating points. Sol adds max reasoning and multi-agent ultra; Terra targets GPT-5.5-class quality at half its token price; Luna compresses capability to $1/M input and $6/M output [[38]](#ref-38) [[39]](#ref-39) | Provider scores are model-plus-harness results; ultra is a multi-agent system mode, not a larger context window |
+| GPT-5.6 Sol / Terra / Luna | One 1.05M-context family exposes flagship, balanced, and fast/cheap operating points. Post-launch price changes moved standard API rates to $4/$20, $2/$12, and $0.20/$1.20 per million input/output tokens respectively [[38]](#ref-38) [[49]](#ref-49) | Long prompts cross documented price thresholds; provider scores are model-plus-harness results; ultra is a multi-agent system mode, not a larger context window |
 | Claude Fable 5 | Mythos-class capability is exposed through broad safety classifiers and automatic fallback. Anthropic initially reported that more than 95% of sessions did not invoke fallback [[41]](#ref-41) [[42]](#ref-42) | A deployed Fable answer can be a routed system response; the product name does not guarantee one underlying-model path |
 | Claude Opus 5 | Near-Fable capability at half Fable's token price, with stronger self-verification, long-horizon work, vision/office tasks, and less restrictive everyday safeguards [[43]](#ref-43) [[44]](#ref-44) | “Near” is workload-dependent; private evaluations still decide whether the cost/quality trade is real |
+| GPT-6 Astra | A September flagship centered on professional artifacts, computer use, science, and long-running coding; OpenAI prices the standard API at $10/M input and $50/M output [[48]](#ref-48) | OpenAI's benchmark values are provider results, and the system carries stronger cyber safeguards after being classified Critical under the Preparedness Framework |
+| Gemini 3.8 Flash | Google reports stronger long-horizon software engineering and agentic knowledge work at a $0.75/$3.75 introductory input/output price through 2026, with 1M input and 64K output limits [[50]](#ref-50) [[51]](#ref-51) | The lower price expires after 2026; more reasoning and tool iterations can increase end-to-end token use |
+| Claude Fable / Mythos 5.1 | The same underlying model is exposed with different safeguards: Fable is generally available, while Mythos is restricted; flagged Fable requests may route to an Opus fallback [[52]](#ref-52) | The evaluated object can be model + safeguard + fallback, so log the actual responding path and intervention rate |
 
-The GPT-5.6 tier names are especially useful as a design lesson. Sol, Terra, and Luna are not a simple quality ladder. They are explicit points on a deployment surface. With the published API prices, Sol costs five times Luna per input and output token. If Luna passes a private release gate, buying Sol by default can spend five times more without creating five times more product value.
+The GPT-5.6 tier names are especially useful as a design lesson. Sol, Terra, and Luna are not a simple quality ladder. They are explicit points on a deployment surface. At the September standard rates, Sol costs 20 times Luna per input token and about 16.7 times per output token. If Luna passes a private release gate, buying Sol by default can spend far more without creating proportionate product value. This calculation still understates complexity: cached inputs, long-context multipliers, tool charges, and retries change the bill.
 
 Fable teaches a different lesson: **the evaluated object may be a router**. If a safety classifier can fall back to another model, the measured production system is classifier + policy + fallback + base capability. Record routing rates and fallback-specific failures in eval logs; otherwise a single aggregate score hides which system actually answered.
 
 ### Open preview is not open weight
 
-GLM-5.2 is verifiably open weight under MIT and publishes enough configuration detail to inspect its 753B MoE, sparse attention, 1M context, IndexShare, and MTP path [[45]](#ref-45). Kimi K3 is already usable as a hosted model, but Moonshot schedules the full weights and technical report for July 27 [[46]](#ref-46). Qwen3.8-Max-Preview discloses 2.4T parameters and promises open weights, but as of this snapshot has no public weights or model card [[47]](#ref-47).
+GLM-5.2 is verifiably open weight under MIT and publishes enough configuration detail to inspect its 753B MoE, sparse attention, 1M context, IndexShare, and MTP path [[45]](#ref-45). Kimi K3 moved from announcement to released/open-weight on July 27: Moonshot published the weights, technical report, MoonEP communication library, FlashKDA kernels, and AgentEnv sandbox system [[53]](#ref-53). Qwen3.8-Max likewise graduated from preview in August, and Alibaba/Qwen published the 2.4T-A95B weights; exact data mixtures and some long-horizon claims remain provider-disclosed rather than independently reproduced [[54]](#ref-54) [[55]](#ref-55).
+
+This status change is why release state belongs in the dataset, not just in prose. A future date in an announcement is not self-updating evidence. The canonical row should change only after the promised artifact can be fetched and its license and configuration inspected.
 
 These three rows should not share one “open” badge. A useful release-state vocabulary is:
 
@@ -302,3 +307,11 @@ The next chapter section can now return to the larger question: if benchmarks ke
 45. <a id="ref-45"></a>Z.ai. (2026). *GLM-5.2: From Long Context to Long-Horizon Agents*. [Z.ai](https://z.ai/blog/glm-5.2).
 46. <a id="ref-46"></a>Moonshot AI. (2026). *Kimi K3: A Native Multimodal Agent Model*. [Kimi](https://www.kimi.com/blog/kimi-k3).
 47. <a id="ref-47"></a>Alibaba Group. (2026). *Alibaba Unveils Qwen3.8-Max-Preview*. [Alibaba Group](https://www.alibabagroup.com/en-US/document-2016703577908576256).
+48. <a id="ref-48"></a>OpenAI. (2026). *GPT-6 Astra: A new generation of intelligence*. [OpenAI](https://openai.com/index/gpt-6-astra/).
+49. <a id="ref-49"></a>OpenAI. (2026). *Models*. [OpenAI API documentation](https://developers.openai.com/api/docs/models).
+50. <a id="ref-50"></a>Google. (2026). *Introducing Gemini 3.8 Flash and 3.8 Flash Cyber*. [Google Blog](https://blog.google/innovation-and-ai/models-and-research/gemini-models/3-8-flash-and-3-8-flash-cyber/).
+51. <a id="ref-51"></a>Google DeepMind. (2026). *Gemini 3.8 Flash Model Card*. [Google DeepMind](https://deepmind.google/models/model-cards/gemini-3-8-flash/).
+52. <a id="ref-52"></a>Anthropic. (2026). *Claude Fable 5.1 and Claude Mythos 5.1*. [Anthropic](https://www.anthropic.com/claude-fable-and-mythos-5-1).
+53. <a id="ref-53"></a>Moonshot AI. (2026). *Kimi K3 Open Day: weights, technical report, and infrastructure*. [Kimi](https://www.kimi.com/news/kimi-k3-open-source).
+54. <a id="ref-54"></a>Alibaba Group. (2026). *Alibaba Unveils Qwen3.8-Max*. [Alibaba Group](https://www.alibabagroup.com/en-US/document-2021044032125272064).
+55. <a id="ref-55"></a>Qwen Team. (2026). *Qwen3.8-2.4T-A95B*. [Hugging Face model repository](https://huggingface.co/Qwen/Qwen3.8-2.4T-A95B).

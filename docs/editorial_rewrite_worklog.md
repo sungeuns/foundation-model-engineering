@@ -195,7 +195,7 @@ Review completed on 2026-04-16 for every EN/KO sub-chapter pair below.
 - [x] function-calling-and-tool-use (EN/KO pair)
 - [x] long-term-memory-for-agents (EN/KO pair)
 - [x] multi-agent-collaboration (EN/KO pair)
-- [ ] self-improving-agents (EN/KO pair; current evidence review pending)
+- [x] self-improving-agents (EN/KO pair; 2026-09-15 evidence and promotion-gate rewrite)
 
 ### chapter-17
 - [x] academic-benchmarks (EN/KO pair; 2026-08-16 practitioner rewrite)
@@ -203,7 +203,7 @@ Review completed on 2026-04-16 for every EN/KO sub-chapter pair below.
 - [x] elo-rating-and-leaderboards (EN/KO pair)
 - [x] llm-as-a-judge (EN/KO pair)
 - [x] production-evaluation-and-release-gates (EN/KO pair; 2026-08-16 practitioner rewrite)
-- [ ] commercial-model-benchmarks (EN/KO pair; current snapshot verification pending)
+- [x] commercial-model-benchmarks (EN/KO pair; 2026-09-15 primary-source snapshot verification)
 
 ### chapter-18
 - [x] hallucination-detection (EN/KO pair)
@@ -233,3 +233,14 @@ Review completed on 2026-04-16 for every EN/KO sub-chapter pair below.
 - Applied additional tone, parity, and framing fixes in Chapters 1, 9, 11, and 20 based on the exhaustive review.
 - 2026-04-16: `npm run build` passed after the full-audit pass.
 - Added `docs/exhaustive_subchapter_audit.md` so the reviewed-file list and the edited-file list are explicitly separated in a page-by-page audit ledger.
+
+## 2026-09-15 Current-Evidence and Technical-Depth Pass
+
+- Mechanically scanned the canonical EN/KO inventory for mutable claims, unsupported absolutes, stale release labels, and weak training contracts; then inspected and rewrote the affected Chapter 6, 16, and 17 pairs.
+- Rebuilt `synthetic-data-for-pre-training` around the published Phi-1 mixture, conditional collapse dynamics, tokenizer-native generation, immutable lineage, evaluation quarantine, resource accounting, abort criteria, complete checkpoints, and release/rollback gates. Replaced the misleading legacy raster with source-grounded EN/KO SVG diagrams.
+- Reworked `self-improving-agents` to separate research-prototype evidence from recursive-improvement rhetoric and added the statistics of adaptive selection, sealed holdouts, canaries, confidence-bound gates, provenance, and evaluator trust separation. Added and exercised a deterministic bilingual interactive.
+- Reverified `commercial-model-benchmarks` as of 2026-09-15 against primary provider pages and model cards, including GPT-6 Astra, Gemini 3.8 Flash, Claude Fable/Mythos 5.1, Kimi K3, and Qwen3.8-Max; preserved `not reported` rather than manufacturing cross-harness comparisons.
+- Fixed the shared narrow-screen layout so horizontally scrollable teaching visuals no longer widen or squeeze the whole page.
+- 2026-09-15: `npm run test:content` passed after the paired content and ledger updates.
+- 2026-09-15: Browser QA passed for EN/KO Chapter 6 assets, Chapter 16 slider states and hydration, Chapter 17 metric/axis/company filters and missing-data state, plus 390px responsive layout.
+- 2026-09-15: `ASTRO_TELEMETRY_DISABLED=1 npm run build` generated all 204 pages successfully; only the pre-existing KaTeX Korean-in-math warnings remained.

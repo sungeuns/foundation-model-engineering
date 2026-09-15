@@ -89,16 +89,18 @@ Optical context compression belongs to the last category. It is promising for sc
 
 ---
 
-## The July 2026 Open-Model Frontier: Architecture Versus Disclosure
+## The Open-Model Frontier: Architecture Versus Disclosure
+
+**Evidence snapshot: September 15, 2026.**
 
 The most useful comparison is not a product-name table. It is a **claim-boundary table**: what can be verified from weights and configuration files, what is described only in a launch post, and what is still promised.
 
-| Model | Public state on July 26, 2026 | Verified architectural disclosure | What is still unknown |
+| Model | Public state on September 15, 2026 | Verified architectural disclosure | What is still unknown |
 | :--- | :--- | :--- | :--- |
 | GLM-5.2 | MIT-licensed weights and configuration are public | 753B MoE, 78 layers, first 3 dense layers, 256 routed + 1 shared expert, 8 routed experts per token, 1M positions, DeepSeek Sparse Attention, IndexShare, and one MTP layer [[8]](#ref-8) [[9]](#ref-9) | The complete pre-training corpus mixture and filtering recipe are not published |
-| Kimi K3 | Hosted model is live; Moonshot says full weights and the technical report arrive July 27 | 2.8T parameters, native multimodality, 1M context, Kimi Delta Attention, Attention Residuals, Stable LatentMoE, and 16-of-896 expert routing [[11]](#ref-11) | Weight files, config-level dimensions, data mixture, and full training recipe are not public yet |
+| Kimi K3 | Released/open-weight; weights, technical report, MoonEP, FlashKDA, and AgentEnv are public [[14]](#ref-14) | 2.8T parameters, native multimodality, 1M context, Kimi Delta Attention, Attention Residuals, Stable LatentMoE, and 16-of-896 expert routing [[11]](#ref-11) [[14]](#ref-14) | The exact pre-training data mixture and complete filtering recipe remain undisclosed |
 | Qwen3.7 | Released as an agent-oriented Qwen generation | 1M-context product configuration and long-horizon agent examples are documented [[12]](#ref-12) | It is not evidence for Qwen3.8 internals |
-| Qwen3.8-Max-Preview | 2.4T hosted preview; Alibaba says open weights are coming | Parameter scale and product availability are announced [[13]](#ref-13) | No weights, model card, architecture config, corpus recipe, or detailed post-training report is public yet |
+| Qwen3.8-Max | Released/open-weight as Qwen3.8-2.4T-A95B [[15]](#ref-15) | Public weights and configuration establish 2.4T total parameters, 95B active parameters, and 1M context [[13]](#ref-13) [[15]](#ref-15) | The exact corpus mixture and complete data-filtering and post-training recipes remain undisclosed |
 
 This distinction matters. “Open” is not a future promise, an API endpoint, or a parameter-count announcement. For reproducible engineering, an open-weight claim starts when the actual weight files and a usable configuration are available.
 
@@ -112,13 +114,13 @@ The post-training pipeline is equally instructive. Z.ai describes parallel on-po
 
 ### Kimi K3: three disclosed ideas, one important denominator
 
-K3 combines Kimi Delta Attention (a recurrent/linear attention path), Attention Residuals (cross-layer attention-style residual mixing), and Stable LatentMoE. Its router selects 16 of 896 experts per token. That is about **1.8% of the expert pool**, not proof that only 1.8% of the model's total parameters are active: embeddings, attention, shared components, and expert sizes all affect the true active-parameter ratio. Moonshot reports 2.5× scaling efficiency over K2, but the technical report needed to audit that definition is scheduled for the following day [[11]](#ref-11).
+K3 combines Kimi Delta Attention (a recurrent/linear attention path), Attention Residuals (cross-layer attention-style residual mixing), and Stable LatentMoE. Its router selects 16 of 896 experts per token. That is about **1.8% of the expert pool**, not proof that only 1.8% of the model's total parameters are active: embeddings, attention, shared components, and expert sizes all affect the true active-parameter ratio. Moonshot reports 2.5× scaling efficiency over K2; the subsequently released technical artifacts make the architecture and systems claim inspectable, while the exact training-data mixture is still undisclosed [[11]](#ref-11) [[14]](#ref-14).
 
 K3 also exposes a subtle product constraint: a reasoning session should preserve its thinking history. Switching modes mid-session can destabilize the trajectory. That is an architectural clue with operational consequences—conversation state is part of the inference contract, not merely UI decoration.
 
-### Qwen3.8: absence is a technical fact
+### Qwen3.8: artifact arrival changes the claim boundary
 
-Qwen3.8-Max-Preview is valuable to include precisely because it teaches evidence discipline. Alibaba announced a 2.4T preview and future open weights, but no public artifact currently supports claims about its expert count, attention layout, data mixture, or training pipeline [[13]](#ref-13). Qwen3.7 details cannot be silently carried forward. Until the artifacts arrive, the technically correct architecture entry is **undisclosed**, not an educated guess.
+Qwen3.8 is valuable precisely because its release history teaches evidence discipline. At preview time, Alibaba had announced a 2.4T model and future open weights, so its internals had to remain **undisclosed** rather than inherit Qwen3.7 details [[13]](#ref-13). The later Qwen3.8-2.4T-A95B repository changed that boundary: weights and configuration now support claims about total and active parameters and the 1M context window [[15]](#ref-15). They still do not disclose the exact corpus mixture or complete filtering and post-training recipes. A living technical comparison must change when the artifact changes—not when a future promise is first published.
 
 ## A Better Way to Compare Modern Architectures
 
@@ -250,3 +252,5 @@ To better understand how these different architectures control information flow,
 11. <a id="ref-11"></a>Moonshot AI. (2026). *Kimi K3: A Native Multimodal Agent Model*. [Kimi](https://www.kimi.com/blog/kimi-k3).
 12. <a id="ref-12"></a>Qwen Team. (2026). *Qwen3.7: The Agent Frontier*. [Alibaba Cloud Community](https://www.alibabacloud.com/blog/qwen3-7-the-agent-frontier_603154).
 13. <a id="ref-13"></a>Alibaba Group. (2026). *Alibaba Unveils Qwen3.8-Max-Preview*. [Alibaba Group](https://www.alibabagroup.com/en-US/document-2016703577908576256).
+14. <a id="ref-14"></a>Moonshot AI. (2026). *Kimi K3 Open Day: weights, technical report, and infrastructure*. [Kimi](https://www.kimi.com/news/kimi-k3-open-source).
+15. <a id="ref-15"></a>Qwen Team. (2026). *Qwen3.8-2.4T-A95B*. [Hugging Face model repository](https://huggingface.co/Qwen/Qwen3.8-2.4T-A95B).

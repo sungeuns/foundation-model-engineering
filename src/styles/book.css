@@ -78,6 +78,8 @@ img {
 .content-wrapper {
   margin-left: var(--sidebar-width);
   flex: 1;
+  min-width: 0;
+  width: calc(100% - var(--sidebar-width));
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -85,6 +87,7 @@ img {
 
 .container {
   max-width: 960px;
+  min-width: 0;
   margin: 0 auto;
   padding: 2rem;
   width: 100%;
@@ -310,6 +313,12 @@ h1, h2, h3 {
 }
 
 @media (max-width: 768px) {
+  html,
+  body {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
   .sidebar {
     transform: translateX(-100%);
     z-index: 999;
@@ -319,6 +328,7 @@ h1, h2, h3 {
   }
   .content-wrapper {
     margin-left: 0;
+    width: 100%;
   }
   .menu-toggle {
     display: block;

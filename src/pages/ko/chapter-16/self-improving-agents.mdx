@@ -4,6 +4,8 @@ title: 16.3 자기 개선 에이전트
 lang: ko
 ---
 
+import SelfImprovementGateVisualizer from '../../../components/chapter-16/SelfImprovementGateVisualizer.tsx';
+
 # 16.3 자기 개선 에이전트 (Self-Improving Agents)
 
 이전 절에서는 자율 에이전트를 control loop 안에 들어간 LLM으로 설명했습니다. 자기 개선 에이전트는 그 loop 바깥에 또 하나의 loop를 둡니다. 단지 "다음에 무엇을 할까?"를 묻는 것이 아니라, "다음 행동을 결정하는 시스템 자체를 어떻게 바꿔야 할까?"를 묻습니다.
@@ -11,6 +13,8 @@ lang: ko
 이 차이는 생각보다 큽니다. 일반적인 autonomous coding agent는 저장소를 읽고, 파일을 수정하고, 테스트를 실행하고, 실패하면 재시도합니다. 반면 self-improving coding agent는 다음 세대의 에이전트가 더 잘 작동하도록 자기 자신의 tool, prompt, memory policy, reviewer, search strategy, evaluation harness를 수정할 수 있습니다. 최적화 대상이 단순한 답이 아니라 **에이전트를 만드는 과정** 으로 올라가는 것입니다.
 
 비유하자면 숙제를 푸는 학생과 공부법 자체를 고치는 학생의 차이입니다. Reflection은 "이번에 이런 실수를 했으니 다음에 기억하자"에 가깝습니다. Self-improvement는 "내가 연습하고, 평가하고, 문제를 고르는 방식도 시스템의 일부이니 그 시스템도 수정 대상이다"라고 보는 관점입니다.
+
+**근거 스냅샷: 2026년 9월 15일.** 아래 시스템은 연구 프로토타입 또는 제약된 제품이지, 제약 없는 재귀적 자기 개선의 증거가 아닙니다. 보고된 벤치마크 향상은 특정 예산에서 실행한 모델·스캐폴드·평가기의 결합 결과입니다.
 
 ---
 
@@ -52,6 +56,40 @@ $$
 
 어려운 부분은 $J$ 안에 숨어 있습니다. evaluator가 약하면 에이전트는 task가 아니라 measurement를 exploit하는 법을 배웁니다. evaluator가 너무 비싸면 loop가 실용적이지 않습니다. evaluator가 너무 좁으면 개선이 다른 과업으로 transfer되지 않습니다.
 
+### 통계적 함정: 가장 운이 좋은 후보를 고르는 문제
+
+시스템이 $K$개의 변형을 만든다고 합시다. 후보 $i$의 개발셋 추정치는 다음과 같습니다.
+
+$$
+\hat{J}_{\mathrm{dev}}(\theta_i) = J(\theta_i) + \epsilon_i,
+\qquad
+i^* = \arg\max_{i \in \{1,\ldots,K\}} \hat{J}_{\mathrm{dev}}(\theta_i)
+$$
+
+여기서 $J(\theta_i)$는 관측할 수 없는 실제 배포 품질이고, $\epsilon_i$는 측정 잡음입니다. 선택 전에는 모든 추정치가 불편향이어도 가장 높은 값을 고른 뒤의 승자 추정치는 낙관적으로 치우칩니다. 후보를 많이 탐색할수록 양의 잡음을 뽑을 기회가 늘기 때문입니다. 세대마다 같은 벤치마크를 재사용하면 이 **winner's curse** 가 적응적 벤치마크 과적합으로 누적됩니다.
+
+방어 가능한 승격 규칙은 세 집합을 분리합니다.
+
+1. 반복해서 조회할 수 있는 **탐색셋**
+2. 승격 결정에 한 번 사용하는 **봉인 홀드아웃**
+3. 미리 정한 롤백 임계값으로 실제 트래픽을 측정하는 **배포 후 카나리**
+
+실질적으로 의미 있는 최소 향상 폭을 $\delta$라고 하면, 보수적인 게이트는 점 추정치가 아니라 불확실성 경계를 비교합니다.
+
+$$
+\operatorname{LCB}_{95\%}(\hat{J}_{\mathrm{holdout}}(\theta_{i^*}))
+>
+\operatorname{UCB}_{95\%}(\hat{J}_{\mathrm{holdout}}(\theta_{0})) + \delta
+$$
+
+홀드아웃은 버전 관리와 접근 통제를 적용하고, 반복 노출된 뒤에는 폐기해야 합니다. 그렇지 않으면 조용히 또 하나의 개발셋이 됩니다.
+
+### Interactive: 개발셋 승자가 게이트에서 탈락하는 이유
+
+개발 과업 수를 작게 유지한 채 후보 변형 수를 늘려 보세요. 주황색 개발셋 추정치는 선택에 사용되지만, 파란색 홀드아웃 추정치는 탐색 루프에 공개되지 않습니다. 이어서 배포 분포 이동을 키우면 로컬에서 성공한 스캐폴드가 프로덕션에서는 퇴행할 수 있는 이유를 볼 수 있습니다.
+
+<SelfImprovementGateVisualizer lang="ko" client:load />
+
 ---
 
 ## 3. 초기 연구 루프: Autoresearch와 AI Scientists
@@ -91,7 +129,7 @@ Google DeepMind의 **Co-Scientist** 는 완전 자율 연구자라기보다 인�
 
 핵심은 archive입니다. 단순 hill-climber는 현재 best agent만 유지합니다. 하지만 어떤 변경은 즉시 모든 metric을 이기지 못해도 나중 개선을 가능하게 하는 stepping stone일 수 있습니다. DGM은 population-like archive를 유지해 여러 과거 agent에서 새로운 분기가 생기도록 합니다.
 
-논문에서 보고된 개선 폭은 큽니다. DGM은 SWE-bench에서 20.0%에서 50.0%로, Polyglot에서 14.2%에서 30.7%로 개선되었습니다. 발견된 변경도 추상적인 prompt trick이 아니라 더 나은 editing tools, long-context management, peer-review mechanisms 같은 구체적인 engineering improvement였습니다.
+논문은 명시된 하네스 안에서 큰 향상을 보고합니다. 해당 SWE-bench 설정에서는 20.0%에서 50.0%로, Polyglot에서는 14.2%에서 30.7%로 향상되었습니다. 이는 베이스 모델 자체의 아키텍처 독립적 향상이 아니라 전체 DGM 시스템의 결과입니다. 발견된 변경도 추상적인 prompt trick이 아니라 더 나은 editing tools, long-context management, peer-review mechanisms 같은 구체적인 engineering improvement였습니다.
 
 다만 DGM에는 숨은 alignment advantage가 있습니다. 평가 과업이 coding이고, 수정 대상도 code입니다. coding ability가 좋아지면 더 나은 self-modification을 작성하는 능력도 직접 좋아질 수 있습니다. 이 점은 강점이지만 동시에 domain-specific합니다. 과업이 poetry critique, protein hypothesis generation, robotics reward design이라면 task performance 향상이 self-improvement machinery 수정 능력으로 자동 연결되지는 않습니다.
 
@@ -186,6 +224,12 @@ DGM과 DGM-H는 모두 single-path self-improvement가 취약하다는 점을 �
 - human review status
 
 provenance가 없으면 개선되는 시스템은 강해질수록 이해하기 어려워집니다. 안전 관점에서는 정확히 반대 방향으로 가는 셈입니다.
+
+### 프로덕션 승격 계약
+
+승인된 변형은 단순히 점수가 높을 뿐 아니라 재현 가능하고 되돌릴 수 있어야 합니다. 최소 기록에는 부모 아티팩트 해시, 정확한 diff, 베이스 모델 스냅샷, 도구·권한 스키마, 평가기 버전, 과업 ID, seed, 토큰·도구·지연 시간 예산, 신뢰구간, 알려진 slice 퇴행, 검토자 신원이 포함됩니다. 이전 번들은 last-known-good 버전으로 보존하고, 카나리 트래픽을 시작하기 전에 롤백 조건을 정합니다.
+
+후보가 자기 acceptance test를 같은 신뢰 영역에서 수정하게 해서는 안 됩니다. 평가기, 샌드박스, 권한 또는 홀드아웃 매니페스트 변경은 별도의 검토 경로를 거쳐야 합니다. 즉 에이전트는 측정법 변경을 제안할 수 있지만, 같은 실행에서 자를 다시 쓰고 자신이 더 커졌다고 선언할 수는 없습니다.
 
 ---
 

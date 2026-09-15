@@ -12,7 +12,7 @@ import CommercialModelBenchmarkExplorer from '../../../components/chapter-17/Com
 
 모델 landscape는 메달 순위표보다 지도에 가깝습니다. 어떤 길은 raw reasoning ability를 보여 주고, 어떤 길은 coding-agent reliability를 보여 줍니다. 또 다른 길은 token price, speed, context window를 보여 줍니다. “가장 좋은 모델”은 제품이 실제로 어느 길을 달리는지에 따라 달라집니다.
 
-아래 interactive map은 **2026년 7월 26일**까지 공개된 모델 정보를 보존한 **과거 스냅샷**입니다. 현재 구매 가이드가 아니며, 발행이나 조달 전에 모든 모델 상태, 점수, 가격, 가용성 주장을 인용한 1차 출처에서 **다시 검증**해야 합니다. 기본값은 가능한 모델에 대해 최신 Artificial Analysis Intelligence Index를 보여 주고, release timeline은 2024년 초부터 시작해 발전 속도가 눈에 보이도록 구성했습니다. Benchmark와 x축을 바꾸면 같은 모델도 전혀 다르게 보입니다. 시간에 따른 성능, token price 대비 성능, speed 대비 성능, context window 대비 성능을 각각 확인해 볼 수 있습니다.
+아래 interactive map은 **2026년 9월 15일**에 검증한 공개 모델 정보의 **시점 고정 스냅샷**입니다. 영구적인 구매 가이드가 아니며, 발행이나 조달 전에 모든 모델 상태, 점수, 가격, 가용성 주장을 인용한 1차 출처에서 **다시 검증**해야 합니다. 기본값은 호환 가능한 공개 결과가 있는 모델에 한해 Artificial Analysis Intelligence Index를 보여 주고, release timeline은 2024년 초부터 시작해 발전 속도가 눈에 보이도록 구성했습니다. Benchmark와 x축을 바꾸면 같은 모델도 전혀 다르게 보입니다. 시간에 따른 성능, token price 대비 성능, speed 대비 성능, context window 대비 성능을 각각 확인해 볼 수 있습니다.
 
 <CommercialModelBenchmarkExplorer client:load locale="ko" />
 
@@ -131,7 +131,7 @@ $$
 
 Commercial release cadence는 빨라졌습니다. 2024년 초에는 Gemini 1.5 Pro가 1M-token long context를 frontier feature로 끌어올렸고 [[15]](#ref-15), Claude 3는 Opus/Sonnet/Haiku product ladder를 명확히 만들었습니다 [[16]](#ref-16). GPT-4o는 low-latency multimodal interaction을 대중화했고 [[17]](#ref-17), Claude 3.5 Sonnet은 더 높은 capability를 더 싼 mid-tier price와 speed로 내렸습니다 [[18]](#ref-18). OpenAI o1은 test-time reasoning을 하나의 product category로 만들었습니다 [[19]](#ref-19). 이어서 Mistral Large 2, DeepSeek-V3, DeepSeek-R1, Qwen3, MiniMax-M1, Kimi K2는 challenger lane이 더 이상 “작은 open model”만의 영역이 아님을 보여 주었습니다. 이제는 MoE efficiency, reasoning, long context, agentic coding에서도 경쟁합니다 [[20]](#ref-20) [[21]](#ref-21) [[22]](#ref-22) [[23]](#ref-23) [[24]](#ref-24) [[25]](#ref-25).
 
-2026년에 들어서면 OpenAI의 GPT-5.3-Codex, GPT-5.4, GPT-5.5 흐름은 몇 주에서 몇 달 간격의 update가 coding-agent specialization, general professional work, computer use, long-horizon task completion을 서로 다른 각도에서 밀어 올리는 모습을 보여 줍니다 [[3]](#ref-3) [[4]](#ref-4) [[5]](#ref-5). Google의 Gemini 2.5, Gemini 3, Gemini 3.1 Pro, Gemini 3.5 Flash 흐름도 비슷합니다. reasoning behavior와 multimodality는 더 이상 부가 기능이 아니라 핵심 product axis가 되었고, Flash 계열조차 agent scaffold, coding, workflow automation을 전면에 놓기 시작했습니다 [[6]](#ref-6) [[7]](#ref-7) [[26]](#ref-26). Anthropic의 Claude line은 Opus/Sonnet/Haiku economics뿐 아니라 effort level, computer-use reliability, safety posture, gated access까지 함께 분화하고 있습니다 [[8]](#ref-8) [[9]](#ref-9).
+2026년에 들어서면 OpenAI의 GPT-5.3-Codex에서 GPT-5.6 tier와 GPT-6 Astra로 이어지는 흐름은 몇 주에서 몇 달 간격의 update가 coding-agent specialization, cost tier, general professional work, computer use, long-horizon task completion을 서로 다른 각도에서 밀어 올리는 모습을 보여 줍니다 [[3]](#ref-3) [[38]](#ref-38) [[48]](#ref-48). Google의 Gemini 2.5에서 Gemini 3.8 Flash로 이어지는 흐름도 비슷합니다. reasoning behavior와 multimodality는 더 이상 부가 기능이 아니라 핵심 product axis가 되었고, Flash 계열조차 agent scaffold, coding, workflow automation을 전면에 놓기 시작했습니다 [[6]](#ref-6) [[7]](#ref-7) [[50]](#ref-50). Anthropic의 Claude line은 Opus/Sonnet/Haiku economics뿐 아니라 effort level, computer-use reliability, safety posture, routed fallback, gated access까지 함께 분화하고 있습니다 [[8]](#ref-8) [[52]](#ref-52).
 
 오래된 static task에서는 top model 간 visible gap이 작을 때가 많습니다. 진짜 차이는 더 어려운 harness에서 나타납니다.
 
@@ -141,24 +141,29 @@ Commercial release cadence는 빨라졌습니다. 2024년 초에는 Gemini 1.5 P
 - hidden instruction을 무시해야 하는 adversarial safety setting
 - 조금 약하지만 훨씬 싸고 빠른 모델이 production에서 이기는 cost-adjusted evaluation
 
-### 2026년 7월의 capability compression
+### 2026년 중반의 capability compression과 9월의 세대 전환
 
 가장 최근 공개는 서로 다른 세 종류의 개선을 보여 줍니다.
 
 | 공개 모델 | 개선된 점 | 과장하지 말아야 할 점 |
 | :--- | :--- | :--- |
 | Gemini 3.6 Flash | 3.5 Flash 계열을 바탕으로 AA Index에서 output token 17% 감소, tool loop 축소, coding/computer use 개선, output 가격 $9/M에서 $7.50/M으로 인하 [[36]](#ref-36) [[37]](#ref-37) | 효율 중심 Flash 업데이트이지, 모든 reasoning benchmark에서 Pro tier를 이겼다는 뜻은 아님 |
-| GPT-5.6 Sol / Terra / Luna | 1.05M context를 공유하면서 flagship, balanced, fast/cheap operating point를 분리. Sol은 max reasoning과 multi-agent ultra, Terra는 GPT-5.5급 품질을 절반 token price에, Luna는 $1/M input·$6/M output에 제공 [[38]](#ref-38) [[39]](#ref-39) | Provider 점수는 model+harness 결과이며, ultra는 더 긴 context가 아니라 multi-agent system mode |
+| GPT-5.6 Sol / Terra / Luna | 1.05M context를 공유하면서 flagship, balanced, fast/cheap operating point를 분리. 출시 후 표준 API 가격은 각각 input/output $4/$20, $2/$12, $0.20/$1.20 per million token으로 변경 [[38]](#ref-38) [[49]](#ref-49) | 긴 prompt는 문서화된 별도 가격 임계값을 넘을 수 있음. Provider 점수는 model+harness 결과이며 ultra는 더 긴 context가 아니라 multi-agent system mode |
 | Claude Fable 5 | Mythos급 capability에 넓은 safety classifier와 automatic fallback을 결합. 초기 공개 시점에는 95%가 넘는 session이 fallback 없이 처리됐다고 Anthropic이 보고 [[41]](#ref-41) [[42]](#ref-42) | 실제 Fable 응답은 routed system 결과일 수 있으므로 product name이 단일 underlying path를 보장하지 않음 |
 | Claude Opus 5 | Fable의 절반 token price에 가까운 capability, 강화된 self-verification, long-horizon work, vision/office task, 일상 작업에 덜 제한적인 safeguard [[43]](#ref-43) [[44]](#ref-44) | “가까운” 정도는 workload마다 다르므로 private eval로 cost/quality trade-off를 확인해야 함 |
+| GPT-6 Astra | professional artifact, computer use, science, long-running coding을 중심에 둔 9월 flagship. 표준 API 가격은 input $10/M, output $50/M [[48]](#ref-48) | 공개 점수는 provider 결과이며, Preparedness Framework에서 cyber capability가 Critical로 분류되어 더 강한 safeguard가 적용됨 |
+| Gemini 3.8 Flash | long-horizon software engineering과 agentic knowledge work를 강화하고 1M input, 64K output을 지원. 2026년 말까지 input/output $0.75/$3.75의 도입 가격 적용 [[50]](#ref-50) [[51]](#ref-51) | 낮은 가격은 2026년 뒤 만료되며, 높은 effort에서 reasoning과 tool iteration이 늘면 end-to-end token 사용량도 증가할 수 있음 |
+| Claude Fable / Mythos 5.1 | 같은 underlying model에 서로 다른 safeguard를 적용. Fable은 일반 공개, Mythos는 제한 공개이며 Fable의 민감한 요청은 Opus fallback으로 route될 수 있음 [[52]](#ref-52) | 평가 대상은 model+safeguard+fallback일 수 있으므로 실제 응답 경로와 intervention rate를 기록해야 함 |
 
-GPT-5.6 tier는 deployment 설계 관점에서 특히 흥미롭습니다. Sol, Terra, Luna는 단순한 품질 서열이 아니라 서로 다른 운영점입니다. 공개 API 가격에서 Sol은 Luna보다 input과 output token 모두 5배 비쌉니다. Luna가 private release gate를 통과한다면 Sol을 기본값으로 쓰는 것은 제품 가치가 5배가 되지 않아도 비용을 5배 지불하는 선택이 될 수 있습니다.
+GPT-5.6 tier는 deployment 설계 관점에서 특히 흥미롭습니다. Sol, Terra, Luna는 단순한 품질 서열이 아니라 서로 다른 운영점입니다. 9월 표준 가격에서 Sol은 Luna보다 input token이 20배, output token이 약 16.7배 비쌉니다. Luna가 private release gate를 통과한다면 Sol을 기본값으로 쓰는 것은 비례하는 제품 가치를 만들지 못하면서 훨씬 큰 비용을 지불하는 선택이 될 수 있습니다. 다만 cached input, long-context multiplier, tool charge, retry까지 넣으면 실제 계산은 더 복잡합니다.
 
 Fable은 다른 교훈을 줍니다. **평가 대상이 router일 수 있습니다.** Safety classifier가 다른 모델로 fallback할 수 있다면 production system은 classifier + policy + fallback + base capability의 결합입니다. Eval log에 routing rate와 fallback별 failure를 남기지 않으면 aggregate score 하나가 실제로 어느 system이 답했는지 숨깁니다.
 
 ### Open preview는 open weight가 아니다
 
-GLM-5.2는 MIT open weight이며 753B MoE, sparse attention, 1M context, IndexShare, MTP path를 설정 파일로 검토할 수 있습니다 [[45]](#ref-45). Kimi K3는 hosted model로 이미 사용할 수 있지만 full weights와 technical report는 7월 27일 공개 예정입니다 [[46]](#ref-46). Qwen3.8-Max-Preview는 2.4T parameter와 향후 open weights를 발표했지만, 이 snapshot 시점에는 public weights나 model card가 없습니다 [[47]](#ref-47).
+GLM-5.2는 MIT open weight이며 753B MoE, sparse attention, 1M context, IndexShare, MTP path를 설정 파일로 검토할 수 있습니다 [[45]](#ref-45). Kimi K3는 7월 27일 announced 상태에서 released/open-weight로 바뀌었습니다. Moonshot은 weights, technical report, MoonEP communication library, FlashKDA kernel, AgentEnv sandbox system을 함께 공개했습니다 [[53]](#ref-53). Qwen3.8-Max도 8월에 preview를 졸업했고 Alibaba/Qwen은 2.4T-A95B weights를 공개했습니다. 다만 정확한 data mixture와 일부 long-horizon 성과는 독립 재현이 아니라 provider disclosure로 남아 있습니다 [[54]](#ref-54) [[55]](#ref-55).
+
+이 상태 변화는 release state가 본문 장식이 아니라 데이터셋 필드여야 하는 이유를 보여 줍니다. 발표문에 적힌 미래 날짜는 스스로 갱신되는 근거가 아닙니다. 약속한 artifact를 실제로 내려받고 license와 configuration을 확인한 뒤에만 canonical row를 바꿔야 합니다.
 
 따라서 세 모델에 같은 “open” badge를 붙이면 안 됩니다. 다음 상태 어휘가 실용적입니다.
 
@@ -302,3 +307,11 @@ Frontier는 더 이상 단일 leaderboard race가 아닙니다. intelligence, to
 45. <a id="ref-45"></a>Z.ai. (2026). *GLM-5.2: From Long Context to Long-Horizon Agents*. [Z.ai](https://z.ai/blog/glm-5.2).
 46. <a id="ref-46"></a>Moonshot AI. (2026). *Kimi K3: A Native Multimodal Agent Model*. [Kimi](https://www.kimi.com/blog/kimi-k3).
 47. <a id="ref-47"></a>Alibaba Group. (2026). *Alibaba Unveils Qwen3.8-Max-Preview*. [Alibaba Group](https://www.alibabagroup.com/en-US/document-2016703577908576256).
+48. <a id="ref-48"></a>OpenAI. (2026). *GPT-6 Astra: A new generation of intelligence*. [OpenAI](https://openai.com/index/gpt-6-astra/).
+49. <a id="ref-49"></a>OpenAI. (2026). *Models*. [OpenAI API documentation](https://developers.openai.com/api/docs/models).
+50. <a id="ref-50"></a>Google. (2026). *Introducing Gemini 3.8 Flash and 3.8 Flash Cyber*. [Google Blog](https://blog.google/innovation-and-ai/models-and-research/gemini-models/3-8-flash-and-3-8-flash-cyber/).
+51. <a id="ref-51"></a>Google DeepMind. (2026). *Gemini 3.8 Flash Model Card*. [Google DeepMind](https://deepmind.google/models/model-cards/gemini-3-8-flash/).
+52. <a id="ref-52"></a>Anthropic. (2026). *Claude Fable 5.1 and Claude Mythos 5.1*. [Anthropic](https://www.anthropic.com/claude-fable-and-mythos-5-1).
+53. <a id="ref-53"></a>Moonshot AI. (2026). *Kimi K3 Open Day: weights, technical report, and infrastructure*. [Kimi](https://www.kimi.com/news/kimi-k3-open-source).
+54. <a id="ref-54"></a>Alibaba Group. (2026). *Alibaba Unveils Qwen3.8-Max*. [Alibaba Group](https://www.alibabagroup.com/en-US/document-2021044032125272064).
+55. <a id="ref-55"></a>Qwen Team. (2026). *Qwen3.8-2.4T-A95B*. [Hugging Face model repository](https://huggingface.co/Qwen/Qwen3.8-2.4T-A95B).

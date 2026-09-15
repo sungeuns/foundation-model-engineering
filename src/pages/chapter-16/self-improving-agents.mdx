@@ -4,6 +4,8 @@ title: 16.3 Self-Improving Agents
 lang: en
 ---
 
+import SelfImprovementGateVisualizer from '../../components/chapter-16/SelfImprovementGateVisualizer.tsx';
+
 # 16.3 Self-Improving Agents
 
 The previous section described autonomous agents as LLMs inside a control loop. Self-improving agents add a second loop around that loop. They do not merely ask, "What should I do next?" They ask, "How should the system that decides what to do next be changed?"
@@ -11,6 +13,8 @@ The previous section described autonomous agents as LLMs inside a control loop. 
 That distinction is easy to miss. A normal autonomous coding agent might inspect a repository, edit a file, run tests, and retry. A self-improving coding agent may instead modify its own tools, prompts, memory policy, reviewer, search strategy, or evaluation harness so that the next generation of the agent is better at solving future tasks. The object being optimized is no longer only the answer. It is the agent-making process itself.
 
 A useful analogy is the difference between a student solving homework and a student redesigning their study routine. Reflection says, "I made this mistake; remember it next time." Self-improvement says, "The way I practice, evaluate, and choose problems is part of the system, so that system should also be editable."
+
+**Evidence snapshot: September 15, 2026.** The systems below are research prototypes or constrained products, not evidence of unconstrained recursive self-improvement. Reported benchmark gains belong to a model-plus-scaffold-plus-evaluator configuration under a particular budget.
 
 ---
 
@@ -52,6 +56,40 @@ $$
 
 The hard part is hidden in $J$. If the evaluator is weak, the agent learns to exploit the measurement rather than the task. If the evaluator is too expensive, the loop becomes impractical. If the evaluator is too narrow, improvements fail to transfer.
 
+### The statistical trap: selecting the luckiest candidate
+
+Suppose the system generates $K$ variants. For variant $i$, the development estimate is
+
+$$
+\hat{J}_{\mathrm{dev}}(\theta_i) = J(\theta_i) + \epsilon_i,
+\qquad
+i^* = \arg\max_{i \in \{1,\ldots,K\}} \hat{J}_{\mathrm{dev}}(\theta_i),
+$$
+
+where $J(\theta_i)$ is the unobserved deployment quality and $\epsilon_i$ is measurement noise. Even when every estimate is unbiased before selection, the winning estimate is optimistic after selection: searching more candidates gives the loop more chances to select a positive noise realization. Reusing the same benchmark in every generation turns that **winner's curse** into adaptive benchmark overfitting.
+
+A defensible promotion rule separates three sets:
+
+1. a **search set** that may be queried repeatedly;
+2. a **sealed holdout** used once for a promotion decision; and
+3. a **post-deployment canary** that measures real traffic under rollback thresholds.
+
+For a required practical margin $\delta$, a conservative gate compares uncertainty bounds rather than point estimates:
+
+$$
+\operatorname{LCB}_{95\%}(\hat{J}_{\mathrm{holdout}}(\theta_{i^*}))
+>
+\operatorname{UCB}_{95\%}(\hat{J}_{\mathrm{holdout}}(\theta_{0})) + \delta.
+$$
+
+The holdout must be versioned, access-controlled, and retired after repeated exposure. Otherwise it silently becomes another development set.
+
+### Interactive: why the development winner may fail the gate
+
+Increase the number of candidate variants while keeping the development set small. The orange development estimate is used for selection; the blue holdout estimate is not visible to the search loop. Then increase deployment shift to see why a locally successful scaffold can still regress in production.
+
+<SelfImprovementGateVisualizer client:load />
+
 ---
 
 ## 3. Early Research Loops: Autoresearch and AI Scientists
@@ -91,7 +129,7 @@ The **Darwin Gödel Machine (DGM)** is a more direct attempt at practical recurs
 
 The archive is the key idea. A simple hill-climber keeps only the current best agent. That is brittle because some changes are stepping stones: they may not immediately dominate every metric, but they create a useful basis for later improvements. DGM keeps a population-like archive so future variants can branch from multiple earlier agents.
 
-The reported gains are substantial. In the DGM paper, the system improves from 20.0% to 50.0% on SWE-bench and from 14.2% to 30.7% on Polyglot. The discovered changes are also concrete engineering improvements: better editing tools, long-context management, and peer-review mechanisms.
+The paper reports substantial gains within its stated harness: from 20.0% to 50.0% on its SWE-bench setup and from 14.2% to 30.7% on Polyglot. These are results for the complete DGM system, not an architecture-independent increase in the base model's coding ability. The discovered changes are concrete engineering improvements: better editing tools, long-context management, and peer-review mechanisms.
 
 That said, DGM has a hidden alignment advantage. It is evaluated on coding tasks, and the thing it modifies is also code. Better coding ability can directly help the system write better self-modifications. This is powerful, but it is also domain-specific. If the task were poetry critique, protein hypothesis generation, or robotics reward design, better task performance would not automatically mean better ability to edit the self-improvement machinery.
 
@@ -186,6 +224,12 @@ Every accepted change should carry provenance:
 - human review status
 
 Without provenance, an improving system becomes less understandable as it gets stronger. That is exactly the wrong direction for safety.
+
+### A production promotion contract
+
+An accepted variant should be reconstructable and reversible, not merely higher-scoring. A minimal record includes the parent artifact hash, exact diff, base-model snapshot, tool and permission schema, evaluator version, task IDs, seeds, token/tool/latency budget, confidence interval, known slice regressions, and reviewer identity. Store the previous bundle as the last-known-good version and define rollback triggers before canary traffic begins.
+
+Do not let the candidate modify its own acceptance test in the same trust domain. Changes to evaluators, sandboxes, permissions, or the holdout manifest require a separate review path. This creates a two-key system: the agent may propose a measurement change, but the same run cannot both rewrite the ruler and declare itself taller.
 
 ---
 
