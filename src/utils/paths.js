@@ -27,3 +27,7 @@ export const withBasePath = (pathname, basePath = getBasePath()) => {
   if (normalizedPath === '/') return basePath;
   return `${basePath}${normalizedPath}`;
 };
+
+// HTML pages use directory URLs on GitHub Pages; assets must not use this helper.
+export const withPagePath = (pathname, basePath = getBasePath()) =>
+  `${withBasePath(pathname, basePath).replace(/\/+$/, '')}/`;

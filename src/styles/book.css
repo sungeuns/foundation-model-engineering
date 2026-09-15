@@ -207,6 +207,29 @@ header h1 {
   outline: none;
 }
 
+.breadcrumbs {
+  font-size: 0.95rem;
+  margin-bottom: 1rem;
+}
+
+.breadcrumbs ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.6rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.breadcrumbs li + li::before {
+  content: '›';
+  margin-right: 0.6rem;
+}
+
+.breadcrumbs a {
+  color: var(--accent-color);
+}
+
 main {
   font-size: 1.2rem;
   font-weight: 300;

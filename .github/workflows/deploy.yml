@@ -36,7 +36,7 @@ jobs:
         run: SITE_BASE=/foundation-model-engineering/ npm run build
 
       - name: Verify search metadata
-        run: node --test scripts/search-metadata.test.mjs
+        run: node --test scripts/content-links.test.mjs scripts/search-metadata.test.mjs
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

@@ -2,7 +2,7 @@
 import BookLayout from '../layouts/BookLayout.astro';
 
 import { chapters } from '../data/chapters.js';
-import { withBasePath } from '../utils/paths.js';
+import { withPagePath } from '../utils/paths.js';
 ---
 
 <BookLayout title="Home" lang="en">
@@ -44,7 +44,7 @@ import { withBasePath } from '../utils/paths.js';
         <h3>{ch.title.en}</h3>
         <ul>
           {ch.subs.map(sub => (
-            <li><a href={withBasePath(sub.path)}>{sub.title.en}</a></li>
+            <li><a href={withPagePath(sub.path)}>{sub.title.en}</a></li>
           ))}
         </ul>
       </div>

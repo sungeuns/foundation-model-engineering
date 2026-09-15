@@ -2,7 +2,7 @@
 import { chapters } from '../data/chapters.js';
 import { site } from '../data/site.js';
 import { searchDescriptions } from '../data/search-descriptions.js';
-import { getBasePath, normalizePathname, stripBasePath, withBasePath } from '../utils/paths.js';
+import { getBasePath, normalizePathname, stripBasePath, withBasePath, withPagePath } from '../utils/paths.js';
 import '../styles/book.css';
 
 const { title, lang = 'en', description } = Astro.props.frontmatter || Astro.props;
@@ -41,7 +41,7 @@ const currentSub = chapters
   .find((sub) => currentPath === normalizePathname(getLocalePath(sub.path, lang)));
 const contentTitle = currentSub?.title?.[lang] || title;
 const pageTitle = isHomePage ? siteTitle : `${contentTitle} | ${siteTitle}`;
-const toHref = (pagePath) => withBasePath(pagePath, basePath);
+const toHref = (pagePath) => withPagePath(pagePath, basePath);
 const toAbsoluteUrl = (pagePath) => {
   const url = new URL(withBasePath(pagePath, basePath), Astro.site || site.url);
   if (!url.pathname.endsWith('/')) {
@@ -80,11 +80,25 @@ const structuredData = {
     name: site.author,
     url: 'https://www.linkedin.com/in/sungeuns2',
   },
-  isPartOf: {
-    '@type': 'Book',
-    name: site.titles[lang] || site.titles.en,
-    url: toAbsoluteUrl(homePath),
-  },
+  ...(!isHomePage && {
+    mainEntityOfPage: canonicalUrl,
+    isPartOf: {
+      '@type': 'Book',
+      name: site.titles[lang] || site.titles.en,
+      url: toAbsoluteUrl(homePath),
+    },
+  }),
+};
+const breadcrumbItems = [
+  { name: isKo ? '홈' : 'Home', item: toAbsoluteUrl(homePath) },
+  { name: contentTitle, item: canonicalUrl },
+];
+const breadcrumbData = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: breadcrumbItems.map((item, index) => ({
+    '@type': 'ListItem', position: index + 1, ...item,
+  })),
 };
 
 // Navigation logic
@@ -117,7 +131,7 @@ if (currentIndex !== -1) {
     <title>{pageTitle}</title>
     <meta name="description" content={pageDescription} />
     <meta name="author" content={site.author} />
-    <meta name="robots" content="index, follow" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
     <link rel="canonical" href={canonicalUrl} />
     <link rel="alternate" hreflang="en" href={enUrl} />
     <link rel="alternate" hreflang="ko" href={koUrl} />
@@ -140,6 +154,7 @@ if (currentIndex !== -1) {
     <meta name="twitter:title" content={pageTitle} />
     <meta name="twitter:description" content={pageDescription} />
     <script type="application/ld+json" set:html={JSON.stringify(structuredData)}></script>
+    {!isHomePage && <script type="application/ld+json" set:html={JSON.stringify(breadcrumbData)}></script>}
     <link rel="icon" type="image/svg+xml" href={withBasePath('/favicon.svg', basePath)} />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -197,6 +212,14 @@ if (currentIndex !== -1) {
             </div>
           </div>
         </header>
+        {!isHomePage && (
+          <nav class="breadcrumbs" aria-label={isKo ? '현재 위치' : 'Breadcrumb'}>
+            <ol>
+              <li><a href={toHref(homePath)}>{isKo ? '홈' : 'Home'}</a></li>
+              <li aria-current="page">{contentTitle}</li>
+            </ol>
+          </nav>
+        )}
         <main>
           <slot />
         </main>

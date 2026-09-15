@@ -2,7 +2,7 @@
 import BookLayout from '../../layouts/BookLayout.astro';
 
 import { chapters } from '../../data/chapters.js';
-import { withBasePath } from '../../utils/paths.js';
+import { withPagePath } from '../../utils/paths.js';
 
 const getPath = (p) => `/ko${p}`;
 ---
@@ -46,7 +46,7 @@ const getPath = (p) => `/ko${p}`;
         <h3>{ch.title.ko}</h3>
         <ul>
           {ch.subs.map(sub => (
-            <li><a href={withBasePath(getPath(sub.path))}>{sub.title.ko}</a></li>
+            <li><a href={withPagePath(getPath(sub.path))}>{sub.title.ko}</a></li>
           ))}
         </ul>
       </div>

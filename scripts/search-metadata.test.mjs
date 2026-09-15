@@ -11,6 +11,7 @@ const routes = ['/', '/ko', ...chapters.flatMap(c => c.subs.flatMap(s => [s.path
 const escape = text => text.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 
 test('search descriptions have real routes and equivalent language coverage', () => {
+  assert.deepEqual(Object.keys(searchDescriptions).sort(), chapters.flatMap(c => c.subs.map(s => s.path)).sort());
   for (const [route, descriptions] of Object.entries(searchDescriptions)) {
     assert.ok(routes.includes(route), route);
     assert.deepEqual(Object.keys(descriptions), ['en', 'ko']);
@@ -21,6 +22,7 @@ test('search descriptions have real routes and equivalent language coverage', ()
 
 // Run after the GitHub Pages build, not against the production site's old HTML.
 test('every built page has canonical, reciprocal language links, and a local social image', () => {
+  const seenDescriptions = new Set();
   for (const route of routes) {
     const html = readFileSync(`${outputDir}${route === '/' ? '' : route}/index.html`, 'utf8');
     const head = html.slice(0, html.indexOf('</head>'));
@@ -34,11 +36,56 @@ test('every built page has canonical, reciprocal language links, and a local soc
     assert.ok(head.includes(`property="og:image" content="${base}/social/cover-${lang}.png"`), route);
     assert.ok(head.includes('name="twitter:card" content="summary_large_image"'), route);
     assert.ok(existsSync(`${outputDir}/social/cover-${lang}.png`));
+    const actualDescription = head.match(/name="description" content="([^"]+)"/)?.[1];
+    assert.ok(actualDescription, `${route}: missing description`);
+    assert.ok(!seenDescriptions.has(actualDescription), `${route}: duplicate description`);
+    seenDescriptions.add(actualDescription);
+    assert.ok(head.includes('max-image-preview:large'), route);
+    assert.doesNotMatch(head, /content="[^"]*\bnoindex\b/);
+    const schemas = [...head.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/g)].map(m => JSON.parse(m[1]));
+    const breadcrumb = schemas.find(schema => schema['@type'] === 'BreadcrumbList');
+    if (route !== '/' && route !== '/ko') {
+      assert.deepEqual(breadcrumb.itemListElement.map(item => item.position), [1, 2], route);
+      assert.equal(breadcrumb.itemListElement[0].item, absolute(lang === 'ko' ? '/ko' : '/'));
+      assert.equal(breadcrumb.itemListElement[1].item, absolute(route));
+      assert.ok(html.includes('aria-current="page"'), `${route}: breadcrumb must be visible`);
+    } else {
+      assert.equal(breadcrumb, undefined);
+      assert.equal(schemas[0].isPartOf, undefined, 'a book must not be part of itself');
+    }
     const description = searchDescriptions[en]?.[lang];
     if (description) {
       const source = readFileSync(`src/pages${route}.mdx`, 'utf8').split('---')[1];
       if (!/^description:/m.test(source)) {
         assert.ok(head.includes(`name="description" content="${escape(description)}"`), route);
+      }
+    }
+  }
+});
+
+test('internal links resolve to canonical deployed paths and real fragments', () => {
+  const siteBase = new URL(base);
+  const routeUrls = new Set(routes.map(route => `${base}${route === '/' ? '' : route}/`));
+  const files = new Map();
+  for (const route of routes) {
+    const url = `${base}${route === '/' ? '' : route}/`;
+    files.set(url, readFileSync(`${outputDir}${route === '/' ? '' : route}/index.html`, 'utf8'));
+  }
+  for (const [pageUrl, html] of files) {
+    for (const match of html.matchAll(/<a\s[^>]*href="([^"]+)"/g)) {
+      const href = match[1].replaceAll('&amp;', '&');
+      const url = new URL(href, pageUrl);
+      if (url.origin !== siteBase.origin) continue;
+      assert.ok(url.pathname.startsWith(`${siteBase.pathname}/`), `${pageUrl}: outside deployment base: ${href}`);
+      const target = `${url.origin}${url.pathname}`;
+      if (routeUrls.has(target)) {
+        if (url.hash) {
+          const id = decodeURIComponent(url.hash.slice(1));
+          assert.ok(files.get(target).includes(`id="${id}"`), `${pageUrl}: missing fragment ${href}`);
+        }
+      } else {
+        const assetPath = url.pathname.slice(siteBase.pathname.length);
+        assert.ok(/\.[^/]+$/.test(assetPath) && existsSync(`${outputDir}${assetPath}`), `${pageUrl}: broken or noncanonical link ${href}`);
       }
     }
   }
