@@ -20,6 +20,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -32,6 +34,9 @@ jobs:
 
       - name: Build site
         run: SITE_BASE=/foundation-model-engineering/ npm run build
+
+      - name: Verify search metadata
+        run: node --test scripts/search-metadata.test.mjs
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
