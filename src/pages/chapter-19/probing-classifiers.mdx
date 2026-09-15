@@ -8,219 +8,198 @@ import LinearProbeVisualizer from '../../components/chapter-19/LinearProbeVisual
 
 # 19.3 Probing Classifiers
 
-The Logit Lens from the previous section is a powerful tool, but it suffers from a fundamental limitation: it only reveals what the model is *about to output*. By mapping the residual stream directly to the vocabulary space via the unembedding matrix, we are strictly looking at the model's immediate predictive intent.
+The logit lens asks what a hidden state would predict through the model's unembedding. A **probe** asks a different question: can a specified property be decoded from that state by a constrained auxiliary model?
 
-But what if the model possesses knowledge that it isn't explicitly verbalizing? 
-* Does the model know that the subject of a sentence is plural, even if the next predicted word isn't a verb?
-* Does the model internally *know* a statement is factually false, even while it is being prompted to generate a lie?
-* Is a concept like "sarcasm" or "sentiment" explicitly tracked in the hidden states?
+That distinction sets the epistemic boundary for this chapter. A successful probe establishes **decodability under an experimental protocol**. It does not, by itself, show that the base model uses the information, stores it in a unique direction, or would expose the same feature under distribution shift.
 
-To answer these questions, we cannot rely on the unembedding matrix. Instead, we must interrogate the model's internal representations directly. We do this by training an auxiliary classifier—a **Probe**—on the frozen hidden states of the model.
+## 1. The Measurement Object
 
----
+For input $x_i$, choose a model location and extract activation $h_i^{(l,p)}\in\mathbb R^d$, where $l$ is the layer and $p$ identifies the token position and stream location. Train a probe $f_\theta$ to predict label $y_i$:
 
-## 1. The Interrogation Room: What is a Probe?
+$$
+\hat y_i=\arg\max_c \left(Wh_i^{(l,p)}+b\right)_c.
+$$
 
-The core idea of probing is to treat a pre-trained, frozen Large Language Model as a feature extractor. We run a dataset of inputs $X$ through the model and extract the continuous activation vectors $h_l \in \mathbb{R}^d$ at a specific layer $l$. 
+A result is not reproducible unless the activation artifact records:
 
-We then train a secondary, lightweight supervised model (the probe) $f_\theta: \mathbb{R}^d \rightarrow \mathcal{Y}$ to predict a specific property $Y$ (e.g., Part-of-Speech, syntactic depth, or factual truth) from those activations. 
+- model checkpoint and tokenizer hashes, chat template, and input text;
+- layer, module, pre/post-normalization location, and token-position rule;
+- dtype, pooling, truncation and padding behavior;
+- dataset example ID, split, label provenance, and extraction code version.
 
-![probing_architecture](../../assets/images/chapter-19/probing_architecture.png)
-*Source: AI-generated illustration*
+“Layer 20 activation” is underspecified: residual-stream input, attention output, MLP output, and post-block residual are different tensors.
 
-If the probe achieves high accuracy, we conclude that the information required to predict property $Y$ is encoded within the representations at layer $l$.
+## 2. Why Use a Linear Probe?
 
----
+A high-capacity nonlinear probe can create a useful decision surface even when the target is awkwardly represented. A linear probe deliberately asks the narrower question: is the label accessible by an affine boundary? The **Linear Representation Hypothesis** studies when high-level properties correspond to linear structure in representation space [[1]](#ref-1).
 
-## 2. The Linear Representation Hypothesis
+Low capacity improves interpretability but does not eliminate confounds. In a high-dimensional space, a linear classifier can memorize limited data, exploit lexical identity, or use a feature correlated with the label. Probe capacity, regularization, sample size, and representation dimension must be reported together.
 
-When designing a probe, a critical question arises: *How complex should the probe be?* 
+## 3. A Minimal, Auditable Experiment
 
-If we use a deep, highly parameterized Multi-Layer Perceptron (MLP) as our probe, it could easily achieve 100% accuracy. However, a powerful MLP might just be *learning the task itself* from the raw data, completely bypassing the LLM's internal structure. In this scenario, the probe isn't reading the LLM's mind; it's doing the thinking for it.
+Split before fitting transformations. Related prompts, entities, paraphrases, and synthetic siblings belong in one split; otherwise the probe can recognize examples rather than generalize a property. Compute normalization statistics on training data only.
 
-To prevent this, researchers overwhelmingly rely on the **Linear Representation Hypothesis (LRH)** [[1]](#ref-1). The LRH posits that modern neural networks encode high-level semantic concepts as linear directions (or hyperplanes) within their high-dimensional activation space. 
+> **Scope of the code.** This is executable for pre-extracted, fixed-length activations with class IDs $0,\ldots,C-1$. Activation hooks, sequence pooling, class imbalance, hyperparameter selection, confidence intervals, and grouped splitting are experiment-specific and intentionally kept outside the helper.
 
-Therefore, standard practice dictates using **Linear Probes** (e.g., Logistic Regression or a single linear layer). The mathematical formulation is intentionally constrained:
-
-$$ \hat{y} = \text{argmax}(\text{softmax}(W \cdot h_l + b)) $$
-
-If a simple linear hyperplane can successfully separate complex concepts (e.g., true statements from false statements), it serves as strong evidence that the LLM has *already* done the heavy computational lifting to extract and organize that concept by layer $l$.
-
----
-
-## 3. Engineering a Linear Probe (PyTorch)
-
-Training a probe involves two distinct phases: extracting the activations from the frozen LLM, and training the linear classifier. Below is a realistic PyTorch implementation demonstrating how to train a linear probe on pre-extracted activations.
-
-```python
+~~~python
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader, TensorDataset
+
 
 class LinearProbe(nn.Module):
-    """
-    A strictly linear probe to test the Linear Representation Hypothesis.
-    No hidden layers, no non-linear activation functions.
-    """
-    def __init__(self, input_dim: int, num_classes: int):
+    def __init__(self, width: int, classes: int):
         super().__init__()
-        self.proj = nn.Linear(input_dim, num_classes)
-        
+        self.readout = nn.Linear(width, classes)
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # Output raw logits
-        return self.proj(x)
-
-def train_probe(activations: torch.Tensor, labels: torch.Tensor, epochs: int = 10) -> nn.Module:
-    """
-    Trains a linear probe on frozen LLM activations.
-    
-    Args:
-        activations: Tensor of shape (N, hidden_dim) extracted from layer l.
-        labels: Tensor of shape (N,) containing target concept classes.
-    """
-    # 1. Prepare data loaders
-    dataset = TensorDataset(activations, labels)
-    loader = DataLoader(dataset, batch_size=64, shuffle=True)
-    
-    input_dim = activations.shape[-1]
-    num_classes = labels.max().item() + 1
-    
-    # 2. Initialize the probe and optimizer
-    # Weight decay is crucial here to prevent the linear probe from overfitting
-    # to spurious noise directions in the high-dimensional space.
-    probe = LinearProbe(input_dim, num_classes).to(activations.device)
-    optimizer = torch.optim.AdamW(probe.parameters(), lr=1e-3, weight_decay=0.01)
-    criterion = nn.CrossEntropyLoss()
-    
-    # 3. Training Loop
-    probe.train()
-    for epoch in range(epochs):
-        total_loss = 0.0
-        correct = 0
-        total = 0
-        
-        for batch_x, batch_y in loader:
-            optimizer.zero_grad()
-            
-            logits = probe(batch_x)
-            loss = criterion(logits, batch_y)
-            
-            loss.backward()
-            optimizer.step()
-            
-            total_loss += loss.item()
-            predictions = torch.argmax(logits, dim=-1)
-            correct += (predictions == batch_y).sum().item()
-            total += batch_y.size(0)
-            
-        print(f"Epoch {epoch+1} | Loss: {total_loss/len(loader):.4f} | Acc: {correct/total:.4f}")
-            
-    return probe
-```
-
----
-
-## 4. The Selectivity Problem: Is the Probe Cheating?
-
-Even with a strictly linear probe, there is a risk that the probe is memorizing the dataset rather than uncovering latent, generalized knowledge. Hewitt and Liang (2019) formalized this as the **Selectivity Problem** [[2]](#ref-2).
-
-To prove a probe is actually reading the LLM's structural knowledge, they introduced the concept of **Control Tasks**.
-* **Real Task**: Train a probe to predict the actual Part-of-Speech (POS) of words from their activations.
-* **Control Task**: Assign a *random, deterministic* label to each word type (e.g., every instance of the word "apple" is assigned class 3, "run" is class 1) and train a probe to predict it.
-
-If the probe achieves 90% accuracy on the Real Task and 85% on the Control Task, the probe is simply memorizing word identities (mapping specific token embeddings to arbitrary labels). A high-quality probe must exhibit high **Selectivity**, defined as:
-
-$$ \text{Selectivity} = \text{Accuracy}_{\text{Task}} - \text{Accuracy}_{\text{Control}} $$
-
-A high selectivity score proves that the LLM's geometry naturally clusters the semantic concept, making the real task inherently easier to linearly separate than the random control task.
-
----
-
-## 5. From Correlation to Causation: Amnesic Probing
-
-Suppose our linear probe successfully finds a direction vector $W$ that perfectly classifies plural vs. singular subjects with high selectivity. Does this mean the LLM actually *uses* this information to predict the next word? 
-
-Not necessarily. The information might just be a correlated byproduct of the network's processing. To prove causation, we must intervene in the model's computational graph.
-
-Elazar et al. (2021) introduced **Amnesic Probing** [[3]](#ref-3). The methodology involves surgically removing the concept from the model's hidden state and observing if its downstream behavior changes. This is achieved using Iterative Null-space Projection (INLP).
-
-Mathematically, if $W$ is the weight matrix of our linear probe, we project the model's hidden state $h_l$ onto the null space of $W$:
-
-$$ h'_l = \left( I - W^T(WW^T)^{-1}W \right) h_l $$
-
-![amnesic_intervention](../../assets/images/chapter-19/amnesic_intervention.png)
-*Source: AI-generated illustration*
-
-This new vector $h'_l$ contains exactly zero information about the probed concept (if fed into the probe, it would output random noise). If we substitute $h_l$ with $h'_l$ during the LLM's forward pass, and the model suddenly fails to maintain subject-verb agreement in its generated text, we have proven a causal link: the model *relies* on that specific linear direction to perform the task.
-
----
-
-## 6. Discovering Latent Truth (Unsupervised Probing)
-
-One of the most profound applications of probing is discovering whether an LLM "knows" it is hallucinating. 
-
-Burns et al. (2022) proposed a method to find the "Truth Direction" in an LLM *without any labeled data* [[4]](#ref-4). They introduced Contrast-Consistent Search (CCS). The intuition is based on logical consistency. If we feed the model a statement $x^+$ ("The earth is flat") and its exact negation $x^-$ ("The earth is not flat"), we get two activation vectors $h^+$ and $h^-$.
-
-Even without knowing which statement is factually true, we know that a valid "truth probe" $P_{true}(x)$ must satisfy the logical constraint:
-
-$$ P_{true}(x^+) + P_{true}(x^-) = 1 $$
-
-By training a linear probe to simply minimize this consistency loss across thousands of paired statements, the probe naturally converges on the latent "truth direction" inside the LLM. This remarkable finding allows researchers to detect when a model is lying, even if the model's standard output is explicitly prompted to generate false information.
-
----
-
-## 7. Interactive: The Linear Representation Hypothesis
-
-To visualize how concepts crystallize in the activation space, interact with the simulation below. It demonstrates how the representations of two concepts (e.g., True vs. False statements) evolve across the layers of a Transformer. 
-
-Notice how the concepts are entangled in early layers (making linear separation impossible), but naturally organize into linearly separable clusters in the deeper layers, validating the Linear Representation Hypothesis.
+        return self.readout(x)
 
 
+def fit_linear_probe(
+    train_x: torch.Tensor,
+    train_y: torch.Tensor,
+    test_x: torch.Tensor,
+    test_y: torch.Tensor,
+    *,
+    steps: int = 500,
+    learning_rate: float = 3e-3,
+    weight_decay: float = 1e-2,
+) -> tuple[LinearProbe, float]:
+    if train_x.ndim != 2 or test_x.shape[1] != train_x.shape[1]:
+        raise ValueError("expected [examples, hidden_width] with matching widths")
+    classes = int(train_y.max().item()) + 1
+    if classes < 2:
+        raise ValueError("training split must contain at least two classes")
 
+    # Fit preprocessing on train only; keep it with the probe artifact.
+    mean = train_x.mean(dim=0, keepdim=True)
+    scale = train_x.std(dim=0, keepdim=True).clamp_min(1e-6)
+    x_train = (train_x - mean) / scale
+    x_test = (test_x - mean) / scale
 
+    torch.manual_seed(0)
+    probe = LinearProbe(train_x.shape[1], classes).to(train_x.device)
+    optimizer = torch.optim.AdamW(
+        probe.parameters(), lr=learning_rate, weight_decay=weight_decay
+    )
+    for _ in range(steps):
+        optimizer.zero_grad(set_to_none=True)
+        loss = nn.functional.cross_entropy(probe(x_train), train_y)
+        loss.backward()
+        optimizer.step()
 
-<LinearProbeVisualizer client:load />
+    probe.eval()
+    with torch.no_grad():
+        accuracy = (probe(x_test).argmax(dim=-1) == test_y).float().mean().item()
+    return probe, accuracy
+~~~
 
----
+In a real study, select hyperparameters on validation data, run multiple seeds, report uncertainty, and compare against a majority baseline, token or embedding baselines, and randomly initialized or shuffled-layer representations.
 
-## 9. Summary and Open Questions
+## 4. Controls and Selectivity
 
-Probing Classifiers have allowed us to move beyond simply observing the final outputs of an LLM. By treating the network as a feature extractor, we can prove that models internally track complex linguistic, syntactical, and factual concepts long before the final token is generated. Furthermore, causal interventions like Amnesic Probing prove that the model actively relies on these internal linear geometries.
+Hewitt and Liang's control task assigns a random but deterministic label to each word type [[2]](#ref-2). A probe that predicts both the linguistic task and this memorization-friendly control may be exploiting lexical identity or excess capacity. They define
 
-However, probing has a blind spot. A linear probe can only find a concept if we *already know what we are looking for*. We must provide the dataset (e.g., POS tags, true/false statements) to train the probe. 
+$$
+\text{selectivity}=
+\text{task performance}-\text{control performance}.
+$$
 
-But what about the thousands of other features the LLM has learned that we haven't thought to probe for? How can we discover the complete dictionary of concepts an LLM uses, without relying on human-defined labels? 
+High selectivity is useful evidence that the chosen probe/data protocol favors the real structure over that control. It does **not** prove that the geometry “naturally represents” the human concept. The conclusion is conditional on the control construction, split, capacity measure, metric, and distribution.
 
-To solve this unsupervised discovery problem, we must turn to the cutting edge of mechanistic interpretability: **19.4 Sparse Autoencoders (SAE)**.
+A robust probe card includes:
+
+- label balance and grouped train/dev/test split;
+- layers and token positions chosen before inspecting the test set;
+- probe family, parameter count, regularization, seeds, and preprocessing;
+- in-distribution, paraphrase, entity-held-out, and template-held-out results;
+- control-task performance and simple representation baselines;
+- confidence intervals and all attempted hypotheses, not only the best layer.
+
+## 5. From Decodability to Intervention
+
+Decodability is correlational. Amnesic probing asks whether downstream behavior changes after removing probe-accessible information [[3]](#ref-3). For a probe matrix $W$, a single linear null-space projection can be written
+
+$$
+P=I-W^\top(WW^\top)^\dagger W,\qquad h'=Ph,
+$$
+
+where ${}^\dagger$ is the Moore–Penrose pseudoinverse. INLP repeats probe fitting and projection until the selected linear probe family can no longer recover the label.
+
+The careful interpretation is “the intervention reduced information recoverable by this probe family.” It did not erase every nonlinear encoding of the concept, and it may have removed unrelated information that shared the same subspace. Later work reports that INLP can introduce non-targeted changes and finds Mean Projection or LEACE more targeted in evaluated settings [[5]](#ref-5).
+
+A causal claim needs controls:
+
+1. Verify **completeness**: can fresh probes still decode the target?
+2. Verify **intervention selectivity**: are matched non-target properties retained?
+3. Compare matched-rank random projections and magnitude-matched noise.
+4. Measure the predeclared downstream behavior, not only probe accuracy.
+5. Repeat across layers, seeds, removal methods, and held-out distributions.
+
+Canby et al. formalize an empirical completeness–selectivity trade-off and report that no intervention family is perfect across their tests [[6]](#ref-6). A downstream change after projection is therefore evidence for a causal contribution only to the extent that collateral damage has been ruled out.
+
+## 6. Unsupervised Probing and CCS
+
+Contrast-Consistent Search (CCS) uses pairs such as a statement and its negation, seeking a low-capacity direction whose predictions are confident and mutually consistent without using task labels [[4]](#ref-4). A simplified consistency condition is
+
+$$
+p_\theta(x)+p_\theta(\neg x)\approx1.
+$$
+
+This is an assumption and a training signal, not ground truth. Natural-language negation may not form a clean logical complement; both members can be ambiguous or false under different readings. The objective has a sign symmetry, so a learned axis still needs orientation, and label-free training does not make model selection label-free.
+
+The CCS paper reports an average improvement over zero-shot accuracy across its evaluated datasets and models. It presents an initial method for eliciting latent knowledge—not a universal truth direction and not a detector that establishes whether a model is “lying.”
+
+## 7. Product Debugging Without Overclaiming
+
+Probes can be valuable instrumentation:
+
+- **Over-refusal:** test whether a risk-related signal separates benign security education from harmful requests across layers.
+- **RAG grounding:** ask whether answer-time states predict document-supported versus parametric answers on entity- and template-held-out data.
+- **Tool readiness:** compare pre-call states from successful and failed traces to find where action selection becomes decodable.
+
+These are hypotheses, not production gates. Start in shadow mode. Calibrate false-positive and false-negative costs by slice, monitor drift after every model/template update, and require an output- or behavior-level fallback. Activation geometry and probe calibration can change when the base artifact changes.
+
+<LinearProbeVisualizer client:load lang="en" />
+
+The interactive uses synthetic two-dimensional points. It demonstrates how a fixed linear boundary responds to signal and distribution shift; it does not simulate layer evolution or validate the LRH.
+
+## 8. Takeaway
+
+A probe is a measurement instrument whose validity comes from its controls. Linear accuracy supports a claim about decodability; selectivity narrows alternative explanations; a controlled intervention can support a causal contribution. None of these, alone, reveals a unique human-readable feature. The next section turns to sparse autoencoders, which replace a predeclared label with a learned feature dictionary—and introduce a different set of identifiability and evaluation problems.
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: Why are simple linear probes preferred over deep MLPs for interpreting LLM representations?</summary>
-*Deep MLPs have high capacity and can learn complex, non-linear mappings to solve the task themselves, essentially ignoring the LLM's internal structural logic. Linear probes are highly constrained; if they succeed, it proves the LLM has already done the hard computational work of linearly separating the concept in its activation space.*
+<summary>Quiz 1: What is the strongest conclusion justified by high held-out linear-probe accuracy alone?</summary>
+*Under the stated extraction, split, preprocessing, and probe family, the label is linearly decodable from those activations. Model use and causality require additional evidence.*
 </details>
 
 <details>
-<summary>Quiz 2: In the context of Hewitt and Liang's Control Tasks, what does a Selectivity score near 0 indicate?</summary>
-*A Selectivity near 0 means the probe performs equally well on the real task and the random control task. This indicates the probe is likely memorizing the identities of the tokens (e.g., mapping specific token embeddings to arbitrary labels) rather than extracting generalized semantic features.*
+<summary>Quiz 2: Why must normalization be fitted on the training split only?</summary>
+*Using test statistics leaks information about the evaluation distribution into the probe pipeline and can bias the estimate.*
 </details>
 
 <details>
-<summary>Quiz 3: How does Amnesic Probing (using Null-space Projection) prove causation whereas standard probing only proves correlation?</summary>
-*Standard probing only shows that information exists in the hidden state. Amnesic probing actively intervenes by mathematically erasing that specific information vector from the hidden state during the forward pass. If the model's downstream output degrades or changes as a result, it proves the model causally relied on that information to generate its answer.*
+<summary>Quiz 3: Why does a behavior drop after INLP not automatically prove targeted causal dependence?</summary>
+*The projection may remove non-target information or move activations off distribution. Completeness, collateral-feature retention, and matched interventions are needed.*
 </details>
 
 <details>
-<summary>Quiz 4: How does Contrast-Consistent Search (CCS) manage to find a "truth" direction in the activation space without any ground-truth labels?</summary>
-*CCS leverages the logical constraint that a statement and its exact negation must have opposite truth values. By training a linear probe to ensure that the probabilities assigned to a statement and its negation always sum to 1, the probe naturally aligns with the internal axis the LLM uses to represent factual truth, completely bypassing the need for human labels.*
+<summary>Quiz 4: What ambiguity remains after CCS learns a consistent statement–negation axis?</summary>
+*Consistency does not identify which end is true, and natural-language pairs may violate the assumed complement relation. Orientation and external evaluation remain necessary.*
 </details>
 
----
+<details>
+<summary>Quiz 5: A probe performs well on random example splits but fails on entity-held-out data. What is the likely lesson?</summary>
+*The random split allowed lexical or entity-specific shortcuts. The evidence supports memorization or narrow interpolation, not a general property representation.*
+</details>
 
 ## References
 
 1. <a id="ref-1"></a>Park, K., et al. (2023). *The Linear Representation Hypothesis and the Geometry of Large Language Models*. [arXiv:2311.03658](https://arxiv.org/abs/2311.03658).
-2. <a id="ref-2"></a>Hewitt, J., & Liang, P. (2019). *Designing and Interpreting Probes with Control Tasks*. EMNLP 2019. [Link](https://aclanthology.org/D19-1275/).
-3. <a id="ref-3"></a>Elazar, Y., et al. (2021). *Amnesic Probing: Behavioral Explanation with Amnesic Counterfactuals*. Transactions of the Association for Computational Linguistics (TACL). [Link](https://aclanthology.org/2021.tacl-1.10/).
+2. <a id="ref-2"></a>Hewitt, J., & Liang, P. (2019). *Designing and Interpreting Probes with Control Tasks*. [ACL Anthology](https://aclanthology.org/D19-1275/).
+3. <a id="ref-3"></a>Elazar, Y., et al. (2021). *Amnesic Probing: Behavioral Explanation with Amnesic Counterfactuals*. [ACL Anthology](https://aclanthology.org/2021.tacl-1.10/).
 4. <a id="ref-4"></a>Burns, C., et al. (2022). *Discovering Latent Knowledge in Language Models Without Supervision*. [arXiv:2212.03827](https://arxiv.org/abs/2212.03827).
-```
+5. <a id="ref-5"></a>Dobrzeniecka, A., Fokkens, A., & Sommerauer, P. (2025). *Improving Causal Interventions in Amnesic Probing with Mean Projection or LEACE*. [ACL Anthology](https://aclanthology.org/2025.findings-acl.674/).
+6. <a id="ref-6"></a>Canby, M. E., Davies, A., Rastogi, C., & Hockenmaier, J. (2025). *How Reliable are Causal Probing Interventions?* [ACL Anthology](https://aclanthology.org/2025.ijcnlp-long.47/).

@@ -345,6 +345,9 @@
 
 .pred-col {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   text-align: right;
   font-weight: 700;
 }

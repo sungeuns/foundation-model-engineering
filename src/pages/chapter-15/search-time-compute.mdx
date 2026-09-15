@@ -8,167 +8,193 @@ import InferenceScalingVisualizer from '../../components/chapter-15/InferenceSca
 
 # 15.3 Search-time Compute
 
-In the previous section, we explored how Tree and Graph of Thoughts externalize reasoning. A Python orchestrator forces the model to generate, evaluate, and search through discrete states. While effective, this approach is fundamentally bolted-on. The model remains a passive generator, oblivious to the overarching search algorithm.
+The previous section treated reasoning as an explicit search graph. Test-time compute is the broader systems problem: given a prompt and a latency or cost budget, which inference procedure should run, how much work should it spend, and when should it stop?
 
-In late 2024 and early 2025, the paradigm shifted. Instead of relying on external scripts to manage search trees, researchers discovered how to make the model internalize the search process. By allowing models to "think" for extended periods before emitting a final answer, we unlocked a new dimension of performance scaling: **Inference-Time Scaling Laws** (or Test-Time Compute).
+Extra tokens are not automatically extra reasoning. A model may explore a useful alternative, repeat itself, rationalize an error, or merely produce a longer explanation. The unit of analysis must be the **model–sampler–verifier–budget system**, not reasoning-token count in isolation.
 
-This section explores the mechanics of search-time compute, the economic shift from pre-training to inference, and the internal architectures of reasoning models like OpenAI's o1 and DeepSeek-R1.
+## 1. Three Ways to Spend Inference Compute
 
----
+### Parallel sampling
 
-## 1. The Inference-Time Scaling Law
+Generate $N$ candidates and select one with a verifier, reward model, tests, or majority vote. If each independent candidate has probability $p$ of being acceptable, the probability that the set contains at least one acceptable answer is
 
-Historically, the AI industry adhered to a single scaling axis: **Pre-training Compute**. To get a smarter model, you trained a larger parameter matrix on a larger dataset for more GPU hours (as dictated by the Power Law and Chinchilla scaling laws, covered in Chapter 8). 
+$$
+P(\text{coverage})=1-(1-p)^N.
+$$
 
-However, pre-training scaling faces severe diminishing returns. Pushing a model from 70 billion to 1 trillion parameters requires exponential capital expenditure. 
+This is only an upper bound on delivered quality. A fallible verifier may miss the good candidate, samples are correlated, and $p$ varies sharply across prompts. **pass@$N$** measures coverage; **best@$N$** measures the selector's delivered result. Conflating them hides selection error.
 
-Inference-time scaling offers an orthogonal vector. Research by Snell et al. (2024) [[1]](#ref-1) demonstrated that intelligently allocating additional compute *during inference* can yield performance gains exceeding those of purely scaling model size. In a FLOPs-matched evaluation, a smaller base model utilizing heavy test-time compute can outperform a model $14\times$ larger that relies solely on standard zero-shot generation.
+### Sequential search
 
-![inference_scaling_curve](../../assets/images/chapter-15/inference_scaling_curve.png)
+Beam search, tree search, and process-reward-guided search score partial solutions and discontinue weak branches. They can spend fewer completion tokens than best-of-$N$, but introduce a new failure: an inaccurate process verifier may prune the only recoverable path. Search policy, branch width, expansion depth, and stopping rule are part of the evaluated system.
 
-This is the AI equivalent of Daniel Kahneman's **System 1 vs. System 2 thinking**. Standard autoregressive decoding is System 1: fast, reflexive, and prone to hallucination on complex logic. Search-time compute is System 2: slow, deliberate, evaluating multiple paths, and self-correcting before speaking.
+### Learned long-form deliberation
 
----
+Reasoning-oriented models are trained so that one trajectory may include decomposition, checking, and revision. This can remove an external tree controller, but it does not prove that a visible or hidden trace is a faithful execution log. “The model wrote *wait*” and “the model recovered from a distinct internal search state” are different claims.
 
-## 2. Mechanisms of Test-Time Compute
+## 2. What the Scaling Evidence Says
 
-How exactly do we "spend" compute at inference time? There are three primary mechanisms, ranging from brute-force external wrappers to native internal processes.
+Snell et al. found that compute-optimal allocation can be more than four times as efficient as a best-of-$N$ baseline in their evaluated settings [[1]](#ref-1). They also showed cases where a smaller model with test-time compute outperformed a model 14 times larger. The qualifier is that this occurred in difficulty regions where the smaller model already had non-trivial success. It is not a general rule that a small model can replace a large one by emitting enough tokens.
 
-### Parallel Scaling (Best-of-N)
-The simplest way to scale test-time compute is to generate $N$ independent solutions in parallel using a high temperature, and then use a separate **Reward Model** (or Verifier) to score them and select the best one. 
+The return curve has three common regimes:
 
-While Best-of-$N$ reliably improves performance (scaling logarithmically with $N$), it is highly inefficient. If the model makes a critical logical error in the first step of a math proof, it will waste hundreds of tokens generating a fundamentally flawed solution.
+- **Already solved:** extra samples mostly duplicate correct work.
+- **Searchable:** the model has the required primitives, and sampling or verification can expose a correct composition.
+- **Capability-limited:** the generator rarely proposes a viable path, or the verifier cannot distinguish it. More budget can saturate without solving the task.
 
-```python
-import torch
-import torch.nn as nn
-from transformers import PreTrainedModel, PreTrainedTokenizer
-
-class BestOfNInference(nn.Module):
-    def __init__(self, generator: PreTrainedModel, verifier: PreTrainedModel, tokenizer: PreTrainedTokenizer):
-        super().__init__()
-        self.generator = generator
-        self.verifier = verifier
-        self.tokenizer = tokenizer
-
-    @torch.no_grad()
-    def generate_and_select(self, prompt: str, n: int = 64, max_new_tokens: int = 512) -> str:
-        """
-        Executes Best-of-N sampling.
-        generator: The base LLM producing candidate solutions.
-        verifier: An Outcome Reward Model (ORM) trained to score final answers.
-        """
-        input_ids = self.tokenizer(prompt, return_tensors="pt").input_ids.to(self.generator.device)
-        
-        # 1. Expand input for parallel generation: Shape [N, seq_len]
-        input_ids_expanded = input_ids.repeat(n, 1)
-        
-        # 2. Generate N diverse candidates using temperature scaling
-        outputs = self.generator.generate(
-            input_ids_expanded,
-            max_new_tokens=max_new_tokens,
-            do_sample=True,
-            temperature=0.7,
-            top_p=0.95,
-            pad_token_id=self.tokenizer.pad_token_id
-        )
-        
-        prompt_len = input_ids.shape[1]
-        responses = outputs[:, prompt_len:]
-        
-        # 3. Score candidates using the Verifier
-        # The verifier outputs a scalar logit representing the reward
-        rewards = self.verifier(outputs).logits.squeeze(-1) # Shape: [N]
-        
-        # 4. Select the candidate with the highest reward
-        best_idx = torch.argmax(rewards)
-        best_response = responses[best_idx]
-        
-        return self.tokenizer.decode(best_response, skip_special_tokens=True)
-```
-
-### Sequential Scaling (Step-Level Search)
-To fix the inefficiency of Best-of-$N$, we can use a **Process Reward Model (PRM)** that evaluates intermediate steps rather than final outcomes. Algorithms like Beam Search or Lookahead Search use the PRM to prune bad reasoning branches early, reallocating compute to promising paths. (We will dive deep into PRMs in the next section, 15.4).
-
-### Internal Scaling (The o1 Paradigm)
-The most advanced form of test-time compute eliminates external orchestrators entirely. Models like OpenAI's o1 and DeepSeek-R1 [[2]](#ref-2) are trained to internalize the search process within a continuous stream of tokens. 
-
-When given a prompt, the model generates a long sequence of "thinking tokens" (a hidden Chain-of-Thought) before outputting the final answer. During this phase, the model autonomously proposes strategies, executes them, recognizes its own errors, backtracks, and verifies its logic. 
-
----
-
-## 3. Training for Internal Search: The DeepSeek-R1 Approach
-
-If internalizing search is the goal, how do we train a model to do it? Standard Supervised Fine-Tuning (SFT) is insufficient. If you train a model on human-written reasoning traces, it merely learns to mimic the *style* of reasoning, not the actual *process* of exploration and self-correction.
-
-The breakthrough is large-scale **Reinforcement Learning (RL)** applied specifically to reasoning tasks where the final answer can be objectively verified (e.g., math, coding). 
-
-DeepSeek-R1 demonstrated that you can take a base model and apply pure RL using an algorithm like **Group Relative Policy Optimization (GRPO)**. Unlike PPO (Proximal Policy Optimization), GRPO does not require a separate, memory-heavy Value Model. Instead, it generates a group of outputs for the same prompt, scores them using a rule-based verifier (e.g., "Did the code pass the unit tests?"), and normalizes the rewards within the group to calculate advantages.
-
-During this RL phase, a fascinating phenomenon occurs. Without explicit human prompting, the model experiences "Aha!" moments. It naturally learns that allocating more tokens to verify its previous steps increases its final reward. The model spontaneously develops behaviors like:
-- *"Wait, that calculation seems wrong. Let me re-evaluate..."*
-- *"Let's try a different approach..."*
-
-The length of the thinking phase becomes a proxy for search depth. By simply running the autoregressive engine longer, the model explores a wider state space natively.
+Studies also report **overthinking**: additional inference can reduce accuracy on some tasks through unnecessary revisions or failure to stop [[3]](#ref-3). Monotonic “more compute is better” extrapolation is unsafe.
 
 <InferenceScalingVisualizer client:load lang="en" />
 
----
+## 3. Compute-Optimal Routing
 
-## 4. Compute-Optimal Allocation
+Let $a$ denote an action: model, sample count, temperature, maximum tokens, search policy, verifier, and stopping rule. A router can be framed as
 
-A critical engineering challenge in test-time compute is allocation efficiency. Applying 10,000 thinking tokens to a simple query like *"What is the capital of France?"* is a massive waste of FLOPs. Conversely, allocating only 100 tokens to a complex physics problem will result in failure.
+$$
+a^*(x)=\arg\max_{a\in\mathcal A}
+\left[
+\mathbb E\!\left[U(y,x)\mid x,a\right]
+-\lambda\,\mathbb E\!\left[C(a,x)\right]
+\right],
+$$
 
-Snell et al. [[1]](#ref-1) formalized the concept of **Compute-Optimal Inference**. The effectiveness of test-time compute is heavily dependent on the prompt's difficulty relative to the base model's capability.
-- **Easy Prompts:** The base model already has a high probability of success. Extra compute yields marginal gains.
-- **Impossible Prompts:** The required knowledge is entirely absent from the model's weights. No amount of test-time search will conjure facts it does not know.
-- **The "Sweet Spot" (Challenging Prompts):** The model possesses the necessary primitives but requires deep logical chaining to connect them. This is where test-time compute yields exponential returns.
+subject to latency, safety, and availability constraints. $U$ is task utility, $C$ total compute or monetary cost, and $\lambda$ the product's cost weighting. In an SLO-bound service, maximizing utility under a p95 latency budget is often easier to operate.
 
-Modern infrastructure relies on adaptive routing. A lightweight classifier (or the model's own initial entropy) determines the difficulty of the prompt and dynamically sets the maximum thinking token budget.
+A production router should not use “difficulty” as an uncalibrated label. Useful features include:
 
----
+- a cheap model's calibrated probability of success;
+- disagreement among small pilot samples;
+- verifier margin or entropy;
+- tool requirements, prompt length, and expected output length;
+- customer tier, deadline, and error cost.
 
-## 5. Summary and Open Questions
+Evaluate routing off-policy or in a randomized shadow experiment. If only hard prompts go to the expensive policy, raw success rates make that policy look worse even when routing is beneficial.
 
-Inference-time scaling has fundamentally altered the economics of AI. We are transitioning from a world constrained by pre-training clusters to one constrained by inference infrastructure. If a 7B model can match a 70B model simply by "thinking longer," the deployment strategies for edge devices and cloud APIs must be entirely re-architected to support asynchronous, long-running generation tasks.
+## 4. Accounting: Tokens Are Not the Whole Bill
 
-However, internalizing search via RL relies heavily on domains where automated verification is possible (math, code). The next frontier—and a major open question—is how to apply inference-time scaling to open-ended, subjective domains like creative writing or strategic planning, where rule-based reward functions do not exist. 
+For $N$ candidates, a rough ledger is
 
-To bridge this gap, we need robust models capable of evaluating complex logic. In the next section, we will examine the engineering behind **Verifiers and Process Reward Models (PRMs)**.
+$$
+C_{\text{total}} =
+C_{\text{shared prefill}}+
+\sum_{i=1}^{N}C_{\text{decode},i}+
+C_{\text{verification}}+
+C_{\text{orchestration}}.
+$$
 
----
+Prefix sharing may reduce prefill and KV memory. Parallel sampling can lower wall-clock latency without lowering total FLOPs. A verifier with another tokenizer or model needs its own formatted input and attention mask. Tool calls add external latency and cost. Early stopping changes both output-length distribution and selection pool.
+
+The executable reference below isolates these application contracts.
+
+> **Interface-level example.** The generator and verifier come from the serving stack. The example does not pretend generator token IDs can be passed directly to an unrelated verifier. Production code needs tokenizer-native chat templates, batching, retries, deterministic request IDs, cancellation, safety checks, and calibrated scores.
+
+~~~python
+from dataclasses import dataclass
+from typing import Callable, Sequence
+
+
+@dataclass(frozen=True)
+class Candidate:
+    text: str
+    output_tokens: int
+    finish_reason: str
+
+
+@dataclass(frozen=True)
+class Selection:
+    answer: str
+    score: float
+    samples: int
+    generated_tokens: int
+
+
+def budgeted_best_of_n(
+    prompt: str,
+    generate: Callable[[str, int, int], Sequence[Candidate]],
+    verify: Callable[[str, str], float],
+    *,
+    samples: int,
+    max_new_tokens: int,
+    token_budget: int,
+) -> Selection:
+    if samples < 1 or max_new_tokens < 1 or token_budget < 1:
+        raise ValueError("budgets must be positive")
+
+    candidates = list(generate(prompt, samples, max_new_tokens))
+    used = sum(item.output_tokens for item in candidates)
+    if used > token_budget:
+        raise RuntimeError(f"generator exceeded budget: {used}>{token_budget}")
+    if not candidates:
+        raise RuntimeError("generator returned no candidate")
+
+    scored = [(verify(prompt, item.text), item) for item in candidates]
+    score, winner = max(scored, key=lambda pair: pair[0])
+    return Selection(winner.text, score, len(candidates), used)
+~~~
+
+This boundary makes budget overshoot and empty candidate sets observable. It still needs a selection threshold: if all scores are poor, abstention or escalation can be safer than returning the maximum.
+
+## 5. Training Models to Deliberate
+
+DeepSeek-R1 is useful because its report distinguishes two recipes [[2]](#ref-2):
+
+- **DeepSeek-R1-Zero** applies reinforcement learning to a base model without an initial supervised reasoning stage. The report describes emergent longer reasoning and self-reflection, along with readability and language-mixing problems.
+- **DeepSeek-R1** uses a multi-stage pipeline including cold-start data, reasoning-oriented RL, rejection sampling and supervised fine-tuning, followed by alignment-oriented RL. Calling it “pure RL” is inaccurate.
+
+The report uses Group Relative Policy Optimization (GRPO), which estimates a group-relative baseline from multiple responses and avoids a separately trained critic model. That removes one memory cost relative to actor–critic PPO, but rollout generation, policy and optimizer state, reference policy where used for KL control, and verification remain expensive.
+
+Verifiable rewards are easiest for mathematics and code, but even there the objective can be gamed. Unit tests may be incomplete, answer extraction may accept malformed reasoning, and reward normalization can become unstable when every sample in a group gets the same reward. For open-ended work, judge-model bias and rubric ambiguity become part of the target.
+
+Reasoning length is an observable **cost**, not a reliable proxy for search depth. Report answer quality jointly with generated tokens, total FLOPs or accelerator time, verifier cost, latency, and failure modes.
+
+## 6. Evaluation and Release Gate
+
+Build an evaluation matrix before tuning budget:
+
+- difficulty and domain slices below and above the model's capability frontier;
+- fixed-compute comparisons across model size and inference policy;
+- pass@$N$, best@$N$, verifier regret, calibration, and abstention quality;
+- total generated/verifier tokens, accelerator-seconds, p50/p95 latency, and peak KV memory;
+- malformed traces, non-termination, repeated reasoning, answer flips, reward hacking, and safety regressions.
+
+Set stopping and rollback thresholds in advance. Stop after a verified terminal answer; cap repeated semantic states; fall back to a larger model when calibrated confidence remains low; roll back when the expensive route misses its paired quality gain or violates latency/cost bounds over the declared window.
+
+Keep reconstructable request IDs, model/verifier versions, sampling parameters, seeds, routing features, candidate hashes, scores, and finish reasons. Without that ledger, a surprising answer cannot be reproduced and the router cannot be audited.
+
+## 7. Takeaway
+
+Test-time compute is a budget-allocation discipline, not a synonym for long chain-of-thought. It works when the generator can produce useful alternatives, the verifier can rank them, and the router spends compute where marginal utility exceeds marginal cost. The next section examines the component that often becomes the real bottleneck: the verifier.
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: Why is Best-of-$N$ sampling considered computationally inefficient compared to internalizing search (like OpenAI o1), even if both utilize large amounts of test-time compute?</summary>
-*Best-of-$N$ generates $N$ complete, independent sequences from start to finish. If a candidate makes a logical error at token 10, the model still wastes compute generating the remaining 500 tokens of a flawed solution. Internalized search (like o1) allows the model to recognize errors mid-generation, backtrack, and reallocate its token budget to promising paths, effectively pruning bad branches natively.*
+<summary>Quiz 1: Why is pass@$N$ an upper bound on best-of-$N$ delivered quality?</summary>
+*Pass@$N$ asks whether any candidate is acceptable. The system must still identify it; correlated samples and verifier error can make best@$N$ substantially lower.*
 </details>
 
 <details>
-<summary>Quiz 2: According to the concept of Compute-Optimal Inference, on what type of prompts does test-time scaling yield the lowest return on investment (ROI) in terms of FLOPs?</summary>
-*Test-time compute yields the lowest ROI on two extremes: "Easy" prompts (where the base model already achieves near 100% accuracy via zero-shot System 1 thinking, making extra compute redundant) and "Impossible" prompts (where the model fundamentally lacks the pre-trained knowledge required, meaning no amount of search will uncover the answer).*
+<summary>Quiz 2: Why can parallel sampling lower latency without lowering compute?</summary>
+*Candidates run concurrently, shortening elapsed time, while total decode FLOPs, tokens, KV capacity, and verifier work still scale with candidate count.*
 </details>
 
 <details>
-<summary>Quiz 3: How does Group Relative Policy Optimization (GRPO), used in DeepSeek-R1, reduce the memory overhead during reasoning RL compared to traditional PPO?</summary>
-*Traditional PPO requires maintaining a separate Value Model (often the same size as the policy model) in VRAM to estimate the baseline for advantage calculations. GRPO eliminates the Value Model. Instead, it generates a group of responses for a single prompt, scores them, and uses the mean and standard deviation of those scores to calculate the baseline and advantages directly.*
+<summary>Quiz 3: What does the 14-times-smaller-model result not establish?</summary>
+*It does not establish a universal substitution rule. The result was conditional on evaluated tasks and difficulty regions where the smaller model had non-trivial success.*
 </details>
 
 <details>
-<summary>Quiz 4: In the provided PyTorch implementation of Best-of-$N$, why do we apply `temperature=0.7` and `do_sample=True` instead of greedy decoding?</summary>
-*Greedy decoding is deterministic; it would generate the exact same sequence $N$ times, completely defeating the purpose of Best-of-$N$. Sampling with temperature ensures diversity in the generated candidates, allowing the model to explore different reasoning paths so the Verifier has a varied pool of solutions to score.*
+<summary>Quiz 4: Why is reasoning-token count a poor stand-alone target?</summary>
+*Longer traces may contain useful search, repetition, rationalization, or harmful answer flips. Quality, verifier regret, cost, latency, and stopping must be measured jointly.*
 </details>
 
 <details>
-<summary>Quiz 5: In MCTS for reasoning sequence search, how does the UCT formula balance exploration and exploitation? Formulate the UCT equation and explain how the trade-off varies with the generated token sequence length $T$.</summary>
-*The UCT formula is defined as: $\text{UCT}(s, a) = Q(s, a) + c \sqrt{\frac{\ln N(s)}{N(s, a)}}$, where $Q(s, a)$ is the exploitation term (mean process reward), $N(s)$ is the visit count of the parent node $s$, $N(s, a)$ is the visit count of node $s$ after taking action (token/step) $a$, and $c$ is the exploration constant. In token sequence searches, as the generated sequence length $T$ increases, the depth of the tree expands exponentially. This makes the exploration term $c \sqrt{\ln N(s) / N(s, a)}$ critical for preventing the search algorithm from getting stuck in early, high-reward but ultimately incorrect sub-branches. However, allocating too much compute to exploration in deep branches can severely inflate the test-time token budget without improving the final answer.*
+<summary>Quiz 5: Why is comparing raw accuracy biased when only hard prompts reach an expensive policy?</summary>
+*The policies see different prompt distributions. Randomized or matched evaluation, off-policy estimators, or per-difficulty paired comparisons are needed.*
 </details>
-
----
 
 ## References
 
-1. <a id="ref-1"></a>Snell, C., Lee, J., Xu, K., & Kumar, A. (2024). *Scaling LLM Test-Time Compute Optimally can be More Effective than Scaling Model Parameters.* [arXiv:2408.03314](https://arxiv.org/abs/2408.03314).
-2. <a id="ref-2"></a>DeepSeek-AI. (2025). *DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning.* [arXiv:2501.12948](https://arxiv.org/abs/2501.12948).
-3. <a id="ref-3"></a>Brown, N., et al. (2024). *Large Language Monkeys: Scaling Inference Compute with Repeated Sampling.* [arXiv:2407.21787](https://arxiv.org/abs/2407.21787).
+1. <a id="ref-1"></a>Snell, C., Lee, J., Xu, K., & Kumar, A. (2024). *Scaling LLM Test-Time Compute Optimally can be More Effective than Scaling Model Parameters*. [arXiv:2408.03314](https://arxiv.org/abs/2408.03314).
+2. <a id="ref-2"></a>DeepSeek-AI. (2025). *DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning*. [arXiv:2501.12948](https://arxiv.org/abs/2501.12948).
+3. <a id="ref-3"></a>Ghosal, S. S., et al. (2025). *Does Thinking More always Help? Mirage of Test-Time Scaling in Reasoning Models*. [arXiv:2506.04210](https://arxiv.org/abs/2506.04210).
+4. <a id="ref-4"></a>Brown, N., et al. (2024). *Large Language Monkeys: Scaling Inference Compute with Repeated Sampling*. [arXiv:2407.21787](https://arxiv.org/abs/2407.21787).

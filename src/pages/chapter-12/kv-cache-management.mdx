@@ -8,204 +8,186 @@ import KVCacheCalculator from '../../components/chapter-12/KVCacheCalculator.tsx
 
 # 12.1 KV Cache Management
 
-While multimodal architectures push the boundaries of *what* foundation models can generate, deploying these massive models in production environments introduces a harsh engineering reality. In the transition from academic research to datacenter-scale serving, the bottleneck shifts abruptly from raw compute (TFLOPS) to memory bandwidth and capacity. At the heart of this bottleneck lies a single, rapidly expanding data structure: the **KV Cache**.
+Autoregressive serving has two different hardware regimes. **Prefill** processes the prompt in parallel and is commonly limited by matrix-multiplication throughput. **Decode** produces one token per sequence at a time; it repeatedly reads weights and attention state, so memory bandwidth, cache capacity, and scheduling often dominate. The KV cache is the state that connects those phases.
 
-To understand why serving Large Language Models (LLMs) is fundamentally different from serving traditional microservices, we must dive deep into the mechanics of autoregressive decoding, the physical limits of High Bandwidth Memory (HBM), and the clever architectural hacks engineers use to keep the memory wall at bay.
+The engineering question is not merely “does the cache fit?” A useful design must preserve model quality, keep inter-token latency predictable under mixed sequence lengths, and recover capacity when requests finish.
 
----
+## 1. What the Cache Actually Saves
 
-## 1. The Autoregressive Bottleneck
+At layer $l$, attention projects token state $x_t$ into
 
-LLM inference operates in two distinct phases:
-1. **The Prefill Phase**: The model processes the entire input prompt simultaneously. This phase is highly parallel, compute-bound, and fully utilizes the massive matrix-multiplication capabilities of modern GPUs.
-2. **The Decode Phase**: The model generates the output one token at a time. Because token $N$ depends on the context of all tokens from $1$ to $N-1$, this process is strictly sequential.
+$$
+q_t=x_tW_Q,\qquad k_t=x_tW_K,\qquad v_t=x_tW_V.
+$$
 
-If we naively compute the self-attention for each new token, the model must re-project every previous token in the sequence into Query (Q), Key (K), and Value (V) tensors, and then perform the attention calculation. This results in an $O(N^2)$ time complexity per generation step. For a 4,000-token response, the redundant computation becomes astronomically slow.
+During causal decoding, keys and values of earlier tokens do not change. Retaining $\{k_i,v_i\}_{i\le t}$ means step $t+1$ computes only the new projections and attends to cached history:
 
-**The Solution:** As we generate new tokens, the Key and Value vectors for all *previous* tokens do not change. By caching these K and V tensors in GPU memory, the model only needs to compute the Q, K, and V for the *current* token. The current Q is then multiplied against the cached K and V matrices. This optimization reduces the per-step time complexity from $O(N^2)$ to $O(N)$, making real-time chat feasible.
+$$
+o_{t+1}=\operatorname{softmax}\left(
+\frac{q_{t+1}K_{\le t+1}^{\top}}{\sqrt{d_h}}+M
+\right)V_{\le t+1},
+$$
 
-However, this speed comes at a severe cost: memory.
+where $d_h$ is head dimension and $M$ is a causal or padding mask.
 
----
+Complexity needs careful wording. Without a cache, decode step $t$ reruns a length-$t$ forward pass: self-attention score work is $O(t^2)$. Summed across $N$ newly generated tokens, that attention work is $O(N^3)$, while projections and MLP work sum to $O(N^2)$. With a cache, attention at step $t$ is $O(t)$, so its total is $O(N^2)$. These expressions suppress model width and batch dimensions; wall-clock speed is usually governed by memory traffic and kernel utilization, not asymptotic notation alone.
 
-## 2. The Mathematics of the Memory Wall
+## 2. Capacity Model
 
-The KV cache is not a small buffer; it is a massive, dynamically growing memory allocation that often exceeds the size of the model's weights. 
+For a dense cache with equal-length sequences,
 
-For a standard Multi-Head Attention (MHA) model, the exact memory footprint in bytes required to store the KV cache for a single request is governed by this formula:
+$$
+\text{bytes}_{KV}=2BSLH_{KV}d_hp,
+$$
 
-$$ \text{KV Cache Size} = 2 \times B \times S \times L \times H \times D \times P $$
+where $B$ is concurrent sequences, $S$ cached tokens per sequence, $L$ layers, $H_{KV}$ KV heads, $d_h$ values per head, and $p$ bytes per value. The factor two accounts for keys and values.
 
-Where:
-- $2$: Accounts for both the Key and Value tensors.
-- $B$: Batch size (number of concurrent requests).
-- $S$: Sequence length (number of past tokens).
-- $L$: Number of Transformer layers.
-- $H$: Number of Attention Heads (KV heads).
-- $D$: Dimension per head.
-- $P$: Precision in bytes (e.g., 2 bytes for FP16/BF16).
+For heterogeneous traffic, replace $BS$ with actual allocated token count $\sum_i S_i^{\text{allocated}}$. Padding, block metadata, allocator slack, temporary workspaces, speculative branches, beam hypotheses, and tensor-parallel replication or sharding are separate costs.
 
-Let's apply this to a theoretical 70B parameter model (80 layers, 8 KV heads (assuming GQA), 128 dimension) serving a batch of 32 users, each with an 8,192-token context, using FP16 precision:
+For 32 sequences, 8,192 tokens each, 80 layers, 8 KV heads, $d_h=128$, and BF16:
 
-$$ 2 \times 32 \times 8192 \times 80 \times 8 \times 128 \times 2 = 85,899,345,920 \text{ bytes} \approx 80 \text{ GB} $$
+$$
+2\cdot32\cdot8192\cdot80\cdot8\cdot128\cdot2
+=85{,}899{,}345{,}920\text{ bytes}=80\text{ GiB}.
+$$
 
-A single NVIDIA H100 GPU has 80 GB of HBM. In this scenario, the KV cache alone consumes all of the GPU's memory, leaving no room for the 140 GB of model weights. This is known as the **Memory Wall**. The decode phase is notoriously *memory-bandwidth bound*—the GPU's compute cores sit idle waiting for these massive KV tensors to stream from HBM into SRAM for every single generated token.
+This is the aggregate for 32 equal-length sequences, not one request. Nor does the cache always exceed the weights. It can do so at large concurrency or context length, so both weights and peak live-cache occupancy belong in the capacity plan.
 
----
+<KVCacheCalculator client:load lang="en" />
 
-## 3. Architectural Evolution: MHA, GQA, and MLA
+## 3. Reducing KV Width
 
-To mitigate the Memory Wall, researchers have aggressively modified the core Transformer architecture to reduce the $H$ (number of KV heads) variable in the formula.
+Let $H_Q$ be query heads.
 
-![kv_cache_evolution](../../assets/images/chapter-12/kv_cache_evolution.png)
+- **Multi-Head Attention (MHA):** $H_{KV}=H_Q$.
+- **Multi-Query Attention (MQA):** one shared KV head.
+- **Grouped-Query Attention (GQA):** $1<H_{KV}<H_Q$, with multiple query heads sharing each KV head.
 
-### Multi-Query Attention (MQA) & Grouped-Query Attention (GQA)
-Introduced around 2023, **MQA** forces all Query heads to share a *single* KV head. While this reduces the cache size by up to 64x, it severely degrades the model's reasoning capabilities. 
+Payload scales linearly with $H_{KV}$. GQA therefore exposes a quality–capacity–bandwidth trade-off. The original study reported quality close to MHA for its evaluated converted and trained models while retaining speed near MQA [[1]](#ref-1). That evidence does not guarantee that an arbitrary checkpoint can change head structure without retraining.
 
-The industry standard quickly shifted to **Grouped-Query Attention (GQA)** (used in Llama 2/3, Mistral). GQA divides the Query heads into groups (e.g., 8 groups) and assigns one KV head per group. This provides a pragmatic 8x memory reduction with almost zero degradation in benchmark performance.
+### Multi-Head Latent Attention
 
-### Multi-Head Latent Attention (MLA): The Recent Trends
-Pioneered by DeepSeek (V2, V3, and R1) [[1]](#ref-1), **Multi-Head Latent Attention (MLA)** completely redefines KV cache economics. Instead of caching high-dimensional K and V matrices, MLA projects the input into a highly compressed, low-dimensional **latent vector** $c_t \in \mathbb{R}^{d_c}$ (e.g., 512 dimensions). 
+DeepSeek-V2 introduced **Multi-Head Latent Attention (MLA)** [[2]](#ref-2). MLA caches a low-rank latent $c_t^{KV}$, plus the position-dependent component required by decoupled RoPE, instead of a conventional per-head KV payload. Linear key/value up-projections can be absorbed algebraically into adjacent projections during decode. RoPE is separate because a position-dependent rotation breaks simple static absorption.
 
-During inference, only this tiny latent vector is stored in the cache. 
+The DeepSeek-V2 report states a 93.3% KV-cache reduction and 5.76-times maximum generation throughput relative to its DeepSeek 67B comparison system. Those are reported system results for that architecture and implementation—not universal MLA multipliers. Kernel support, latent width, positional encoding, parallel layout, and traffic shape determine realized gain.
 
-**The Magic of Matrix Absorption:**
-You might assume that during the decode phase, the model must read $c_t$ from memory and multiply it by an up-projection matrix to reconstruct the full multi-head K and V tensors, which would be computationally expensive. 
-However, MLA utilizes a mathematical trick called *Matrix Absorption*. Because the attention score is computed as a dot product, the decompression matrix for the Keys ($W_{UK}$) can be mathematically absorbed into the Query projection matrix ($W_{DQ} W_{UQ}$). 
+## 4. Cache Precision Is a Systems Trade-off
 
-$$ \text{Attention Score} \propto (q_t W_{DQ} W_{UQ}) (c_t W_{UK})^T = q_t (W_{DQ} W_{UQ} W_{UK}^T) c_t^T $$
+FP8 storage halves dense payload relative to FP16/BF16; four-bit storage quarters it. Capacity gains are deterministic, but latency and quality gains are not. A serving engine may spend instructions converting values, calculating scales, or moving metadata. Workloads that are not KV-bandwidth-bound may see little speedup.
 
-By pre-computing the absorbed matrix $(W_{DQ} W_{UQ} W_{UK}^T)$, the attention kernel can directly compute the dot product between the projected Query and the raw, compressed latent vector $c_t$ fetched from HBM. The high-dimensional Key matrix is *never materialized in memory*. 
+Quantization also changes the numerical contract. Scale granularity, calibration data, format such as E4M3 versus E5M2, outliers, and accumulation precision matter. vLLM's documentation recommends calibrated scales when possible and asks users to evaluate workload accuracy [[3]](#ref-3).
 
-*Note: To handle Rotary Position Embeddings (RoPE), which cannot be linearly absorbed, MLA explicitly caches a small, decoupled RoPE vector $r_t$ (e.g., 64 dimensions) alongside the latent vector.*
+A sound rollout compares:
 
-This reduces the KV cache footprint by an astounding **20x to 57x** compared to standard MHA, allowing massive models to serve huge batches of long-context requests on fewer GPUs.
+- quality by context-length slice;
+- prefill latency, p50/p95 time to first token, and p50/p95 inter-token latency;
+- throughput at a fixed latency service-level objective;
+- cache occupancy, allocation failures, and eviction or recomputation rate.
 
-<KVCacheCalculator client:load />
+“Twice as many cache tokens fit” is not the same as “tokens are generated twice as fast.”
 
----
+## 5. An Educational GQA Cache
 
-## 4. Data-Level Compression: Quantization
+The following kernel demonstrates cache shape and causal masking, including chunked decode where cached tokens precede several new tokens.
 
-Beyond architectural changes, engineers tackle the $P$ (Precision) variable in the formula. By default, KV caches are stored in 16-bit precision (FP16 or BF16, 2 bytes per parameter). 
+> **Deliberately simplified implementation.** It omits RoPE, padding masks, sliding windows, quantized storage, tensor parallelism, paged allocation, prefix sharing, and an in-place writer. It uses torch.cat, so it is unsuitable for production. The enable_gqa flag also depends on the installed PyTorch backend.
 
-Modern inference engines (like vLLM and TensorRT-LLM) natively support **KV Cache Quantization**. By compressing the cache to FP8 (1 byte) or even INT4 (0.5 bytes), the memory footprint is halved or quartered. 
-
-Because the decode phase is memory-bandwidth bound, reading an INT4 KV cache from HBM is up to 4x faster than reading an FP16 cache. The slight computational overhead required to dequantize the INT4 values back to FP16 in SRAM is completely hidden by the massive reduction in memory transfer time. This results in a direct, near-linear increase in token generation throughput (tokens/sec).
-
----
-
-## 5. Engineering the Cache
-
-To ground these concepts, below is a realistic PyTorch implementation of a Transformer attention layer that supports GQA and maintains a dynamic KV cache. Notice how the cache avoids recomputing past tokens by concatenating the current token's state to the historical tensor along the sequence dimension (`dim=1`).
-
-```python
+~~~python
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-class CausalSelfAttention(nn.Module):
-    """
-    A realistic implementation of a Transformer attention layer supporting 
-    Grouped-Query Attention (GQA) and KV Caching for autoregressive decoding.
-    """
-    def __init__(self, d_model=4096, n_heads=32, n_kv_heads=8):
+KVCache = tuple[torch.Tensor, torch.Tensor]  # [B, H_kv, S, d_h] each
+
+
+class CausalGQAAttention(nn.Module):
+    def __init__(self, d_model: int = 4096, n_heads: int = 32, n_kv_heads: int = 8):
         super().__init__()
+        if d_model % n_heads or n_heads % n_kv_heads:
+            raise ValueError("d_model % n_heads and n_heads % n_kv_heads must be zero")
         self.n_heads = n_heads
         self.n_kv_heads = n_kv_heads
         self.d_head = d_model // n_heads
-        
-        # Projections
         self.q_proj = nn.Linear(d_model, n_heads * self.d_head, bias=False)
         self.k_proj = nn.Linear(d_model, n_kv_heads * self.d_head, bias=False)
         self.v_proj = nn.Linear(d_model, n_kv_heads * self.d_head, bias=False)
         self.o_proj = nn.Linear(d_model, d_model, bias=False)
-        
-    def forward(self, x, kv_cache=None):
-        # x shape: (Batch, Seq_Len, Dim)
-        B, T, C = x.size()
-        
-        q = self.q_proj(x).view(B, T, self.n_heads, self.d_head)
-        k = self.k_proj(x).view(B, T, self.n_kv_heads, self.d_head)
-        v = self.v_proj(x).view(B, T, self.n_kv_heads, self.d_head)
-        
-        if kv_cache is not None:
-            past_k, past_v = kv_cache
-            # The core of KV Caching: Concatenate past history with the current token
-            k = torch.cat([past_k, k], dim=1)
-            v = torch.cat([past_v, v], dim=1)
-            
-        # Update the cache payload for the next autoregressive step
-        new_kv_cache = (k, v)
-        
-        # GQA: Repeat K and V heads to match the number of Q heads
-        groups = self.n_heads // self.n_kv_heads
-        k = k.repeat_interleave(groups, dim=2)
-        v = v.repeat_interleave(groups, dim=2)
-        
-        # Transpose for PyTorch attention computation: (Batch, Heads, Seq_Len, Dim)
-        q = q.transpose(1, 2)
-        k = k.transpose(1, 2)
-        v = v.transpose(1, 2)
-        
-        # During decode (T=1), causal masking is implicitly handled by the cache structure.
-        # During prefill (T>1), we must apply the causal mask.
-        is_causal = T > 1
-        
-        # Utilize hardware-accelerated Flash Attention
-        y = F.scaled_dot_product_attention(q, k, v, is_causal=is_causal)
-        
-        # Reshape back to flat sequence: (Batch, Seq_Len, Dim)
-        y = y.transpose(1, 2).contiguous().view(B, T, C)
-        return self.o_proj(y), new_kv_cache
-```
 
----
+    @torch.no_grad()
+    def forward(self, x: torch.Tensor, cache: KVCache | None = None):
+        batch, new_tokens, width = x.shape
+        q = self.q_proj(x).view(batch, new_tokens, self.n_heads, self.d_head)
+        k = self.k_proj(x).view(batch, new_tokens, self.n_kv_heads, self.d_head)
+        v = self.v_proj(x).view(batch, new_tokens, self.n_kv_heads, self.d_head)
+        q, k, v = (z.transpose(1, 2) for z in (q, k, v))
 
-## 6. The Fragmentation Problem (A Look Ahead)
+        past_tokens = 0
+        if cache is not None:
+            past_k, past_v = cache
+            past_tokens = past_k.size(2)
+            k = torch.cat((past_k, k), dim=2)
+            v = torch.cat((past_v, v), dim=2)
 
-The code above utilizes a naive strategy: allocating a contiguous PyTorch tensor and appending to it (`torch.cat`) at every step. In a production server handling hundreds of concurrent requests, this approach is disastrous. 
+        # True means “allowed” for PyTorch SDPA boolean masks.
+        q_pos = torch.arange(past_tokens, past_tokens + new_tokens, device=x.device)
+        k_pos = torch.arange(k.size(2), device=x.device)
+        allowed = (k_pos[None, :] <= q_pos[:, None])[None, None, :, :]
 
-Because the final sequence length of a user's prompt is unknown at the start, the system must either over-allocate memory (wasting up to 80% of the cache capacity) or constantly reallocate and move tensors, causing severe memory fragmentation. Solving this OS-level memory management problem is the domain of **PagedAttention**, which we will explore in the next section.
+        y = F.scaled_dot_product_attention(
+            q, k, v, attn_mask=allowed, is_causal=False, enable_gqa=True
+        )
+        y = y.transpose(1, 2).contiguous().view(batch, new_tokens, width)
+        return self.o_proj(y), (k, v)
+~~~
 
----
+The explicit position mask matters. Naively setting is_causal=True for a multi-token chunk with a non-empty cache can align the triangular mask to the wrong origin, depending on the kernel contract.
 
-## 7. Summary
+## 6. Production Cache Contract
 
-Managing the KV cache is the most critical engineering challenge in LLM inference. By caching past Key and Value states, we drop the computational complexity of text generation from quadratic to linear. However, this optimization shifts the bottleneck to memory capacity and bandwidth. Innovations like Grouped-Query Attention (GQA), DeepSeek's Multi-Head Latent Attention (MLA), and INT4 quantization are essential tools for fitting massive context windows into limited GPU hardware.
+A production engine preallocates blocks and writes new KV rows in place. PagedAttention applies virtual-memory-style block mapping so sequences do not require one contiguous allocation and blocks can be shared for common prefixes [[4]](#ref-4). The next section develops that allocator.
 
----
+Before launch, record:
+
+- **Artifact:** model, tokenizer, positional encoding, cache dtype/scales, kernel/engine versions, block size, parallel layout.
+- **Capacity:** weights, cache, activations, workspace, CUDA graphs, fragmentation, and failure reserve separately.
+- **Telemetry:** logical versus allocated tokens, block utilization, prefix hit rate, eviction/preemption, recomputed tokens, HBM use, batch tokens, TTFT, inter-token latency, output tokens/s.
+- **Failure policy:** stop admission or shed low-priority work before allocation failure; roll back a format when quality slices regress or latency tails exceed the declared window.
+- **Recovery:** verify token continuation after preemption or migration; do not assume a serialized KV tensor is portable across model or kernel revisions.
+
+## 7. Takeaway
+
+KV caching exchanges redundant computation for persistent memory traffic. MQA/GQA/MLA reduce width, lower precision reduces bytes per value, and paged allocation reduces waste. None is an isolated switch: quality, kernels, scheduling, and request-length distribution decide whether a smaller cache becomes a faster, reliable service.
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: Why does autoregressive generation without KV cache exhibit $O(N^2)$ time complexity per step?</summary>
-*Without a cache, generating the $N$-th token requires re-projecting and re-calculating the attention scores for all $N-1$ previous tokens from scratch. Because this full sequence calculation must occur at every single step, the total time to generate $N$ tokens grows quadratically.*
+<summary>Quiz 1: Why is “KV caching changes generation from quadratic to linear” incomplete?</summary>
+*At step $t$, cached attention still reads $O(t)$ history, so $N$ generated tokens incur $O(N^2)$ attention work in total. The cache removes full-prefix projection and $O(t^2)$ attention recomputation at each step.*
 </details>
 
 <details>
-<summary>Quiz 2: In the KV cache memory formula, why is the footprint multiplied by 2?</summary>
-*The factor of 2 accounts for the fact that we must store both the Key (K) matrix and the Value (V) matrix for every token in the sequence.*
+<summary>Quiz 2: Why can equal logical token counts require different cache capacity?</summary>
+*Block rounding, length variance, speculative branches, padding, prefix sharing, replication, and fragmentation change allocated tokens and overhead.*
 </details>
 
 <details>
-<summary>Quiz 3: How does DeepSeek's Multi-Head Latent Attention (MLA) avoid materializing high-dimensional Key matrices in memory during inference?</summary>
-*MLA stores a low-dimensional latent vector in the cache. Through a mathematical technique called Matrix Absorption, the Key decompression matrix is absorbed directly into the Query projection matrix. This allows the attention kernel to compute the dot product between the projected Query and the raw, compressed latent vector fetched from HBM, bypassing the need to generate the full Key matrix.*
+<summary>Quiz 3: What is needed before attributing throughput gain to FP8 KV cache?</summary>
+*Hold model, scheduler, traffic, latency objective, and output policy fixed; measure bandwidth, occupancy, conversion overhead, tail latency, throughput, and quality slices.*
 </details>
 
 <details>
-<summary>Quiz 4: If KV cache memory is reduced using INT4 quantization, what is the primary hardware trade-off encountered during the decode phase?</summary>
-*The decode phase is heavily memory-bandwidth bound, meaning the GPU spends most of its time waiting for data to transfer from HBM to SRAM. While INT4 quantization introduces a slight computational overhead to dequantize the values back to FP16 in SRAM, it drastically reduces the time spent transferring data. Therefore, the trade-off is highly favorable, resulting in significantly higher token generation throughput.*
+<summary>Quiz 4: Why does MLA keep a position-related cache component separate?</summary>
+*RoPE applies a position-dependent rotation that cannot be absorbed into static projection matrices like a purely linear up-projection.*
 </details>
 
 <details>
-<summary>Quiz 5: Derive the exact mathematical formula for the memory footprint (in Gigabytes) of the KV cache for an LLM with $L$ layers, hidden dimension $d$, $H_Q$ query heads, $H_{KV}$ key-value heads (Grouped-Query Attention), sequence length $S$, batch size $B$, using float16 precision.</summary>
-*In Grouped-Query Attention (GQA), the dimensions of the key and value vectors are reduced by the factor $H_{KV} / H_Q$. The dimension per KV head is $d_{head} = d / H_Q$. Thus, each token requires $2 \times L \times H_{KV} \times d_{head}$ parameters. For float16 precision, each parameter consumes 2 bytes. For batch size $B$ and sequence length $S$, the total memory in bytes is: $Memory = B \times S \times L \times H_{KV} \times \frac{d}{H_Q} \times 2 \times 2$ bytes. To convert this to Gigabytes (GB), we divide by $10^9$ or $2^{30}$. Therefore, the formula in GB is: $Footprint = \frac{4 \times B \times S \times L \times H_{KV} \times d}{H_Q \times 10^9}$ GB. This precise linear relationship with sequence length $S$ highlights why memory management is critical for long-context serving.*
+<summary>Quiz 5: What is wrong with appending cache tensors using torch.cat?</summary>
+*Each append allocates and copies growing history. Production engines reserve blocks and write rows in place.*
 </details>
-
----
 
 ## References
 
-1. <a id="ref-1"></a>DeepSeek-AI (2025). *DeepSeek-V3 Technical Report*. [arXiv:2412.19437](https://arxiv.org/abs/2412.19437)
-2. <a id="ref-2"></a>Ainslie, J., et al. (2023). *GQA: Training Generalized Multi-Query Transformer Models from Multi-Head Checkpoints*. [arXiv:2305.13245](https://arxiv.org/abs/2305.13245)
+1. <a id="ref-1"></a>Ainslie, J., et al. (2023). *GQA: Training Generalized Multi-Query Transformer Models from Multi-Head Checkpoints*. [arXiv:2305.13245](https://arxiv.org/abs/2305.13245).
+2. <a id="ref-2"></a>DeepSeek-AI. (2024). *DeepSeek-V2: A Strong, Economical, and Efficient Mixture-of-Experts Language Model*. [arXiv:2405.04434](https://arxiv.org/abs/2405.04434).
+3. <a id="ref-3"></a>vLLM Project. *Quantized KV Cache*. [Official documentation](https://docs.vllm.ai/en/latest/features/quantization/quantized_kvcache/).
+4. <a id="ref-4"></a>Kwon, W., et al. (2023). *Efficient Memory Management for Large Language Model Serving with PagedAttention*. [arXiv:2309.06180](https://arxiv.org/abs/2309.06180).

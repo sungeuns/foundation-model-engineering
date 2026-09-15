@@ -8,205 +8,186 @@ import KVCacheCalculator from '../../../components/chapter-12/KVCacheCalculator.
 
 # 12.1 KV Cache Management
 
-멀티모달 아키텍처가 파운데이션 모델이 생성할 수 있는 *내용(what)* 의 한계를 넓히는 동안, 이러한 거대 모델을 프로덕션 환경에 배포하는 것은 가혹한 엔지니어링 현실을 마주하게 합니다. 학계의 연구실에서 데이터센터 규모의 서비스 환경으로 넘어갈 때, 시스템의 병목(bottleneck)은 순수한 연산 성능(TFLOPS)에서 메모리 대역폭(Memory Bandwidth)과 용량(Capacity)으로 급격히 이동합니다. 그리고 이 병목의 중심에는 기하급수적으로 팽창하는 단 하나의 데이터 구조, 바로 **KV Cache** 가 자리 잡고 있습니다.
+자기회귀 serving에는 성격이 다른 두 hardware 구간이 있습니다. **Prefill** 은 prompt를 병렬 처리하므로 행렬 곱셈 처리량이 주된 병목인 경우가 많습니다. **Decode** 는 sequence마다 한 번에 한 token을 생성하며, 매 단계 weight와 attention state를 읽습니다. 따라서 memory bandwidth, cache 용량, scheduler가 성능을 좌우하는 경우가 많습니다. 이 두 구간을 연결하는 상태가 KV cache입니다.
 
-대규모 언어 모델(LLM)을 서빙하는 것이 전통적인 마이크로서비스를 서빙하는 것과 근본적으로 어떻게 다른지 이해하려면, 자기회귀적 디코딩(Autoregressive decoding)의 메커니즘, HBM(High Bandwidth Memory)의 물리적 한계, 그리고 메모리 장벽(Memory Wall)을 극복하기 위해 엔지니어들이 도입한 아키텍처적 기법들을 깊이 파고들어야 합니다.
+중요한 질문은 “cache가 들어가는가?”만이 아닙니다. 모델 품질을 지키면서 길이가 다른 요청이 섞였을 때 inter-token latency를 예측 가능하게 유지하고, 끝난 요청의 용량을 즉시 회수할 수 있어야 합니다.
 
----
+## 1. Cache가 절약하는 연산
 
-## 1. The Autoregressive Bottleneck
+Layer $l$ 의 attention은 token state $x_t$ 를 투영합니다.
 
-LLM 추론은 두 개의 뚜렷하게 구분되는 단계로 작동합니다:
-1. **The Prefill Phase (프리필 단계)**: 모델이 입력 프롬프트 전체를 동시에 처리합니다. 이 단계는 고도로 병렬화되어 있으며, 연산 바운드(compute-bound) 상태로 최신 GPU의 거대한 행렬 곱셈 연산 능력을 최대한 활용합니다.
-2. **The Decode Phase (디코드 단계)**: 모델이 한 번에 하나의 토큰씩 출력을 생성합니다. 토큰 $N$ 은 $1$ 부터 $N-1$ 까지의 모든 토큰의 컨텍스트에 의존하기 때문에, 이 과정은 엄격하게 순차적(sequential)입니다.
+$$
+q_t=x_tW_Q,\qquad k_t=x_tW_K,\qquad v_t=x_tW_V.
+$$
 
-만약 새로운 토큰이 생성될 때마다 순진하게 self-attention을 계산한다면, 모델은 시퀀스 내의 모든 이전 토큰들을 Query (Q), Key (K), Value (V) 텐서로 다시 투영(projection)한 뒤 어텐션을 계산해야 합니다. 이는 생성 단계마다 $O(N^2)$ 의 시간 복잡도를 유발합니다. 4,000 토큰의 응답을 생성한다고 가정할 때, 이러한 중복 연산은 천문학적으로 느린 속도를 초래합니다.
+Causal decode에서 이전 token의 key와 value는 변하지 않습니다. $\{k_i,v_i\}_{i\le t}$ 를 보관하면 $t+1$ 단계에서 새 projection만 계산하고 저장된 history를 조회합니다.
 
-**해결책:** 새로운 토큰을 생성할 때, *이전* 모든 토큰들의 Key와 Value 벡터는 변하지 않습니다. 이러한 K와 V 텐서를 GPU 메모리에 캐싱해두면, 모델은 오직 *현재* 토큰에 대한 Q, K, V만 계산하면 됩니다. 그런 다음 현재의 Q를 캐싱된 K, V 행렬과 곱합니다. 이 최적화는 단계당 시간 복잡도를 $O(N^2)$ 에서 $O(N)$ 으로 줄여주며, 실시간 채팅을 가능하게 만듭니다.
+$$
+o_{t+1}=\operatorname{softmax}\left(
+\frac{q_{t+1}K_{\le t+1}^{\top}}{\sqrt{d_h}}+M
+\right)V_{\le t+1}.
+$$
 
-하지만 이 속도 향상은 막대한 비용, 즉 메모리를 대가로 합니다.
+$d_h$ 는 head dimension, $M$ 은 causal 또는 padding mask입니다.
 
----
+복잡도는 정확히 구분해야 합니다. Cache가 없으면 decode $t$ 단계마다 길이 $t$ 인 전체 forward를 다시 실행하므로 self-attention score 연산은 $O(t^2)$ 입니다. 새 token $N$ 개에 대해 합하면 attention은 $O(N^3)$, projection과 MLP는 $O(N^2)$ 입니다. Cache가 있으면 $t$ 단계 attention이 $O(t)$, 전체는 $O(N^2)$ 가 됩니다. 이 표기는 model width와 batch dimension을 생략합니다. 실제 시간은 점근 복잡도보다 memory traffic과 kernel utilization에 좌우되는 경우가 많습니다.
 
-## 2. The Mathematics of the Memory Wall
+## 2. 용량 모델
 
-**KV Cache** 는 결코 작은 버퍼가 아닙니다. 그것은 종종 모델의 가중치(weights) 크기를 초과할 정도로 거대하고 동적으로 성장하는 메모리 할당 영역입니다.
+길이가 같은 sequence로 구성된 dense cache는
 
-표준 Multi-Head Attention (MHA) 모델의 경우, 단일 요청에 대한 **KV Cache** 를 저장하는 데 필요한 정확한 메모리 공간(바이트 단위)은 다음 공식에 의해 결정됩니다:
+$$
+\text{bytes}_{KV}=2BSLH_{KV}d_hp
+$$
 
-$$ \text{KV Cache Size} = 2 \times B \times S \times L \times H \times D \times P $$
+byte를 사용합니다. $B$ 는 동시 sequence 수, $S$ 는 sequence당 cache token, $L$ 은 layer 수, $H_{KV}$ 는 KV head 수, $d_h$ 는 head당 값의 수, $p$ 는 값 하나의 byte 수입니다. 앞의 2는 key와 value입니다.
 
-여기서:
-- $2$: Key와 Value 텐서 두 개를 모두 고려.
-- $B$: Batch size (동시 요청 수).
-- $S$: Sequence length (과거 토큰의 수).
-- $L$: Transformer 레이어 수.
-- $H$: Attention Heads (KV 헤드) 수.
-- $D$: 헤드당 차원(Dimension).
-- $P$: 정밀도 바이트 수 (예: FP16/BF16의 경우 2바이트).
+실제 요청 길이가 다르면 $BS$ 대신 할당 token 수 $\sum_i S_i^{\text{allocated}}$ 를 써야 합니다. Padding, block metadata, allocator 여유 공간, 임시 workspace, speculative branch, beam hypothesis, tensor-parallel 복제 또는 sharding 비용은 별도입니다.
 
-이 공식을 이론적인 70B 파라미터 모델(80 레이어, 8 KV 헤드 (GQA 가정), 128 차원)에 적용하여, 8,192 토큰 컨텍스트를 가진 32명의 사용자를 FP16 정밀도로 서빙한다고 가정해 봅시다:
+동시 sequence 32개, sequence당 8,192 token, 80개 layer, 8개 KV head, $d_h=128$, BF16이라면:
 
-$$ 2 \times 32 \times 8192 \times 80 \times 8 \times 128 \times 2 = 85,899,345,920 \text{ bytes} \approx 80 \text{ GB} $$
+$$
+2\cdot32\cdot8192\cdot80\cdot8\cdot128\cdot2
+=85{,}899{,}345{,}920\text{ bytes}=80\text{ GiB}.
+$$
 
-단일 NVIDIA H100 GPU는 80 GB의 HBM을 가집니다. 위 시나리오에서 **KV Cache** 만으로도 GPU 메모리 전체를 소비하게 되며, 140 GB에 달하는 모델 가중치를 올릴 공간조차 남지 않게 됩니다. 이를 **Memory Wall (메모리 장벽)** 이라고 부릅니다. 디코드 단계는 악명 높을 정도로 *메모리 대역폭 바운드(memory-bandwidth bound)* 상태입니다. 생성되는 매 토큰마다 이 거대한 KV 텐서들이 HBM에서 SRAM으로 스트리밍되기를 기다리며 GPU의 연산 코어들은 유휴 상태(idle)로 방치됩니다.
+요청 하나가 아니라 32개 요청의 합계입니다. KV cache가 항상 weight보다 큰 것도 아닙니다. 동시성과 context가 충분히 커지면 더 커질 수 있으므로 capacity plan에는 weight와 최대 live-cache 점유량을 모두 포함해야 합니다.
 
----
+<KVCacheCalculator client:load lang="ko" />
 
-## 3. Architectural Evolution: MHA, GQA, and MLA
+## 3. KV 폭 줄이기
 
-Memory Wall을 완화하기 위해 연구자들은 핵심 Transformer 아키텍처를 공격적으로 수정하여 공식의 $H$ (KV 헤드 수) 변수를 줄이는 데 집중했습니다.
+$H_Q$ 를 query head 수라고 하겠습니다.
 
-![kv_cache_evolution](../../../assets/images/chapter-12/kv_cache_evolution.png)
-*출처: AI 생성 이미지*
+- **Multi-Head Attention (MHA):** $H_{KV}=H_Q$
+- **Multi-Query Attention (MQA):** 모든 query가 하나의 KV head를 공유
+- **Grouped-Query Attention (GQA):** $1<H_{KV}<H_Q$, 여러 query head가 하나의 KV head를 공유
 
-### Multi-Query Attention (MQA) & Grouped-Query Attention (GQA)
-2023년경 도입된 **MQA** 는 모든 Query 헤드가 *단 하나의* KV 헤드를 공유하도록 강제합니다. 이는 캐시 크기를 최대 64배까지 줄여주지만, 모델의 추론 능력을 심각하게 저하시킵니다.
+Payload는 $H_{KV}$ 에 선형 비례합니다. GQA는 품질·용량·bandwidth trade-off를 제공합니다. 원 논문은 평가한 변환 및 학습 설정에서 MHA에 가까운 품질과 MQA에 가까운 속도를 보고했습니다 [[1]](#ref-1). 임의의 checkpoint가 재학습 없이 head 구조를 바꿔도 품질이 유지된다는 보장은 아닙니다.
 
-이에 따라 업계 표준은 빠르게 **Grouped-Query Attention (GQA)** (Llama 2/3, Mistral 등에서 사용)으로 이동했습니다. GQA는 Query 헤드들을 그룹(예: 8개 그룹)으로 나누고, 각 그룹당 하나의 KV 헤드를 할당합니다. 이는 벤치마크 성능 저하를 거의 발생시키지 않으면서도 실용적인 8배의 메모리 감소 효과를 제공합니다.
+### Multi-Head Latent Attention
 
-### Multi-Head Latent Attention (MLA): The 최신 동향
-DeepSeek (V2, V3, R1) [[1]](#ref-1) 에 의해 개척된 **Multi-Head Latent Attention (MLA)** 는 **KV Cache** 의 경제학을 완전히 재정의했습니다. 고차원의 K와 V 행렬을 캐싱하는 대신, MLA는 입력을 고도로 압축된 저차원 **잠재 벡터(latent vector)** $c_t \in \mathbb{R}^{d_c}$ (예: 512 차원)로 투영합니다.
+DeepSeek-V2는 **Multi-Head Latent Attention (MLA)** 를 제안했습니다 [[2]](#ref-2). MLA는 전통적인 head별 KV payload 대신 low-rank latent $c_t^{KV}$ 와 decoupled RoPE에 필요한 위치 성분을 cache합니다. Decode에서는 선형 key/value up-projection을 인접 projection에 대수적으로 흡수할 수 있습니다. Position-dependent rotation인 RoPE는 static absorption이 불가능해 별도로 처리합니다.
 
-추론 과정에서는 오직 이 작은 잠재 벡터만이 캐시에 저장됩니다.
+DeepSeek-V2 report는 자사의 DeepSeek 67B 비교 시스템 대비 KV cache 93.3% 감소와 최대 generation throughput 5.76배를 보고합니다. 해당 architecture와 구현의 system result이지 보편적인 MLA 배수가 아닙니다. Kernel 지원, latent width, positional encoding, parallel layout, traffic 형태가 실제 이득을 결정합니다.
 
-**행렬 흡수(Matrix Absorption)의 마법:**
-디코드 단계에서 모델이 메모리로부터 $c_t$ 를 읽어와 업-프로젝션(up-projection) 행렬과 곱해 완전한 멀티 헤드 K와 V 텐서를 재구성해야 한다면 연산 비용이 매우 클 것이라고 생각할 수 있습니다.
-그러나 MLA는 *행렬 흡수(Matrix Absorption)* 라는 수학적 트릭을 활용합니다. 어텐션 점수(attention score)는 내적(dot product)으로 계산되기 때문에, Keys를 위한 압축 해제 행렬($W_{UK}$)은 Query 투영 행렬($W_{DQ} W_{UQ}$)로 수학적으로 흡수될 수 있습니다.
+## 4. Cache Precision은 시스템 Trade-off다
 
-$$ \text{Attention Score} \propto (q_t W_{DQ} W_{UQ}) (c_t W_{UK})^T = q_t (W_{DQ} W_{UQ} W_{UK}^T) c_t^T $$
+FP8 storage는 FP16/BF16 대비 dense payload를 절반으로, 4-bit storage는 4분의 1로 줄입니다. 용량 이득은 계산대로지만 latency와 품질 이득은 그렇지 않습니다. Serving engine은 값 변환, scale 계산, metadata 이동에 추가 명령을 쓸 수 있습니다. KV bandwidth가 병목이 아닌 workload는 속도 이득이 작을 수 있습니다.
 
-흡수된 행렬 $(W_{DQ} W_{UQ} W_{UK}^T)$ 을 미리 계산(pre-compute)해 둠으로써, 어텐션 커널은 HBM에서 가져온 원시 압축 잠재 벡터 $c_t$ 와 투영된 Query 간의 내적을 직접 계산할 수 있습니다. 고차원의 Key 행렬은 *메모리에 전혀 구체화(materialized)되지 않습니다*.
+Scale granularity, calibration data, E4M3/E5M2 같은 format, outlier, accumulation precision을 함께 정해야 합니다. vLLM 문서는 가능하면 calibrated scale을 사용하고 실제 workload에서 정확도를 평가하라고 명시합니다 [[3]](#ref-3).
 
-*참고: 선형적으로 흡수될 수 없는 Rotary Position Embeddings (RoPE)를 처리하기 위해, MLA는 잠재 벡터와 함께 작고 분리된 RoPE 벡터 $r_t$ (예: 64 차원)를 명시적으로 캐싱합니다.*
+건전한 rollout은 다음을 비교합니다.
 
-이를 통해 표준 MHA와 비교하여 **KV Cache** 의 메모리 풋프린트를 무려 **20배에서 57배** 까지 줄일 수 있으며, 더 적은 수의 GPU로도 긴 컨텍스트 요청의 대규모 배치를 서빙할 수 있게 됩니다.
+- Context-length slice별 품질
+- Prefill latency, p50/p95 time to first token, p50/p95 inter-token latency
+- 고정 latency SLO에서의 throughput
+- Cache 점유율, allocation failure, eviction 또는 recomputation 비율
 
-<KVCacheCalculator lang="ko" client:load />
+“Cache token이 두 배 들어간다”와 “token 생성 속도가 두 배다”는 다른 주장입니다.
 
----
+## 5. 교육용 GQA Cache
 
-## 4. Data-Level Compression: Quantization
+다음 kernel은 cache shape와 causal masking을 보여줍니다. Cache된 token 뒤에 여러 새 token을 붙이는 chunked decode도 처리합니다.
 
-아키텍처 변경을 넘어, 엔지니어들은 공식의 $P$ (정밀도, Precision) 변수도 공략합니다. 기본적으로 **KV Cache** 는 16비트 정밀도(FP16 또는 BF16, 파라미터당 2바이트)로 저장됩니다.
+> **의도적으로 단순화한 구현입니다.** RoPE, padding mask, sliding window, quantized storage, tensor parallelism, paged allocation, prefix sharing, in-place writer를 생략했습니다. torch.cat을 사용하므로 production에 적합하지 않습니다. enable_gqa 지원도 설치된 PyTorch backend에 따라 다릅니다.
 
-최신 추론 엔진(vLLM, TensorRT-LLM 등)은 네이티브하게 **KV Cache 양자화(Quantization)** 를 지원합니다. 캐시를 FP8 (1바이트) 또는 심지어 INT4 (0.5바이트)로 압축함으로써 메모리 풋프린트를 절반 또는 4분의 1로 줄입니다.
-
-디코드 단계는 메모리 대역폭 바운드 상태이므로, HBM에서 INT4 **KV Cache** 를 읽어오는 것은 FP16 캐시를 읽어오는 것보다 최대 4배 빠릅니다. SRAM 내부에서 INT4 값을 다시 FP16으로 역양자화(dequantize)하는 데 필요한 약간의 연산 오버헤드는, 메모리 전송 시간의 막대한 감소에 의해 완전히 상쇄(hidden)됩니다. 이는 결과적으로 토큰 생성 처리량(tokens/sec)의 직접적이고 거의 선형적인 증가로 이어집니다.
-
----
-
-## 5. Engineering the Cache
-
-개념을 명확히 하기 위해, 아래는 GQA를 지원하고 동적 **KV Cache** 를 유지하는 현실적인 PyTorch Transformer 어텐션 레이어 구현체입니다. 시퀀스 차원(`dim=1`)을 따라 과거 히스토리 텐서에 현재 토큰의 상태를 이어 붙임(`torch.cat`)으로써 과거 토큰의 재계산을 피하는 캐시 메커니즘을 주목하십시오.
-
-```python
+~~~python
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-class CausalSelfAttention(nn.Module):
-    """
-    Grouped-Query Attention (GQA) 및 자기회귀적 디코딩을 위한 
-    KV Caching을 지원하는 현실적인 Transformer 어텐션 레이어 구현체.
-    """
-    def __init__(self, d_model=4096, n_heads=32, n_kv_heads=8):
+KVCache = tuple[torch.Tensor, torch.Tensor]  # 각각 [B, H_kv, S, d_h]
+
+
+class CausalGQAAttention(nn.Module):
+    def __init__(self, d_model: int = 4096, n_heads: int = 32, n_kv_heads: int = 8):
         super().__init__()
+        if d_model % n_heads or n_heads % n_kv_heads:
+            raise ValueError("d_model % n_heads와 n_heads % n_kv_heads는 0이어야 합니다")
         self.n_heads = n_heads
         self.n_kv_heads = n_kv_heads
         self.d_head = d_model // n_heads
-        
-        # Projections
         self.q_proj = nn.Linear(d_model, n_heads * self.d_head, bias=False)
         self.k_proj = nn.Linear(d_model, n_kv_heads * self.d_head, bias=False)
         self.v_proj = nn.Linear(d_model, n_kv_heads * self.d_head, bias=False)
         self.o_proj = nn.Linear(d_model, d_model, bias=False)
-        
-    def forward(self, x, kv_cache=None):
-        # x shape: (Batch, Seq_Len, Dim)
-        B, T, C = x.size()
-        
-        q = self.q_proj(x).view(B, T, self.n_heads, self.d_head)
-        k = self.k_proj(x).view(B, T, self.n_kv_heads, self.d_head)
-        v = self.v_proj(x).view(B, T, self.n_kv_heads, self.d_head)
-        
-        if kv_cache is not None:
-            past_k, past_v = kv_cache
-            # KV Caching의 핵심: 과거 히스토리와 현재 토큰을 이어 붙임(Concatenate)
-            k = torch.cat([past_k, k], dim=1)
-            v = torch.cat([past_v, v], dim=1)
-            
-        # 다음 자기회귀적 단계를 위해 캐시 페이로드 업데이트
-        new_kv_cache = (k, v)
-        
-        # GQA: Q 헤드 수에 맞추기 위해 K와 V 헤드를 반복(repeat)
-        groups = self.n_heads // self.n_kv_heads
-        k = k.repeat_interleave(groups, dim=2)
-        v = v.repeat_interleave(groups, dim=2)
-        
-        # PyTorch 어텐션 계산을 위한 Transpose: (Batch, Heads, Seq_Len, Dim)
-        q = q.transpose(1, 2)
-        k = k.transpose(1, 2)
-        v = v.transpose(1, 2)
-        
-        # Decode 중(T=1)에는 인과적 마스킹(causal masking)이 캐시 구조에 의해 암시적으로 처리됩니다.
-        # Prefill 중(T>1)에는 인과적 마스크를 적용해야 합니다.
-        is_causal = T > 1
-        
-        # 하드웨어 가속이 지원되는 Flash Attention 활용
-        y = F.scaled_dot_product_attention(q, k, v, is_causal=is_causal)
-        
-        # 평탄한 시퀀스로 다시 형태 변환(Reshape): (Batch, Seq_Len, Dim)
-        y = y.transpose(1, 2).contiguous().view(B, T, C)
-        return self.o_proj(y), new_kv_cache
-```
 
----
+    @torch.no_grad()
+    def forward(self, x: torch.Tensor, cache: KVCache | None = None):
+        batch, new_tokens, width = x.shape
+        q = self.q_proj(x).view(batch, new_tokens, self.n_heads, self.d_head)
+        k = self.k_proj(x).view(batch, new_tokens, self.n_kv_heads, self.d_head)
+        v = self.v_proj(x).view(batch, new_tokens, self.n_kv_heads, self.d_head)
+        q, k, v = (z.transpose(1, 2) for z in (q, k, v))
 
-## 6. The Fragmentation Problem (A Look Ahead)
+        past_tokens = 0
+        if cache is not None:
+            past_k, past_v = cache
+            past_tokens = past_k.size(2)
+            k = torch.cat((past_k, k), dim=2)
+            v = torch.cat((past_v, v), dim=2)
 
-위의 코드는 연속적인 PyTorch 텐서를 할당하고 매 단계마다 이어 붙이는(`torch.cat`) 순진한(naive) 전략을 사용합니다. 수백 개의 동시 요청을 처리하는 프로덕션 서버에서 이 접근 방식은 재앙에 가깝습니다.
+        # PyTorch SDPA boolean mask에서 True는 attention 허용입니다.
+        q_pos = torch.arange(past_tokens, past_tokens + new_tokens, device=x.device)
+        k_pos = torch.arange(k.size(2), device=x.device)
+        allowed = (k_pos[None, :] <= q_pos[:, None])[None, None, :, :]
 
-사용자 프롬프트의 최종 시퀀스 길이를 시작 시점에서는 알 수 없기 때문에, 시스템은 메모리를 과도하게 할당(캐시 용량의 최대 80% 낭비)하거나 텐서를 지속적으로 재할당하고 이동시켜 심각한 메모리 단편화(fragmentation)를 유발하게 됩니다. 이러한 OS 수준의 메모리 관리 문제를 해결하는 것이 바로 다음 섹션에서 살펴볼 **PagedAttention** 의 영역입니다.
+        y = F.scaled_dot_product_attention(
+            q, k, v, attn_mask=allowed, is_causal=False, enable_gqa=True
+        )
+        y = y.transpose(1, 2).contiguous().view(batch, new_tokens, width)
+        return self.o_proj(y), (k, v)
+~~~
 
----
+명시적인 position mask가 중요합니다. Cache가 비어 있지 않은 multi-token chunk에 is_causal=True를 순진하게 적용하면 kernel 계약에 따라 triangular mask 원점이 잘못 정렬될 수 있습니다.
 
-## 7. Summary
+## 6. Production Cache 계약
 
-**KV Cache** 를 관리하는 것은 LLM 추론에서 가장 중요한 엔지니어링 과제입니다. 과거의 Key와 Value 상태를 캐싱함으로써 텍스트 생성의 연산 복잡도를 이차(quadratic)에서 선형(linear)으로 낮출 수 있습니다. 그러나 이 최적화는 병목 현상을 메모리 용량과 대역폭으로 이동시킵니다. Grouped-Query Attention (GQA), DeepSeek의 Multi-Head Latent Attention (MLA), 그리고 INT4 양자화와 같은 혁신적인 기술들은 제한된 GPU 하드웨어에 거대한 컨텍스트 윈도우를 적재하기 위한 필수적인 도구입니다.
+Production engine은 block을 미리 할당하고 새 KV row를 제자리에 기록합니다. PagedAttention은 virtual-memory-style block mapping을 사용해 sequence마다 하나의 연속 공간을 요구하지 않으며, 공통 prefix block을 공유할 수 있습니다 [[4]](#ref-4). 다음 절에서 allocator를 다룹니다.
 
----
+출시 전에는 다음을 기록합니다.
+
+- **Artifact:** model, tokenizer, positional encoding, cache dtype/scale, kernel/engine version, block size, parallel layout
+- **Capacity:** weight, cache, activation, workspace, CUDA graph, fragmentation, 장애 여유분을 분리
+- **Telemetry:** logical/allocated token, block utilization, prefix hit rate, eviction/preemption, recomputed token, HBM 사용량, batch token, TTFT, inter-token latency, output tokens/s
+- **Failure policy:** allocation failure 전에 admission을 중단하거나 낮은 우선순위 요청을 줄이고, 품질 slice 또는 tail latency가 기준을 넘으면 cache format을 rollback
+- **Recovery:** preemption/migration 뒤 token continuation을 검증하고, 직렬화한 KV tensor가 model 또는 kernel revision 사이에 호환된다고 가정하지 않기
+
+## 7. 핵심 정리
+
+KV caching은 중복 연산을 persistent memory traffic으로 바꿉니다. MQA/GQA/MLA는 폭을, 저정밀도는 값당 byte를, paged allocation은 낭비를 줄입니다. 어느 기법도 독립적인 switch가 아닙니다. 품질, kernel, scheduler, 요청 길이 분포가 작은 cache를 실제로 더 빠르고 안정적인 서비스로 만들 수 있는지 결정합니다.
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: KV Cache 없이 자기회귀적(autoregressive) 생성을 수행할 경우 왜 단계당 $O(N^2)$ 의 시간 복잡도가 발생하는가?</summary>
-*캐시가 없으면 $N$ 번째 토큰을 생성할 때마다 이전 $N-1$ 개의 모든 토큰에 대해 투영(projection) 및 어텐션 점수 계산을 처음부터 다시 수행해야 합니다. 이러한 전체 시퀀스 계산이 매 생성 단계마다 발생하기 때문에 $N$ 개의 토큰을 생성하는 총 시간은 기하급수적(이차 함수형)으로 증가합니다.*
+<summary>Quiz 1: “KV cache가 generation을 quadratic에서 linear로 바꾼다”는 설명이 불완전한 이유는 무엇인가요?</summary>
+*Decode $t$ 단계에서도 $O(t)$ history를 읽으므로 새 token $N$ 개의 전체 attention은 $O(N^2)$ 입니다. Cache는 단계마다 전체 prefix projection과 $O(t^2)$ attention을 재계산하는 일을 제거합니다.*
 </details>
 
 <details>
-<summary>Quiz 2: KV Cache 메모리 공식에서 풋프린트에 2를 곱하는 이유는 무엇인가?</summary>
-*시퀀스 내의 모든 토큰에 대해 Key (K) 행렬과 Value (V) 행렬 두 가지를 모두 저장해야 한다는 사실을 반영하기 위해 2를 곱합니다.*
+<summary>Quiz 2: Logical token 수가 같아도 cache 용량이 달라질 수 있는 이유는 무엇인가요?</summary>
+*Block rounding, 길이 분산, speculative branch, padding, prefix sharing, 복제, fragmentation이 allocated token과 overhead를 바꾸기 때문입니다.*
 </details>
 
 <details>
-<summary>Quiz 3: DeepSeek의 Multi-Head Latent Attention (MLA)는 추론 중 고차원의 Key 행렬이 메모리에 구체화(materializing)되는 것을 어떻게 방지하는가?</summary>
-*MLA는 저차원의 잠재 벡터(latent vector)를 캐시에 저장합니다. 행렬 흡수(Matrix Absorption)라는 수학적 기법을 통해 Key 압축 해제 행렬을 Query 투영 행렬에 직접 흡수시킵니다. 이를 통해 어텐션 커널은 HBM에서 가져온 원시 압축 잠재 벡터와 투영된 Query 간의 내적을 계산할 수 있어, 완전한 Key 행렬을 생성할 필요를 우회합니다.*
+<summary>Quiz 3: FP8 KV cache의 throughput 이득을 주장하기 전에 무엇이 필요한가요?</summary>
+*Model, scheduler, traffic, latency 목표, output policy를 고정하고 bandwidth, 점유율, 변환 overhead, tail latency, throughput, 품질 slice를 측정해야 합니다.*
 </details>
 
 <details>
-<summary>Quiz 4: INT4 양자화를 사용하여 KV Cache 메모리를 줄일 경우, 디코드 단계에서 발생하는 주요 하드웨어 트레이드오프(trade-off)는 무엇인가?</summary>
-*디코드 단계는 극도로 메모리 대역폭 바운드(memory-bandwidth bound) 상태이므로, GPU는 대부분의 시간을 HBM에서 SRAM으로 데이터를 전송하는 데 기다리며 보냅니다. INT4 양자화는 SRAM 내부에서 값을 FP16으로 다시 역양자화하기 위한 약간의 연산 오버헤드를 발생시키지만, 데이터 전송에 걸리는 시간을 획기적으로 줄여줍니다. 따라서 이 트레이드오프는 매우 유리하게 작용하여 토큰 생성 처리량을 크게 높여줍니다.*
+<summary>Quiz 4: MLA가 position 관련 cache 성분을 별도로 유지하는 이유는 무엇인가요?</summary>
+*RoPE는 위치에 따른 rotation이므로 순수 선형 up-projection처럼 static projection matrix에 흡수할 수 없습니다.*
 </details>
 
 <details>
-<summary>Quiz 5: $L$ 개의 레이어, 히든 차원 $d$, $H_Q$ 개의 Query 헤드, $H_{KV}$ 개의 Key-Value 헤드(Grouped-Query Attention), 시퀀스 길이 $S$, 배치 크기 $B$ 를 가지며 float16 정밀도를 사용하는 LLM에 대해 정확한 KV 캐시 메모리 풋프린트(기가바이트(GB) 단위) 수학적 유도 공식을 도출하시오.</summary>
-*GQA (Grouped-Query Attention)에서 Key 및 Value 벡터의 차원은 $H_{KV} / H_Q$ 비율만큼 감소합니다. KV 헤드당 차원은 $d_{head} = d / H_Q$ 입니다. 따라서 각 토큰은 레이어당 $2 \times L \times H_{KV} \times d_{head}$ 개의 파라미터를 필요로 합니다. float16 정밀도를 사용할 때 각 파라미터는 2바이트를 소비합니다. 배치 크기 $B$ 및 시퀀스 길이 $S$ 에 대해 바이트 단위의 총 메모리는 $Memory = B \times S \times L \times H_{KV} \times \frac{d}{H_Q} \times 2 \times 2$ 바이트가 됩니다. 이를 기가바이트(GB)로 변환하려면 $10^9$ (또는 $2^{30}$)으로 나눕니다. 결과적으로 GB 단위의 유도 공식은 $Footprint = \frac{4 \times B \times S \times L \times H_{KV} \times d}{H_Q \times 10^9}$ GB 입니다. 시퀀스 길이 $S$ 에 정확히 선형적으로 비례하는 이러한 특성은 왜 긴 문맥 서빙에서 메모리 관리가 가장 중요한 과제가 되는지를 명확히 해줍니다.*
+<summary>Quiz 5: torch.cat으로 cache tensor를 계속 늘리는 방식의 문제는 무엇인가요?</summary>
+*증가하는 history를 매번 새로 할당하고 복사합니다. Production engine은 block을 예약하고 row를 제자리에 씁니다.*
 </details>
-
----
 
 ## References
 
-1. <a id="ref-1"></a>DeepSeek-AI (2025). *DeepSeek-V3 Technical Report*. [arXiv:2412.19437](https://arxiv.org/abs/2412.19437)
-2. <a id="ref-2"></a>Ainslie, J., et al. (2023). *GQA: Training Generalized Multi-Query Transformer Models from Multi-Head Checkpoints*. [arXiv:2305.13245](https://arxiv.org/abs/2305.13245)
+1. <a id="ref-1"></a>Ainslie, J., et al. (2023). *GQA: Training Generalized Multi-Query Transformer Models from Multi-Head Checkpoints*. [arXiv:2305.13245](https://arxiv.org/abs/2305.13245).
+2. <a id="ref-2"></a>DeepSeek-AI. (2024). *DeepSeek-V2: A Strong, Economical, and Efficient Mixture-of-Experts Language Model*. [arXiv:2405.04434](https://arxiv.org/abs/2405.04434).
+3. <a id="ref-3"></a>vLLM Project. *Quantized KV Cache*. [공식 문서](https://docs.vllm.ai/en/latest/features/quantization/quantized_kvcache/).
+4. <a id="ref-4"></a>Kwon, W., et al. (2023). *Efficient Memory Management for Large Language Model Serving with PagedAttention*. [arXiv:2309.06180](https://arxiv.org/abs/2309.06180).
