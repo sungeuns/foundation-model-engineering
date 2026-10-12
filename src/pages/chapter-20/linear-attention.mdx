@@ -78,6 +78,8 @@ That does **not** mean the field has settled on one universal recipe. It means m
 
 The simplified block below illustrates the main computational idea: building a compact state before applying it back to the queries.
 
+> **Deliberately simplified example.** This block summarizes the entire sequence and is bidirectional: earlier outputs can depend on later tokens. It is not a causal decoder or a Gated DeltaNet implementation. Causal prefix scans, incremental state, padding masks, denominator stability, and distributed kernels are omitted.
+
 ```python
 import torch
 import torch.nn as nn
@@ -141,6 +143,13 @@ Linear attention is best understood as an important efficiency direction rather 
 
 ---
 
+## Recent Work: Gating, Delta Updates, and Stateful Serving
+
+**As of 2026-10-13.** Gated DeltaNet combines selective forgetting with targeted delta-rule updates and studies hybrid attention stacks [[4]](#ref-4). This is a specific recurrent mechanism, not the same operation as multiplying a bidirectional linear-attention output by a gate.
+
+An efficient layer still needs an exact state contract. Prefix reuse must restore recurrent state and any attention KV at the same position. Branching speculation must isolate state that cannot be rolled back by merely shortening a token buffer. The recent integration evidence in [Chapter 12.1](/chapter-12/kv-cache-management) and [Chapter 12.4](/chapter-12/speculative-decoding) explains why architecture-level memory gains require scheduler and recovery validation. Evaluate associative recall, position sensitivity, long-context quality, and cold-versus-restored continuation alongside throughput.
+
+
 ## Quizzes
 
 <details>
@@ -168,5 +177,6 @@ Linear attention is best understood as an important efficiency direction rather 
 ## References
 
 1. <a id="ref-1"></a>Katharopoulos, A., et al. (2020). *Transformers are RNNs: Fast Autoregressive Transformers with Linear Attention.* [arXiv:2006.16236](https://arxiv.org/abs/2006.16236).
-2. <a id="ref-2"></a>Yang, S., et al. (2024). *DeltaNet: Linear-Time Sequence Modeling with Gated Delta Rule.* [arXiv:2406.06484](https://arxiv.org/abs/2406.06484).
+2. <a id="ref-2"></a>Yang, S., et al. (2024). *Parallelizing Linear Transformers with the Delta Rule over Sequence Length.* [arXiv:2406.06484](https://arxiv.org/abs/2406.06484).
 3. <a id="ref-3"></a>Dao, T., & Gu, A. (2024). *Transformers are SSMs: Generalized Models and Efficient Algorithms Through Structured State Space Duality.* [arXiv:2405.21060](https://arxiv.org/abs/2405.21060).
+4. <a id="ref-4"></a>Yang, S., Kautz, J., & Hatamizadeh, A. (2024). Gated Delta Networks: Improving Mamba2 with Delta Rule. [Source](https://arxiv.org/abs/2412.06464).

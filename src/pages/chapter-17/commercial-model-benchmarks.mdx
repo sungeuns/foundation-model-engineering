@@ -8,310 +8,127 @@ import CommercialModelBenchmarkExplorer from '../../components/chapter-17/Commer
 
 # 17.6 Commercial Model Benchmarks
 
-The previous section asked how a team decides whether a model is safe enough and useful enough to release. Now we look at a more public question: when OpenAI, Google, Anthropic, Mistral, Kimi, DeepSeek, Alibaba, MiniMax, and other labs release new models every few weeks, how should we read the benchmark numbers without getting lost?
+A model release can change three things at once: what the system can solve, how much it costs to complete a task, and which deployment routes are actually available. Reading only the headline score misses the engineering decision. A public preview can be worth evaluating while still being unavailable for self-hosting; a cheap token can become an expensive task when a model emits long reasoning traces.
 
-Think of the model landscape like a city map, not a medal table. One road shows raw reasoning ability. Another shows coding-agent reliability. Another shows price per token. Another shows speed. The "best" model depends on which road your product actually travels.
+**As of 2026-10-13.** This page is a dated historical snapshot, not a live leaderboard. Availability and mutable values **must be reverified** before publication or procurement. The selected August–October releases below extend the previous September snapshot. Older releases remain useful historical examples elsewhere in the book; their old index values are not carried into the new comparison.
 
-The interactive map below is a **dated snapshot** of public model information verified on **September 15, 2026**. It is not a permanent buying guide: every model status, score, price, and availability claim **must be reverified** against the cited primary source before publication or procurement. The default view shows Artificial Analysis Intelligence Index values only where a compatible public result was available, and the release timeline starts in early 2024 so the acceleration is visible. Change the benchmark and x-axis to see the same models from different angles: performance over time, performance per token price, performance versus speed, or performance versus context window.
+## 1. One Evaluation Version, Explicit Operating Points
+
+The chart uses **Artificial Analysis Intelligence Index v4.3.2**. Its methodology now includes Terminal-Bench 4.0 and revised professional-work evaluations [[1]](#ref-1). A score from the previous v4.2 snapshot is not a compatible longitudinal measurement. A lower number after a suite revision does not establish that model capability deteriorated.
+
+All index observations below come from the evaluator's model-specific pages. **Effort and fallback settings are part of each system's identity.** Different providers' `max` settings do not imply equal FLOPs, tokens, or latency. These are observed quality/cost operating points under one evaluation suite, not a controlled experiment isolating model weights. Run matched-budget private evaluations before making a causal claim or replacement decision.
 
 <CommercialModelBenchmarkExplorer client:load />
 
----
+The default x-axis is measured **cost per AA evaluation task**. Switching to token price uses the explicit proxy $p_b=(3p_{in}+p_{out})/4$, where $p_{in}$ and $p_{out}$ are dollars per million uncached input and output tokens. This assumes a 3:1 token mixture and excludes cache writes/reads, service tiers, tools, retries, and long-context surcharges. It is not a task-cost estimate. Missing values are omitted from plots and shown as **not reported** in details; they never become zero.
 
-## 1. Metrics And Model Families In The Map
+## 2. Verified Release and Evaluation Snapshot
 
-This map is not meant to crown a permanent winner. It is a snapshot for seeing **how public model releases are accelerating and which capability axes keep moving**. A blank value means that the model does not have a public number from a compatible harness. The table avoids borrowing numbers from unrelated benchmark variants.
+The selection is illustrative rather than exhaustive. Index values are **index points**, not percentages. The evaluator's per-task costs describe its workload, not your application. Scores for restricted and preview systems do not imply general access. Speed values are omitted because the retrieved leaderboard and individual pages did not consistently agree on the serving snapshot.
 
-| Field | What it measures | How to read it |
-| :--- | :--- | :--- |
-| AA Index | An Artificial Analysis aggregate intelligence signal across multiple reasoning/evaluation tasks | A useful public aggregate, not a substitute for your private workflow eval. |
-| Vals Index | Industry-oriented work across law, finance, healthcare, education, coding, and multimodal tasks | Closer to knowledge work, but still not identical to any one company's workflow. |
-| SWE-Bench | Coding-agent performance on real GitHub issues and repository edits | Variant choice matters: Verified, Pro, Multilingual, vendor harnesses, and scaffolds are not interchangeable. |
-| Terminal-Bench | Agent performance in shell environments requiring command execution and recovery | Strongly stresses command-line workflow and tool coordination. |
-| GPQA Diamond | Hard expert-level scientific reasoning | A reasoning signal, but not a direct measure of agentic execution or tool use. |
-| Humanity's Last Exam | Difficult frontier questions across many expert domains | A fast-moving frontier signal. The trend matters more than any single point. |
-| Output speed | Output token generation speed | In interactive products, speed can matter as much as raw score. |
-| Token price | A simple blended proxy for input/output token cost | Real cost depends on prompt length, reasoning tokens, retries, and tool calls. |
-| Context window | Token budget the model can process in one request | Long context does not guarantee quality; retrieval, attention stability, and lost-in-the-middle failures still matter. |
-| Release date | Public release or model-card timing | The most important axis for this section: it shows how compressed the improvement cycle has become. |
+| Model | Release / announcement | Access as of 2026-10-13 | AA v4.3.2 configuration | Index | $/AA task | Sources |
+|---|---|---|---|---:|---:|---|
+| GPT-6.1 Sol | 2026-09-29 | released/API-only | max | 52 | 0.72 | [[3]](#ref-3) [[4]](#ref-4) |
+| GPT-6 Sol | 2026-09-22 | released/API-only | not reported | not reported | not reported | [[5]](#ref-5) |
+| GPT-6 Luna | 2026-09-22 | released/API-only | max | 38 | 0.07 | [[6]](#ref-6) [[7]](#ref-7) |
+| GPT-6 Astra | 2026-09-03 | released/API-only | max | 53 | 3.26 | [[8]](#ref-8) [[9]](#ref-9) |
+| Claude Opus 5.5 | 2026-09-22 | released/API-only | max with fallback | 58 | 5.98 | [[10]](#ref-10) [[11]](#ref-11) |
+| Claude Sonnet 5.5 | 2026-09-28 | released/API-only | max with fallback | 56 | 5.46 | [[12]](#ref-12) [[13]](#ref-13) |
+| Claude Haiku 5.5 | 2026-10-07 | released/API-only | max | 43 | 0.21 | [[14]](#ref-14) [[15]](#ref-15) |
+| Gemini 4 Argon | 2026-09-30 | restricted preview | high | 53 | 1.99 | [[16]](#ref-16) [[17]](#ref-17) |
+| DeepSeek V4.1 Flash | 2026-09-10 | released/open-weight | max | 39 | 0.27 | [[18]](#ref-18) [[19]](#ref-19) |
+| GLM-5.3 | 2026-08-14 | released/open-weight | max | 45 | 2.01 | [[20]](#ref-20) [[21]](#ref-21) |
+| Mistral Large 4 | 2026-10-06 | preview/API-only | preview configuration | 38 | 1.13 | [[22]](#ref-22) [[23]](#ref-23) |
+| Beam | 2026-10-05 | announced/planned | not reported | not reported | not reported | [[24]](#ref-24) |
 
-The major model families also represent different product theses.
+## 3. What These Releases Change for Engineers
 
-| Model family | Main signal |
-| :--- | :--- |
-| OpenAI GPT / Codex | Combines reasoning, coding agents, computer use, and a broad tool ecosystem into one product system. |
-| Google Gemini | Pushes long context, native multimodality, fast serving, and broad reasoning. |
-| Anthropic Claude | Has a strong identity around coding, long-running work, instruction following, safety posture, and enterprise workflows. |
-| DeepSeek / Kimi / Qwen / MiniMax / Z.ai / xAI / Cohere | Pressures frontier economics through MoE efficiency, open-weight releases, reasoning, long context, lower-cost inference, and enterprise/self-hosted deployment options. |
-| Mistral | Expands open-weight, enterprise, multilingual, and European/regional deployment options. |
+### Hosted models: API compatibility is a release gate
 
-So the point is not to stare at one score. Watch how **release date, benchmark score, price, speed, and context** move together. The same model can mean something very different when the x-axis changes.
+GPT-6.1 Sol's documented contract differs from GPT-6 Sol: it does not support `none` reasoning, and tool calling uses Responses. Neither an endpoint's familiar name nor an unchanged token price proves request compatibility. Validate the exact model ID, effort, tool protocol, tokenizer behavior where exposed, maximum output, error handling, and routing before a canary. Input context and maximum output are different limits.
 
----
+The Claude 5.5 family adds another operational lesson. The independent Opus and Sonnet measurements above include **fallback**, so the evaluated object includes the provider's routing and safety policy. Haiku 5.5 exposes adjustable effort. The current overview lists input/output prices of $4/$20 for Opus, $2/$10 for Sonnet, and **from** $0.10/$0.50 for Haiku per million tokens [[2]](#ref-2). Preserve the price qualifier rather than assigning the minimum to every operating mode. Cache pricing also deserves its own versioned field: a release-day article can become stale without a model-name change.
 
-## 2. Why One Leaderboard Is Not Enough
+### Open weights: inspect the artifact that will run
 
-During the GPT-4 period, a simple story still worked reasonably well: a stronger model usually produced higher scores on broad academic and professional exams. GPT-4's release emphasized that kind of progress: stronger reasoning, better exam performance, and early multimodal capability [[1]](#ref-1).
+DeepSeek V4.1 Flash and GLM-5.3 have public model repositories. The former changes the architecture and cache contract; the latter documents text-only inputs and always-on reasoning. These are different migration problems. Weight availability does not disclose the full data mixture, establish a reproducible training recipe, or guarantee that your serving engine supports the intended precision, attention state, and chat template.
 
-That story is now too small. Recent frontier models are not only chat models with better next-token prediction. They are product systems:
+Kimi K3 and Qwen3.8 remain relevant open-weight examples in [Chapter 4.5](/chapter-4/various-llm-architectures). Keep their hosted and local artifacts distinct: Qwen3.8's local configuration declares 262,144 positions, while extended or hosted context claims require their own scaling and serving evidence. Do not transfer a hosted endpoint's result or limit to a similarly named downloadable checkpoint.
 
-- routers that choose between fast and deeper reasoning modes
-- models with adjustable thinking budgets
-- tool-using agents that browse, write code, edit files, and operate computers
-- multimodal systems that parse screenshots, documents, audio, video, and long repositories
-- safety layers that may change behavior by domain
+### Announcements: a future weight release is not present access
 
-OpenAI describes GPT-5 as a unified system with fast responses, deeper reasoning, and routing components rather than a single flat model endpoint [[2]](#ref-2). Google describes Gemini 2.5 and Gemini 3.1 Pro as reasoning-oriented multimodal models with long-context behavior [[6]](#ref-6) [[7]](#ref-7). Anthropic's recent Claude releases emphasize long-running software work, computer use, prompt-injection resistance, and controlled access for more sensitive cybersecurity capabilities [[8]](#ref-8) [[9]](#ref-9).
+Mistral Large 4 is an API preview, with weights promised later in October. Beam's announcement invites early-access signup and also promises weights and technical artifacts later in October. Gemini 4 Argon's initial rollout is restricted to trusted cyber defenders. Their launch material can establish provider claims and release plans; it cannot establish completed self-hostable releases. In particular, Argon's announced 1M **output** limit must not be entered as a measured **input-context** value.
 
-This changes the meaning of a benchmark number. A score now depends on at least five choices:
+## 4. A Benchmark Result Needs a Reproduction Record
 
-| Choice | Why it matters |
-| :--- | :--- |
-| Model variant | "Pro", "Thinking", "Instant", "max effort", and coding-specialized variants can be different operating points. |
-| Harness | A browser-use benchmark with screenshots, DOM access, or shell access measures different skills. |
-| Tool allowance | Search, Python, code execution, and file-system access can dominate the score. |
-| Reasoning budget | Higher effort may improve accuracy while increasing latency and cost. |
-| Grading method | Exact match, unit tests, LLM judge, pairwise preference, and human review reward different behaviors. |
+Record the following before accepting a public result into an internal comparison:
 
-So the useful question is not "Which model is best?" A better question is: **best under which harness, with which tools, at what latency and cost budget?**
+| Field | Required distinction |
+|---|---|
+| Task | Dataset, split, version, exclusions, and contamination checks |
+| System | Model revision, provider fallback, scaffold, tools, and permissions |
+| Budget | Effort, sampling, attempts, token/context limits, timeout, and total cost |
+| Grader | Test suite or judge revision, prompt/rubric, and aggregation |
+| Evidence | Report date, source URL, uncertainty, and per-case outcomes where available |
 
----
+Terminal-Bench 2.1, 3.0, and 4.0 are separate evaluations. SWE-bench Verified, Pro, DeepSWE, and private coding suites are also separate. HLE with tools and HLE without tools must not share a series. A GDPval-AA Elo-like rating must not receive a percent sign. A leaderboard's ranking can change when the harness, task mix, or population changes even if the model does not.
 
-## 3. The Three Public Lenses
+## 5. From Public Signal to a Deployment Decision
 
-### Lab model cards and release notes
+Start with a Pareto shortlist across quality, task cost, p95 latency, context behavior, deployment control, and safety. Then compare candidate and champion on the same private prompts, tool state, and declared budgets. Measure successful tasks per dollar and per minute, critical-slice failures, and repeated-run reliability. Averages must not hide unauthorized tool effects or severe failures.
 
-Model cards and release notes tell us what the model creator thinks matters: context length, modalities, intended use, safety posture, and benchmark methodology. They are the first place to check, but they are not neutral scoreboards. Labs naturally highlight the evaluations that best explain the model they are shipping.
-
-For example, OpenAI's GPT-5.3-Codex release focused on SWE-Bench Pro, Terminal-Bench, OSWorld, GDPval, cybersecurity CTFs, and SWE-Lancer because the product was a coding and computer-use agent [[3]](#ref-3). GPT-5.4 and GPT-5.5 then pushed the same family of metrics further into general professional work and native computer use [[4]](#ref-4) [[5]](#ref-5).
-
-Google's Gemini 3.1 Pro model card highlights HLE, ARC-AGI-2, GPQA Diamond, SWE-Bench, LiveCodeBench, BrowseComp, MMMU-Pro, and long-context tests [[7]](#ref-7). Gemini 3.5 Flash, released in May 2026, shows how the Flash tier has moved beyond "cheap and fast" serving into agentic coding and long-horizon workflow work. Its model card reports a 1M-token input context, 64K output, 76.2% on Terminal-Bench 2.1, 83.6% on MCP Atlas, and 78.4% on OSWorld-Verified, while still showing areas where Gemini 3.1 Pro remains stronger on pure reasoning tests such as HLE and ARC-AGI-2 [[26]](#ref-26) [[27]](#ref-27). Anthropic's Opus 4.7 announcement emphasizes long-running software engineering, third-party GDPval-AA, document reasoning, prompt-injection resistance, and migration effects such as tokenizer and effort-level changes [[8]](#ref-8).
-
-Lab cards answer: **What did the creator optimize for, and what deployment constraints come with it?**
-
-### Independent benchmark dashboards
-
-Artificial Analysis, Vals AI, and LMArena are useful because they compare models from many providers under a more consistent public process.
-
-Artificial Analysis reports an Intelligence Index that combines multiple evaluations such as GDPval-AA, Terminal-Bench Hard, GPQA Diamond, Humanity's Last Exam, SciCode, instruction-following tests, and other reasoning tasks [[10]](#ref-10). Vals AI focuses on real-world industry tasks across law, finance, healthcare, education, coding, and multimodal work [[11]](#ref-11). LMArena collects blind pairwise votes across text, code, vision, image, search, and video arenas [[12]](#ref-12); the underlying Chatbot Arena method is based on large-scale human preference comparisons [[13]](#ref-13).
-
-Independent dashboards answer: **How does a model compare under a shared public harness today?**
-
-### Internal product evaluations
-
-The most important benchmark for a company is usually private. It comes from real failures: support conversations, code review incidents, spreadsheet tasks, RAG misses, medical triage escalations, prompt-injection cases, tool-call errors, or customer workflows that are too specific to appear in a public benchmark.
-
-Public benchmarks tell you whether a model deserves a trial. Private evals tell you whether it should replace the model already serving users.
-
----
-
-## 4. What Changed In The Last Three Years
-
-### From static knowledge to reasoning and agents
-
-In 2023, MMLU, GSM8K, HumanEval, and professional exams were strong headline signals. They still matter, but they are now closer to unit tests for baseline competence than final release criteria.
-
-The frontier moved toward:
-
-- **scientific reasoning:** GPQA Diamond, HLE, SciCode, CritPt
-- **coding agents:** SWE-Bench Verified, SWE-Bench Pro, Terminal-Bench, LiveCodeBench
-- **computer use:** OSWorld, WebArena-style browser tasks, MCP workflow tasks
-- **knowledge work:** GDPval, FinanceAgent, OfficeQA, Vals Index
-- **preference and product fit:** LMArena, WebDev Arena, domain-specific human review
-
-The important change is that many valuable tasks are now loops rather than one-shot answers:
-
-$$
-\text{observe} \rightarrow \text{plan} \rightarrow \text{act} \rightarrow \text{verify} \rightarrow \text{revise}
-$$
-
-That loop is harder to score than a multiple-choice answer. It also reveals problems that old benchmarks hide: tool-call reliability, latency, state management, recovery from bad intermediate steps, and safety behavior under hidden instructions.
-
-### Faster releases, smaller visible gaps
-
-Commercial release cadence has accelerated. In early 2024, Gemini 1.5 Pro made 1M-token long context a visible frontier feature [[15]](#ref-15), Claude 3 formalized the Opus/Sonnet/Haiku ladder [[16]](#ref-16), GPT-4o pushed low-latency multimodal interaction into the mainstream [[17]](#ref-17), Claude 3.5 Sonnet moved high capability into a cheaper mid-tier model [[18]](#ref-18), and OpenAI o1 made test-time reasoning a product category [[19]](#ref-19). Mistral Large 2, DeepSeek-V3, DeepSeek-R1, Qwen3, MiniMax-M1, and Kimi K2 then showed that the challenger lane was no longer just "smaller open models"; it was competing on MoE efficiency, reasoning, long context, and agentic coding [[20]](#ref-20) [[21]](#ref-21) [[22]](#ref-22) [[23]](#ref-23) [[24]](#ref-24) [[25]](#ref-25).
-
-By 2026, OpenAI's public sequence from GPT-5.3-Codex through the GPT-5.6 tiers and GPT-6 Astra shows updates only weeks or months apart, each with a different emphasis: coding-agent specialization, cost tiers, general professional work, computer use, and long-horizon task completion [[3]](#ref-3) [[38]](#ref-38) [[48]](#ref-48). Google's Gemini 2.5 through Gemini 3.8 Flash sequence shows a similar pattern: reasoning behavior and multimodality have become the central product axis rather than optional features, and even the Flash tier is now marketed around agent scaffolds, coding, and workflow automation [[6]](#ref-6) [[7]](#ref-7) [[50]](#ref-50). Anthropic's Claude line now splits not only by Opus/Sonnet/Haiku economics, but also by effort level, computer-use reliability, safety posture, routed fallback, and gated access for unusually sensitive capabilities [[8]](#ref-8) [[52]](#ref-52).
-
-The visible gap between top models on old static tasks is often small. The real separation appears on harder harnesses:
-
-- long-horizon coding tasks where the agent must inspect a repo and run tests
-- professional tasks where output quality is judged by experts
-- browser or desktop tasks where the model must recover from UI friction
-- adversarial safety settings where a model must ignore hidden instructions
-- cost-adjusted evaluations where a slightly weaker but cheaper model wins in production
-
-### The mid-2026 compression wave and September handoff
-
-The newest releases make three different kinds of improvement visible.
-
-| Release | What improved | What not to overclaim |
-| :--- | :--- | :--- |
-| Gemini 3.6 Flash | Built from the 3.5 Flash line, Google reports 17% fewer output tokens on the AA Index, fewer tool loops, stronger coding/computer use, and a lower output-token price of USD 7.50/M versus USD 9/M [[36]](#ref-36) [[37]](#ref-37) | It is an efficiency-oriented Flash update, not proof that every reasoning benchmark exceeds the Pro tier |
-| GPT-5.6 Sol / Terra / Luna | One 1.05M-context family exposes flagship, balanced, and fast/cheap operating points. Post-launch price changes moved standard API input/output rates to USD 4/20, USD 2/12, and USD 0.20/1.20 per million tokens respectively [[38]](#ref-38) [[49]](#ref-49) | Long prompts cross documented price thresholds; provider scores are model-plus-harness results; ultra is a multi-agent system mode, not a larger context window |
-| Claude Fable 5 | Mythos-class capability is exposed through broad safety classifiers and automatic fallback. Anthropic initially reported that more than 95% of sessions did not invoke fallback [[41]](#ref-41) [[42]](#ref-42) | A deployed Fable answer can be a routed system response; the product name does not guarantee one underlying-model path |
-| Claude Opus 5 | Near-Fable capability at half Fable's token price, with stronger self-verification, long-horizon work, vision/office tasks, and less restrictive everyday safeguards [[43]](#ref-43) [[44]](#ref-44) | “Near” is workload-dependent; private evaluations still decide whether the cost/quality trade is real |
-| GPT-6 Astra | A September flagship centered on professional artifacts, computer use, science, and long-running coding; OpenAI prices the standard API at USD 10/M input and USD 50/M output [[48]](#ref-48) | OpenAI's benchmark values are provider results, and the system carries stronger cyber safeguards after being classified Critical under the Preparedness Framework |
-| Gemini 3.8 Flash | Google reports stronger long-horizon software engineering and agentic knowledge work at a USD 0.75/3.75 introductory input/output price through 2026, with 1M input and 64K output limits [[50]](#ref-50) [[51]](#ref-51) | The lower price expires after 2026; more reasoning and tool iterations can increase end-to-end token use |
-| Claude Fable / Mythos 5.1 | The same underlying model is exposed with different safeguards: Fable is generally available, while Mythos is restricted; flagged Fable requests may route to an Opus fallback [[52]](#ref-52) | The evaluated object can be model + safeguard + fallback, so log the actual responding path and intervention rate |
-
-The GPT-5.6 tier names are especially useful as a design lesson. Sol, Terra, and Luna are not a simple quality ladder. They are explicit points on a deployment surface. At the September standard rates, Sol costs 20 times Luna per input token and about 16.7 times per output token. If Luna passes a private release gate, buying Sol by default can spend far more without creating proportionate product value. This calculation still understates complexity: cached inputs, long-context multipliers, tool charges, and retries change the bill.
-
-Fable teaches a different lesson: **the evaluated object may be a router**. If a safety classifier can fall back to another model, the measured production system is classifier + policy + fallback + base capability. Record routing rates and fallback-specific failures in eval logs; otherwise a single aggregate score hides which system actually answered.
-
-### Open preview is not open weight
-
-GLM-5.2 is verifiably open weight under MIT and publishes enough configuration detail to inspect its 753B MoE, sparse attention, 1M context, IndexShare, and MTP path [[45]](#ref-45). Kimi K3 moved from announcement to released/open-weight on July 27: Moonshot published the weights, technical report, MoonEP communication library, FlashKDA kernels, and AgentEnv sandbox system [[53]](#ref-53). Qwen3.8-Max likewise graduated from preview in August, and Alibaba/Qwen published the 2.4T-A95B weights; exact data mixtures and some long-horizon claims remain provider-disclosed rather than independently reproduced [[54]](#ref-54) [[55]](#ref-55).
-
-This status change is why release state belongs in the dataset, not just in prose. A future date in an announcement is not self-updating evidence. The canonical row should change only after the promised artifact can be fetched and its license and configuration inspected.
-
-These three rows should not share one “open” badge. A useful release-state vocabulary is:
-
-- **released:** the claimed artifact is available now;
-- **preview:** a hosted or limited product can be tested;
-- **announced:** a dated or undated future artifact is promised;
-- **restricted:** access requires identity, contract, or capability approval.
-
-That vocabulary prevents a surprisingly common benchmark error: comparing an announced architecture as if it were independently reproducible.
-
-### The challenger effect
-
-China-based and open-weight labs changed the economics of evaluation. Kimi, DeepSeek, Alibaba's Qwen family, MiniMax, Z.ai, and related models often appear near the frontier on independent dashboards, especially when cost is included. Qwen3.7-Max, announced in May 2026, shows that this pressure is no longer only about open weights; Alibaba frames it as a proprietary agent foundation for coding, office workflow automation, multi-agent orchestration, and long-horizon execution. The release describes a 35-hour autonomous kernel-optimization run with more than 1,000 tool calls, plus a 1M context and 65,536 max-token configuration in agent tooling examples [[28]](#ref-28) [[29]](#ref-29). The interactive map also includes adjacent pressure points that are easy to miss in a prose-only timeline: base GPT-5 as the unified-system transition, Kimi K2.6 and DeepSeek V4 Flash as newer open-weight frontier/efficiency points, Grok 4.3 as a low-output-price proprietary challenger, GLM-4.7 as a Z.ai coding-agent model, and Cohere Command A+ as an enterprise open-weight/sovereign-AI signal [[30]](#ref-30) [[31]](#ref-31) [[32]](#ref-32) [[33]](#ref-33) [[34]](#ref-34) [[35]](#ref-35). Mistral occupies a different strategic position: European, enterprise-oriented, and focused on open-weight and customizable deployments [[14]](#ref-14).
-
-This matters because model selection is no longer a pure quality ranking. A model that is a few points lower on an aggregate index but much cheaper, faster, open-weight, or deployable in a preferred jurisdiction may be the correct engineering choice.
-
----
-
-## 5. What Commercial Models Teach Us
-
-The main lesson is not that one provider stays permanently ahead. The lesson is that the unit of progress has changed. In 2024, major releases were separated by months and were easy to describe as model upgrades: more context, better vision, stronger coding, lower price. By 2025 and 2026, the frontier started moving as a sequence of product systems: thinking modes, tool use, browser and desktop operation, coding agents, long-horizon workflow completion, and risk-gated access.
-
-That acceleration has three practical consequences.
-
-First, benchmark leadership is becoming short-lived. A model can be first on a public aggregate score and still lose a few weeks later on a different harness, a cheaper challenger, or a specialized coding agent. This is why the release timeline matters: it shows the slope of change, not just the current winner.
-
-Second, improvement is increasingly architectural and operational, not only statistical. The important deltas are often MoE routing efficiency, long-context stability, inference-time reasoning, tool reliability, token efficiency, and safety gating. Those details affect production behavior more than a one-point difference on a saturated exam.
-
-Third, the frontier is spreading sideways. Closed proprietary models still set many top-line scores, but Chinese labs and European open-weight providers have made cost, deployment control, multilingual support, and self-hosting part of the evaluation conversation. The result is a faster, wider Pareto surface: model selection is now a moving engineering trade-off, not a static ranking exercise.
-
-For actual model selection, a compact metric vector is more useful than one rank:
-
-$$
-\mathbf{s}(m) =
-\left[
-q_{\text{reasoning}},
-q_{\text{coding}},
-q_{\text{tool}},
-q_{\text{domain}},
-c_{\text{token}},
-\ell_{\text{p95}},
-r_{\text{safety}}
-\right]
-$$
-
-The chosen model is rarely the argmax of one quality score. It is usually the model that maximizes utility under constraints:
-
-$$
-m^* = \arg\max_m U(m)
-\quad \text{s.t.} \quad
-c(m) \le C,\ \ell_{p95}(m) \le L,\ r_{\text{critical}}(m) = 0
-$$
-
-where $U(m)$ is task utility, $C$ is the cost budget, $L$ is the latency budget, and $r_{\text{critical}}$ is the count or probability of unacceptable failures. Capability asks "can it solve the task?" Deployability asks whether it still works under your latency, cost, data-residency, safety-policy, and private-eval constraints. Keeping those separate prevents public leaderboard excitement from turning into a production mistake.
-
----
-
-## 6. Practical Takeaway
-
-The frontier is no longer a single leaderboard race. It is a moving Pareto surface of intelligence, tool use, latency, token price, safety posture, openness, and product fit. Since early 2024, the release cycle has visibly compressed while improvement has shifted from static academic exams toward dynamic, agentic, and domain-specific work. Good teams read public scores as useful but incomplete signals and maintain private evals as release gates.
-
-The next chapter section can now return to the larger question: if benchmarks keep moving, how do we build evaluation systems that improve faster than models can overfit them?
-
----
+For API models, record provider routing and model revisions and detect alias changes. For local models, pin weights, tokenizer, template, quantization scales, kernels, and distributed topology as one artifact bundle. Finish with a canary and a rehearsed switch to the last-known-good system, following [Chapter 17.5](/chapter-17/production-evaluation-and-release-gates).
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: Why is it misleading to compare a GPT-5.5 Terminal-Bench result directly with a Gemini 3.1 Pro SWE-Bench result?</summary>
-*They measure different task distributions and execution loops. Terminal-Bench emphasizes command-line workflows, tool coordination, and environment recovery, while SWE-Bench variants emphasize repository issue resolution under a particular scaffold. The model, harness, tool allowance, reasoning budget, and grader all shape the score.*
+<summary>Quiz 1: Why can a model's index decline after the evaluator changes its suite?</summary>
+*The tasks, versions, and weighting changed. Comparing v4.2 and v4.3.2 does not isolate model capability; rerun both systems under one version.*
 </details>
 
 <details>
-<summary>Quiz 2: A cheaper open-weight model is 4 points below the top proprietary model on an aggregate benchmark. When might it still be the better production choice?</summary>
-*It can be better when latency, token cost, data residency, self-hosting, customization, auditability, or fallback capacity dominate the utility function. A small quality gap on a public benchmark may be irrelevant if the open-weight model passes the private workflow eval and satisfies operational constraints the proprietary model cannot.*
+<summary>Quiz 2: Why is a 3:1 blended token price insufficient for choosing an agent model?</summary>
+*Agents consume different reasoning lengths, cached prefixes, retries, and tool calls. Measure completed-task cost and latency on the intended workload.*
 </details>
 
 <details>
-<summary>Quiz 3: Why did public evaluation shift from MMLU-style static exams toward agentic benchmarks such as SWE-Bench Pro, Terminal-Bench, OSWorld, and GDPval?</summary>
-*Static exams became saturated and are vulnerable to contamination. High-value commercial workloads require multi-step planning, tool use, state tracking, verification, and recovery from errors. Agentic benchmarks expose these behaviors, along with cost and latency, better than one-shot question answering.*
+<summary>Quiz 3: Can an announcement calling a model open-weight establish that weights are released?</summary>
+*No. Inspect accessible weight files and usable configuration. A promise of a later release remains announced/planned even when an API preview exists.*
 </details>
 
 <details>
-<summary>Quiz 4: What is the main risk of copying numbers from model cards into a comparison table without methodology notes?</summary>
-*The table can imply apples-to-apples comparison where none exists. Labs may use different prompts, tools, effort levels, sampling settings, dates, and graders. Without methodology notes, readers may interpret a benchmark delta as intrinsic model quality rather than harness-specific measurement.*
+<summary>Quiz 4: What changes when a benchmark explicitly includes fallback?</summary>
+*The measured system includes provider routing and safeguards. Its result cannot be attributed to the named model's weights alone.*
 </details>
 
 <details>
-<summary>Quiz 5: In the utility formula $m^* = \arg\max_m U(m)$ subject to cost, latency, and critical-risk constraints, why is a hard safety constraint often better than folding safety into the average utility score?</summary>
-*Some failures are unacceptable even if the average quality is high. Folding critical safety into an average can hide rare severe regressions behind many benign wins. A hard constraint keeps release decisions aligned with operational risk: a model can be generally better and still be blocked.*
+<summary>Quiz 5: Why keep a hosted context limit separate from a local checkpoint's configuration?</summary>
+*They can use different revisions, position scaling, templates, or serving policies. The local artifact must pass its own long-context correctness and capacity tests.*
 </details>
-
----
 
 ## References
 
-1. <a id="ref-1"></a>OpenAI. (2023). *GPT-4.* [OpenAI Research](https://openai.com/research/gpt-4).
-2. <a id="ref-2"></a>OpenAI. (2025). *GPT-5 System Card.* [OpenAI](https://openai.com/index/gpt-5-system-card/).
-3. <a id="ref-3"></a>OpenAI. (2026). *Introducing GPT-5.3-Codex.* [OpenAI](https://openai.com/index/introducing-gpt-5-3-codex/).
-4. <a id="ref-4"></a>OpenAI. (2026). *Introducing GPT-5.4.* [OpenAI](https://openai.com/index/introducing-gpt-5-4/).
-5. <a id="ref-5"></a>OpenAI. (2026). *Introducing GPT-5.5* and *GPT-5.5 System Card.* [Release](https://openai.com/index/introducing-gpt-5-5/), [System Card](https://openai.com/index/gpt-5-5-system-card/).
-6. <a id="ref-6"></a>Google DeepMind. (2025). *Gemini 2.5: Our newest Gemini model with thinking.* [Google Blog](https://blog.google/technology/google-deepmind/gemini-model-thinking-updates-march-2025).
-7. <a id="ref-7"></a>Google DeepMind. (2026). *Gemini 3.1 Pro Model Card.* [Google DeepMind](https://deepmind.google/models/model-cards/gemini-3-1-pro/).
-8. <a id="ref-8"></a>Anthropic. (2026). *Introducing Claude Opus 4.7.* [Anthropic](https://www.anthropic.com/news/claude-opus-4-7).
-9. <a id="ref-9"></a>Anthropic. (2026). *Project Glasswing.* [Anthropic](https://www.anthropic.com/project/glasswing).
-10. <a id="ref-10"></a>Artificial Analysis. (2026). *AI Model Evaluations and Intelligence Index.* [Artificial Analysis](https://artificialanalysis.ai/evaluations).
-11. <a id="ref-11"></a>Vals AI. (2026). *Benchmarks.* [Vals AI](https://www.vals.ai/benchmarks).
-12. <a id="ref-12"></a>LMArena. (2026). *Leaderboard.* [LMArena](https://lmarena.ai/leaderboard/).
-13. <a id="ref-13"></a>Chiang, W.-L., et al. (2024). *Chatbot Arena: An Open Platform for Evaluating LLMs by Human Preference.* [arXiv:2403.04132](https://arxiv.org/abs/2403.04132).
-14. <a id="ref-14"></a>Mistral AI. (2026). *Models Overview.* [Mistral Docs](https://docs.mistral.ai/models/overview).
-15. <a id="ref-15"></a>Google. (2024). *Our next-generation model: Gemini 1.5.* [Google Blog](https://blog.google/innovation-and-ai/products/google-gemini-next-generation-model-february-2024/).
-16. <a id="ref-16"></a>Anthropic. (2024). *Introducing the next generation of Claude.* [Anthropic](https://www.anthropic.com/news/claude-3-family).
-17. <a id="ref-17"></a>OpenAI. (2024). *Hello GPT-4o.* [OpenAI](https://openai.com/index/hello-gpt-4o/).
-18. <a id="ref-18"></a>Anthropic. (2024). *Claude 3.5 Sonnet.* [Anthropic](https://www.anthropic.com/news/claude-3-5-sonnet).
-19. <a id="ref-19"></a>OpenAI. (2024). *Introducing OpenAI o1-preview.* [OpenAI](https://openai.com/index/introducing-openai-o1-preview/).
-20. <a id="ref-20"></a>Mistral AI. (2024). *Large Enough: Mistral Large 2.* [Mistral AI](https://mistral.ai/news/mistral-large-2407).
-21. <a id="ref-21"></a>DeepSeek-AI. (2024). *DeepSeek-V3 Technical Report.* [arXiv:2412.19437](https://arxiv.org/abs/2412.19437).
-22. <a id="ref-22"></a>DeepSeek-AI. (2025). *DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning.* [arXiv:2501.12948](https://arxiv.org/abs/2501.12948).
-23. <a id="ref-23"></a>Qwen Team. (2025). *Qwen3: Think Deeper, Act Faster.* [Qwen Blog](https://qwenlm.github.io/blog/qwen3/).
-24. <a id="ref-24"></a>MiniMax. (2025). *MiniMax-M1, the World's First Open-Source, Large-Scale, Hybrid-Attention Reasoning Model.* [MiniMax](https://www.minimax.io/news/minimaxm1).
-25. <a id="ref-25"></a>Moonshot AI. (2025). *Kimi K2.* [Kimi](https://www.kimi.com/preview/1980c532-5631-8c55-885f-517d380005e7).
-26. <a id="ref-26"></a>Google DeepMind. (2026). *Gemini 3.5 Flash Model Card.* [Google DeepMind](https://deepmind.google/models/model-cards/gemini-3-5-flash/).
-27. <a id="ref-27"></a>Google. (2026). *Gemini 3.5: frontier intelligence with action.* [Google Blog](https://blog.google/innovation-and-ai/models-and-research/gemini-models/gemini-3-5/).
-28. <a id="ref-28"></a>Qwen Team. (2026). *Qwen3.7: The Agent Frontier.* [Qwen / Alibaba Cloud Community](https://www.alibabacloud.com/blog/qwen3-7-the-agent-frontier_603154).
-29. <a id="ref-29"></a>Alibaba Cloud. (2026). *Alibaba Announces Comprehensive Full-Stack AI Upgrade for the Agentic Era.* [Alibaba Cloud](https://www.alibabacloud.com/press-room/alibaba-announces-comprehensive-full-stack-ai).
-30. <a id="ref-30"></a>OpenAI. (2025). *Introducing GPT-5.* [OpenAI](https://openai.com/index/introducing-gpt-5/).
-31. <a id="ref-31"></a>Artificial Analysis. (2026). *Kimi K2.6 - Intelligence, Performance & Price Analysis.* [Artificial Analysis](https://artificialanalysis.ai/models/kimi-k2-6).
-32. <a id="ref-32"></a>Artificial Analysis. (2026). *DeepSeek V4 Flash - Intelligence, Performance & Price Analysis.* [Artificial Analysis](https://artificialanalysis.ai/models/deepseek-v4-flash).
-33. <a id="ref-33"></a>Artificial Analysis. (2026). *Grok 4.3 - Intelligence, Performance & Price Analysis.* [Artificial Analysis](https://artificialanalysis.ai/models/grok-4-3/).
-34. <a id="ref-34"></a>Artificial Analysis. (2026). *GLM-4.7 - Intelligence, Performance & Price Analysis.* [Artificial Analysis](https://artificialanalysis.ai/models/glm-4-7).
-35. <a id="ref-35"></a>Cohere. (2026). *Introducing Command A+.* [Cohere](https://cohere.com/blog/command-a-plus).
-36. <a id="ref-36"></a>Google. (2026). *Gemini 3.6 Flash, 3.5 Flash-Lite and 3.5 Flash-Cyber*. [Google Blog](https://blog.google/innovation-and-ai/models-and-research/gemini-models/gemini-3-6-flash-3-5-flash-lite-3-5-flash-cyber/).
-37. <a id="ref-37"></a>Google DeepMind. (2026). *Gemini 3.6 Flash Model Card*. [Google DeepMind](https://deepmind.google/models/model-cards/gemini-3-6-flash/).
-38. <a id="ref-38"></a>OpenAI. (2026). *Introducing GPT-5.6*. [OpenAI](https://openai.com/index/gpt-5-6/).
-39. <a id="ref-39"></a>OpenAI. (2026). *GPT-5.6 Terra model*. [OpenAI API Docs](https://developers.openai.com/api/docs/models/gpt-5.6-terra).
-40. <a id="ref-40"></a>OpenAI. (2026). *GPT-5.6 Preview System Card*. [OpenAI Deployment Safety](https://deploymentsafety.openai.com/gpt-5-6-preview/gpt-5-6-preview.pdf).
-41. <a id="ref-41"></a>Anthropic. (2026). *Claude Fable 5 and Claude Mythos 5*. [Anthropic](https://www.anthropic.com/news/claude-fable-5-mythos-5).
-42. <a id="ref-42"></a>Anthropic. (2026). *Introducing Claude Fable 5 and Claude Mythos 5*. [Claude Docs](https://platform.claude.com/docs/en/about-claude/models/introducing-claude-fable-5-and-claude-mythos-5).
-43. <a id="ref-43"></a>Anthropic. (2026). *Claude Opus 5*. [Anthropic](https://www.anthropic.com/news/claude-opus-5).
-44. <a id="ref-44"></a>Anthropic. (2026). *Models overview*. [Claude Docs](https://platform.claude.com/docs/en/about-claude/models/overview).
-45. <a id="ref-45"></a>Z.ai. (2026). *GLM-5.2: From Long Context to Long-Horizon Agents*. [Z.ai](https://z.ai/blog/glm-5.2).
-46. <a id="ref-46"></a>Moonshot AI. (2026). *Kimi K3: A Native Multimodal Agent Model*. [Kimi](https://www.kimi.com/blog/kimi-k3).
-47. <a id="ref-47"></a>Alibaba Group. (2026). *Alibaba Unveils Qwen3.8-Max-Preview*. [Alibaba Group](https://www.alibabagroup.com/en-US/document-2016703577908576256).
-48. <a id="ref-48"></a>OpenAI. (2026). *GPT-6 Astra: A new generation of intelligence*. [OpenAI](https://openai.com/index/gpt-6-astra/).
-49. <a id="ref-49"></a>OpenAI. (2026). *Models*. [OpenAI API documentation](https://developers.openai.com/api/docs/models).
-50. <a id="ref-50"></a>Google. (2026). *Introducing Gemini 3.8 Flash and 3.8 Flash Cyber*. [Google Blog](https://blog.google/innovation-and-ai/models-and-research/gemini-models/3-8-flash-and-3-8-flash-cyber/).
-51. <a id="ref-51"></a>Google DeepMind. (2026). *Gemini 3.8 Flash Model Card*. [Google DeepMind](https://deepmind.google/models/model-cards/gemini-3-8-flash/).
-52. <a id="ref-52"></a>Anthropic. (2026). *Claude Fable 5.1 and Claude Mythos 5.1*. [Anthropic](https://www.anthropic.com/claude-fable-and-mythos-5-1).
-53. <a id="ref-53"></a>Moonshot AI. (2026). *Kimi K3 Open Day: weights, technical report, and infrastructure*. [Kimi](https://www.kimi.com/news/kimi-k3-open-source).
-54. <a id="ref-54"></a>Alibaba Group. (2026). *Alibaba Unveils Qwen3.8-Max*. [Alibaba Group](https://www.alibabagroup.com/en-US/document-2021044032125272064).
-55. <a id="ref-55"></a>Qwen Team. (2026). *Qwen3.8-2.4T-A95B*. [Hugging Face model repository](https://huggingface.co/Qwen/Qwen3.8-2.4T-A95B).
+1. <a id="ref-1"></a>Artificial Analysis. (2026). Intelligence Index v4.3.2 methodology. [Source](https://artificialanalysis.ai/methodology/intelligence-benchmarking).
+2. <a id="ref-2"></a>Anthropic. (2026). Current model specifications and pricing. [Source](https://platform.claude.com/docs/en/models/overview).
+3. <a id="ref-3"></a>OpenAI. (2026). GPT-6.1 Sol: release or model documentation. [Source](https://developers.openai.com/api/docs/models/gpt-6.1-sol).
+4. <a id="ref-4"></a>Artificial Analysis. (2026). GPT-6.1 Sol (max): v4.3.2 evaluation. [Source](https://artificialanalysis.ai/models/gpt-6-1-sol).
+5. <a id="ref-5"></a>OpenAI. (2026). GPT-6 Sol: release or model documentation. [Source](https://developers.openai.com/api/docs/models/gpt-6-sol).
+6. <a id="ref-6"></a>OpenAI. (2026). GPT-6 Luna: release or model documentation. [Source](https://developers.openai.com/api/docs/models/gpt-6-luna).
+7. <a id="ref-7"></a>Artificial Analysis. (2026). GPT-6 Luna (max): v4.3.2 evaluation. [Source](https://artificialanalysis.ai/models/gpt-6-luna).
+8. <a id="ref-8"></a>OpenAI. (2026). GPT-6 Astra: release or model documentation. [Source](https://developers.openai.com/api/docs/models/gpt-6-astra).
+9. <a id="ref-9"></a>Artificial Analysis. (2026). GPT-6 Astra (max): v4.3.2 evaluation. [Source](https://artificialanalysis.ai/models/gpt-6-astra).
+10. <a id="ref-10"></a>Anthropic. (2026). Claude Opus 5.5: release or model documentation. [Source](https://www.anthropic.com/claude-opus-5-5).
+11. <a id="ref-11"></a>Artificial Analysis. (2026). Claude Opus 5.5 (max with fallback): v4.3.2 evaluation. [Source](https://artificialanalysis.ai/models/claude-opus-5-5).
+12. <a id="ref-12"></a>Anthropic. (2026). Claude Sonnet 5.5: release or model documentation. [Source](https://www.anthropic.com/claude-sonnet-5-5).
+13. <a id="ref-13"></a>Artificial Analysis. (2026). Claude Sonnet 5.5 (max with fallback): v4.3.2 evaluation. [Source](https://artificialanalysis.ai/models/claude-sonnet-5-5).
+14. <a id="ref-14"></a>Anthropic. (2026). Claude Haiku 5.5: release or model documentation. [Source](https://www.anthropic.com/claude-haiku-5-5).
+15. <a id="ref-15"></a>Artificial Analysis. (2026). Claude Haiku 5.5 (max): v4.3.2 evaluation. [Source](https://artificialanalysis.ai/models/claude-haiku-5-5).
+16. <a id="ref-16"></a>Google. (2026). Gemini 4 Argon: release or model documentation. [Source](https://blog.google/innovation-and-ai/models-and-research/gemini-models/gemini-4-argon/).
+17. <a id="ref-17"></a>Artificial Analysis. (2026). Gemini 4 Argon (high): v4.3.2 evaluation. [Source](https://artificialanalysis.ai/models/gemini-4-argon).
+18. <a id="ref-18"></a>DeepSeek. (2026). DeepSeek V4.1 Flash: release or model documentation. [Source](https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash).
+19. <a id="ref-19"></a>Artificial Analysis. (2026). DeepSeek V4.1 Flash (max): v4.3.2 evaluation. [Source](https://artificialanalysis.ai/models/deepseek-v4-1-flash).
+20. <a id="ref-20"></a>Z AI. (2026). GLM-5.3: release or model documentation. [Source](https://huggingface.co/zai-org/GLM-5.3).
+21. <a id="ref-21"></a>Artificial Analysis. (2026). GLM-5.3 (max): v4.3.2 evaluation. [Source](https://artificialanalysis.ai/models/glm-5-3).
+22. <a id="ref-22"></a>Mistral. (2026). Mistral Large 4: release or model documentation. [Source](https://mistral.ai/news/mistral-large-4/).
+23. <a id="ref-23"></a>Artificial Analysis. (2026). Mistral Large 4 (preview configuration): v4.3.2 evaluation. [Source](https://artificialanalysis.ai/models/mistral-large-4).
+24. <a id="ref-24"></a>Reflection. (2026). Beam: release or model documentation. [Source](https://reflection.ai/blog/introducing-beam).

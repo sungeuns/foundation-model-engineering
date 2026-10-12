@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -76,14 +77,25 @@ test('navigation contains every English page exactly once', () => {
 test('chapter list contains every numbered navigation item', () => {
   const navigation = read(path.join(ROOT, 'src', 'data', 'chapters.js'));
   const navigationNumbers = [...navigation.matchAll(/\{ id: "(\d+)-(\d+)"/g)]
-    .map((match) => `${match[1]}.${match[2]}`)
-    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+    .map((match) => `${match[1]}.${match[2]}`);
   const chapterList = read(path.join(ROOT, 'docs', 'chapter_list.md'));
   const documentedNumbers = [...chapterList.matchAll(/^\* \*\*(\d+\.\d+)\s/mg)]
-    .map((match) => match[1])
-    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+    .map((match) => match[1]);
 
   assert.deepEqual(documentedNumbers, navigationNumbers);
+});
+
+test('navigation numbers match both language page headings', () => {
+  const navigation = read(path.join(ROOT, 'src', 'data', 'chapters.js'));
+  const items = [...navigation.matchAll(/\{ id: "(\d+)-(\d+)",[^\n]*path: "(\/chapter-\d+\/[^"]+)"/g)];
+  assert.equal(items.length, englishPages.length);
+  for (const [, chapter, sub, route] of items) {
+    for (const root of [PAGES_ROOT, koreanRoot]) {
+      const heading = read(path.join(root, `${route.slice(1)}.mdx`)).match(/^# (\d+)\.(\d+)\b/m);
+      assert.ok(heading, `${route} needs a numbered H1`);
+      assert.equal(`${heading[1]}.${heading[2]}`, `${chapter}.${sub}`, route);
+    }
+  }
 });
 
 test('MDX frontmatter starts at byte one and uses the expected layout and language', () => {
@@ -149,6 +161,22 @@ test('review ledgers that claim full coverage include the current inventory', ()
     const source = read(path.join(ROOT, ledger));
     for (const slug of requiredSlugs) {
       assert.ok(source.includes(slug), `${ledger} omits ${slug}`);
+    }
+  }
+});
+
+test('current review inventory matches navigation order and inspected file hashes', () => {
+  const navigation = read(path.join(ROOT, 'src', 'data', 'chapters.js'));
+  const expected = [...navigation.matchAll(/\{ id: "(\d+)-(\d+)",[^\n]*path: "(\/chapter-\d+\/[^\"]+)"/g)]
+    .map(([, chapter, sub, route]) => [`${chapter}.${sub}`, route]);
+  const ledger = read(path.join(ROOT, 'docs', 'editorial_rewrite_worklog.md'));
+  const rows = [...ledger.matchAll(/^\| (\d+\.\d+) \| `(\/chapter-\d+\/[^`]+)` \| (Inspected \d{4}-\d{2}-\d{2}|Mechanical only) \| ([a-f0-9]{64}|—) \| ([a-f0-9]{64}|—) \|$/mg)];
+  assert.deepEqual(rows.map(([, number, route]) => [number, route]), expected);
+  for (const [, , route, evidence, enHash, koHash] of rows) {
+    if (evidence === 'Mechanical only') continue;
+    for (const [root, hash] of [[PAGES_ROOT, enHash], [koreanRoot, koHash]]) {
+      const actual = createHash('sha256').update(read(path.join(root, `${route.slice(1)}.mdx`))).digest('hex');
+      assert.equal(actual, hash, `${route} changed after the recorded inspection`);
     }
   }
 });

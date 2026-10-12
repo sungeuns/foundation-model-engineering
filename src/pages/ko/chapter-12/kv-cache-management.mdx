@@ -158,6 +158,13 @@ Production engine은 block을 미리 할당하고 새 KV row를 제자리에 기
 
 KV caching은 중복 연산을 persistent memory traffic으로 바꿉니다. MQA/GQA/MLA는 폭을, 저정밀도는 값당 byte를, paged allocation은 낭비를 줄입니다. 어느 기법도 독립적인 switch가 아닙니다. 품질, kernel, scheduler, 요청 길이 분포가 작은 cache를 실제로 더 빠르고 안정적인 서비스로 만들 수 있는지 결정합니다.
 
+## 아키텍처별 캐시 상태: 10월의 근거
+
+**2026-10-13 기준.** DeepSeek V4.1 Flash 보고서는 레이어 간 재사용과 FP4 저장을 적용한 전역 HBM KV payload를 **토큰당 890바이트** 로 보고합니다 [[5]](#ref-5). 이는 요청의 전체 메모리가 아닙니다. 가중치, 로컬 window 상태, 해당 모델의 recurrent/lookup 상태, scale·할당 메타데이터, activation, workspace, speculative 분기는 별도 계산해야 합니다. 다른 아키텍처의 캐시 추정값을 이 모델의 payload로 대신하지 않습니다.
+
+9월 GLM-5.3-Flash 통합 연구는 외부 캐시 전송이 성공해도 복원 상태와 scheduler가 처리했다고 기록한 토큰 위치가 어긋날 수 있음을 보여 줍니다. 수정된 직렬 실험은 변경된 재계산 대조군과 continuation을 비교하며 근거는 해당 리비전과 설정으로 제한됩니다 [[6]](#ref-6). 실무적으로는 **모든** 어텐션/recurrent 상태를 같은 논리적 접두사에서 checkpoint하고, 실제 tail 토큰과 rank별 수치 설정을 확인한 뒤 cold recomputation과 continuation logits 또는 토큰을 비교해야 합니다. 캐시 적중률만으로 복구를 검증할 수 없습니다. 직렬 실험의 수정을 운영으로 확대하기 전에 동시성·부분 적중·eviction·이동도 검사합니다.
+
+
 ## Quizzes
 
 <details>
@@ -191,3 +198,5 @@ KV caching은 중복 연산을 persistent memory traffic으로 바꿉니다. MQA
 2. <a id="ref-2"></a>DeepSeek-AI. (2024). *DeepSeek-V2: A Strong, Economical, and Efficient Mixture-of-Experts Language Model*. [arXiv:2405.04434](https://arxiv.org/abs/2405.04434).
 3. <a id="ref-3"></a>vLLM Project. *Quantized KV Cache*. [공식 문서](https://docs.vllm.ai/en/latest/features/quantization/quantized_kvcache/).
 4. <a id="ref-4"></a>Kwon, W., et al. (2023). *Efficient Memory Management for Large Language Model Serving with PagedAttention*. [arXiv:2309.06180](https://arxiv.org/abs/2309.06180).
+5. <a id="ref-5"></a>DeepSeek-AI. (2026). DeepSeek-V4.1-Flash technical report. [Source](https://arxiv.org/abs/2609.19969).
+6. <a id="ref-6"></a>Li, F. (2026). Validating Hybrid-State Cache Recovery for GLM-5.3-Flash with vLLM and LMCache. [Source](https://arxiv.org/abs/2609.15030).

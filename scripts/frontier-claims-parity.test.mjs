@@ -10,8 +10,10 @@ test('commercial video pages separate public facts from undisclosed internals', 
     read('src/pages/ko/chapter-11/commercial-video-models.mdx'),
   ]);
 
-  assert.match(en, /As of August 16, 2026/);
-  assert.match(ko, /2026년 8월 16일 기준/);
+  const enDate = en.match(/As of (\d{4}-\d{2}-\d{2})/)?.[1];
+  const koDate = ko.match(/(\d{4}-\d{2}-\d{2}) 기준/)?.[1];
+  assert.ok(enDate, 'English video snapshot must use an ISO date');
+  assert.equal(koDate, enDate, 'video snapshot dates must match');
   assert.match(en, /undisclosed/i);
   assert.match(ko, /공개되지 않/);
   for (const page of [en, ko]) {

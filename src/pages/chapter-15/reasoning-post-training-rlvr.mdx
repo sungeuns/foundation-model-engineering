@@ -1,0 +1,136 @@
+---
+layout: ../../layouts/BookLayout.astro
+title: 15.5 Reasoning Post-training with Verifiable Rewards
+lang: en
+---
+
+# 15.5 Reasoning Post-training with Verifiable Rewards
+
+A verifier can select a good answer at inference time, as the previous section explained. It can also provide a training signal. If a program passes a hidden test suite or a mathematical answer satisfies a trusted checker, reinforcement learning can increase the probability of that behavior. This is **reinforcement learning with verifiable rewards (RLVR)**. It changes how the policy generates candidates; it does not remove the need for a trustworthy verifier.
+
+**Research snapshot as of 2026-10-13.** Distinguish published mechanisms from deployment advice below. The September studies discussed here are preprints with bounded experimental evidence, not established universal recipes.
+
+## 1. From PPO to Group-Relative Updates
+
+Classic language-model PPO uses a learned value function to estimate a baseline. GRPO instead samples a group of responses for the same prompt and computes a relative reward signal. DeepSeek-R1 made this approach a prominent reasoning-training example [[1]](#ref-1).
+
+For prompt $x$, sample $G$ responses $y_i$ from frozen rollout policy $\pi_{old}$ and verify each with reward $r_i$. One common GRPO normalization is
+
+$$
+\bar r=\frac{1}{G}\sum_{i=1}^{G}r_i,\qquad
+A_i=\frac{r_i-\bar r}{\operatorname{std}(r_1,\ldots,r_G)+\epsilon}.
+$$
+
+$G$ is group size, $A_i$ the response-level advantage, and $\epsilon>0$ prevents division by zero. Implementations must specify population versus sample standard deviation and whether normalization is enabled. Relative advantages are then broadcast over valid policy-generated response tokens. With token probability ratio $\rho_{i,t}=\pi_\theta(y_{i,t}\mid x,y_{i,<t})/\pi_{old}(y_{i,t}\mid x,y_{i,<t})$, a representative clipped objective is
+
+$$
+J(\theta)=\mathbb E\!\left[\mathcal R_m\!\left(
+\min\left(\rho_{i,t}A_i,\operatorname{clip}(\rho_{i,t},1-\delta_-,1+\delta_+)A_i\right)
+\right)\right]-\beta\,\mathbb E[D_{KL}(\pi_\theta\|\pi_{ref})].
+$$
+
+$\theta$ are policy parameters, $\delta_-$ and $\delta_+$ the clipping bounds, $\mathcal R_m$ the explicitly chosen masked batch reduction, $\pi_{ref}$ a separately pinned reference checkpoint, and $\beta$ the KL coefficient. This is a family of objectives, not a promise that every GRPO variant uses the same reduction or KL estimator. The rollout snapshot and fixed reference have different jobs and must not be silently substituted for one another.
+
+If every reward in a group is identical, the centered reward advantages are zero. A small denominator epsilon does not create reward contrast. KL or other regularizers may still generate gradients. Track all-correct and all-incorrect groups separately: saturation and insufficient exploration need different interventions.
+
+## 2. Length and Sampling Are Part of the Objective
+
+Two reductions that look similar produce different weighting:
+
+- **Sequence mean:** average valid tokens within each response, then average responses. Short and long responses have equal total weight.
+- **Token mean:** sum over all valid response tokens, then divide by their global count. Longer responses contribute more tokens.
+
+Neither is an interchangeable implementation detail. Dr. GRPO studies optimization bias associated with GRPO normalization [[3]](#ref-3). DAPO explicitly addresses clipping, dynamic sampling, token-level loss, and overlong-response behavior [[2]](#ref-2). Their reported results do not establish that changing one denominator alone reproduces the full system.
+
+Predeclare the response cap and timeout, whether a truncated response is rejected or receives a penalty, and how malformed answers and sandbox failures are distinguished from wrong solutions. If dynamic sampling removes equal-reward groups, log acceptance and rejection by domain and difficulty; the retained distribution differs from the requested one. Compare methods at equal **total rollout and verifier budget**, including discarded generations.
+
+## 3. September Research: Useful Boundaries on Improvement
+
+### Composition is not guaranteed by learning the parts
+
+He et al. use data-structure tasks with deterministic rewards and find an asymmetric transfer pattern: training decomposed skills does not reliably transfer to composed tasks, while composed-task training transfers more readily to the components. Their tool-calling extension is preliminary [[4]](#ref-4).
+
+The engineering implication is a test design, not a universal theorem about all models. For an agent that must retrieve a record, transform it, and submit an update, evaluate each tool skill **and the full authorized workflow**. Hold out composition structures, entity groups, and longer trajectories. Do not conclude that three passing unit skills imply a passing end-to-end task.
+
+### Assistance can become a training distribution shift
+
+HATCH studies **hinted reward shift**: hints recover reward contrast on difficult problems, but the successful assisted trajectories can dominate updates even though hints are absent at evaluation. Its proposed hint annealing and gradient projection are evaluated on small-model mathematical reasoning [[5]](#ref-5).
+
+Treat assistance as a separate data condition. Record hint provenance and availability, isolate solution-derived hints from evaluation, and release against a sealed **unassisted** set. Faster reward growth on hinted rollouts is insufficient evidence of improved unaided reasoning. The result does not establish autonomous recursive improvement of frontier agents.
+
+## 4. An Experiment Contract Before the First Rollout
+
+This is an engineering checklist for an experiment, not runnable training code. Pin the implementation and optimizer variant; an algorithm name is not enough to reproduce a run.
+
+| Contract | Required contents |
+|---|---|
+| Input artifacts | Base/SFT policy, tokenizer-native chat template, fixed reference identity or explicit absence, verifier/container version, and immutable dataset manifest |
+| Objective | Reward components, answer extraction, KL estimator/coefficient, group baseline, clipping, and exact batch reduction |
+| Hyperparameters | Group size, temperature/top-p, prompt and response caps, token batch size, accumulation, learning rate, update epochs, rollout-age limit, and seeds |
+| Data isolation | Provenance, license/consent, PII/secrets handling, deduplication and semantic clusters before splits, filter/mixture versions, shard hashes, sample IDs, and evaluation quarantine |
+| Length semantics | EOS and truncation policy, variable-length masks, padding exclusion, tool-result masks, and per-group membership after filtering |
+| Acceptance | Fixed-budget target quality, base-capability retention, safety, tool/format correctness, cost, and latency with paired uncertainty and critical-slice blockers |
+
+Render prompts with the **tokenizer-native chat template** used at serving time. Verify BOS/EOS, `add_generation_prompt`, truncation side, and padding behavior. The policy loss includes policy-generated assistant spans, including intended terminal tokens; it excludes prompts, padding, externally supplied tool results, and post-terminal positions. Tool conversations require span metadata, not a single assumed contiguous suffix. Packed samples must not attend across independent episode boundaries. Distributed token means require globally consistent valid-token counts and reductions.
+
+Keep immutable rollout records: prompt/sample/group ID, policy revision, formatted tokens, masks, old log probabilities, decoding seed/settings, completion and finish reason, tool transcript, verifier output, reward components, and any hint or filtering provenance. Independent reward audits should distinguish a correct solution from an exploited checker.
+
+## 5. Compute, Observability, and Recovery
+
+Removing the critic does not make the run cheap. A resource plan separates:
+
+- policy parameters, gradients, and optimizer states;
+- fixed reference weights when KL is used;
+- rollout replicas and their KV or recurrent state;
+- training activations, recomputation, temporary buffers, and CUDA graphs;
+- collectives, weight distribution, sandbox/verifier capacity, checkpoints, and evaluation overhead.
+
+State precision, optimizer, sharding, sequence lengths, recomputation, concurrency, and active-expert assumptions. Sparse models still need storage for all expert weights. A September rollout-efficiency survey organizes freshness, consistency, and statistical validity as constraints alongside throughput [[6]](#ref-6). Higher generation throughput can reduce useful learning if stale policies or numerical mismatches corrupt the updates.
+
+Monitor token-normalized training and validation loss, held-out reward and domain slices, zero-contrast groups, entropy, KL, ratios/clip fraction, response length, truncation, hint dependence, reward exploits, and verifier failures. Add nonfinite/overflow counts, gradient/activation norms, rollout/train throughput, MFU, data wait, collective/straggler time, queue age, policy lag, and reconstructable batch IDs. Report attempts and discarded tokens, not only successful rollouts.
+
+Set pause/abort thresholds before launch: persistent nonfinite values, excess policy lag, entropy collapse, runaway length/KL, verifier failures, or reward gains without unassisted held-out gains. Each threshold needs an owner and observation window; critical safety failures trigger an immediate stop.
+
+Checkpoints include sharded model and optimizer state, scheduler, scaler/FP8 state, global step/tokens, RNG, sampler state and exact **data cursor**, artifact/config hashes, fixed reference/verifier identities, and rollout-store cursor with in-flight completion policy. Publish atomically with checksums and a completion marker. Specify retention, remote replication, supported world-size changes, restore drills, and continuation-equivalence checks.
+
+## 6. Release Gate and Practical Takeaway
+
+Evaluate the complete artifact bundle on domain tasks, unassisted compositions, base-capability retention, safety, format/tool use, latency, cost, and error rates. Use paired uncertainty or a justified sample size; do not let an aggregate reward conceal a critical slice failure. Promote only after the predeclared gate passes, then canary under bounded permissions. Keep a last-known-good bundle and rehearse rollback, including conversation state and tool effects.
+
+RLVR is a way to change the candidate distribution using trusted feedback. The bottleneck can move from learning to exploration, verifier integrity, compositional coverage, or rollout systems. The next chapter turns these learned capabilities into tool-using agents whose real-world effects require separate authorization and recovery contracts.
+
+## Quizzes
+
+<details>
+<summary>Quiz 1: Why does increasing epsilon not fix an all-incorrect equal-reward GRPO group?</summary>
+*The centered reward numerator remains zero. Epsilon prevents division by zero but creates no relative reward signal; other regularizers may still update the policy.*
+</details>
+
+<details>
+<summary>Quiz 2: Why must a comparison count discarded rollouts?</summary>
+*Filtering changes the training distribution and consumes generation and verification budget. Counting only retained examples can hide both sampling bias and actual compute cost.*
+</details>
+
+<details>
+<summary>Quiz 3: Why can hinted training reward improve without unassisted reasoning improving?</summary>
+*Successful assisted trajectories may dominate updates in a condition absent at evaluation. Track assistance separately and test on sealed unassisted cases.*
+</details>
+
+<details>
+<summary>Quiz 4: What is the difference between the rollout policy and the reference checkpoint?</summary>
+*The rollout policy defines the behavior distribution and stored old log probabilities. The fixed reference anchors KL when used; swapping them changes the objective.*
+</details>
+
+<details>
+<summary>Quiz 5: Why is passing each individual tool skill insufficient for release?</summary>
+*The composed task adds state dependencies, order, authorization, and recovery requirements. Hold out and evaluate complete workflows and novel composition structures.*
+</details>
+
+## References
+
+1. <a id="ref-1"></a>DeepSeek-AI. (2025). *DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning*. [arXiv:2501.12948](https://arxiv.org/abs/2501.12948).
+2. <a id="ref-2"></a>Yu, Q., et al. (2025). *DAPO: An Open-Source LLM Reinforcement Learning System at Scale*. [arXiv:2503.14476](https://arxiv.org/abs/2503.14476).
+3. <a id="ref-3"></a>Liu, Z., et al. (2025). *Understanding R1-Zero-Like Training: A Critical Perspective*. [arXiv:2503.20783](https://arxiv.org/abs/2503.20783).
+4. <a id="ref-4"></a>He, Y., Li, Y., Wang, Y., & Vitercik, E. (2026). *Compositional Reasoning in Language Models under Reinforcement Learning Post-Training*. [arXiv:2609.19465](https://arxiv.org/abs/2609.19465).
+5. <a id="ref-5"></a>Wang, Z., et al. (2026). *Teach to Learn: Hint Annealing for Self-improving LLM Reasoning*. [arXiv:2609.34975](https://arxiv.org/abs/2609.34975).
+6. <a id="ref-6"></a>Gholipour, N., et al. (2026). *Rollout Efficiency in Reinforcement Learning for Reasoning Large Language Models: A Taxonomy and Future Directions*. [arXiv:2609.25463](https://arxiv.org/abs/2609.25463).

@@ -8,7 +8,7 @@ lang: en
 
 In the previous section, we used Probing Classifiers to detect specific concepts hidden in an LLM's residual stream. However, probing is fundamentally a supervised, hypothesis-driven task: we can only find what we explicitly look for. If we want to discover the *complete* set of concepts a model has learned—without relying on human-provided labels—we need an unsupervised approach.
 
-Over the past year, **Sparse Autoencoders (SAEs)** have emerged as the premier tool in mechanistic interpretability. They have successfully reverse-engineered the opaque, high-dimensional activations of state-of-the-art models like GPT-4 and Claude 3 Sonnet into millions of distinct, human-readable concepts.
+**Sparse Autoencoders (SAEs)** learn sparse dictionaries from model activations. The GPT-4 and Claude 3 Sonnet studies below are dated research examples, not complete inventories of a model's concepts or proof that every learned feature is human-interpretable.
 
 ---
 
@@ -42,11 +42,11 @@ The forward pass of a standard SAE is defined as:
 $$ f = \text{ReLU}(W_{enc}(x - b_{pre}) + b_{enc}) $$
 $$ \hat{x} = W_{dec} f + b_{dec} + b_{pre} $$
 
-To ensure the features are interpretable (monosemantic), we force the network to use only a tiny fraction of the $D$ features for any given input. This is typically enforced by adding an $L_1$ regularization penalty to the reconstruction loss:
+To encourage sparse feature decompositions, we force the network to use only a tiny fraction of the $D$ features for any given input. This is typically enforced by adding an $L_1$ regularization penalty to the reconstruction loss:
 
 $$ \mathcal{L} = ||x - \hat{x}||_2^2 + \lambda ||f||_1 $$
 
-By expanding the dimension size and forcing sparsity, the SAE naturally decomposes polysemantic neurons into individual, single-meaning features.
+Sparse dictionary learning can reveal interpretable directions, but reconstruction error, feature splitting, polysemantic latents, and dependence on training data remain.
 
 ---
 
@@ -54,7 +54,7 @@ By expanding the dimension size and forcing sparsity, the SAE naturally decompos
 
 Training SAEs introduces severe engineering challenges. The most notorious is the **Dead Latent** (or Dead Neuron) problem. 
 
-Because the feature space $D$ is massive and the sparsity penalty ($\lambda$) aggressively pushes activations to zero, many features in the SAE stop activating early in training. Once a feature stops activating, it receives zero gradient from the ReLU function, permanently trapping it in a "dead" state. In early SAE experiments, it was common for over 90% of the learned dictionary to be dead, wasting massive amounts of compute.
+Because the feature space $D$ is massive and the sparsity penalty ($\lambda$) aggressively pushes activations to zero, many features in the SAE stop activating early in training. Once a feature stops activating, it receives zero gradient from the ReLU function, leaving it without a direct reconstruction gradient on those inputs. Measure inactivity over a declared sample window; recovery methods can alter this state.
 
 State-of-the-art training pipelines employ several techniques to revive these dead latents:
 1. **Ghost Gradients**: Artificially routing gradients to dead neurons during the backward pass to give them a "nudge" toward useful directions.
@@ -71,6 +71,8 @@ In 2024, OpenAI researchers demonstrated a breakthrough by scaling a 16-million 
 Instead of relying on a loss penalty to push values to zero, a Top-K SAE simply computes the dense activations, strictly selects the $K$ highest values, and forcefully zeros out the rest. This directly controls the $L_0$ sparsity without distorting the activation magnitudes.
 
 Here is how a Top-K SAE is implemented in PyTorch:
+
+> **Deliberately simplified example.** It illustrates encoder/decoder shapes and top-K. Full training, decoder normalization, dead-latent recovery, activation sampling, and distributed execution are omitted. The large configuration below is a memory-planning illustration, not an executed experiment.
 
 ```python
 import torch
@@ -141,7 +143,7 @@ They discovered that SAE features are **concept-centric**, not token-centric. Fo
 
 More importantly, SAEs allow for **causal steering**. In a famous experiment, Anthropic researchers artificially clamped the activation of the Golden Gate Bridge feature to a high value during the model's forward pass. The result was "Golden Gate Claude"—a model that became obsessively fixated on the bridge. When asked "How do I spend a day in London?", the model suggested taking a flight to San Francisco to see the Golden Gate Bridge. 
 
-Beyond tourist attractions, researchers identified features for sycophancy, bias, scam emails, and dangerous capabilities (like generating bioweapons). By suppressing these specific features, SAEs offer a surgical approach to AI safety, allowing engineers to remove harmful behaviors without fine-tuning or degrading the model's general intelligence.
+Beyond tourist attractions, researchers identified features for sycophancy, bias, scam emails, and dangerous capabilities (like generating bioweapons). Steering or suppressing a feature can change behavior, but it does not guarantee selective removal of harmful behavior or preservation of general capabilities. Validate collateral effects, distribution shift, and adversarial bypass.
 
 ---
 
@@ -155,13 +157,28 @@ One more speculative direction borrows ideas from qualitative analysis, especial
 
 ---
 
+## From Features to Circuits: What a Label Does Not Prove
+
+**Research context as of 2026-10-13.** Anthropic's circuit-tracing study uses attribution graphs to investigate mechanisms in Claude 3.5 Haiku, while documenting incomplete coverage and limits on the prompts and behaviors its method can explain [[5]](#ref-5). A feature label or a convincing generated explanation is not a causal circuit by itself.
+
+Validate a proposed mechanism with controlled activation interventions, matched prompts, alternative hypotheses, reconstruction/behavioral fidelity, and held-out cases. Report which computations the surrogate preserves and which it misses. Causal steering establishes an effect of an intervention in the tested setting; it does not establish that a feature is the sole cause of a behavior or that suppressing it is a robust safety policy.
+
+
+
+## 7. Engineering Decisions for SAE Use
+
+Choose the analysis method to match the question. A production agent failure may first need better task evaluation, tool-policy controls, and tracing. A small-model mechanism question may be cheaper to investigate with activation patching, probes, or a logit lens than with a million-feature dictionary.
+
+Evaluate reconstruction and **behavioral fidelity**, sparsity, dead-latent frequency over a declared window, held-out interpretability, and the breadth of causal effects. A low reconstruction MSE alone does not show that the surrogate preserves the computations you want to explain. Circuit tracing asks how features influence other features and output logits, while its methods paper documents the limits of that approximation [[4]](#ref-4).
+
 ## 8. Summary and Open Questions
 
-Sparse Autoencoders have cracked open the black box. By expanding the LLM's residual stream into a massive, sparse dictionary, we can map the chaotic superposition of polysemantic neurons into clean, single-meaning concepts. The shift from $L_1$ regularization to Top-K architectures has allowed these techniques to scale to frontier models like GPT-4 and Claude 3, enabling precise behavioral steering and safety interventions.
+Sparse Autoencoders provide a useful but incomplete view of activations. Sparse dictionaries can reveal interpretable structure; they do not guarantee clean single-meaning features or complete explanations. The shift from $L_1$ regularization to Top-K architectures has allowed these techniques to scale to frontier models like GPT-4 and Claude 3, enabling precise behavioral steering and safety interventions.
 
 However, extracting features is only half the battle. If an LLM is a machine that "thinks," features are merely the nouns and verbs of its thoughts. The next frontier in mechanistic interpretability is understanding how these features wire together to perform complex logic. How does the "If-Then" feature interact with the "Python Code" feature to generate a working script? 
 
 To answer this, we must map the **Circuits** of the LLM.
+
 
 ## Quizzes
 
@@ -177,17 +194,17 @@ To answer this, we must map the **Circuits** of the LLM.
 
 <details>
 <summary>Quiz 3: How does the Top-K SAE architecture solve the "shrinkage" problem inherent in standard $L_1$-regularized SAEs?</summary>
-*A Top-K SAE completely removes the $L_1$ penalty. Instead, it computes the dense activations, explicitly selects only the Top $K$ highest values, and forcefully zeros out the rest. This guarantees exact $L_0$ sparsity without applying a continuous mathematical penalty that shrinks the magnitude of the active features.*
+*A Top-K SAE completely removes the $L_1$ penalty. Instead, it computes the dense activations, explicitly selects only the Top $K$ highest values, and forcefully zeros out the rest. This bounds the number of nonzero activations by $K$; selected ReLU values can themselves be zero. It controls sparsity without applying a continuous mathematical penalty that shrinks the magnitude of the active features.*
 </details>
 
 <details>
-<summary>Quiz 4: What does the existence of "multilingual and multimodal" SAE features imply about the LLM's internal representations?</summary>
-*It implies that the LLM is not merely memorizing surface-level token statistics or language-specific grammar. Instead, the model maps inputs into a deeply abstract, conceptual space where the fundamental "idea" of an object (like a bridge) is represented universally, regardless of the language or modality (text vs. image) used to invoke it.*
+<summary>Quiz 4: What does a cross-modal SAE activation establish?</summary>
+*It supports a shared representation for the tested inputs. It does not prove universal concept understanding, complete feature discovery, or causal necessity.*
 </details>
 
 <details>
-<summary>Quiz 5: Formalize the exact mathematical gradient update logic sequence for Top-K routing inside an SAE during the backward pass. Define explicit Ghost Gradient boundaries to neutralize the Dead Latent problem.</summary>
-*A simple formalization treats Top-K routing as a hard mask $m_i = \mathbb{I}(i \in \text{Top-K}(x))$, so the selected latent is $z_i = m_i x_i$. In the backward pass, the direct gradient is masked in the same way: $\frac{\partial \mathcal{L}}{\partial x_i} \approx m_i \frac{\partial \mathcal{L}}{\partial z_i}$. The dead-latent problem appears because units outside Top-K receive no direct learning signal. Ghost-gradient style fixes add an auxiliary reconstruction-based term to inactive latents, for example $g_i^{ghost} = \eta (1-m_i)\left(\frac{\partial \mathcal{L}}{\partial \hat{x}} W_{dec}^\top\right)_i$, where $\eta$ is a small scaling factor. The key idea is not a universal boundary formula, but selectively giving inactive latents a weak gradient path so they can re-enter the active set later.*
+<summary>Quiz 5: Why should a feature intervention be compared with matched controls?</summary>
+*Changing one activation can have broad downstream effects. Matched prompts, alternative features, and held-out cases help separate a specific mechanism from generic disruption.*
 </details>
 
 ---
@@ -197,3 +214,5 @@ To answer this, we must map the **Circuits** of the LLM.
 1. <a id="ref-1"></a>Templeton, A., et al. (2024). *Scaling Monosemanticity: Extracting Interpretable Features from Claude 3 Sonnet*. Transformer Circuits Thread. [Link](https://transformer-circuits.pub/2024/scaling-monosemanticity/index.html).
 2. <a id="ref-2"></a>Gao, L., et al. (2024). *Scaling and evaluating sparse autoencoders*. [arXiv:2406.04093](https://arxiv.org/abs/2406.04093).
 3. <a id="ref-3"></a>De Paoli, S., & Mathis, W. S. (2025). *Codebook Reduction and Saturation: Novel observations on Inductive Thematic Saturation for Large Language Models and initial coding in Thematic Analysis.* [arXiv:2503.04859](https://arxiv.org/abs/2503.04859).
+4. <a id="ref-4"></a>Ameisen, E., et al. (2025). *Circuit Tracing: Revealing Computational Graphs in Language Models.* [Source](https://transformer-circuits.pub/2025/attribution-graphs/methods.html).
+5. <a id="ref-5"></a>Anthropic. (2025). On the Biology of a Large Language Model. [Source](https://transformer-circuits.pub/2025/attribution-graphs/biology.html).

@@ -147,6 +147,11 @@ print("Attention Weights Shape:", weights.shape) # Expected: (2, 4, 5, 10)
 
 ---
 
+## A Recent Counterexample: Causal Encoder-Decoder
+
+**As of 2026-10-13**, DeepSeek V4.1 Flash's published CED architecture shows why “autoregressive” and “decoder-only” are different labels [[3]](#ref-3). Its encoder is causal, unlike the bidirectional source encoder described for T5/BART above. The report gives different active-parameter budgets for prefill and decode. The lesson is to inspect attention masks and phase-specific execution rather than conclude that every encoder-decoder is a translation-style model or that every text generator executes a decoder-only stack. See [Chapter 4.5](/chapter-4/various-llm-architectures) for the cache implications.
+
+
 ## Quizzes
 
 <details>
@@ -161,7 +166,7 @@ print("Attention Weights Shape:", weights.shape) # Expected: (2, 4, 5, 10)
 
 <details>
 <summary>Quiz 3: How does T5 frame classification tasks (like sentiment analysis) as a text-to-text problem?</summary>
-*T5 takes the text to be classified as input (e.g., "translate English to German: Hello") and is trained to output the text label directly (e.g., "positive" or "negative") rather than a class index. This unifies all tasks into a single format.*
+*T5 takes the text to be classified as input (e.g., "sentiment: This movie is great") and is trained to output the text label directly (e.g., "positive" or "negative") rather than a class index. This unifies all tasks into a single format.*
 </details>
 
 <details>
@@ -180,3 +185,4 @@ print("Attention Weights Shape:", weights.shape) # Expected: (2, 4, 5, 10)
 
 1. <a id="ref-1"></a>Raffel, C., et al. (2019). *Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer*. [arXiv:1910.10683](https://arxiv.org/abs/1910.10683).
 2. <a id="ref-2"></a>Lewis, M., et al. (2019). *BART: Denoising Sequence-to-Sequence Pre-training for Natural Language Generation, Translation, and Comprehension*. [arXiv:1910.13461](https://arxiv.org/abs/1910.13461).
+3. <a id="ref-3"></a>DeepSeek-AI. (2026). DeepSeek-V4.1-Flash technical report. [Source](https://arxiv.org/abs/2609.19969).

@@ -108,6 +108,13 @@ Developers can truncate a 768-dimensional vector to just 128 dimensions. This re
 
 ---
 
+## October Update: Embeddings Across Modalities
+
+**As of 2026-10-13.** Google released EmbeddingGemma 2 on October 6 for shared text, image, audio, and video embeddings. Its release describes Matryoshka vectors that can be shortened from 768 to 128 dimensions [[2]](#ref-2). The relevant engineering shift is that a query and retrieved artifact need not share a modality—not that one generic embedding model solves every retrieval task.
+
+A new embedding model or dimension creates a **new index version**. Re-embed documents and queries with compatible preprocessing, task instructions, normalization, and dimensions; do not mix coordinate systems in one index. Compare recall, ranking, citation grounding, and latency on text, code, image, and audio slices. Preserve timestamps, source spans or frame/audio ranges, access control, and deletion lineage so a cross-modal hit can be audited. Lower-dimensional vectors save payload storage but still require measured quality at the chosen dimension.
+
+
 ## Quizzes
 
 <details>
@@ -130,3 +137,4 @@ Developers can truncate a 768-dimensional vector to just 128 dimensions. This re
 ## References
 
 1. <a id="ref-1"></a>Kusupati, A., et al. (2022). *Matryoshka Representation Learning.* [arXiv:2205.13147](https://arxiv.org/abs/2205.13147).
+2. <a id="ref-2"></a>Google DeepMind. (2026-10-06). EmbeddingGemma 2. [Source](https://blog.google/innovation-and-ai/technology/developers-tools/embeddinggemma-2/).

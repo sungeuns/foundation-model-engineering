@@ -137,6 +137,8 @@ During this editorial overhaul, every English/Korean sub-chapter pair was review
 - `tree-graph-of-thoughts`: reviewed; no additional edits required; notes: no blocking issues found after audit.
 - `verifiers-and-reward-models`: reviewed; edits applied; notes: softened stronger-than-source claims and aligned EN/KO wording.
 
+- [x] 15.5 `reasoning-post-training-rlvr` (EN/KO): inspected 2026-10-13; current file hashes recorded in the October canonical inventory in `docs/editorial_rewrite_worklog.md`.
+
 ## Chapter 16
 
 - `agent-reliability-recovery-and-guardrails`: reviewed; edits applied; notes: new production-focused sub-chapter added in EN/KO.
@@ -185,3 +187,7 @@ During this editorial overhaul, every English/Korean sub-chapter pair was review
 - The modified-file list is intentionally smaller than the reviewed-file list because many pages passed the audit without needing changes.
 - User-reported quiz-format issues in Korean Chapters 5 and 6 were fixed before the full audit was closed.
 - New production sub-chapters were added inside existing chapters rather than as a separate Chapter 21.
+
+## 2026-10-13 Current Inspection Evidence
+
+The October pass mechanically scanned all 20 chapters and 102 EN/KO pairs, then inspected and updated 28 affected pairs. The other 74 pairs retain historical inspection evidence; this entry does not certify a fresh deep review of those files. The ordered current inventory, inspection dates, and SHA-256 hashes for the 28 current inspected pairs are recorded in [the October worklog](editorial_rewrite_worklog.md#2026-10-13-evidence-update-and-technical-review). New section 15.5 was inspected in both languages before its completion mark was recorded.

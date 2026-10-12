@@ -110,6 +110,8 @@ Date: 2026-04-20
 - [x] 15.3 `search-time-compute` reviewed (EN, KO)
 - [x] 15.4 `verifiers-and-reward-models` reviewed (EN, KO)
 
+- [x] 15.5 `reasoning-post-training-rlvr` (EN/KO): inspected 2026-10-13; current file hashes recorded in the October canonical inventory in `docs/editorial_rewrite_worklog.md`.
+
 ## Chapter 16
 - [x] 16.1 `function-calling-and-tool-use` reviewed (EN, KO)
 - [x] 16.2 `autonomous-agents` reviewed (EN, KO)
@@ -153,3 +155,7 @@ Date: 2026-04-20
 - [x] Corrected Chapter 11 sub-chapter numbering drift in EN/KO video-generation pages.
 - [x] Recalibrated time-sensitive commercial video model claims in Chapter 11 EN/KO pages using current official product information.
 - [x] Softened over-strong MoE market-positioning wording in Chapter 5 EN/KO pages.
+
+## 2026-10-13 Current Inspection Evidence
+
+The October pass mechanically scanned all 20 chapters and 102 EN/KO pairs, then inspected and updated 28 affected pairs. The other 74 pairs retain historical inspection evidence; this entry does not certify a fresh deep review of those files. The ordered current inventory, inspection dates, and SHA-256 hashes for the 28 current inspected pairs are recorded in [the October worklog](editorial_rewrite_worklog.md#2026-10-13-evidence-update-and-technical-review). New section 15.5 was inspected in both languages before its completion mark was recorded.

@@ -124,31 +124,31 @@ While the sinusoidal approach was a brilliant starting point, the field has deve
 Instead of giving each token an absolute position, these methods encode the *distance* between tokens.
 - **Shaw et al. (2018)**: Modifies self-attention to include relative position representations in keys and values.
 
-### 3. Modern SOTA Encodings
+### 3. Rotary and Bias-Based Encodings
 - **RoPE (Rotary Position Embedding)**: Applies a rotation matrix to Query and Key vectors based on their position. It naturally captures relative distance and is used in Llama, Gemma, DeepSeek, Qwen, and many modern LLMs.
-- **ALiBi (Attention with Linear Biases)**: Instead of adding embeddings, it adds a static penalty to attention scores that grows linearly with distance. Extremely efficient and excellent at length extrapolation.
+- **ALiBi (Attention with Linear Biases)**: Instead of adding embeddings, it adds a static penalty to attention scores that grows linearly with distance. Its distance bias supports extrapolation experiments, but quality beyond trained lengths still requires validation.
 
 ### Comparison Table
 
 | Method | Type | Extrapolation | Learnable? | Used In | Pros | Cons |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Sinusoidal** | Absolute | Limited | No | Original Transformer | No parameters to learn | Fixed, not optimal for all tasks |
-| **Learned** | Absolute | No | Yes | BERT, GPT-3 | Adapts to data | Cannot handle longer sequences |
-| **RoPE** | Relative | Excellent | No | Llama, Gemma, DeepSeek, Qwen | Captures relative distance well | Complex implementation |
-| **ALiBi** | Relative | Excellent | No | BLOOM, MPT | Very simple, great extrapolation | May require fine-tuning for very long |
+| **Learned** | Absolute | Requires table extension | Yes | BERT, GPT-3 | Adapts to data | Cannot handle longer sequences |
+| **RoPE** | Relative | Requires length-specific validation | No | Llama, Gemma, DeepSeek, Qwen | Captures relative distance well | Complex implementation |
+| **ALiBi** | Relative | Requires length-specific validation | No | BLOOM, MPT | Very simple, great extrapolation | May require fine-tuning for very long |
 
 ### Why Sinusoidal Was Chosen (and Why We Moved On)
 The original Transformer used sinusoidal encodings because:
 1.  **No parameters**: It didn't increase model size.
 2.  **Theoretical extrapolation**: The authors hoped it would handle longer sequences.
 
-However, as models grew and sequence lengths became critical (e.g., handling whole books), methods like **RoPE** and **ALiBi** proved far superior in handling long-context tasks, leading to their dominance today.
+However, as models grew and sequence lengths became critical (e.g., handling whole books), RoPE and ALiBi provide alternative ways to encode relative position. Extrapolation quality depends on training length, scaling, attention pattern, task and serving implementation.
 
 ---
 
 ## A Closer Look at Rotary Position Embedding (RoPE)
 
-While sinusoidal encodings were a great start, modern state-of-the-art LLMs (such as Llama 3, Gemma 4, DeepSeek V3, Qwen 3, and GLM series) almost exclusively use **Rotary Position Embedding (RoPE)** [[2]](#ref-2). RoPE is a hybrid method that combines the best of absolute and relative positional encodings.
+RoPE encodes absolute positions through rotations while making query–key interactions depend on relative displacement [[2]](#ref-2). The mathematical property does not guarantee reliable retrieval or reasoning at arbitrary lengths.
 
 ### The Intuition: Rotation in 2D Space
 

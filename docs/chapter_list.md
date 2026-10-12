@@ -23,7 +23,7 @@
 * **3.3 Position Encoding Strategy:** Sinusoidal부터 최신 RoPE(Rotary), ALiBi까지의 비교 분석.
 * **3.4 Layer Normalization & Residuals:** Pre-LN vs Post-LN의 학습 안정성 차이.
 * **3.5 Complexity Analysis:** 시퀀스 길이에 따른 $O(n^2)$ 복잡도와 메모리 병목 현상.
-* **Summary:** 현재 모든 Foundation Model의 뼈대인 Transformer의 내부 로직을 수학적, 구조적으로 파헤칩니다.
+* **Summary:** Transformer 계열 Foundation Model의 내부 로직을 수학적, 구조적으로 파헤칩니다.
 
 ### **Chapter 4: LLM Architectures & Paradigms**
 
@@ -31,8 +31,8 @@
 * **4.2 Decoder-only (GPT-style):** Causal Language Modeling과 차세대 생성 모델의 주류화.
 * **4.3 Encoder-Decoder (T5/BART):** Seq2Seq 작업의 강자와 Unified Framework.
 * **4.4 Hybrid & Prefix LM:** 다양한 입출력 구조에 따른 학습 효율성 비교.
-* **4.5 다양한 LLM 아키텍처와 최신 트렌드:** Hybrid/linear/sparse attention, MLA, MoE, MTP를 중심으로 GLM-5.2, Kimi K3, Qwen3.7/3.8의 공개 아키텍처와 공개 범위를 비교.
-* **Summary:** 목적에 따라 달라지는 모델 아키텍처의 유형과 생성형 AI에서 Decoder-only가 승리한 이유를 분석합니다.
+* **4.5 다양한 LLM 아키텍처와 최신 트렌드:** Hybrid/linear/sparse attention, MLA, MoE, MTP와 Causal Encoder-Decoder·조건부 메모리를 공개 범위와 함께 비교.
+* **Summary:** 목적에 따라 달라지는 모델 아키텍처의 유형과 생성형 AI에서 Decoder-only가 널리 쓰이는 이유를 분석합니다.
 
 ### **Chapter 5: Scaling Mixture of Experts (MoE)**
 
@@ -40,7 +40,7 @@
 * **5.2 Routing Algorithms:** Top-k routing, Noisy Top-k, Expert choice routing.
 * **5.3 Expert Parallelism:** 대규모 MoE 모델을 여러 GPU에 분산하는 기술.
 * **5.4 Collapsing & Load Balancing:** 특정 전문가에게 연산이 쏠리는 문제와 해결책(Auxiliary Loss).
-* **5.5 Case Study:** Mixtral, DBRX, DeepSeek-V3에서 GLM-5.2까지 MoE 라우팅, sparse attention, MTP, post-training/serving pipeline을 뜯어보기.
+* **5.5 Case Study:** Mixtral, DBRX, DeepSeek-V3, GLM-5.2와 DeepSeek-V4.1-Flash의 단계별 연산까지 MoE 라우팅, sparse attention, MTP, post-training/serving pipeline을 뜯어보기.
 * **Summary:** 거대 모델을 효율적으로 운영하기 위한 핵심 기술인 MoE의 라우팅 매커니즘과 분산 처리 기법을 정리합니다.
 
 ### **Chapter 6: Foundation Model Pre-training (The Engineering)**
@@ -74,7 +74,7 @@
 * **9.1 Instruction Following:** 모델이 사용자의 의도를 이해하게 만드는 과정.
 * **9.2 Dataset Quality vs Quantity:** 'LIMA' 논문이 시사하는 고품질 데이터의 힘.
 * **9.3 Parameter-Efficient Fine-Tuning (PEFT):** LoRA, DoRA, Prefix Tuning, Adapters.
-* **9.4 Prompt Engineering as SFT:** Few-shot, Chain-of-Thought 데이터 구축.
+* **9.4 Prompting, ICL, and Prompt Optimization:** ICL의 최적화 비유, 추론 예산, DSPy/GEPA 탐색과 봉인 평가.
 * **9.5 Synthetic Instructions & Self-Instruct:** 모델을 이용한 고품질 인스트럭션 데이터 생성.
 * **Summary:** 사전 학습된 모델에 '말귀'를 알아먹게 하는 기술과 효율적인 미세 조정 기법을 정리합니다.
 
@@ -91,10 +91,10 @@
 
 * **11.1 Vision-Language Bridges:** CLIP, Flamingo 아키텍처와 Projection Layer.
 * **11.2 Audio & Speech Integration:** Whisper, AudioLM 등 소리를 이해하고 생성하는 법.
-* **11.3 Unified Multimodal (Any-to-Any):** Gemini, GPT-4o 처럼 네이티브하게 멀티모달을 지원하는 구조.
+* **11.3 Unified Multimodal (Any-to-Any):** 입출력 지원 범위, 시간 정렬, 공개된 표현·생성 경로와 native의 의미.
 * **11.4 Image Diffusion Models:** 확산(Diffusion) 모델의 원리와 Stable Diffusion, Flux 등 대표적인 이미지 생성 모델 소개.
 * **11.5 Video Generation Foundations:** Diffusion Transformer (DiT)와 공간-시간 어텐션.
-* **11.6 Commercial Video Models & Future Directions:** Google Veo 3.1, OpenAI Sora, ByteDance Seedance 2.0 등 최신 상업 모델의 특징과 물리 법칙 및 공간적 일관성을 이해하는 멀티모달 종합(Synthesis) 및 향후 방향 정리.
+* **11.6 Commercial Video Models & Future Directions:** Google Veo 3.1, ByteDance Seedance 2.5의 공개 기능과 Sora API 종료를 확인하고, 물리·공간 일관성 평가와 향후 방향을 정리.
 * **Summary:** 텍스트를 넘어 시각, 청각 등 다양한 감각을 통합하는 멀티모달 인공지능의 원리를 분석하고, 최신 상업 모델의 현황과 앞으로의 발전 방향을 정리합니다.
 
 ### **Chapter 12: LLM Inference Optimization (Deep Tech)**
@@ -130,8 +130,9 @@
 
 * **15.1 Chain of Thought (CoT):** 단계적 추론이 성능에 미치는 영향.
 * **15.2 Tree/Graph of Thoughts:** 탐색 알고리즘(DFS/BFS)을 결합한 복합 추론.
-* **15.3 Search-time Compute:** 추론(Test-time) 시 연산량을 늘려 성능을 높이는 'Inference-time Scaling Laws'와 OpenAI o1의 메커니즘.
+* **15.3 Search-time Compute:** 모델·sampler·verifier·예산의 시스템으로 추론 연산을 배분하고 고정 비용에서 평가하는 법.
 * **15.4 Verifiers & Reward Models:** 추론 과정의 정답 유무를 판단하는 프로세스 보상 모델(PRM).
+* **15.5 Reasoning Post-training with Verifiable Rewards:** GRPO/RLVR, 길이 정규화, 구성적 일반화, 힌트 의존, rollout 복구와 출시 계약.
 * **Summary:** 단순한 다음 단어 예측을 넘어, 논리적인 '생각'과 '검색'을 통해 정답에 도달하는 추론 최적화 기술입니다.
 
 ### **Chapter 16: Agentic AI & Tools**
@@ -151,7 +152,7 @@
 * **17.3 Elo Rating & Leaderboards:** LMSYS Chatbot Arena와 같은 인간 선호도 기반 평가.
 * **17.4 Contamination Issues:** 학습 데이터에 평가셋이 포함되는 문제와 검증법.
 * **17.5 Production Evaluation and Release Gates:** offline eval, judge calibration, canary, rollout gate를 실제 릴리스 프로세스와 연결하는 방법.
-* **17.6 Commercial Model Benchmarks:** Gemini 3.5/3.6 Flash, Qwen3.7/3.8, Claude Fable/Opus 5, GPT-5.6 Sol/Terra/Luna 등 최신 모델을 성능·가격·속도·context·공개 상태로 비교하는 interactive map.
+* **17.6 Commercial Model Benchmarks:** 2026-10-13 기준 GPT-6.1 Sol, Claude 5.5, Gemini 4 Argon, DeepSeek V4.1 Flash, GLM-5.3, Mistral Large 4, Beam을 평가 버전·과업 비용·공개 상태와 비교하는 interactive map.
 * **Summary:** 모델의 '진짜 실력'을 객관적이고 공정하게 측정하기 위한 평가 방법론과 지표를 다룹니다.
 
 ### **Chapter 18: AI Safety & Alignment Research**

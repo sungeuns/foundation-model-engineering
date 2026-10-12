@@ -429,3 +429,4 @@
   border-radius: 4px;
   font-weight: 700;
 }
+.topology-explorer .tab-btn:focus-visible { outline: 3px solid #1976d2; outline-offset: 3px; }

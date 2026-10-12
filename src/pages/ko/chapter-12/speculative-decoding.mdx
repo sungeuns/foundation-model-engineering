@@ -76,88 +76,81 @@ $K$ 를 크게 잡으면 더 많이 가속할 여지가 생기지만, 초안 모
 
 투기적 디코딩은 평균 처리량을 개선하는 경우가 많지만, 꼬리 지연 시간(tail latency)은 오히려 더 복잡해질 수 있습니다. 요청마다 작업 유형, 프롬프트 엔트로피, temperature에 따라 수용률이 크게 달라지기 때문입니다. 그래서 멀티테넌트 서빙에서는 tokens-per-second뿐 아니라, 요청군별 수용률 분포와 latency variance까지 함께 모니터링하는 편이 좋습니다.
 
-## PyTorch 구현 (검증 로직)
+## 교육용 검증 참조
 
 다음은 투기적 디코딩의 핵심 검증 및 거절 샘플링 로직을 보여주는 PyTorch 코드입니다.
 
+> **의도적으로 단순화하고 smoke test한 Python 참조 예제.** 공통 어휘와 미리 계산한 확률로 한 시퀀스를 검증합니다. 모델 실행·logits processor·tensor/device/dtype·배치·EOS/예산 종료·캐시·분산 서빙은 빠져 있습니다. 운영용 decoder가 아닙니다.
+
 ```python
-import torch
-import torch.nn.functional as F
+import math
+import random
 
-def verify_draft_tokens(draft_logits, target_logits, draft_tokens, temperature=1.0):
-    """
-    초안 토큰을 검증하고 거절 샘플링을 적용합니다.
-    
-    Args:
-        draft_logits: 초안 모델의 로짓. 형태: (batch_size, K, vocab_size)
-        target_logits: 타겟 모델의 로짓. 형태: (batch_size, K + 1, vocab_size)
-        draft_tokens: 초안 모델이 제안한 토큰. 형태: (batch_size, K)
-        temperature: 샘플링 온도.
-        
-    Returns:
-        accepted_tokens: 수락된 토큰 목록.
-        num_accepted: 수락된 토큰 수.
-    """
-    batch_size, K = draft_tokens.shape
-    
-    # 온도 적용
-    draft_probs = F.softmax(draft_logits / temperature, dim=-1)
-    target_probs = F.softmax(target_logits[:, :K, :] / temperature, dim=-1)
-    
-    accepted_tokens = []
-    
-    for i in range(K):
-        # 특정 초안 토큰에 대한 확률 가져오기
-        q = draft_probs[:, i, draft_tokens[:, i]]
-        p = target_probs[:, i, draft_tokens[:, i]]
-        
-        # 수락 확률
-        p_accept = torch.min(torch.ones_like(p), p / q)
-        
-        # 주사위 굴리기
-        rand_val = torch.rand_like(p_accept)
-        accepted = rand_val < p_accept
-        
-        if accepted.all():
-            accepted_tokens.append(draft_tokens[:, i])
+
+def validate_distribution(probabilities):
+    if not probabilities or any(not math.isfinite(p) or p < 0 for p in probabilities):
+        raise ValueError("require finite nonnegative probabilities")
+    if not math.isclose(sum(probabilities), 1.0, abs_tol=1e-8):
+        raise ValueError("probabilities must sum to one")
+
+
+def draw(probabilities, rng):
+    threshold = rng.random()
+    cumulative = 0.0
+    for token, probability in enumerate(probabilities):
+        cumulative += probability
+        if threshold < cumulative:
+            return token
+    return len(probabilities) - 1  # floating-point rounding only
+
+
+def verify_draft_tokens(draft_probs, target_probs, draft_tokens, rng):
+    # One sequence: q has K rows; p has K+1 rows, including the bonus.
+    # Each p row is target-verified under the corresponding draft prefix.
+    k = len(draft_tokens)
+    if k < 1 or len(draft_probs) != k or len(target_probs) != k + 1:
+        raise ValueError("require K draft rows and K+1 target rows")
+    vocab = len(target_probs[0])
+    for row in [*draft_probs, *target_probs]:
+        validate_distribution(row)
+        if len(row) != vocab:
+            raise ValueError("draft and target must share a token space")
+
+    output = []
+    for i, token in enumerate(draft_tokens):
+        if not 0 <= token < vocab or draft_probs[i][token] <= 0:
+            raise ValueError("proposal must have positive draft probability")
+        q = draft_probs[i][token]
+        p = target_probs[i][token]
+        if rng.random() < min(1.0, p / q):
+            output.append(token)
         else:
-            # 거절! 수정된 분포에서 샘플링
-            # 참고: 이 다중 배치 시뮬레이션의 단순화를 위해 batch_size=1을 가정합니다.
-            # 전체 구현에서는 배치 항목당 마스크를 처리합니다.
-            diff = target_probs[:, i, :] - draft_probs[:, i, :]
-            adjusted_probs = torch.clamp(diff, min=0.0)
-            
-            if adjusted_probs.sum() > 0:
-                adjusted_probs = adjusted_probs / adjusted_probs.sum(dim=-1, keepdim=True)
-                next_token = torch.multinomial(adjusted_probs, 1)
-            else:
-                # 차이가 0인 경우 타겟 모델의 원래 분포로 폴백
-                next_token = torch.multinomial(target_probs[:, i, :], 1)
-                
-            accepted_tokens.append(next_token.squeeze(-1))
-            break
-            
-    # K개 토큰이 모두 수락되면, 공짜로 계산된 (K+1)번째 위치의 타겟 모델 예측도 가져올 수 있습니다!
-    if len(accepted_tokens) == K:
-        last_probs = F.softmax(target_logits[:, K, :] / temperature, dim=-1)
-        next_token = torch.multinomial(last_probs, 1)
-        accepted_tokens.append(next_token.squeeze(-1))
-        
-    return torch.cat(accepted_tokens, dim=-1), len(accepted_tokens)
+            residual = [max(pj - qj, 0.0)
+                        for pj, qj in zip(target_probs[i], draft_probs[i])]
+            mass = sum(residual)
+            if mass <= 0:
+                raise ArithmeticError("rejection with no residual mass")
+            output.append(draw([value / mass for value in residual], rng))
+            return output, i  # accepted draft count; no bonus after rejection
 
-# 예제 사용법 (배치 크기 1)
-K = 4 # 초안 룩어헤드
-vocab_size = 1000
+    output.append(draw(target_probs[k], rng))
+    return output, k  # bonus only when all K draft tokens were accepted
 
-draft_logits = torch.randn(1, K, vocab_size)
-target_logits = torch.randn(1, K + 1, vocab_size)
-# 초안 모델이 토큰을 선택하는 시뮬레이션
-draft_tokens = torch.argmax(draft_logits, dim=-1)
 
-accepted, count = verify_draft_tokens(draft_logits, target_logits, draft_tokens)
-print(f"수락된 토큰 수: {count}")
-print(f"수락된 토큰 시퀀스: {accepted}")
+rng = random.Random(7)
+q = [[0.25, 0.75]]
+p = [[0.75, 0.25], [0.5, 0.5]]
+proposal = [draw(q[0], rng)]  # sample from q, not argmax(q)
+output, accepted_drafts = verify_draft_tokens(q, p, proposal, rng)
+print(output, accepted_drafts)
 ```
+
+## 트리형 speculative decoding에는 분기별 상태 격리가 필요하다
+
+**2026-10-13 기준 연구 스냅샷.** 9월 DeepSeek-V4-Flash 연구는 압축 어텐션에 트리형 speculation을 적용하면서 분기별 검증, 임시 상태 격리, 채택한 경로의 상태 갱신을 사용합니다 [[3]](#ref-3). 서로 다른 분기는 공유 접두사를 다른 상태로 압축할 수 있어 토큰 위치 마스크만으로 상태 일관성을 보장할 수 없습니다. 연구에서는 채택 길이가 늘어도 처리량이 포화되는 경우를 보고합니다.
+
+실무 검증은 같은 raw logits만 비교하지 말고 같은 temperature·top-k/top-p가 적용된 실제 분포에서 일반 샘플링과 비교합니다. 모든 깊이에서의 거절, 전부 채택됐을 때의 bonus, EOS·취소·가변 배치 길이, 압축/recurrent 상태 복원을 검사합니다. 채택한 **draft** 토큰을 대체·bonus 토큰과 구분하고, draft·검증·상태 갱신·스케줄링을 포함한 총시간을 보고합니다. 채택 길이가 길어졌다고 서비스가 반드시 빨라지는 것은 아닙니다.
+
 
 ## Quizzes
 
@@ -195,3 +188,4 @@ $\mathbb{E}[N] = \frac{1 - \alpha^{K+1}}{1 - \alpha}$
 
 1. <a id="ref-1"></a>Leviathan, Y., et al. (2023). *Fast Inference from Transformers via Speculative Decoding*. [arXiv:2211.17192](https://arxiv.org/abs/2211.17192).
 2. <a id="ref-2"></a>Chen, C., et al. (2023). *Accelerating Large Language Model Decoding with Speculative Sampling*. [arXiv:2302.01318](https://arxiv.org/abs/2302.01318).
+3. <a id="ref-3"></a>Liu, C., & Li, Z. (2026). Adapting Tree-Structured Speculative Decoding to DeepSeek-V4 for Efficient Inference. [Source](https://arxiv.org/abs/2609.24698).

@@ -1,0 +1,15 @@
+# Foundation Model Engineering terminology baseline
+# Created 2026-10-13 for durable terms introduced in the current review.
+# Keep code/API names verbatim; translations below are the prose baseline.
+reinforcement learning with verifiable rewards (RLVR) = 검증 가능한 보상을 이용한 강화학습
+compositional generalization = 구성적 일반화
+hinted reward shift = 힌트에 의한 보상 이동
+hint annealing = 힌트 기여도의 점진적 감소
+conditional memory = 조건부 메모리
+Attention Residuals = 어텐션 기반 잔차 혼합 (고유 방법명: Attention Residuals)
+Causal Encoder-Decoder (CED) = 인과적 인코더-디코더 (방법명: Causal Encoder-Decoder)
+hybrid-state cache recovery = 하이브리드 상태 캐시 복구
+sealed holdout = 봉인된 평가셋
+behavioral fidelity = 행동 충실도
+policy lag = 정책 지연
+artifact bundle = 아티팩트 묶음

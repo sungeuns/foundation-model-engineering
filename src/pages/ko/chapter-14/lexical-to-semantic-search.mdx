@@ -108,6 +108,13 @@ $$ \mathcal{L}_{InfoNCE} = -\frac{1}{N} \sum_{i=1}^{N} \log \frac{\exp(\text{sim
 
 ---
 
+## 10월 업데이트: 모달리티를 넘나드는 임베딩
+
+**2026-10-13 기준.** Google은 10월 6일 텍스트·이미지·음성·동영상을 같은 공간에 임베딩하는 EmbeddingGemma 2를 공개했습니다. 발표문은 Matryoshka 벡터를 768차원에서 128차원까지 줄일 수 있다고 설명합니다 [[2]](#ref-2). 중요한 변화는 질의와 검색 대상의 모달리티가 달라도 된다는 점이며, 한 범용 임베딩이 모든 검색 과업을 해결한다는 뜻은 아닙니다.
+
+임베딩 모델이나 차원을 바꾸면 **새 index 버전** 이 필요합니다. 문서·질의를 호환되는 전처리·과업 지시·정규화·차원으로 다시 임베딩하고, 한 index에 다른 좌표계를 섞지 않습니다. 텍스트·코드·이미지·음성 구간별 recall·순위·인용 근거·지연을 비교합니다. 시간 정보, 원문 구간이나 frame/audio 범위, 접근 권한, 삭제 이력을 보존해 교차 모달 검색 결과를 감사할 수 있게 합니다. 낮은 차원은 벡터 저장 공간을 줄이지만 선택한 차원의 품질은 별도로 측정해야 합니다.
+
+
 ## Quizzes
 
 <details>
@@ -130,3 +137,4 @@ $$ \mathcal{L}_{InfoNCE} = -\frac{1}{N} \sum_{i=1}^{N} \log \frac{\exp(\text{sim
 ## References
 
 1. <a id="ref-1"></a>Kusupati, A., et al. (2022). *Matryoshka Representation Learning.* [arXiv:2205.13147](https://arxiv.org/abs/2205.13147).
+2. <a id="ref-2"></a>Google DeepMind. (2026-10-06). EmbeddingGemma 2. [Source](https://blog.google/innovation-and-ai/technology/developers-tools/embeddinggemma-2/).

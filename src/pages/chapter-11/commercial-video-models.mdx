@@ -8,7 +8,7 @@ lang: "en"
 
 Commercial video generation is an integration problem, not a beauty contest. A team must evaluate temporal consistency, prompt and reference adherence, audio timing, editability, latency, price, content rights, safety controls, and the stability of the serving interface. A polished demo establishes possibility; it does not establish a dependable production system.
 
-**As of August 16, 2026**, the products and access paths in this section are a dated snapshot. Recheck official documentation before procurement or release because names, limits, prices, and availability change quickly.
+**As of 2026-10-13**, the products and access paths in this section are a dated snapshot. Recheck official documentation before procurement or release because names, limits, prices, and availability change quickly.
 
 ---
 
@@ -20,17 +20,17 @@ Google's public product material emphasizes native audio, reference-based contro
 
 ### OpenAI Sora 2
 
-OpenAI's Sora 2 system card describes video generation with synchronized audio and documents safety evaluations and mitigations [[2]](#ref-2). OpenAI's model documentation labels the Sora 2 API model as legacy at this snapshot [[3]](#ref-3). This is an important engineering lesson: a model's research significance, consumer product, and API lifecycle are different facts and may change on different schedules.
+OpenAI's Sora 2 system card describes video generation with synchronized audio and documents safety evaluations and mitigations [[2]](#ref-2). OpenAI's deprecation schedule lists the Videos API and Sora 2 aliases/snapshots as removed from the API on September 24, 2026 [[3]](#ref-3). Treat Sora 2 as a historical research/safety example, not an available API choice in this snapshot. This is an important engineering lesson: a model's research significance, consumer product, and API lifecycle are different facts and may change on different schedules.
 
-### ByteDance Seedance 2.0
+### ByteDance Seedance 2.5
 
-ByteDance describes Seedance 2.0 as accepting text, image, audio, and video inputs through a unified multimodal audio-video generation approach [[4]](#ref-4). The official release highlights consistency and control, but the exact latent modules, identity representation, parameter count, and training recipe are **undisclosed**. Treat performance statements in a provider release as provider claims until an independent, method-compatible evaluation reproduces them.
+The current official page describes joint audio-video generation, up to 30-second clips, reference control, and editing, with a hosted/API access path [[4]](#ref-4). These are testable product claims. Parameter count, exact latent modules, training mixture, and full recipe remain **undisclosed** in the cited product page. Evaluate the exact product revision and region rather than inherit Seedance 2.0's limits.
 
-| Question | Veo 3.1 | Sora 2 | Seedance 2.0 |
+| Question | Veo 3.1 | Sora 2 | Seedance 2.5 |
 | :--- | :--- | :--- | :--- |
-| Publicly emphasized capability | Video with native audio and creator controls | Video with synchronized audio and documented safety controls | Multimodal inputs and joint audio-video generation |
+| Publicly emphasized capability | Video with native audio and creator controls | Video with synchronized audio and documented safety controls | Joint audio-video generation, reference control, and editing |
 | Architecture detail in the cited source | Undisclosed beyond product-level descriptions | Partial research framing; production recipe undisclosed | Unified approach named; internal modules undisclosed |
-| Production implication | Verify the exact Google surface and quota | Separate API lifecycle from consumer availability | Verify regional access, terms, and independent quality |
+| Production implication | Verify the exact Google surface and quota [[1]](#ref-1) | API removed on 2026-09-24; historical example [[3]](#ref-3) | Verify hosted/API revision, region, and terms [[4]](#ref-4) |
 
 This table deliberately does not declare a universal winner. Provider demos, prompt sets, editing tools, and graders are not interchangeable.
 
@@ -107,6 +107,6 @@ For an AI engineer, the near-term design question is concrete: does the system m
 
 1. <a id="ref-1"></a>Google. (2026). *Veo 3.1 Ingredients to Video: More consistency, creativity and control*. [Google Blog](https://blog.google/innovation-and-ai/technology/ai/veo-3-1-ingredients-to-video/).
 2. <a id="ref-2"></a>OpenAI. (2026). *Sora 2 System Card*. [OpenAI](https://openai.com/index/sora-2-system-card/).
-3. <a id="ref-3"></a>OpenAI. (2026). *Sora 2 model documentation*. [OpenAI Developers](https://developers.openai.com/api/docs/models/sora-2).
-4. <a id="ref-4"></a>ByteDance Seed. (2026). *Seedance 2.0*. [Official model page](https://seed.bytedance.com/en/seedance2_0).
+3. <a id="ref-3"></a>OpenAI. (2026). *Deprecations: Sora 2 video generation models and Videos API*. [OpenAI Developers](https://developers.openai.com/api/docs/deprecations).
+4. <a id="ref-4"></a>ByteDance Seed. (2026). *Seedance 2.5*. [Official model page](https://seed.bytedance.com/en/seedance2_5).
 5. <a id="ref-5"></a>Google DeepMind. (2026). *Genie*. [Official model page](https://deepmind.google/models/genie/).

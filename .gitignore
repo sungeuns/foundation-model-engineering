@@ -31,3 +31,7 @@ pnpm-debug.log*
 # Misc
 docs
 *.tar.gz
+# Track the terminology baseline while keeping other untracked docs ignored.
+!/docs/
+/docs/*
+!/docs/terminology_dict.txt

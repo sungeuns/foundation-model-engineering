@@ -91,7 +91,7 @@ export const chapters = [
       { id: "9-1", title: { en: "9.1 SFT Fundamentals", ko: "9.1 SFT 기본 개념" }, path: "/chapter-9/sft-fundamentals" },
       { id: "9-2", title: { en: "9.2 Dataset Quality vs Quantity", ko: "9.2 데이터셋 품질 vs 양" }, path: "/chapter-9/dataset-quality-vs-quantity" },
       { id: "9-3", title: { en: "9.3 Parameter-Efficient Fine-Tuning (PEFT)", ko: "9.3 매개변수 효율적 미세 조정 (PEFT)" }, path: "/chapter-9/parameter-efficient-fine-tuning-peft" },
-      { id: "9-4", title: { en: "9.4 Prompt Engineering as SFT", ko: "9.4 SFT로서의 프롬프트 엔지니어링" }, path: "/chapter-9/prompt-engineering-as-sft" },
+      { id: "9-4", title: { en: "9.4 Prompting, ICL, and Prompt Optimization", ko: "9.4 프롬프팅·ICL·프롬프트 최적화" }, path: "/chapter-9/prompt-engineering-as-sft" },
       { id: "9-5", title: { en: "9.5 Synthetic Instructions & Self-Instruct", ko: "9.5 합성 인스트럭션 및 Self-Instruct" }, path: "/chapter-9/synthetic-instructions-and-self-instruct" },
     ]
   },
@@ -161,6 +161,7 @@ export const chapters = [
       { id: "15-2", title: { en: "15.2 Tree/Graph of Thoughts", ko: "15.2 생각의 트리/그래프" }, path: "/chapter-15/tree-graph-of-thoughts" },
       { id: "15-3", title: { en: "15.3 Search-time Compute", ko: "15.3 탐색 시간 컴퓨팅" }, path: "/chapter-15/search-time-compute" },
       { id: "15-4", title: { en: "15.4 Verifiers & Reward Models", ko: "15.4 검증기 및 보상 모델" }, path: "/chapter-15/verifiers-and-reward-models" },
+      { id: "15-5", title: { en: "15.5 Reasoning Post-training with Verifiable Rewards", ko: "15.5 검증 가능한 보상을 이용한 추론 사후 학습" }, path: "/chapter-15/reasoning-post-training-rlvr" },
     ]
   },
   {

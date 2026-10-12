@@ -91,7 +91,7 @@ Optical context compression belongs to the last category. It is promising for sc
 
 ## The Open-Model Frontier: Architecture Versus Disclosure
 
-**Evidence snapshot: September 15, 2026.**
+**Historical release snapshot: as of 2026-09-15.** The local-context correction and October additions below supersede the conflated hosted/checkpoint limits.
 
 The most useful comparison is not a product-name table. It is a **claim-boundary table**: what can be verified from weights and configuration files, what is described only in a launch post, and what is still promised.
 
@@ -100,7 +100,7 @@ The most useful comparison is not a product-name table. It is a **claim-boundary
 | GLM-5.2 | MIT-licensed weights and configuration are public | 753B MoE, 78 layers, first 3 dense layers, 256 routed + 1 shared expert, 8 routed experts per token, 1M positions, DeepSeek Sparse Attention, IndexShare, and one MTP layer [[8]](#ref-8) [[9]](#ref-9) | The complete pre-training corpus mixture and filtering recipe are not published |
 | Kimi K3 | Released/open-weight; weights, technical report, MoonEP, FlashKDA, and AgentEnv are public [[14]](#ref-14) | 2.8T parameters, native multimodality, 1M context, Kimi Delta Attention, Attention Residuals, Stable LatentMoE, and 16-of-896 expert routing [[11]](#ref-11) [[14]](#ref-14) | The exact pre-training data mixture and complete filtering recipe remain undisclosed |
 | Qwen3.7 | Released as an agent-oriented Qwen generation | 1M-context product configuration and long-horizon agent examples are documented [[12]](#ref-12) | It is not evidence for Qwen3.8 internals |
-| Qwen3.8-Max | Released/open-weight as Qwen3.8-2.4T-A95B [[15]](#ref-15) | Public weights and configuration establish 2.4T total parameters, 95B active parameters, and 1M context [[13]](#ref-13) [[15]](#ref-15) | The exact corpus mixture and complete data-filtering and post-training recipes remain undisclosed |
+| Qwen3.8-Max | Released/open-weight as Qwen3.8-2.4T-A95B [[15]](#ref-15) | Public weights and configuration establish 2.4T total parameters, 95B active parameters, 262,144 native positions, and documented context extension [[13]](#ref-13) [[15]](#ref-15) | The exact corpus mixture and complete data-filtering and post-training recipes remain undisclosed |
 
 This distinction matters. “Open” is not a future promise, an API endpoint, or a parameter-count announcement. For reproducible engineering, an open-weight claim starts when the actual weight files and a usable configuration are available.
 
@@ -120,7 +120,31 @@ K3 also exposes a subtle product constraint: a reasoning session should preserve
 
 ### Qwen3.8: artifact arrival changes the claim boundary
 
-Qwen3.8 is valuable precisely because its release history teaches evidence discipline. At preview time, Alibaba had announced a 2.4T model and future open weights, so its internals had to remain **undisclosed** rather than inherit Qwen3.7 details [[13]](#ref-13). The later Qwen3.8-2.4T-A95B repository changed that boundary: weights and configuration now support claims about total and active parameters and the 1M context window [[15]](#ref-15). They still do not disclose the exact corpus mixture or complete filtering and post-training recipes. A living technical comparison must change when the artifact changes—not when a future promise is first published.
+Qwen3.8 is valuable precisely because its release history teaches evidence discipline. At preview time, Alibaba had announced a 2.4T model and future open weights, so its internals had to remain **undisclosed** rather than inherit Qwen3.7 details [[13]](#ref-13). The later Qwen3.8-2.4T-A95B repository changed that boundary: weights and configuration now support claims about total and active parameters and the documented native/extended context distinction [[15]](#ref-15). They still do not disclose the exact corpus mixture or complete filtering and post-training recipes. A living technical comparison must change when the artifact changes—not when a future promise is first published.
+
+## October Update: Separate Compute, Memory, and Release State
+
+**As of 2026-10-13.** The following additions are supported by current primary artifacts. They extend the historical September table above.
+
+| Model | Access | Disclosed mechanism | Boundary |
+|---|---|---|---|
+| DeepSeek V4.1 Flash | released/open-weight | Causal Encoder-Decoder (CED), CSA2 cross-layer cache reuse, FP4 KV, and Engram conditional memory [[16]](#ref-16) [[17]](#ref-17) | Backbone parameters and lookup memory are different accounting categories; full data mixture remains undisclosed |
+| GLM-5.3 | released/open-weight | Its documentation describes post-training improvements on the GLM-5.2 base, text-only inputs, and always-on reasoning [[18]](#ref-18) | Do not infer a new backbone or borrow the separate Flash model's cache layout |
+| Mistral Large 4 | preview/API-only | The launch post reports a 1T multimodal MoE with 52B active parameters [[19]](#ref-19) | Weight release and additional technical detail are planned for later in October |
+| Beam | announced/planned | The launch post reports a 501B MoE with 23B active parameters [[20]](#ref-20) | Early-access signup is available; weights and technical artifacts are promised later in October |
+
+### Autoregressive does not mean decoder-only
+
+V4.1 Flash uses a causal encoder followed by a decoder. Its card explains that global decoder KV is projected from the encoder's final states, rather than rebuilt independently from each decoder layer [[16]](#ref-16). This differs from T5's bidirectional source encoder while still generating text autoregressively. Output factorization, attention visibility, and the prefill/decode execution path are separate design choices.
+
+### Conditional memory is a different sparsity axis
+
+Engram studies token-conditioned lookup as a complement to MoE computation [[21]](#ref-21). A deterministic address can enable prefetching, but a lookup is not free: storage capacity, host bandwidth, transfer overlap, and miss behavior matter. It is also not the external, refreshable document index of RAG. For a deployment comparison, separate neural compute, lookup storage, KV state, and communication; one active-parameter ratio cannot describe all four.
+
+### Hosted and downloadable Qwen3.8 are distinct artifacts
+
+The local Qwen3.8 configuration declares `max_position_embeddings: 262144` [[22]](#ref-22). Its model card describes 262,144 native positions and extension to 1,010,000 tokens, while the hosted Qwen3.8-Max product has additional capabilities and a different default context [[15]](#ref-15). Pin the scaling configuration and evaluate retrieval, multi-document reasoning, position sensitivity, memory, and latency at the intended length. “1M context” is a configuration and evaluation claim, not a guarantee inherited by every serving path.
+
 
 ## A Better Way to Compare Modern Architectures
 
@@ -147,6 +171,8 @@ That is why modern architecture work often looks less like a search for a univer
 ## PyTorch Implementation: Simplified MLA
 
 Despite the rise of hybrid attention, Multi-head Latent Attention (MLA) is still a useful example because it makes the serving problem concrete. The simplified implementation below shows the central idea: compress what you store, then reconstruct what you need for attention computation.
+
+> **Deliberately simplified example.** This educational low-rank attention block reconstructs K/V and does not implement production MLA cache absorption, decoupled RoPE, incremental serving, quantization, or distributed kernels.
 
 ```python
 import torch
@@ -254,3 +280,10 @@ To better understand how these different architectures control information flow,
 13. <a id="ref-13"></a>Alibaba Group. (2026). *Alibaba Unveils Qwen3.8-Max-Preview*. [Alibaba Group](https://www.alibabagroup.com/en-US/document-2016703577908576256).
 14. <a id="ref-14"></a>Moonshot AI. (2026). *Kimi K3 Open Day: weights, technical report, and infrastructure*. [Kimi](https://www.kimi.com/news/kimi-k3-open-source).
 15. <a id="ref-15"></a>Qwen Team. (2026). *Qwen3.8-2.4T-A95B*. [Hugging Face model repository](https://huggingface.co/Qwen/Qwen3.8-2.4T-A95B).
+16. <a id="ref-16"></a>DeepSeek-AI. (2026). DeepSeek-V4.1-Flash model card. [Source](https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash).
+17. <a id="ref-17"></a>DeepSeek-AI. (2026). DeepSeek-V4.1-Flash technical report. [Source](https://arxiv.org/abs/2609.19969).
+18. <a id="ref-18"></a>Z.ai. (2026). GLM-5.3 developer documentation. [Source](https://docs.z.ai/guides/llm/glm-5.3).
+19. <a id="ref-19"></a>Mistral. (2026). Introducing Mistral Large 4. [Source](https://mistral.ai/news/mistral-large-4/).
+20. <a id="ref-20"></a>Reflection. (2026). Introducing Beam. [Source](https://reflection.ai/blog/introducing-beam).
+21. <a id="ref-21"></a>Cheng, X., et al. (2026). Conditional Memory via Scalable Lookup. [Source](https://arxiv.org/abs/2601.07372).
+22. <a id="ref-22"></a>Qwen Team. (2026). Qwen3.8-2.4T-A95B configuration. [Source](https://huggingface.co/Qwen/Qwen3.8-2.4T-A95B/raw/main/config.json).

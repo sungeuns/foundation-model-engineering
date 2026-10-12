@@ -116,6 +116,20 @@
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
+.induction-visualizer .matrix-container { max-width: 100%; }
+.induction-visualizer .matrix-row,
+.induction-visualizer .col-labels { min-width: 560px; }
+.induction-visualizer .row-label { flex: 0 0 80px; box-sizing: border-box; }
+.induction-visualizer .col-label { flex: 0 0 60px; }
+.induction-visualizer .matrix-cell {
+  flex: 0 0 60px;
+  padding: 0;
+  border-radius: 0;
+  box-sizing: border-box;
+}
+.induction-visualizer .matrix-cell:focus-visible { outline: 3px solid #1d4ed8; outline-offset: -3px; }
+.induction-visualizer .matrix-cell:focus .tooltip { display: block; }
+
 .visualizer-title {
   margin: 0 0 15px 0;
   color: #1e293b;

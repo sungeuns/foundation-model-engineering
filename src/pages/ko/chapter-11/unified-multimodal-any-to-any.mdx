@@ -1,177 +1,85 @@
 ---
 layout: ../../../layouts/BookLayout.astro
-title: 11.3 Unified Multimodal (Any-to-Any)
+title: 11.3 통합 멀티모달과 Any-to-Any
 lang: ko
 ---
 
-import OmniAttentionVisualizer from '../../../components/chapter-11/OmniAttentionVisualizer.tsx';
+# 11.3 통합 멀티모달과 Any-to-Any
 
-# 11.3 Unified Multimodal (Any-to-Any)
+이미지를 읽는 모델이 이미지를 생성하는 것은 아닙니다. 음성을 이해해도 텍스트로만 답할 수 있습니다. 따라서 **any-to-any** 는 검사해야 할 역량 표이며, native라는 단어에서 도출할 아키텍처 결론이 아닙니다.
 
-이전 섹션에서는 오디오가 Foundation Models에 어떻게 통합되었는지, 즉 계단식(cascaded) 파이프라인에서 연속적인 잠재 모델링(continuous latent modeling)으로 진화하는 과정을 살펴보았습니다. 그러나 오디오, 비전, 텍스트를 각각 고립된 통합 문제로 취급하면 필연적으로 시스템의 파편화를 초래합니다. 만약 모델이 이미지를 위한 특화된 어댑터, 오디오를 위한 별도의 신경망 코덱, 그리고 비디오를 위한 독립적인 디퓨전(diffusion) 헤드를 요구한다면, 아키텍처는 여러 구성 요소가 억지로 접착된 취약한 누더기(patchwork)가 되고 맙니다.
+문제는 모달리티 사이의 표현·시간 정렬·목적함수·출력 경로를 조율하는 것입니다. 공동 학습한 시스템에도 전용 encoder·codec·projector·생성 모듈이 남을 수 있습니다.
 
-2024년부터 2026년 사이에 뚜렷하게 보이는 연구 흐름 중 하나가 **Native Any-to-Any Architectures** 로의 이동입니다. 사전 학습된 LLM을 동결(freeze)하고 교차 어텐션(cross-attention)으로 외부 인코더를 붙이는 "모듈형 멀티모달(modular multimodality)" 대신, 최근 시스템들은 멀티모달 처리를 더 많이 공유 백본 안으로 끌어들이려 합니다. 이런 관점에서는 텍스트, 이미지 패치, 오디오 프레임, 때로는 action-like token까지 공통 잠재 공간(common latent space) 안에서 다뤄집니다.
+## 1. 공통 표현이 모달리티 인터페이스를 없애지는 않는다
 
-이 섹션에서는 통합된 Any-to-Any 모델 이면의 엔지니어링 원리를 해부하고, 옴니 토큰화(omni-tokenization), 교차 자기회귀(interleaved autoregression), 그리고 이를 지배하는 모달리티 불가지론적(modality-agnostic) 스케일링 법칙을 탐구합니다.
+모달리티 $m$ 의 encoder가 $f_m\in\mathbb R^{B\times S_m\times d_m}$ 을 만든다고 합시다. 투영 $P_m$ 은 폭 $d_m$ 을 공통 폭 $D$ 로 바꾸어 $z_m\in\mathbb R^{B\times S_m\times D}$ 를 만듭니다. $B$ 는 배치 크기, $S_m$ 은 모달리티의 표현 길이입니다. 호환되는 폭은 공동 처리를 가능하게 하지만 backbone hidden dimension 확대나 모든 모달리티에 같은 토크나이저를 요구하지는 않습니다.
 
-![modular_vs_native_multimodal](../../../assets/images/chapter-11/modular_vs_native_multimodal.png)
-*출처: AI 생성 이미지.*
+이미지 patch 위치·음성 시간·video frame·텍스트 순서는 투영 후에도 복원 가능해야 합니다. tensor 연결은 shape를 설명할 수 있지만 시간 정렬·interleaving·padding mask·교차 모달 학습을 구현하지는 않습니다. 투영 레이어만으로 완전한 멀티모달 모델이 되는 것은 아닙니다.
 
----
+## 2. 공개된 사례: Qwen2.5-Omni
 
-## 1. The Architecture of Unity: Omni-Tokens
+2025년 Qwen2.5-Omni 보고서는 텍스트·이미지·음성·동영상 입력과 streaming 텍스트·음성 출력을 설명합니다. **Thinker–Talker** 는 텍스트 생성과 자기회귀 audio-token 경로를 구분하며, 시간 정렬 위치 인코딩과 streaming 음성 decoder를 사용합니다 [[1]](#ref-1).
 
-Any-to-Any 모델의 핵심 엔지니어링 과제는 각 모달리티의 고유한 특성을 파괴하지 않으면서, 다양하고 고차원적인 신호들을 균일한 Transformer 백본으로 라우팅(routing)하는 것입니다.
+이는 native 통합이 구분 없는 단일 출력 head라는 주장에 대한 좋은 반례입니다. 보고서는 전용 구성 요소가 조율되는 시스템을 공개합니다. 입증한 출력 모드가 임의의 이미지·동영상 생성을 뜻하지는 않으며, 이 메커니즘을 다른 제공사의 미공개 모델에 적용해서도 안 됩니다.
 
-초기 멀티모달 모델(예: Flamingo 또는 초기 LLaVA)에서는 시각적 특징이 텍스트 임베딩 공간으로 매핑되었습니다. 모델이 사실상 이미지를 텍스트 비슷한 표현으로 "번역"한 셈입니다. 반면 Qwen2.5-Omni [[1]](#ref-1) 같은 좀 더 네이티브한 멀티모달 시스템과 GPT-4o/Gemini 같은 제품 계열은 **Omni-Token Space** 에 더 가까운 설계를 지향합니다.
+## 3. 10월 업데이트: 세 가지 다른 출력 계약
 
-모달리티가 텍스트를 모방하도록 강제하는 대신, 모델은 기본 차원을 확장하여 모든 모달리티의 본질적인 구조를 수용합니다. 텍스트, 연속적인 오디오 프레임, 그리고 공간적인 이미지 패치는 모두 동등한 피어(peer)로 취급되는 공유된 고차원 공간으로 투영(projection)됩니다.
+**2026-10-13 기준.** 모달리티 지원과 생성 모델의 마케팅 분류를 구분합니다.
 
-### Interleaved Autoregression
-모든 입력이 동일한 차원 공간을 공유하기 때문에, Transformer는 이들을 단일하고 연속적인 시퀀스로 처리할 수 있습니다. 이는 **Fluid Context Switching** 을 가능하게 합니다. 사용자 프롬프트는 문자 그대로 `[Text] [Image Patch] [Text] [Audio Frame]` 과 같은 구조로 구성될 수 있습니다. 모델은 교차로 섞인(interleaved) 전체 시퀀스에 대해 self-attention을 계산하므로, 오디오 토큰이 텍스트를 거치지 않고도 이미지 패치에 직접 어텐션을 가할 수 있습니다.
+| 사례 | 입력 계약 | 출력 계약 | 근거의 경계 |
+|---|---|---|---|
+| Qwen2.5-Omni, 과거 기술 사례 | 텍스트·이미지·음성·동영상 | 텍스트·음성 | 공개된 Thinker–Talker이며 임의 출력 모달리티는 아님 [[1]](#ref-1) |
+| DeepSeek V4.1 Flash, 가중치 공개 완료 | native 이미지·텍스트 | 자기회귀 텍스트 | 카드만으로 음성·동영상 생성이 입증되지는 않음 [[2]](#ref-2) |
+| EmbeddingGemma 2, 10월 공개 | 공통 멀티모달 표현 | 임베딩 벡터 | 검색 표현과 생성된 미디어는 다름 [[3]](#ref-3) |
 
-### Engineering the Omni-Projector
-이를 달성하기 위해 모델의 입력 레이어는 대대적으로 수정됩니다. 단일 텍스트 임베딩 테이블 대신, 모델은 각 모달리티에 특화된 경량 프로젝터(projector)를 사용하여 원시 특징(raw features)을 공유 차원 $D$ 로 매핑합니다.
+지원 조합·streaming·시간 정보·입력 한도·정확한 API/로컬 아티팩트도 표에 넣어야 합니다. 음성 지원은 인식·생성·임베딩 또는 이들의 조합일 수 있습니다. 필요한 경로를 각각 검사하고 누락된 기능은 미보고로 남깁니다.
 
-아래는 Omni-Token Projector의 현실적인 PyTorch 구현체입니다. 학습 가능한 모달리티 임베딩(modality embeddings)이 추가된 것에 주목하십시오. 이는 공유 공간에서 우연히 비슷한 벡터로 매핑된 텍스트 토큰과 오디오 프레임을 모델이 혼동하지 않도록 방지하는 중요한 역할을 합니다.
+## 4. 시간·서빙 계약
 
-```python
-import torch
-import torch.nn as nn
+live 음성·동영상에는 사용 가능한 출력까지의 전체 지연, chunk 경계, 동기화 drift, buffering, 취소, 중단 후 복구를 측정합니다. 음성 처리 시간은 음성 응답 지연과 같지 않습니다. frame sampling은 짧은 사건을 놓칠 수 있고 겉보기 정렬이 맞아도 인과적으로 중요한 순서를 잃을 수 있습니다.
 
-class OmniTokenProjector(nn.Module):
-    def __init__(self, hidden_dim=4096):
-        super().__init__()
-        self.hidden_dim = hidden_dim
-        
-        # 1. 텍스트 임베딩 (표준 이산 룩업 테이블)
-        self.text_embed = nn.Embedding(num_embeddings=128000, embedding_dim=hidden_dim)
-        
-        # 2. 이미지 패치 프로젝터 (예: ViT 또는 SigLIP 특징에서 추출)
-        self.image_projector = nn.Linear(1152, hidden_dim)
-        
-        # 3. 오디오 프레임 프로젝터 (예: 연속 오디오 인코더에서 추출)
-        self.audio_projector = nn.Linear(1024, hidden_dim)
-        
-        # 모달리티 타입 임베딩 (0: 텍스트, 1: 이미지, 2: 오디오)
-        # 어텐션 메커니즘이 신호의 출처를 구별하도록 돕는 핵심 요소
-        self.modality_embed = nn.Embedding(num_embeddings=3, embedding_dim=hidden_dim)
+모달리티 encoder·표현 확장·backbone prefill/decode·실제로 공개된 codec/diffusion decoder·메모리 전송·도구 orchestration을 별도 계산합니다. 짧은 텍스트 요청에 긴 녹음이 붙으면 표현·처리 비용이 커질 수 있습니다. 공통 문맥이 모든 모달리티를 똑같이 저렴하게 만들지는 않습니다.
 
-    def forward(self, text_ids=None, image_features=None, audio_features=None):
-        embeddings = []
-        
-        if text_ids is not None:
-            text_emb = self.text_embed(text_ids)
-            # 모달리티 식별자 추가
-            text_emb += self.modality_embed(torch.tensor(0, device=text_emb.device))
-            embeddings.append(text_emb)
-            
-        if image_features is not None:
-            img_emb = self.image_projector(image_features)
-            img_emb += self.modality_embed(torch.tensor(1, device=img_emb.device))
-            embeddings.append(img_emb)
-            
-        if audio_features is not None:
-            aud_emb = self.audio_projector(audio_features)
-            aud_emb += self.modality_embed(torch.tensor(2, device=aud_emb.device))
-            embeddings.append(aud_emb)
-            
-        # 실제 forward pass에서는 시퀀스 위치에 따라 토큰들이 교차로 배열(interleaved)됩니다.
-        # 이 데모에서는 단순히 시퀀스 차원을 기준으로 이어 붙입니다(concatenate).
-        return torch.cat(embeddings, dim=1) if embeddings else None
+캐시 ID에는 전처리, encoder/토크나이저 리비전, sample rate/frame 정책, 위치 정렬, dtype/scale, 모델 리비전을 넣습니다. 음성 chunking·이미지 resizing 변경 후 같은 접두사를 재사용하면 호환되지 않는 상태가 복원될 수 있습니다. 처리량뿐 아니라 cold/복원 실행도 검증합니다.
 
-# 교차 프롬프트(interleaved prompt)를 시뮬레이션하는 실행 예제
-batch_size = 2
-text_ids = torch.randint(0, 128000, (batch_size, 10)) # 10개의 텍스트 토큰
-image_features = torch.randn(batch_size, 256, 1152)   # 256개의 이미지 패치 (예: 16x16 그리드)
-audio_features = torch.randn(batch_size, 50, 1024)    # 50개의 오디오 프레임
+## 5. 학습·평가·출시
 
-projector = OmniTokenProjector(hidden_dim=4096)
-unified_sequence = projector(text_ids, image_features, audio_features)
+입력 checkpoint, 각 토크나이저/encoder/codec, 고유 채팅 템플릿, 모달리티 목적·가중치, 데이터 manifest, 라이선스/동의, PII/비밀 처리, sample ID·shard hash를 고정합니다. 관련 녹음·clip·문서·대화·합성 변형을 묶어 분할하고 평가 자산·의미 이웃을 격리합니다.
 
-print(f"Text tokens shape: {text_ids.shape}")
-print(f"Image patches shape: {image_features.shape}")
-print(f"Audio frames shape: {audio_features.shape}")
-print(f"Unified sequence shape: {unified_sequence.shape}") 
-# Output: -> Transformer 백본에 완벽하게 정렬된 316개의 토큰 생성
-```
+학습률·모달리티 혼합·시퀀스/표현 길이·정밀도·sharding·재계산·응답 cap·reference ID 또는 명시적 미사용을 밝힙니다. 텍스트/도구 SFT에는 BOS/EOS·`add_generation_prompt`·잘림·padding·assistant 구간 mask·packing 격리를 확인합니다. 음성/동영상 target에는 자체 유효 frame/token mask와 정렬된 conditioning이 필요합니다. 입력 녹음을 assistant 텍스트 응답처럼 취급하지 않습니다.
 
-<OmniAttentionVisualizer lang="ko" client:load />
+파라미터·gradient·optimizer·activation·임시 버퍼·collective·checkpoint·평가 자원을 분리합니다. 토큰/frame 정규화 학습/검증 손실, 도메인·모달리티 구간, 정렬 drift, nonfinite/overflow, gradient/activation norm, 처리량, MFU, 데이터 대기, collective/straggler, 재구성 가능한 batch ID를 관측합니다. 수치 실패·drift·역량 유지·위험 출력·비용/지연 악화의 pause/abort 경계를 책임자·관측 구간과 함께 사전에 정합니다.
 
----
+sharded 모델/optimizer·scheduler·scaler/FP8 상태·step/노출 수·RNG·sampler/정확한 데이터 커서·모든 구성 요소/config/data hash를 checkpoint합니다. checksum·완료 표식으로 원자적 게시를 수행하고 보존·원격 복제·world-size 제한·복원 훈련·학습 연속성 검사를 정합니다. 구성 요소/템플릿/도구/안전 불변 묶음은 도메인·기존 역량 유지·안전·형식/도구·지연·비용·오류 조건을 짝지은 불확실성이나 근거 있는 표본 수로 통과한 뒤 출시합니다. 일부만 출력한 미디어와 session 상태까지 rollback을 훈련합니다.
 
-## 2. Tokenized Diffusion and Continuous Flow
+## 6. 실무적 결론
 
-입력 프로젝션은 비교적 직관적이지만, Any-to-Any 출력을 *생성(generation)* 하는 것은 역사적으로 매우 복잡한 문제였습니다. 텍스트 생성은 Softmax 레이어를 통해 이산적인 어휘(vocabulary)에 대한 다음 토큰 예측(next-token prediction)에 의존합니다. 그렇다면 LLM이 어떻게 연속적인 4K 비디오나 고음질 오디오 파형을 네이티브하게 생성할 수 있을까요?
-
-### The VQ-VAE vs. DiT Debate
-최근까지 지배적인 접근 방식은 VQ-VAE (Vector Quantized Variational Autoencoders)를 사용하여 모든 출력을 이산 공간으로 강제 변환하는 것이었습니다. 모델이 이산적인 "이미지 토큰"을 예측하면, 디코더가 이를 픽셀로 렌더링하는 방식입니다. 그러나 이전 오디오 섹션에서 논의했듯이, 엄격한 양자화는 **Discrete Representation Inconsistency (DRI)** 를 유발하여 세밀하고 연속적인 디테일을 버리게 만듭니다.
-
-이 문제를 푸는 한 가지 유력한 연구 흐름은 자기회귀적 추론과 diffusion-style generation을 하나의 스택 안에서 결합하는 방식입니다 [[2]](#ref-2).
-
-Transformer는 표준 분류 헤드(Softmax) 대신, 구조적 청사진 역할을 하는 연속적인 "옴니 토큰(omni-tokens)"을 출력합니다. 이 연속적인 임베딩은 네트워크 끝에 부착된 경량 디퓨전 헤드(또는 DiT)로 직접 공급됩니다.
-1. 자기회귀(autoregressive) 백본은 매크로 구조, 타이밍, 논리적 추론을 처리합니다.
-2. 디퓨전(diffusion) 헤드는 마이크로 구조를 처리하여 연속적인 물리적 디테일(픽셀 또는 파형)을 렌더링합니다.
-
-이러한 하이브리드 접근 방식을 통해 모델은 다음 토큰 예측의 논리적 엄밀성을 유지하면서도, 연속적인 디퓨전 모델의 고음질 생성 기능을 달성할 수 있습니다.
-
----
-
-## 3. Unified Scaling Laws and Cross-Modal Transfer
-
-모델이 단일 모달리티에서 네이티브 Any-to-Any로 전환될 때, 그 스케일링 동작은 극적으로 변화합니다. **Unified Scaling Laws** [[3]](#ref-3) 에 대한 연구는 모델의 성능이 BPC (Bits Per Character)나 모달리티 정규화 손실(modality-normalized loss)과 같은 일반화된 지표로 평가될 때, 모든 모달리티에 걸친 총 연산량(total compute)에 의해 주도되는 경향이 있음을 시사합니다.
-
-### Cross-Modal Transfer Learning
-Any-to-Any 아키텍처가 가져온 가장 심오한 엔지니어링적 결과는 **Cross-Modal Transfer Learning** 입니다. 모든 모달리티가 어텐션 레이어에서 동일한 파라미터 가중치를 공유하기 때문에, 한 모달리티에서 특정 개념을 학습하면 수학적으로 다른 모달리티에서도 해당 개념의 표현력이 향상됩니다.
-
-- **Audio to Text**: 고음질 공간 오디오(spatial audio)에 대해 집중적으로 학습하면, 텍스트 기반의 물리 서술형 문제에서 물리적 공간과 타이밍을 추론하는 모델의 능력이 향상됩니다.
-- **Video to Physics**: 비디오 스트림에서 다음 프레임을 예측하는 동시에 해당 오디오(예: 공이 튀는 소리)를 처리함으로써, 모델은 내부적으로 물리 엔진을 학습하게 됩니다.
-
-때때로 "발현적 공감각(Emergent Synesthesia)"이라고도 불리는 이 현상은 멀티모달 데이터가 단순히 덧셈(additive)이 아니라 곱셈(multiplicative)의 효과를 낸다는 것을 의미합니다. 단순히 보고 들을 수 있는 모델을 얻는 것이 아니라, 보고 들을 수 있기 때문에 *텍스트를 더 잘 이해하는* 모델을 얻게 되는 것입니다.
-
----
-
-## 4. Systems Engineering: Disaggregated Serving
-
-프로덕션 환경에서 Any-to-Any 모델을 서빙(serving)하는 것은 거대한 시스템 병목 현상을 유발합니다. 단일 요청 내에서 텍스트 생성(메모리 대역폭 제한적인 자기회귀) 직후에 비디오 생성(연산량 제한적인 디퓨전)이 요구될 수 있기 때문입니다.
-
-**vLLM-Omni** [[4]](#ref-4) 같은 프레임워크는 **Disaggregated Serving** 으로 이 문제에 대응합니다. 전체 Any-to-Any 파이프라인을 단일 GPU 클러스터에서 돌리는 대신, 아키텍처를 스테이지 그래프(stage graph)로 분해합니다. 자기회귀 LLM 백본은 KV 캐시 대역폭에 맞는 하드웨어에서 실행하고, diffusion-style 헤드는 연산 밀도가 높은 워커로 오프로드합니다. 논문은 이렇게 병목을 분리했을 때 job completion time이 크게 줄어든다고 보고합니다.
-
----
-
-## Summary & Next Steps
-
-Any-to-Any 멀티모달리티로의 전환은 단순한 인터페이스 업데이트가 아니라 근본적인 아키텍처의 재작성입니다. 모든 감각적 입력을 공유된 Omni-Token 공간으로 매핑하고 생성을 위해 연속적인 디퓨전 헤드를 활용함으로써, 모델은 모듈형 어댑터와 이산 코덱이 가진 손실 압축의 병목 현상을 우회합니다. 이 통합된 접근 방식은 교차 모달리티 전이 학습(cross-modal transfer learning)을 잠금 해제하여, 모델이 현실에 대한 보다 포괄적이고 물리 법칙에 기반한 내부 표현을 구축할 수 있게 해줍니다.
-
----
+특정 아티팩트가 필요한 시간·품질 조건에서 어느 모달리티를 입력받고 출력할 수 있는지가 핵심입니다. 공동 학습은 전용 모듈을 유지하면서 조율을 개선할 수 있습니다. 전체 경로를 검증하고 공개되지 않은 아키텍처·데이터 혼합·학습 세부사항은 **미공개** 로 남깁니다.
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: 모든 모달리티를 공유 잠재 공간(Omni-Tokens)으로 매핑하는 것이 모듈형 아키텍처에 비해 추론 지연 시간(latency)을 줄이는 이유는 무엇인가?</summary>
-*모듈형 아키텍처는 일반적으로 중간 표현을 통해 데이터를 계단식으로 전달해야 합니다(예: 오디오를 텍스트로 변환하고, 텍스트를 처리한 다음, 텍스트를 이미지 프롬프트로 변환). 이는 순차적인 병목 현상을 유발하고 여러 개의 특화된 모델을 메모리에 로드해야 합니다. 반면 공유 잠재 공간을 사용하면 단일 Transformer를 통과하는 한 번의 순전파(forward pass)만으로 모든 모달리티를 동시에 처리하고 생성할 수 있어 지연 시간과 메모리 오버헤드가 대폭 감소합니다.*
+<summary>Quiz 1: native 이미지 입력이 이미지 생성을 증명하나요?</summary>
+*아닙니다. 입력 encoder와 출력 생성 경로는 다른 계약입니다. 정확한 입력/출력 표를 확인해야 합니다.*
 </details>
 
 <details>
-<summary>Quiz 2: 비디오와 같은 연속적인 모달리티를 생성할 때, 엄격한 이산 벡터 양자화(VQ) 대신 Tokenized Diffusion을 통합하는 것의 주요 이점은 무엇인가?</summary>
-*엄격한 VQ는 연속적이고 고차원적인 데이터를 제한된 이산 토큰 ID 세트로 강제 변환하여 이산 표현의 불일치(DRI)를 유발하고 세밀한 디테일을 버리게 만듭니다. Tokenized Diffusion은 Transformer가 디퓨전 헤드를 직접 조건화하는 연속적인 임베딩을 출력하도록 허용함으로써, 매크로 수준의 논리적 계획은 Transformer에 의존하면서도 물리적 신호(픽셀/파형)의 고음질 마이크로 구조를 보존할 수 있습니다.*
+<summary>Quiz 2: 모든 모달리티를 폭 D로 투영하는 것만으로 부족한 이유는 무엇인가요?</summary>
+*호환되는 tensor 폭은 시간 정렬·위치 인코딩·mask·목적함수·출력 decoder를 구현하지 않기 때문입니다.*
 </details>
 
 <details>
-<summary>Quiz 3: Unified Scaling Law에 따르면, 교차 모달리티 전이 학습(cross-modal transfer learning)은 모델의 성능에 어떤 영향을 미치는가?</summary>
-*모든 모달리티가 어텐션 레이어에서 동일한 파라미터 가중치를 공유하기 때문에, 한 모달리티에서 개념을 학습하면 다른 모달리티에서도 해당 표현력이 향상됩니다. 예를 들어, 비디오와 오디오를 학습하면 모델이 물리적 규칙(공간적 관계 및 타이밍 등)을 학습하게 되며, 이는 순수 텍스트 기반 작업에서 프롬프트가 주어졌을 때 동일한 물리적 개념을 추론하는 능력을 수학적으로 향상시킵니다.*
+<summary>Quiz 3: Thinker–Talker는 native 통합에 대해 무엇을 알려 주나요?</summary>
+*공동 학습한 시스템에도 전용 텍스트·음성 생성 모듈이 남을 수 있습니다. native가 하나의 encoder·토크나이저·출력 head를 뜻하지는 않습니다.*
 </details>
 
 <details>
-<summary>Quiz 4: 프로덕션 서빙 환경에서 Any-to-Any 모델에 Disaggregated Serving(예: vLLM-Omni)이 필요한 이유는 무엇인가?</summary>
-*서로 다른 모달리티는 상충되는 하드웨어 최적화 요구 사항을 갖습니다. 텍스트 생성(자기회귀)은 KV 캐시로 인해 메모리 대역폭의 제한을 크게 받는 반면, 시각/오디오 생성(디퓨전)은 연산량의 제한을 크게 받습니다. Disaggregated serving은 이러한 특정 병목 현상에 맞춰 모델을 서로 다른 하드웨어 클러스터로 분할하고, 그 사이에서 중간 옴니 토큰을 라우팅함으로써 전체 시스템 처리량(throughput)을 극대화합니다.*
+<summary>Quiz 4: 전처리를 캐시·아티팩트 ID에 넣어야 하는 이유는 무엇인가요?</summary>
+*resizing·frame 선택·sample rate·chunking이 표현·정렬을 바꿉니다. backbone 가중치가 같아도 그 상태들을 서로 바꿔 쓸 수는 없습니다.*
 </details>
-
----
 
 ## References
 
-1. <a id="ref-1"></a>Xu, J., et al. (2025). *Qwen2.5-Omni Technical Report.* [arXiv:2503.20215](https://arxiv.org/abs/2503.20215).
-2. <a id="ref-2"></a>Xie, J., et al. (2024). *Show-o: One Single Transformer to Unify Multimodal Understanding and Generation.* [arXiv:2408.12528](https://arxiv.org/abs/2408.12528).
-3. <a id="ref-3"></a>Sun, Q., & Guo, Z. (2024). *Scaling Law Hypothesis for Multimodal Model.* [arXiv:2409.06754](https://arxiv.org/abs/2409.06754).
-4. <a id="ref-4"></a>Yin, P., et al. (2026). *vLLM-Omni: Fully Disaggregated Serving for Any-to-Any Multimodal Models.* [arXiv:2602.02204](https://arxiv.org/abs/2602.02204).
+1. <a id="ref-1"></a>Qwen Team. (2025). *Qwen2.5-Omni Technical Report*. [arXiv:2503.20215](https://arxiv.org/abs/2503.20215).
+2. <a id="ref-2"></a>DeepSeek-AI. (2026). *DeepSeek-V4.1-Flash model card*. [Hugging Face](https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash).
+3. <a id="ref-3"></a>Google DeepMind. (2026). *EmbeddingGemma 2*. [Google](https://blog.google/innovation-and-ai/technology/developers-tools/embeddinggemma-2/).

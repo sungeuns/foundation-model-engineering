@@ -8,7 +8,7 @@ lang: "ko"
 
 상용 비디오 생성은 미인 대회가 아니라 통합 문제입니다. 팀은 시간적 일관성, 프롬프트와 참조 이미지 준수, 오디오 타이밍, 편집 가능성, 지연 시간, 가격, 콘텐츠 권리, 안전 제어, 서빙 인터페이스의 안정성을 함께 평가해야 합니다. 멋진 데모는 가능성을 보여 주지만 신뢰할 수 있는 운영 시스템을 증명하지는 않습니다.
 
-**2026년 8월 16일 기준** 으로 이 절의 제품과 접근 경로는 날짜가 고정된 스냅샷입니다. 이름, 한도, 가격, 가용성은 빠르게 바뀌므로 구매나 출시 전에 공식 문서를 다시 확인해야 합니다.
+**2026-10-13 기준** 으로 이 절의 제품과 접근 경로는 날짜가 고정된 스냅샷입니다. 이름, 한도, 가격, 가용성은 빠르게 바뀌므로 구매나 출시 전에 공식 문서를 다시 확인해야 합니다.
 
 ---
 
@@ -20,17 +20,17 @@ Google의 공개 제품 자료는 네이티브 오디오, 참조 기반 제어, 
 
 ### OpenAI Sora 2
 
-OpenAI의 Sora 2 시스템 카드는 동기화된 오디오가 포함된 비디오 생성과 안전성 평가·완화 조치를 설명합니다 [[2]](#ref-2). 이 스냅샷에서 OpenAI 모델 문서는 Sora 2 API 모델을 legacy로 표시합니다 [[3]](#ref-3). 연구적 의미, 소비자 제품, API 수명주기는 서로 다른 사실이며 각기 다른 일정으로 변할 수 있다는 점이 중요한 엔지니어링 교훈입니다.
+Sora 2 system card는 동기화된 음성·영상 생성과 안전 평가·완화를 설명합니다 [[2]](#ref-2). 공식 deprecation 일정은 Videos API와 Sora 2 별칭/스냅샷의 API 제거일을 2026-09-24로 명시합니다 [[3]](#ref-3). 따라서 이 스냅샷에서는 사용할 수 있는 API 후보가 아닌 과거 연구·안전 사례로 다룹니다. 연구적 의미·소비자 제품·API 수명 주기는 별도 사실이며 다른 일정으로 변할 수 있습니다.
 
-### ByteDance Seedance 2.0
+### ByteDance Seedance 2.5
 
-ByteDance는 Seedance 2.0이 통합 멀티모달 오디오·비디오 생성 접근을 통해 텍스트, 이미지, 오디오, 비디오 입력을 받는다고 설명합니다 [[4]](#ref-4). 공식 발표는 일관성과 제어력을 강조하지만, 정확한 잠재 모듈, 아이덴티티 표현, 파라미터 수, 학습 레시피는 **공개되지 않았습니다**. 공급자 발표의 성능 주장은 방법론이 호환되는 독립 평가에서 재현되기 전까지 공급자 주장으로 취급해야 합니다.
+현재 공식 페이지는 음성·영상 공동 생성, 최대 30초 clip, reference 제어, 편집과 호스팅/API 접근 경로를 설명합니다 [[4]](#ref-4). 이는 시험할 수 있는 제품 주장입니다. 인용한 제품 페이지에는 파라미터 수·정확한 latent 모듈·데이터 혼합·전체 학습법이 **공개되지 않았습니다**. Seedance 2.0의 한도를 물려받는 대신 정확한 제품 리비전과 지역을 평가합니다.
 
-| 질문 | Veo 3.1 | Sora 2 | Seedance 2.0 |
+| 질문 | Veo 3.1 | Sora 2 | Seedance 2.5 |
 | :--- | :--- | :--- | :--- |
-| 공개적으로 강조한 기능 | 네이티브 오디오와 크리에이터 제어 | 동기화된 오디오와 문서화된 안전 제어 | 멀티모달 입력과 오디오·비디오 생성 |
+| 공개적으로 강조한 기능 | 네이티브 오디오와 크리에이터 제어 | 동기화된 오디오와 문서화된 안전 제어 | 음성·영상 공동 생성, reference 제어와 편집 |
 | 인용 출처의 아키텍처 상세 | 제품 수준 설명 외에는 미공개 | 일부 연구 프레이밍만 공개, 운영 레시피는 미공개 | 통합 접근은 명시, 내부 모듈은 미공개 |
-| 운영상 의미 | 사용할 Google 제품과 quota를 정확히 검증 | API 수명주기와 소비자 가용성을 분리 | 지역별 접근, 약관, 독립 품질을 검증 |
+| 운영상 의미 | Google 제품과 quota를 정확히 검증 [[1]](#ref-1) | 2026-09-24 API 제거; 과거 사례 [[3]](#ref-3) | 호스팅/API 리비전·지역·약관 검증 [[4]](#ref-4) |
 
 이 표는 보편적인 승자를 선언하지 않습니다. 공급자 데모의 프롬프트, 편집 도구, 평가자는 서로 호환되지 않습니다.
 
@@ -107,6 +107,6 @@ AI 엔지니어에게 가까운 설계 질문은 구체적입니다. 시스템�
 
 1. <a id="ref-1"></a>Google. (2026). *Veo 3.1 Ingredients to Video: More consistency, creativity and control*. [Google Blog](https://blog.google/innovation-and-ai/technology/ai/veo-3-1-ingredients-to-video/).
 2. <a id="ref-2"></a>OpenAI. (2026). *Sora 2 System Card*. [OpenAI](https://openai.com/index/sora-2-system-card/).
-3. <a id="ref-3"></a>OpenAI. (2026). *Sora 2 model documentation*. [OpenAI Developers](https://developers.openai.com/api/docs/models/sora-2).
-4. <a id="ref-4"></a>ByteDance Seed. (2026). *Seedance 2.0*. [Official model page](https://seed.bytedance.com/en/seedance2_0).
+3. <a id="ref-3"></a>OpenAI. (2026). *Deprecations: Sora 2 video generation models and Videos API*. [OpenAI Developers](https://developers.openai.com/api/docs/deprecations).
+4. <a id="ref-4"></a>ByteDance Seed. (2026). *Seedance 2.5*. [Official model page](https://seed.bytedance.com/en/seedance2_5).
 5. <a id="ref-5"></a>Google DeepMind. (2026). *Genie*. [Official model page](https://deepmind.google/models/genie/).

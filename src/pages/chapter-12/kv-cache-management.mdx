@@ -158,6 +158,13 @@ Before launch, record:
 
 KV caching exchanges redundant computation for persistent memory traffic. MQA/GQA/MLA reduce width, lower precision reduces bytes per value, and paged allocation reduces waste. None is an isolated switch: quality, kernels, scheduling, and request-length distribution decide whether a smaller cache becomes a faster, reliable service.
 
+## Architecture-Specific Cache State: The October Evidence
+
+**As of 2026-10-13.** DeepSeek V4.1 Flash's report gives a global HBM KV payload of **890 bytes per token**, using cross-layer reuse and FP4 cache storage [[5]](#ref-5). This is not the total memory of a request. Weights, local-window state, recurrent/lookup state where present, scales and allocator metadata, activations, workspaces, and speculative branches need separate accounting. Do not replace every architecture's cache estimate with this one model's reported payload.
+
+A September GLM-5.3-Flash integration study found that a successful external cache transfer could still restore a state inconsistent with the scheduler's credited token position. Its repaired serial experiments compare continuations against a modified recomputation control; the result is confined to the tested revision and configuration [[6]](#ref-6). This suggests a practical recovery contract: checkpoint **all** attention/recurrent state at the same logical prefix, verify the effective tail token and per-rank numerical configuration, and compare continuation logits or tokens against cold recomputation. A cache-hit counter alone does not validate recovery. Add concurrency, partial hits, eviction, and migration tests before extrapolating a serial repair to production.
+
+
 ## Quizzes
 
 <details>
@@ -191,3 +198,5 @@ KV caching exchanges redundant computation for persistent memory traffic. MQA/GQ
 2. <a id="ref-2"></a>DeepSeek-AI. (2024). *DeepSeek-V2: A Strong, Economical, and Efficient Mixture-of-Experts Language Model*. [arXiv:2405.04434](https://arxiv.org/abs/2405.04434).
 3. <a id="ref-3"></a>vLLM Project. *Quantized KV Cache*. [Official documentation](https://docs.vllm.ai/en/latest/features/quantization/quantized_kvcache/).
 4. <a id="ref-4"></a>Kwon, W., et al. (2023). *Efficient Memory Management for Large Language Model Serving with PagedAttention*. [arXiv:2309.06180](https://arxiv.org/abs/2309.06180).
+5. <a id="ref-5"></a>DeepSeek-AI. (2026). DeepSeek-V4.1-Flash technical report. [Source](https://arxiv.org/abs/2609.19969).
+6. <a id="ref-6"></a>Li, F. (2026). Validating Hybrid-State Cache Recovery for GLM-5.3-Flash with vLLM and LMCache. [Source](https://arxiv.org/abs/2609.15030).

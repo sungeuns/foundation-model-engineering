@@ -31,7 +31,7 @@ Imagine you are trying to learn how to play a complex strategy game.
 2.  **Self-Supervised Learning is like reading every book ever written about the game.** You don't have a coach, but by reading millions of sentences, you figure out which words (and concepts) usually follow each other. You learn the *structure* of the game's world.
 3.  **Reinforcement Learning is like playing the game yourself.** You make moves, sometimes you win, sometimes you lose. You adjust your strategy based on the feedback (rewards) from the game itself.
 
-Modern Foundation Models use **all three** of these methods in a specific sequence to achieve state-of-the-art performance.
+Many language-model pipelines combine self-supervised pre-training, supervised adaptation, and reinforcement learning. Not every foundation model uses all three, and the ordering depends on the objective and pipeline.
 
 **Yann LeCun's Cake Analogy:** To explain the relative information content of these paradigms, AI pioneer Yann LeCun famously introduced a cake metaphor. He described machine learning as a cake where **self-supervised learning is the cake itself** (the massive bulk of information), **supervised learning is the icing** (a small amount of information), and **reinforcement learning is the cherry on top** (a tiny amount of information). This highlights that the vast majority of what a foundation model knows comes from self-supervised learning on massive datasets.
 

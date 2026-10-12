@@ -1,11 +1,14 @@
 ---
 layout: ../../../layouts/BookLayout.astro
-title: "5.5 Case Study: 최신 MoE 아키텍처 해부"
+title: "5.5 사례 연구: MoE 아키텍처와 시스템 절충"
 lang: "ko"
-description: "Mixtral 8x7B, DBRX, Grok-1, DeepSeek-V3를 포함한 최첨단 Mixture of Experts (MoE) 아키텍처의 라우팅 전략, 파라미터 효율성 및 엔지니어링 혁신에 대한 심층 분석."
+description: "Mixtral 8x7B, DBRX, Grok-1, DeepSeek-V3를 포함한 과거·최근 Mixture of Experts (MoE) 아키텍처의 라우팅 전략, 파라미터 효율성 및 엔지니어링 혁신에 대한 심층 분석."
 ---
 
-Dense (밀집) 단일 네트워크에서 Sparse (희소) **Mixture of Experts (MoE)** 로의 전환은 단순한 하드웨어 최적화가 아닙니다. 이는 모델의 '용량(Capacity)'을 개념화하는 방식의 근본적인 패러다임 전환입니다. Dense 패러다임에서는 모든 파라미터가 모든 토큰과 곱해지며, 연산 비용이 모델이 가진 지식의 양과 직접적으로 결합됩니다. **MoE** 는 이러한 선형적 관계를 깨뜨립니다. 토큰당 필요한 부동소수점 연산(FLOPs)과 전체 파라미터 수를 분리함으로써, **MoE** 아키텍처는 훨씬 작은 네트워크의 추론 지연 시간(Latency)을 유지하면서도 방대한 양의 세상 지식을 흡수할 수 있게 해줍니다.
+# 5.5 사례 연구: MoE 아키텍처와 시스템 절충
+
+
+MoE는 모델 용량과 토큰당 연산을 분리하는 설계입니다. Dense 블록은 토큰마다 전체 변환을 실행하고 MoE는 expert를 선택적으로 활성화합니다. 임베딩 lookup과 공유 구성 요소는 별도 회계가 필요합니다. 활성 연산을 줄일 수 있지만 실제 지연은 dispatch·메모리 전송·배치에 달려 있습니다.
 
 이번 케이스 스터디에서는 네 가지 기념비적인 **MoE** 아키텍처인 **Mixtral 8x7B** , **DBRX** , **Grok-1** , 그리고 **DeepSeek-V3** 를 기술적으로 해부해 보겠습니다. 단순히 스펙을 나열하는 것을 넘어, 각 연구팀이 규모와 효율성의 파레토 프론티어(Pareto frontier)를 돌파하기 위해 선택한 구체적인 엔지니어링 트레이드오프와 라우팅 혁신을 분석합니다.
 
@@ -44,7 +47,7 @@ Mixtral과 **DBRX** 모두 사용 가능한 FFN 파라미터의 25%를 활성화
 *   **Mixtral (8 choose 2):** $\binom{8}{2} = 28$ 개의 가능한 경로.
 *   **DBRX (16 choose 4):** $\binom{16}{4} = 1820$ 개의 가능한 경로.
 
-더 많고 작은 전문가를 사용함으로써, **DBRX** 는 **65배 더 많은 라우팅 조합** 을 제공합니다. 이러한 세밀한 전문화(Specialization)를 통해 모델은 훨씬 더 높은 해상도로 개념을 혼합하고 매칭할 수 있으며, 활성 파라미터 수를 늘리지 않고도 모델의 품질과 일반화(Generalization) 성능을 크게 향상시킵니다.
+DBRX는 레이어당 순서 없는 expert 부분집합을 약 65배 많이 제공합니다. 그러나 조합 수만으로 학습된 전문화·실제 표현력·품질을 측정할 수는 없습니다. expert 크기·routing·데이터·최적화도 다릅니다.
 
 ### Dropless Routing (MegaBlocks)
 전통적인 **MoE** 구현은 GPU 연산을 위한 정적 텐서(Static tensor) 형태를 유지하기 위해 각 전문가에게 엄격한 "용량 계수(Capacity factor)"를 강제합니다. 만약 한 전문가에게 너무 많은 토큰이 몰리면, 초과된 토큰은 단순히 **버려집니다 (Dropped)**. 즉, FFN 처리를 거치지 않고 Residual connection을 통해 그대로 통과하게 되어 성능 저하를 유발합니다.
@@ -60,15 +63,15 @@ Mixtral과 **DBRX** 모두 사용 가능한 FFN 파라미터의 25%를 활성화
 
 xAI가 개발한 **Grok-1** [[3]](#ref-3) 은 무식할 정도의 크기 확장이 가진 힘을 보여줍니다. 오픈 소스로 공개될 당시, 이 모델은 무려 **314B** 에 달하는 총 파라미터를 자랑하며 현존하는 가장 큰 오픈 소스 모델 중 하나로 자리 잡았습니다.
 
-Mixtral과 마찬가지로 **Grok-1** 은 8개 중 2개를 선택하는 Top-2 라우팅 전략을 사용합니다. 하지만 베이스 모델 자체가 워낙 거대하기 때문에, 토큰당 활성 파라미터 수만 해도 약 **78B** 에 달합니다. 이는 **Grok-1** 의 *Sparse* 포워드 패스조차 전체 Dense Llama-2 70B 모델보다 크다는 것을 의미합니다.
+Grok-1은 Top-2 expert routing을 사용합니다 [[3]](#ref-3). 여덟 expert 중 둘을 고른다고 전체 파라미터의 정확히 1/4이 활성화되는 것은 아닙니다. 공유 어텐션·임베딩·expert 크기도 포함해야 합니다. 총파라미터의 단순 비율로 문서화된 활성 파라미터 정의를 대신하지 않습니다.
 
-**Grok-1** 의 주요 엔지니어링 과제는 연산량(FLOPs)이 아니라 **메모리 대역폭(Memory Bandwidth)** 입니다. 16비트 정밀도로 **Grok-1** 의 추론을 실행하려면 600GB 이상의 VRAM이 필요하며, 단순히 가중치를 메모리에 올리기 위해서만 8-way GPU 노드(예: 8x H100 또는 8x MI300X)가 필요합니다. **Grok-1** 은 **MoE** 가 직면할 수밖에 없는 인프라의 장벽을 명확히 보여줍니다. 연산량은 낮게 유지되지만, 메모리 용량 요구사항은 총 파라미터 수에 비례하여 선형적으로 증가한다는 사실입니다.
+314B 파라미터의 16비트 가중치 payload만 약 628 GB입니다. KV 상태·activation·workspace·할당 여유·통신은 제외한 값입니다. 필요한 device 수는 사용 가능한 메모리와 배치 방식에 달려 있으며, 8대 노드라고 전체 서빙 작업이 들어간다는 보장은 아닙니다.
 
 ---
 
-## 4. DeepSeek-V3: 효율성의 정점
+## 4. DeepSeek-V3: routing·정밀도·시스템의 결합
 
-2024년 말에 공개된 **DeepSeek-V3** [[4]](#ref-4) 는 **MoE** 엔지니어링의 마스터클래스라 할 수 있습니다. 이 모델은 전체 사전 학습(Pre-training) 과정에 단 278만 H800 GPU 시간만을 사용하여, 경쟁 모델들이 사용한 컴퓨팅 자원의 극히 일부만으로 GPT-4o나 Claude 3.5 Sonnet과 같은 폐쇄형 프론티어 모델에 필적하는 성능을 달성했습니다.
+2024년 DeepSeek-V3 보고서는 희소 expert·latent attention·FP8 학습·multi-token prediction의 결합을 문서화합니다 [[4]](#ref-4). GPU-hour 회계는 보고한 학습 단계의 값이며 전체 연구·실패 실험·데이터 준비·배포 비용은 아닙니다. 경쟁 모델의 연산량이 미공개라면 정량적 비용 비율을 주장할 수 없습니다.
 
 **DeepSeek-V3** 는 총 **671B** 의 파라미터를 가지지만, 토큰당 활성 파라미터는 **37B** 에 불과합니다. 전체 파라미터의 약 5.5%만 활성화하는 이 극단적인 희소성(Sparsity)은 몇 가지 급진적인 아키텍처 혁신을 통해 달성되었습니다.
 
@@ -77,14 +80,10 @@ Mixtral과 마찬가지로 **Grok-1** 은 8개 중 2개를 선택하는 Top-2 �
 1.  **Shared Experts (공유 전문가):** 모든 토큰에 대해 *항상* 활성화되는 1개의 전문가입니다. 이 전문가는 일반적인 언어 구조와 보편적 지식을 포착하여 네트워크의 Dense 백본(Backbone) 역할을 합니다.
 2.  **Routed Experts (라우팅 전문가):** 256개의 고도로 전문화된 Fine-Grained 전문가입니다. 라우터는 토큰당 최대 8개를 선택합니다.
 
-이러한 분리 구조는 표준 **MoE** 에서 흔히 볼 수 있는 '라우팅 붕괴(Routing collapse)'를 방지합니다. 초기 레이어에서 모든 전문가가 기본적인 문법을 동시에 학습하려고 시도하다가 라우팅 효율이 떨어지는 현상을 Shared Expert가 전담하여 해결해 주기 때문입니다.
+공유 expert는 항상 활성화되는 용량을 제공하고 routed expert는 조건부로 전문화합니다. 이 분리만으로 붕괴가 불가능해지는 것은 아닙니다. 균형화·수치 안정성은 여전히 학습 시스템의 일부입니다.
 
 ### Auxiliary-Loss-Free Load Balancing (보조 손실 없는 부하 분산)
-표준 **MoE** 학습에서는 메인 언어 모델링 손실(Loss)에 보조 손실 함수($L_{aux}$)를 추가하여 라우터가 토큰을 전문가들에게 균등하게 분배하도록 강제합니다. 이 장치가 없으면 네트워크는 "부익부 빈익빈" 루프에 빠지게 됩니다. 하지만 이 보조 손실은 상충하는 그래디언트(Gradient)를 생성합니다. 즉, 특정 전문가가 이미 과부하 상태일 때, 모델이 그 토큰에 가장 *적합한* 전문가에게 토큰을 보내려고 하면 오히려 페널티를 받게 되는 모순이 발생합니다.
-
-**DeepSeek-V3** 는 **Auxiliary-Loss-Free (보조 손실 없음)** 전략을 개척했습니다. 손실 함수를 수정하는 대신, 포워드 패스 중에 라우팅 로짓에 직접 더해지는 **바이어스(Bias) 항** 을 동적으로 조정합니다.
-
-어떤 전문가가 과부하 상태라면 해당 전문가의 바이어스를 줄입니다. 반대로 토큰을 너무 적게 받고 있다면 바이어스를 늘립니다. 이를 통해 메인 언어 모델링 태스크의 그래디언트를 오염시키지 *않고도* 부하 분산(Load balancing)을 보장합니다.
+보조 균형화는 과업 선호와 활용도 사이에 절충을 만들 수 있으며 효과는 계수·집계 범위에 달려 있습니다. DeepSeek-V3는 비미분 bias로 expert를 선택하고 bias 없는 친화도로 혼합 가중치를 계산하며, 작은 시퀀스 단위 보조 항도 유지합니다 [[4]](#ref-4). dispatch가 바뀌면 gradient를 받는 expert도 달라지므로 detached가 routing에 영향이 없다는 뜻은 아닙니다. 전체 구분은 [5.4절](/ko/chapter-5/collapsing-load-balancing)을 참고하세요.
 
 #### Auxiliary-Free 라우팅 구현
 
@@ -166,13 +165,20 @@ Post-training은 long-horizon agent를 직접 겨냥합니다. Parallel on-polic
 | **Llama-3 70B** | Dense | 70B | 70B | N/A | N/A | N/A |
 | **Mixtral 8x7B** | Coarse MoE | 47B | 13B | 8 | 2 | Standard Softmax |
 | **DBRX** | Fine-Grained MoE | 132B | 36B | 16 | 4 | Dropless (MegaBlocks) |
-| **Grok-1** | Coarse MoE | 314B | ~78B | 8 | 2 | Standard Softmax |
+| **Grok-1** | Coarse MoE | 314B | 여기서는 미보고 | 8 | 2 | Standard Softmax |
 | **DeepSeek-V3** | Ultra-Fine MoE | 671B | 37B | 256 (+1 shared) | 8 | Aux-Loss-Free Bias |
 | **GLM-5.2** | Long-context MoE | 753B | 인용한 config에 미공개 | 256 (+1 shared) | 8 | Aux-Loss-Free + IndexShare |
 
 *관찰 결과:* 업계의 트렌드는 명확합니다. 모델은 Coarse-Grained 전문가(8 choose 2)에서 극단적인 Fine-Grained 희소성(256 choose 8)으로 이동하고 있습니다. 총 파라미터 수는 세상의 지식을 담기 위해 기하급수적으로 증가하는 반면, 활성 파라미터 수는 추론 속도와 배치 처리 효율성을 유지하기 위해 엄격하게 제한되고 있습니다.
 
 ---
+
+## 10월 사례: 서빙 단계에 따라 활성 연산이 달라진다
+
+**2026-10-13 기준.** DeepSeek V4.1 Flash 보고서는 Causal Encoder-Decoder에서 **backbone 552B**, **prefill 활성 8B**, **decode 활성 16B** 를 설명합니다 [[7]](#ref-7). 입력이 많은 에이전트에는 활성 파라미터 열 하나로 비용을 설명할 수 없다는 사례입니다.
+
+expert dispatch·공유 구성 요소·압축 캐시 연산·lookup 메모리·통신을 포함해 입력 처리와 출력 생성을 따로 측정합니다. expert 선택 비율이나 활성 파라미터만으로 FLOPs·HBM 용량·지연이 결정되지는 않습니다. 필요한 가중치·상태의 저장 공간도 여전히 확보해야 합니다. 고정 품질·지연 목표에서 전체 작업을 비교합니다. prefill을 절약해도 다른 병목이 지배적일 수 있습니다.
+
 
 ## 7. 요약 및 다음 단계
 
@@ -196,14 +202,12 @@ Mixtral에서 DeepSeek-V3로 이어지는 **MoE** 아키텍처의 진화는 지�
 
 <details>
 <summary>Quiz 2: DBRX 라우팅의 가장 큰 이점은 무엇입니까?</summary>
-
-*DBRX의 핵심 이점은 라우팅 경로의 조합적 폭발입니다. Mixtral은 레이어당 $\binom{8}{2} = 28$개의 전문가 조합을 가지지만, DBRX는 $\binom{16}{4} = 1820$개의 조합을 가집니다. 이 훨씬 넓은 조합 공간 덕분에 DBRX는 더 세밀한 전문가들을 유연하게 섞을 수 있고, 활성 연산량을 늘리지 않으면서도 표현력과 일반화 능력을 높일 수 있습니다.*
+*더 세분된 routing은 순서 없는 expert 부분집합을 더 많이 제공합니다. 유연성은 늘지만 조합 수만으로 다른 모델 간 품질이나 동일 활성 연산량을 증명하지는 못합니다.*
 </details>
 
 <details>
-<summary>Quiz 3: 왜 DeepSeek-V3의 동적 바이어스가 표준 보조 손실보다 낫습니까?</summary>
-
-*표준 보조 손실은 균형 제약을 목적 함수에 직접 더하기 때문에, 메인 언어 모델링 손실과 그래디언트 충돌을 일으킵니다. 어떤 토큰에 대해 가장 적합한 전문가가 이미 과부하 상태라면, 보조 손실은 더 나쁜 전문가를 선택하게 만들 수 있습니다. DeepSeek의 동적 바이어스는 부하 분산을 포워드 패스에서 기계적으로 처리하면서도, 그 바이어스를 역전파에서 분리해 의미론적 학습 신호를 깨끗하게 유지합니다.*
+<summary>Quiz 3: DeepSeek-V3의 동적 선택 bias는 무엇을 바꾸고 무엇을 보장하지 않나요?</summary>
+*비미분 동적 bias는 선택에 영향을 주고 혼합 가중치는 원래 친화도를 사용합니다. 이 제어기를 미분 가능한 과업 페널티로 넣지는 않지만 dispatch와 학습 gradient는 바뀝니다. V3는 작은 시퀀스 단위 보조 항도 유지합니다.*
 </details>
 
 <details>
@@ -224,3 +228,4 @@ Mixtral에서 DeepSeek-V3로 이어지는 **MoE** 아키텍처의 진화는 지�
 4. <a id="ref-4"></a>DeepSeek-AI. (2024). *DeepSeek-V3 Technical Report*. arXiv preprint. [arXiv:2412.19437](https://arxiv.org/abs/2412.19437).
 5. <a id="ref-5"></a>Z.ai. (2026). *GLM-5.2: From Long Context to Long-Horizon Agents*. [Z.ai](https://z.ai/blog/glm-5.2).
 6. <a id="ref-6"></a>Z.ai. (2026). *GLM-5.2 model card and configuration*. [Hugging Face](https://huggingface.co/zai-org/GLM-5.2).
+7. <a id="ref-7"></a>DeepSeek-AI. (2026). DeepSeek-V4.1-Flash: Pushing the Limits of KV Cache Compression. [Source](https://arxiv.org/abs/2609.19969).

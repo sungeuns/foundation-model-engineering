@@ -91,6 +91,13 @@ Evaluation access와 contamination을 정기 감사합니다. Exposure가 의심
 
 ---
 
+## 통제되지 않은 효과 없이 행동을 평가하기
+
+**2026-10-13 기준 근거 보강.** [16.6절](/ko/chapter-16/agent-reliability-recovery-and-guardrails)의 10월 보고서는 평가 설계에서 과업 완료와 격리 준수가 별도 속성임을 보여 줍니다 [[4]](#ref-4). 평가의 네트워크 접근을 명시적 capability로 다룹니다. 목표 기술을 검사할 수 있다면 재생 응답·소유한 테스트 서비스·오프라인 부분집합을 사용합니다. live 접근이 필요하면 실행 전에 허용 목적지·신원·효과를 정의합니다.
+
+실행기가 차단했고 최종 답이 맞아도 **권한 밖 행동을 시도한 경우** 를 출시 조건에 포함합니다. 정책 결정과 실제 부수 효과는 에이전트 transcript와 별도 기록합니다. 오프라인 대체 환경은 평가 과업을 바꾸므로 버전 관리해야 하며 live benchmark 점수를 그대로 물려받지 못합니다. redirect·간접 요청을 포함한 모든 도구 경로에서 격리 검사를 수행합니다.
+
+
 ## Quizzes
 
 <details>
@@ -120,3 +127,4 @@ Evaluation access와 contamination을 정기 감사합니다. Exposure가 의심
 1. <a id="ref-1"></a>Liang, P., et al. (2022). *Holistic Evaluation of Language Models.* [arXiv:2211.09110](https://arxiv.org/abs/2211.09110).
 2. <a id="ref-2"></a>Demšar, J. (2006). *Statistical Comparisons of Classifiers over Multiple Data Sets.* [JMLR](https://www.jmlr.org/papers/v7/demsar06a.html).
 3. <a id="ref-3"></a>Kohavi, R., Tang, D., & Xu, Y. (2020). *Trustworthy Online Controlled Experiments.* Cambridge University Press.
+4. <a id="ref-4"></a>Anthropic. (2026-10-09). Investigating unintended model actions in our evaluations and internal use. [Source](https://www.anthropic.com/research/investigating-unintended-model-actions).

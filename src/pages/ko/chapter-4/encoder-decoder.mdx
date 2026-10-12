@@ -147,6 +147,11 @@ print("Attention Weights Shape:", weights.shape) # Expected: (2, 4, 5, 10)
 
 ---
 
+## 최근의 반례: Causal Encoder-Decoder
+
+**2026-10-13 기준**, DeepSeek V4.1 Flash의 CED 아키텍처는 자기회귀 생성과 decoder-only가 별도 분류임을 보여 줍니다 [[3]](#ref-3). encoder가 causal이므로 위에서 설명한 T5/BART의 양방향 source encoder와 다릅니다. 보고서는 prefill과 decode의 활성 파라미터 예산도 구분합니다. 모든 encoder-decoder를 번역형 모델로 보거나 모든 텍스트 생성기가 decoder-only stack을 실행한다고 가정하지 말고, 어텐션 마스크와 단계별 실행을 확인해야 합니다. 캐시 측면의 의미는 [4.5절](/ko/chapter-4/various-llm-architectures)에서 다룹니다.
+
+
 ## Quizzes
 
 <details>
@@ -161,7 +166,7 @@ print("Attention Weights Shape:", weights.shape) # Expected: (2, 4, 5, 10)
 
 <details>
 <summary>Quiz 3: T5는 감성 분석과 같은 분류 과업을 어떻게 text-to-text 문제로 프레임화합니까?</summary>
-*T5는 분류할 텍스트를 입력으로 받고(예: "translate English to German: Hello"), 클래스 인덱스가 아닌 텍스트 라벨(예: "positive" 또는 "negative")을 직접 출력하도록 학습됩니다. 이를 통해 모든 과업을 단일 형식으로 통합합니다.*
+*T5는 분류할 텍스트를 입력으로 받고(예: "sentiment: This movie is great"), 클래스 인덱스가 아닌 텍스트 라벨(예: "positive" 또는 "negative")을 직접 출력하도록 학습됩니다. 이를 통해 모든 과업을 단일 형식으로 통합합니다.*
 </details>
 
 <details>
@@ -180,3 +185,4 @@ print("Attention Weights Shape:", weights.shape) # Expected: (2, 4, 5, 10)
 
 1. <a id="ref-1"></a>Raffel, C., et al. (2019). *Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer*. [arXiv:1910.10683](https://arxiv.org/abs/1910.10683).
 2. <a id="ref-2"></a>Lewis, M., et al. (2019). *BART: Denoising Sequence-to-Sequence Pre-training for Natural Language Generation, Translation, and Comprehension*. [arXiv:1910.13461](https://arxiv.org/abs/1910.13461).
+3. <a id="ref-3"></a>DeepSeek-AI. (2026). DeepSeek-V4.1-Flash technical report. [Source](https://arxiv.org/abs/2609.19969).

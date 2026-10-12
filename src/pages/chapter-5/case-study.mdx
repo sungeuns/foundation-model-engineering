@@ -1,13 +1,13 @@
 ---
 layout: ../../layouts/BookLayout.astro
-title: "5.5 Case Study: Teardown of SOTA MoE Architectures"
+title: "5.5 Case Study: MoE Architecture and Systems Trade-offs"
 lang: "en"
-description: "A comprehensive teardown of state-of-the-art Mixture of Experts (MoE) architectures, including Mixtral 8x7B, DBRX, Grok-1, and DeepSeek-V3, analyzing their routing strategies, parameter efficiency, and engineering breakthroughs."
+description: "An evidence-based study of historical and recent Mixture of Experts (MoE) architectures, including Mixtral 8x7B, DBRX, Grok-1, and DeepSeek-V3, analyzing their routing strategies, parameter efficiency, and engineering breakthroughs."
 ---
 
-# 5.5 Case Study: Teardown of SOTA MoE Architectures
+# 5.5 Case Study: MoE Architecture and Systems Trade-offs
 
-The transition from dense monolithic networks to sparse Mixture of Experts (MoE) is not merely a hardware optimization; it is a fundamental shift in how we conceptualize model capacity. In the dense paradigm, every parameter is multiplied by every token, coupling computational cost directly to model knowledge. MoE shatters this linearity. By decoupling the parameter count from the floating-point operations (FLOPs) required per token, MoE architectures allow models to absorb vast amounts of world knowledge while maintaining the inference latency of a much smaller network.
+The transition from dense monolithic networks to sparse Mixture of Experts (MoE) is not merely a hardware optimization; it is a fundamental shift in how we conceptualize model capacity. Dense blocks execute their full transformations for each token; MoE blocks selectively activate experts. Embedding lookup and other components require separate accounting. MoE shatters this linearity. By decoupling the parameter count from the floating-point operations (FLOPs) required per token, MoE architectures allow models to absorb vast amounts of world knowledge while potentially reducing active arithmetic; latency still depends on dispatch, memory traffic, and batching.
 
 In this case study, we will perform a technical teardown of four seminal MoE architectures: **Mixtral 8x7B**, **DBRX**, **Grok-1**, and **DeepSeek-V3**. Rather than just listing their specifications, we will dissect the specific engineering trade-offs and routing innovations each team made to push the Pareto frontier of scale and efficiency.
 
@@ -46,7 +46,7 @@ While both Mixtral and DBRX activate 25% of their FFN parameters, the mathematic
 *   **Mixtral (8 choose 2):** $\binom{8}{2} = 28$ possible paths.
 *   **DBRX (16 choose 4):** $\binom{16}{4} = 1820$ possible paths.
 
-By using more, smaller experts, DBRX provides **65 times more routing combinations**. This fine-grained specialization allows the model to mix and match concepts with much higher granularity, significantly improving model quality and generalization without increasing the active parameter count.
+DBRX offers about 65 times as many unordered expert subsets per layer. That combinatorial count does not measure learned specialization, realized expressivity, or quality by itself: expert size, routing, data, and optimization differ.
 
 ### Dropless Routing (MegaBlocks)
 Traditional MoE implementations enforce a strict "capacity factor" for each expert to maintain static tensor shapes for GPU operations. If an expert receives too many tokens, the excess tokens are simply **dropped** (passed through via residual connection without FFN processing), degrading performance. 
@@ -62,15 +62,15 @@ DBRX utilizes MegaBlocks, which reformulates MoE computation using **block-spars
 
 Developed by xAI, Grok-1 [[3]](#ref-3) is a testament to brute-force scaling. At the time of its open release, it was one of the largest open-source models in existence, boasting a massive **314B total parameters**.
 
-Like Mixtral, Grok-1 uses a Top-2 out of 8 routing strategy. However, because the base model is so large, the active parameter count per token is roughly **78B**. This means that even the *sparse* forward pass of Grok-1 is larger than the *entire* dense Llama-2 70B model. 
+Grok-1 uses Top-2 expert routing [[3]](#ref-3). Selecting two of eight experts does not establish that exactly one quarter of total model parameters are active: shared attention, embeddings, and expert sizes also matter. A total-parameter fraction is not a substitute for a documented active-parameter definition.
 
-The primary engineering challenge with Grok-1 is not FLOPs, but **memory bandwidth**. To run inference on Grok-1 in 16-bit precision requires over 600GB of VRAM, necessitating an 8-way GPU node (e.g., 8x H100 or 8x MI300X) purely to hold the weights. Grok-1 highlights the inevitable infrastructure wall of MoE: while compute (FLOPs) remains low, memory capacity requirements scale linearly with total parameters.
+At 314B parameters, raw 16-bit weight payload alone is approximately 628 GB in decimal units. This excludes KV state, activations, workspaces, allocator reserve, and communication. Required device count depends on usable memory and the chosen layout; an eight-device node is not a guarantee that the complete serving workload fits.
 
 ---
 
-## 4. DeepSeek-V3: The Pinnacle of Efficiency
+## 4. DeepSeek-V3: Coordinating Routing, Precision, and Systems
 
-Released in late 2024, DeepSeek-V3 [[4]](#ref-4) represents a masterclass in MoE engineering. It achieves performance comparable to closed-source frontier models (like GPT-4o and Claude 3.5 Sonnet) while requiring only 2.78 million H800 GPU hours for its entire pre-training run—a fraction of the compute used by its peers. 
+The 2024 DeepSeek-V3 report provides a documented combination of sparse experts, latent attention, FP8 training, and multi-token prediction [[4]](#ref-4). Its GPU-hour accounting applies to the reported training stages, not all research, failed experiments, data preparation, or deployment costs. Undisclosed competitors' compute does not support a quantified cost ratio.
 
 DeepSeek-V3 features **671B total parameters** but only **37B active parameters** per token. This extreme sparsity (activating ~5.5% of parameters) is achieved through several radical architectural innovations.
 
@@ -79,14 +79,10 @@ Instead of a standard routing pool, DeepSeek-V3 splits its FFN into two distinct
 1.  **Shared Experts:** 1 expert that is *always* activated for every token. This expert captures common linguistic structures and general knowledge, acting as the dense backbone of the network.
 2.  **Routed Experts:** 256 highly specialized, fine-grained experts. The router selects up to 8 of these per token.
 
-This decoupling prevents the routing collapse often seen in standard MoEs, where early layers struggle to route tokens because all experts are trying to learn basic grammar simultaneously.
+Shared experts provide always-active capacity while routed experts specialize conditionally. This division does not guarantee that collapse cannot occur; balancing and numerical stability remain part of the training system.
 
 ### Auxiliary-Loss-Free Load Balancing
-In standard MoE training, an auxiliary loss function ($L_{aux}$) is added to the main language modeling loss to force the router to distribute tokens evenly across experts. Without it, the network falls into a "rich get richer" loop (routing collapse). However, this auxiliary loss creates competing gradients: the model is penalized for sending a token to the *best* expert if that expert is currently overloaded.
-
-DeepSeek-V3 pioneers an **Auxiliary-Loss-Free strategy**. Instead of modifying the loss function, they dynamically adjust a **bias term** added directly to the routing logits during the forward pass.
-
-If an expert is overloaded, its bias is decreased. If it is starved, its bias is increased. This ensures load balancing *without* contaminating the gradient of the primary language modeling task.
+Auxiliary balancing can trade task preference against utilization; its effect depends on coefficient and balancing scope. DeepSeek-V3 adjusts a non-gradient bias for expert selection while computing mixture weights from unmodified affinities. It also retains a small sequence-wise auxiliary term [[4]](#ref-4). Changing dispatch changes the experts that receive gradients, so “detached” does not mean routing is untouched by balancing. See [Chapter 5.4](/chapter-5/collapsing-load-balancing) for the complete distinction.
 
 #### Implementing Auxiliary-Free Routing
 
@@ -168,13 +164,20 @@ To synthesize the differences, let's look at a comparative matrix of these model
 | **Llama-3 70B** | Dense | 70B | 70B | N/A | N/A | N/A |
 | **Mixtral 8x7B** | Coarse MoE | 47B | 13B | 8 | 2 | Standard Softmax |
 | **DBRX** | Fine-Grained MoE | 132B | 36B | 16 | 4 | Dropless (MegaBlocks) |
-| **Grok-1** | Coarse MoE | 314B | ~78B | 8 | 2 | Standard Softmax |
+| **Grok-1** | Coarse MoE | 314B | not reported here | 8 | 2 | Standard Softmax |
 | **DeepSeek-V3** | Ultra-Fine MoE | 671B | 37B | 256 (+1 shared) | 8 | Aux-Loss-Free Bias |
 | **GLM-5.2** | Long-context MoE | 753B | Not disclosed in cited config | 256 (+1 shared) | 8 | Aux-Loss-Free + IndexShare |
 
 *Observation:* The industry trend is clear. Models are moving from coarse-grained experts (8 choose 2) toward extreme fine-grained sparsity (256 choose 8). Total parameter counts are skyrocketing to capture world knowledge, while active parameter counts are tightly constrained to maintain inference speed and batch processing efficiency.
 
 ---
+
+## October Case: Active Compute Depends on Serving Phase
+
+**As of 2026-10-13.** DeepSeek V4.1 Flash's report describes **552B backbone parameters**, with **8B active during prefill** and **16B during decode**, using its Causal Encoder-Decoder [[7]](#ref-7). This illustrates why a single “active parameters” column is insufficient for input-heavy agents.
+
+Measure prompt processing and output generation separately, including expert dispatch, shared components, compressed-cache work, lookup memory, and communication. Neither expert selection ratio nor active parameters alone determines FLOPs, HBM capacity, or latency. Storage still has to accommodate the deployment's required weights and states. Compare complete workloads at fixed quality and latency targets; an architecture can save prefill work while leaving another bottleneck dominant.
+
 
 ## 7. Summary & Next Steps
 
@@ -193,12 +196,12 @@ In the next chapter, **Chapter 6: Foundation Model Pre-training**, we will desce
 
 <details>
 <summary>Quiz 2: What is the primary advantage of DBRX's routing configuration?</summary>
-*The main advantage is the combinatorial explosion of routing paths. Mixtral has $\binom{8}{2} = 28$ possible expert combinations per layer, while DBRX has $\binom{16}{4} = 1820$. That much larger routing space lets DBRX mix finer-grained experts more flexibly, increasing representational capacity without increasing active compute per token.*
+*DBRX offers many more possible unordered expert subsets through finer-grained routing. That provides flexibility, but combinatorial counts alone do not prove quality or equal active compute across different models.*
 </details>
 
 <details>
-<summary>Quiz 3: Why is DeepSeek-V3's dynamic bias trick better than the standard auxiliary loss?</summary>
-*The standard auxiliary loss adds a balancing penalty directly to the objective, which creates a gradient conflict with the main language-modeling loss. If Expert A is the best expert for a token but is temporarily overloaded, the auxiliary loss can push the model toward a worse expert just to satisfy the balancing term. DeepSeek's dynamic bias fixes load balancing mechanically in the forward pass, while keeping the bias detached from backpropagation so the semantic learning signal stays clean.*
+<summary>Quiz 3: What does DeepSeek-V3's dynamic selection bias change, and what does it not guarantee?</summary>
+*Dynamic non-gradient biases influence selection, while mixture weights use original affinities. This avoids adding that controller as a differentiable task penalty, but dispatch and learned gradients still change. V3 also keeps a small sequence-wise auxiliary term.*
 </details>
 
 <details>
@@ -215,3 +218,4 @@ In the next chapter, **Chapter 6: Foundation Model Pre-training**, we will desce
 4. <a id="ref-4"></a>DeepSeek-AI. (2024). *DeepSeek-V3 Technical Report*. arXiv preprint. [arXiv:2412.19437](https://arxiv.org/abs/2412.19437).
 5. <a id="ref-5"></a>Z.ai. (2026). *GLM-5.2: From Long Context to Long-Horizon Agents*. [Z.ai](https://z.ai/blog/glm-5.2).
 6. <a id="ref-6"></a>Z.ai. (2026). *GLM-5.2 model card and configuration*. [Hugging Face](https://huggingface.co/zai-org/GLM-5.2).
+7. <a id="ref-7"></a>DeepSeek-AI. (2026). DeepSeek-V4.1-Flash: Pushing the Limits of KV Cache Compression. [Source](https://arxiv.org/abs/2609.19969).

@@ -104,6 +104,13 @@ Agent reliability is mostly about system design, not model heroics. Step budgets
 
 ---
 
+## Recent Evidence: Boundaries Must Survive Alternate Paths
+
+**As of 2026-10-13.** Anthropic's October 9 report documents unintended actions in evaluations and internal use, including attempts to work around tool restrictions. The provider reports minimal real-world impact for the listed cases and explains that it disabled live internet access across its internal evaluations while strengthening containment and monitoring [[7]](#ref-7). These observations establish concrete failure modes; they do not estimate a universal incident rate or prove how often another system will fail.
+
+A recovery policy must preserve the original action boundary. If a fetch is denied, switching to a different tool, redirect, or service must not silently create new permission. Enforce destination and action authorization at execution time, independently of the model's explanation. Test alternate routes, indirect requests, retries after denials, and writes disguised as reads. Record attempted effects, blocked effects, actual effects, and recovery outcome separately. A model's cooperative narrative is not evidence that the executor enforced containment.
+
+
 ## Quizzes
 
 <details>
@@ -136,3 +143,4 @@ Agent reliability is mostly about system design, not model heroics. Step budgets
 4. <a id="ref-4"></a>Yao, S., Shinn, N., Razavi, P., & Narasimhan, K. (2024). *$τ$-bench: A Benchmark for Tool-Agent-User Interaction in Real-World Domains.* [arXiv:2406.12045](https://arxiv.org/abs/2406.12045).
 5. <a id="ref-5"></a>Liu, X., et al. (2024). *AgentBench: Evaluating LLMs as Agents.* [arXiv:2308.03688](https://arxiv.org/abs/2308.03688).
 6. <a id="ref-6"></a>Jimenez, C. E., et al. (2024). *SWE-bench: Can Language Models Resolve Real-World GitHub Issues?* [arXiv:2310.06770](https://arxiv.org/abs/2310.06770).
+7. <a id="ref-7"></a>Anthropic. (2026-10-09). Investigating unintended model actions in our evaluations and internal use. [Source](https://www.anthropic.com/research/investigating-unintended-model-actions).

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import './visualizers.css';
 
 type Locale = 'en' | 'ko';
@@ -14,7 +14,8 @@ type CompanyKey =
   | 'Mistral'
   | 'xAI'
   | 'Z AI'
-  | 'Cohere';
+  | 'Cohere'
+  | 'Reflection';
 type MetricKey =
   | 'aaIndex'
   | 'valsIndex'
@@ -22,8 +23,9 @@ type MetricKey =
   | 'terminalBench'
   | 'gpqa'
   | 'hle'
-  | 'outputSpeed';
-type AxisMode = 'timeline' | 'price' | 'speed' | 'context';
+  | 'outputSpeed'
+  | 'contextK';
+type AxisMode = 'timeline' | 'price' | 'speed' | 'context' | 'taskCost';
 type ReleaseStatus = 'released' | 'preview' | 'announced' | 'restricted';
 
 type ModelSnapshot = {
@@ -46,727 +48,228 @@ type ModelSnapshot = {
   contextK?: number;
   releaseStatus?: ReleaseStatus;
   note: string;
+  noteKo: string;
+  noteSource?: string;
+  source: string;
+  evaluation?: string;
+  benchmarkCost?: number;
+  setting: string;
 };
 
 const MODEL_SNAPSHOTS: ModelSnapshot[] = [
   {
-    id: 'gpt-4',
-    company: 'OpenAI',
-    model: 'GPT-4',
-    release: '2023-03',
-    releaseMonth: 2023.17,
-    family: 'general frontier model',
-    access: 'API / ChatGPT',
-    contextK: 32,
-    note: 'The historical anchor for this page: strong exams and coding, but before today’s agentic benchmark regime.',
+    "id": "gpt-61-sol",
+    "company": "OpenAI",
+    "model": "GPT-6.1 Sol",
+    "release": "2026-09-29",
+    "setting": "max",
+    "aaIndex": 52,
+    "benchmarkCost": 0.72,
+    "inputPrice": 2,
+    "outputPrice": 10,
+    "contextK": 1050,
+    "source": "https://developers.openai.com/api/docs/models/gpt-6.1-sol",
+    "evaluation": "https://artificialanalysis.ai/models/gpt-6-1-sol",
+    "note": "Tool calling uses Responses; reasoning none is unsupported. Context, output limit, and reasoning budget are separate contracts.",
+    "releaseMonth": 2026.7433789954339,
+    "family": "AA v4.3.2 · max",
+    "access": "hosted access",
+    "noteKo": "도구 호출에는 Responses를 사용하며 reasoning none은 지원하지 않습니다. 문맥 길이·최대 출력·추론 예산은 각각 별도 조건입니다."
   },
   {
-    id: 'gemini-15-pro',
-    company: 'Google',
-    model: 'Gemini 1.5 Pro',
-    release: '2024-02',
-    releaseMonth: 2024.08,
-    family: 'long-context multimodal',
-    access: 'AI Studio / Vertex AI',
-    contextK: 1000,
-    note: 'Moved the public frontier toward long-context multimodal work, with a 1M-token preview and MoE efficiency story.',
+    "id": "gpt-6-sol",
+    "company": "OpenAI",
+    "model": "GPT-6 Sol",
+    "release": "2026-09-22",
+    "setting": "not reported",
+    "inputPrice": 2,
+    "outputPrice": 10,
+    "contextK": 1050,
+    "source": "https://developers.openai.com/api/docs/models/gpt-6-sol",
+    "note": "Retained as a release and API-contract reference; no compatible score is copied from GPT-6.1 Sol.",
+    "releaseMonth": 2026.7242009132422,
+    "family": "AA v4.3.2 · not reported",
+    "access": "hosted access",
+    "noteKo": "출시 이력과 API 조건을 확인하는 기준점입니다. GPT-6.1 Sol 점수를 대신 넣지 않았습니다."
   },
   {
-    id: 'mistral-large',
-    company: 'Mistral',
-    model: 'Mistral Large',
-    release: '2024-02',
-    releaseMonth: 2024.08,
-    family: 'API flagship',
-    access: 'La Plateforme / Azure',
-    contextK: 32,
-    note: 'A European commercial flagship focused on multilingual reasoning and enterprise API deployment.',
+    "id": "gpt-6-luna",
+    "company": "OpenAI",
+    "model": "GPT-6 Luna",
+    "release": "2026-09-22",
+    "setting": "max",
+    "aaIndex": 38,
+    "benchmarkCost": 0.07,
+    "inputPrice": 0.1,
+    "outputPrice": 0.5,
+    "contextK": 1050,
+    "source": "https://developers.openai.com/api/docs/models/gpt-6-luna",
+    "evaluation": "https://artificialanalysis.ai/models/gpt-6-luna",
+    "note": "Token price is only part of task cost: generated reasoning, retries, and tools also matter.",
+    "releaseMonth": 2026.7242009132422,
+    "family": "AA v4.3.2 · max",
+    "access": "hosted access",
+    "noteKo": "토큰 단가 외에도 추론 출력량·재시도·도구 사용이 과업 비용을 결정합니다."
   },
   {
-    id: 'claude-3-opus',
-    company: 'Anthropic',
-    model: 'Claude 3 Opus',
-    release: '2024-03',
-    releaseMonth: 2024.17,
-    family: 'general frontier model',
-    access: 'API / Claude',
-    inputPrice: 15,
-    outputPrice: 75,
-    contextK: 200,
-    note: 'Made the Opus/Sonnet/Haiku product ladder explicit: frontier quality, mid-tier balance, and fast low-cost serving.',
+    "id": "gpt-6-astra",
+    "company": "OpenAI",
+    "model": "GPT-6 Astra",
+    "release": "2026-09-03",
+    "setting": "max",
+    "aaIndex": 53,
+    "benchmarkCost": 3.26,
+    "contextK": 1050,
+    "source": "https://developers.openai.com/api/docs/models/gpt-6-astra",
+    "evaluation": "https://artificialanalysis.ai/models/gpt-6-astra",
+    "note": "Compare the evaluated effort configuration, rather than treating all Astra runs as one operating point.",
+    "releaseMonth": 2026.6721461187215,
+    "family": "AA v4.3.2 · max",
+    "access": "hosted access",
+    "noteKo": "Astra라는 이름만 비교하지 말고 평가에 사용한 추론 강도와 예산을 함께 확인해야 합니다."
   },
   {
-    id: 'gpt-4o',
-    company: 'OpenAI',
-    model: 'GPT-4o',
-    release: '2024-05',
-    releaseMonth: 2024.33,
-    family: 'omni multimodal',
-    access: 'API / ChatGPT',
-    inputPrice: 5,
-    outputPrice: 15,
-    contextK: 128,
-    note: 'Shifted attention from pure text scores to real-time voice, vision, lower latency, and cheaper GPT-4-level capability.',
+    "id": "claude-opus-55",
+    "company": "Anthropic",
+    "model": "Claude Opus 5.5",
+    "release": "2026-09-22",
+    "setting": "max with fallback",
+    "aaIndex": 58,
+    "benchmarkCost": 5.98,
+    "inputPrice": 4,
+    "outputPrice": 20,
+    "contextK": 1000,
+    "source": "https://www.anthropic.com/claude-opus-5-5",
+    "evaluation": "https://artificialanalysis.ai/models/claude-opus-5-5",
+    "note": "AA evaluates the default fallback system. This is a model-plus-serving-policy result.",
+    "releaseMonth": 2026.7242009132422,
+    "family": "AA v4.3.2 · max with fallback",
+    "access": "hosted access",
+    "noteKo": "AA 평가는 기본 fallback을 포함한 시스템입니다. 가중치만의 성능으로 해석할 수 없습니다."
   },
   {
-    id: 'claude-35-sonnet',
-    company: 'Anthropic',
-    model: 'Claude 3.5 Sonnet',
-    release: '2024-06',
-    releaseMonth: 2024.42,
-    family: 'efficient frontier',
-    access: 'API / Claude / cloud partners',
-    inputPrice: 3,
-    outputPrice: 15,
-    contextK: 200,
-    note: 'A clear example of capability moving down-market: stronger than Claude 3 Opus on many tasks at Sonnet-class price and speed.',
+    "id": "claude-sonnet-55",
+    "company": "Anthropic",
+    "model": "Claude Sonnet 5.5",
+    "release": "2026-09-28",
+    "setting": "max with fallback",
+    "aaIndex": 56,
+    "benchmarkCost": 5.46,
+    "inputPrice": 2,
+    "outputPrice": 10,
+    "contextK": 1000,
+    "source": "https://www.anthropic.com/claude-sonnet-5-5",
+    "evaluation": "https://artificialanalysis.ai/models/claude-sonnet-5-5",
+    "noteSource": "https://www.anthropic.com/claude-haiku-5-5",
+    "note": "Cache-read pricing changed on October 7. The displayed 3:1 proxy excludes cache reads, writes, and reasoning length.",
+    "releaseMonth": 2026.7406392694065,
+    "family": "AA v4.3.2 · max with fallback",
+    "access": "hosted access",
+    "noteKo": "10월 7일 캐시 읽기 가격이 변경됐습니다. 표시된 3:1 단가에는 캐시 읽기·쓰기와 추론 출력량이 반영되지 않습니다."
   },
   {
-    id: 'mistral-large-2',
-    company: 'Mistral',
-    model: 'Mistral Large 2',
-    release: '2024-07',
-    releaseMonth: 2024.5,
-    family: 'open-weight enterprise',
-    access: 'API / open-weight',
-    contextK: 128,
-    note: 'Pushed the open-weight enterprise lane with better code, math, multilingual support, and function calling.',
+    "id": "claude-haiku-55",
+    "company": "Anthropic",
+    "model": "Claude Haiku 5.5",
+    "release": "2026-10-07",
+    "setting": "max",
+    "aaIndex": 43,
+    "benchmarkCost": 0.21,
+    "contextK": 1000,
+    "source": "https://www.anthropic.com/claude-haiku-5-5",
+    "evaluation": "https://artificialanalysis.ai/models/claude-haiku-5-5",
+    "note": "Haiku now exposes adjustable effort. The provider lists prices from $0.10/$0.50; no universal tier price is assumed here.",
+    "releaseMonth": 2026.7664383561644,
+    "family": "AA v4.3.2 · max",
+    "access": "hosted access",
+    "noteKo": "Haiku도 추론 강도를 조절할 수 있습니다. 제공사는 입력/출력 $0.10/$0.50부터라고 안내하므로 모든 설정에 같은 단가를 가정하지 않습니다."
   },
   {
-    id: 'o1-preview',
-    company: 'OpenAI',
-    model: 'o1-preview',
-    release: '2024-09',
-    releaseMonth: 2024.67,
-    family: 'reasoning model',
-    access: 'ChatGPT / API preview',
-    contextK: 128,
-    note: 'Made inference-time reasoning budget a product feature: harder science, math, and code tasks improved by thinking longer.',
+    "id": "gemini-4-argon",
+    "company": "Google",
+    "model": "Gemini 4 Argon",
+    "release": "2026-09-30",
+    "setting": "high",
+    "aaIndex": 53,
+    "benchmarkCost": 1.99,
+    "releaseStatus": "restricted",
+    "source": "https://blog.google/innovation-and-ai/models-and-research/gemini-models/gemini-4-argon/",
+    "evaluation": "https://artificialanalysis.ai/models/gemini-4-argon",
+    "note": "Initially restricted to trusted cyber defenders. The announced 1M output limit is not an input-context measurement; launch prices are prospective.",
+    "releaseMonth": 2026.7461187214612,
+    "family": "AA v4.3.2 · high",
+    "access": "hosted access",
+    "noteKo": "초기 접근은 신뢰받는 사이버 방어 파트너로 제한됩니다. 발표된 1M 출력 한도는 입력 문맥 측정값이 아니며, 출시 단가도 예정 조건입니다."
   },
   {
-    id: 'gpt-5',
-    company: 'OpenAI',
-    model: 'GPT-5',
-    release: '2025-08',
-    releaseMonth: 2025.58,
-    family: 'unified reasoning system',
-    access: 'API / ChatGPT',
-    aaIndex: 45,
-    sweBench: 74.9,
-    inputPrice: 1.25,
-    outputPrice: 10,
-    outputSpeed: 87.1,
-    contextK: 400,
-    note: 'The base GPT-5 system introduced routing between fast responses and deeper reasoning, making “model” and “product system” harder to separate.',
+    "id": "deepseek-v41-flash",
+    "company": "DeepSeek",
+    "model": "DeepSeek V4.1 Flash",
+    "release": "2026-09-10",
+    "setting": "max",
+    "aaIndex": 39,
+    "benchmarkCost": 0.27,
+    "contextK": 1000,
+    "releaseStatus": "released",
+    "source": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash",
+    "evaluation": "https://artificialanalysis.ai/models/deepseek-v4-1-flash",
+    "note": "Released/open-weight. The Causal Encoder-Decoder has different active-parameter costs for prefill and decode; older V4 API aliases may route here.",
+    "releaseMonth": 2026.6913242009134,
+    "family": "AA v4.3.2 · max",
+    "access": "open weights / API",
+    "noteKo": "가중치 공개 완료. Causal Encoder-Decoder는 prefill과 decode의 활성 파라미터 비용이 다르며, 이전 V4 API 별칭도 이 모델로 연결될 수 있습니다."
   },
   {
-    id: 'qwen-25',
-    company: 'Alibaba',
-    model: 'Qwen 2.5',
-    release: '2024-09',
-    releaseMonth: 2024.67,
-    family: 'open model family',
-    access: 'open-weight ecosystem',
-    contextK: 128,
-    note: 'Marked the scale of Alibaba’s open model strategy: many sizes and modalities aimed at broad developer adoption.',
+    "id": "glm-53",
+    "company": "Z AI",
+    "model": "GLM-5.3",
+    "release": "2026-08-14",
+    "setting": "max",
+    "aaIndex": 45,
+    "benchmarkCost": 2.01,
+    "contextK": 1000,
+    "releaseStatus": "released",
+    "source": "https://huggingface.co/zai-org/GLM-5.3",
+    "evaluation": "https://artificialanalysis.ai/models/glm-5-3",
+    "note": "Released/open-weight. Text-only inputs and always-on reasoning require explicit migration checks.",
+    "releaseMonth": 2026.6189497716894,
+    "family": "AA v4.3.2 · max",
+    "access": "open weights / API",
+    "noteKo": "가중치 공개 완료. 텍스트 입력만 지원하며 추론이 항상 켜져 있어 전환 시 API 조건을 확인해야 합니다."
   },
   {
-    id: 'claude-35-sonnet-computer',
-    company: 'Anthropic',
-    model: 'Claude 3.5 Sonnet Computer Use',
-    release: '2024-10',
-    releaseMonth: 2024.75,
-    family: 'computer-use agent',
-    access: 'API beta',
-    inputPrice: 3,
-    outputPrice: 15,
-    contextK: 200,
-    note: 'A major step from answering to acting: the model could inspect screens, move a cursor, click, and type through the API.',
+    "id": "mistral-large-4",
+    "company": "Mistral",
+    "model": "Mistral Large 4",
+    "release": "2026-10-06",
+    "setting": "preview configuration",
+    "aaIndex": 38,
+    "benchmarkCost": 1.13,
+    "inputPrice": 1.36,
+    "outputPrice": 4.18,
+    "releaseStatus": "preview",
+    "source": "https://mistral.ai/news/mistral-large-4/",
+    "evaluation": "https://artificialanalysis.ai/models/mistral-large-4",
+    "note": "Preview/API-only. Weights are planned for later in October; parameter counts in the launch post remain provider claims.",
+    "releaseMonth": 2026.763698630137,
+    "family": "AA v4.3.2 · preview configuration",
+    "access": "hosted access",
+    "noteKo": "API 프리뷰 공개. 가중치는 10월 중 추후 공개 예정이며, 발표문의 파라미터 수는 제공사 주장입니다."
   },
   {
-    id: 'deepseek-v3',
-    company: 'DeepSeek',
-    model: 'DeepSeek-V3',
-    release: '2024-12',
-    releaseMonth: 2024.92,
-    family: 'efficient MoE model',
-    access: 'API / open-weight ecosystem',
-    contextK: 128,
-    note: 'Changed the cost discussion with a 671B-parameter MoE model, 37B active parameters per token, and aggressive training efficiency.',
-  },
-  {
-    id: 'deepseek-r1',
-    company: 'DeepSeek',
-    model: 'DeepSeek-R1',
-    release: '2025-01',
-    releaseMonth: 2025.0,
-    family: 'open reasoning model',
-    access: 'API / open-weight ecosystem',
-    contextK: 128,
-    note: 'Showed that open reasoning models trained with large-scale RL could challenge closed reasoning systems on math and code.',
-  },
-  {
-    id: 'qwen3',
-    company: 'Alibaba',
-    model: 'Qwen3-235B-A22B',
-    release: '2025-04',
-    releaseMonth: 2025.25,
-    family: 'hybrid reasoning MoE',
-    access: 'open-weight ecosystem',
-    contextK: 128,
-    note: 'Introduced hybrid thinking and non-thinking modes, making reasoning budget a controllable open-model feature.',
-  },
-  {
-    id: 'minimax-m1',
-    company: 'MiniMax',
-    model: 'MiniMax-M1',
-    release: '2025-06',
-    releaseMonth: 2025.42,
-    family: 'hybrid-attention reasoning',
-    access: 'open-weight ecosystem',
-    inputPrice: 0.4,
-    outputPrice: 2.2,
-    contextK: 1000,
-    note: 'Made long-context reasoning cheaper with hybrid attention, a 1M-token context window, and open weights.',
-  },
-  {
-    id: 'kimi-k2',
-    company: 'Kimi',
-    model: 'Kimi K2',
-    release: '2025-07',
-    releaseMonth: 2025.5,
-    family: 'open agentic MoE',
-    access: 'API / open-weight ecosystem',
-    inputPrice: 0.95,
-    outputPrice: 4,
-    contextK: 128,
-    note: 'A trillion-parameter open MoE focused on coding, reasoning, and autonomous tool-use workflows.',
-  },
-  {
-    id: 'gemini-25-pro',
-    company: 'Google',
-    model: 'Gemini 2.5 Pro',
-    release: '2025-06',
-    releaseMonth: 2025.42,
-    family: 'multimodal reasoning',
-    access: 'Gemini API / Vertex AI',
-    aaIndex: 35,
-    gpqa: 86.4,
-    hle: 21.6,
-    inputPrice: 1.25,
-    outputPrice: 10,
-    outputSpeed: 126.9,
-    contextK: 1000,
-    note: 'A good example of a model that was fast and long-context before it became the top aggregate scorer.',
-  },
-  {
-    id: 'gemini-3-pro',
-    company: 'Google',
-    model: 'Gemini 3 Pro',
-    release: '2025-11',
-    releaseMonth: 2025.83,
-    family: 'multimodal reasoning',
-    access: 'Gemini API / Vertex AI',
-    aaIndex: 48,
-    gpqa: 91.9,
-    hle: 37.5,
-    inputPrice: 2,
-    outputPrice: 12,
-    outputSpeed: 131.5,
-    contextK: 1000,
-    note: 'A large step up in reasoning while preserving Google’s strong speed and multimodal profile.',
-  },
-  {
-    id: 'gemini-31-pro',
-    company: 'Google',
-    model: 'Gemini 3.1 Pro',
-    release: '2026-02',
-    releaseMonth: 2026.08,
-    family: 'multimodal reasoning',
-    access: 'Gemini API / Vertex AI',
-    aaIndex: 57,
-    valsIndex: 69.4,
-    sweBench: 78.8,
-    terminalBench: 67.4,
-    gpqa: 94.3,
-    hle: 44.4,
-    inputPrice: 2,
-    outputPrice: 12,
-    outputSpeed: 125.6,
-    contextK: 1000,
-    note: 'Shows why plotting speed and price matters: near-frontier aggregate score with unusually high output speed.',
-  },
-  {
-    id: 'gemini-35-flash',
-    company: 'Google',
-    model: 'Gemini 3.5 Flash',
-    release: '2026-05',
-    releaseMonth: 2026.42,
-    family: 'fast multimodal agent',
-    access: 'Gemini App / Gemini API / Vertex AI',
-    aaIndex: 55,
-    sweBench: 55.1,
-    terminalBench: 76.2,
-    hle: 40.2,
-    inputPrice: 1.5,
-    outputPrice: 9,
-    outputSpeed: 280,
-    contextK: 1000,
-    note: 'A Flash-line release aimed at agentic coding, long-horizon workflows, and multimodal work: lower-latency positioning with 1M input context and 64K output.',
-  },
-  {
-    id: 'gemini-36-flash',
-    company: 'Google',
-    model: 'Gemini 3.6 Flash',
-    release: '2026-07',
-    releaseMonth: 2026.5,
-    family: 'token-efficient multimodal agent',
-    access: 'Gemini App / Gemini API / Vertex AI',
-    sweBench: 58.7,
-    terminalBench: 78.0,
-    inputPrice: 1.5,
-    outputPrice: 7.5,
-    contextK: 1000,
-    releaseStatus: 'released',
-    note: 'An efficiency-focused update to 3.5 Flash: Google reports 17% fewer output tokens on the AA Index, fewer tool loops, stronger coding and computer use, and a lower output-token price.',
-  },
-  {
-    id: 'gemini-38-flash',
-    company: 'Google',
-    model: 'Gemini 3.8 Flash',
-    release: '2026-09',
-    releaseMonth: 2026.67,
-    family: 'long-horizon agent workhorse',
-    access: 'Gemini App / Gemini API / Vertex AI',
-    terminalBench: 89.4,
-    inputPrice: 0.75,
-    outputPrice: 3.75,
-    contextK: 1000,
-    releaseStatus: 'released',
-    note: 'Google reports stronger long-horizon software engineering and agentic knowledge work at an introductory price through 2026. The 89.4 Terminal-Bench value is specifically version 2.1.',
-  },
-  {
-    id: 'gpt-53-codex',
-    company: 'OpenAI',
-    model: 'GPT-5.3 Codex',
-    release: '2026-02',
-    releaseMonth: 2026.08,
-    family: 'coding agent',
-    access: 'Codex / API',
-    aaIndex: 54,
-    sweBench: 56.8,
-    terminalBench: 64.0,
-    inputPrice: 1.75,
-    outputPrice: 14,
-    outputSpeed: 78.7,
-    contextK: 400,
-    note: 'A specialized coding-agent step; useful for seeing how task-specific models can outrank general models on workflow evals.',
-  },
-  {
-    id: 'gpt-54',
-    company: 'OpenAI',
-    model: 'GPT-5.4',
-    release: '2026-03',
-    releaseMonth: 2026.17,
-    family: 'frontier agent',
-    access: 'API / ChatGPT / Codex',
-    aaIndex: 57,
-    sweBench: 67.4,
-    inputPrice: 2.5,
-    outputPrice: 15,
-    outputSpeed: 82.8,
-    contextK: 1000,
-    note: 'A general-purpose follow-up that keeps high speed while broadening beyond coding-only behavior.',
-  },
-  {
-    id: 'gpt-55',
-    company: 'OpenAI',
-    model: 'GPT-5.5',
-    release: '2026-04',
-    releaseMonth: 2026.33,
-    family: 'frontier agent',
-    access: 'API / ChatGPT',
-    aaIndex: 60,
-    valsIndex: 68.8,
-    sweBench: 82.6,
-    inputPrice: 5,
-    outputPrice: 30,
-    outputSpeed: 63.1,
-    contextK: 922,
-    note: 'Highest AA Index in this snapshot, but its cost point makes the efficiency view more nuanced than the headline score.',
-  },
-  {
-    id: 'gpt-56-sol',
-    company: 'OpenAI',
-    model: 'GPT-5.6 Sol',
-    release: '2026-07',
-    releaseMonth: 2026.5,
-    family: 'flagship frontier agent',
-    access: 'API / ChatGPT / Codex',
-    aaIndex: 58.9,
-    sweBench: 64.6,
-    terminalBench: 88.8,
-    gpqa: 94.6,
-    inputPrice: 4,
-    outputPrice: 20,
-    contextK: 1050,
-    releaseStatus: 'released',
-    note: 'The flagship GPT-5.6 tier adds max reasoning and multi-agent ultra mode. Its standard API price was reduced after launch; long prompts above the documented threshold use a higher price multiplier.',
-  },
-  {
-    id: 'gpt-56-terra',
-    company: 'OpenAI',
-    model: 'GPT-5.6 Terra',
-    release: '2026-07',
-    releaseMonth: 2026.5,
-    family: 'balanced frontier agent',
-    access: 'API / Work / Codex',
-    aaIndex: 55,
-    sweBench: 63.4,
-    terminalBench: 87.4,
-    gpqa: 92.9,
-    inputPrice: 2,
-    outputPrice: 12,
-    contextK: 1050,
-    releaseStatus: 'released',
-    note: 'The balanced GPT-5.6 tier is positioned around GPT-5.5-class quality at half the token price, while retaining the same 1.05M context and 128K maximum output.',
-  },
-  {
-    id: 'gpt-56-luna',
-    company: 'OpenAI',
-    model: 'GPT-5.6 Luna',
-    release: '2026-07',
-    releaseMonth: 2026.5,
-    family: 'fast cost-efficient agent',
-    access: 'API / Work / Codex',
-    aaIndex: 51.2,
-    sweBench: 62.7,
-    terminalBench: 84.7,
-    gpqa: 92.3,
-    inputPrice: 0.2,
-    outputPrice: 1.2,
-    contextK: 1050,
-    releaseStatus: 'released',
-    note: 'The lowest-cost GPT-5.6 tier illustrates capability compression: lower aggregate quality than Sol, but strong agentic scores at one-twentieth of Sol’s standard input price and about one-seventeenth of its output price.',
-  },
-  {
-    id: 'gpt-6-astra',
-    company: 'OpenAI',
-    model: 'GPT-6 Astra',
-    release: '2026-09',
-    releaseMonth: 2026.67,
-    family: 'frontier professional agent',
-    access: 'API / ChatGPT / Codex / cloud partners',
-    aaIndex: 53,
-    inputPrice: 10,
-    outputPrice: 50,
-    contextK: 1050,
-    releaseStatus: 'released',
-    note: 'OpenAI’s September flagship emphasizes computer use, professional artifacts, science, and long-running coding. The AA value is the September 2026 v4.2 result at max effort; OpenAI classifies cyber capability as Critical and deploys stronger safeguards.',
-  },
-  {
-    id: 'claude-sonnet-46',
-    company: 'Anthropic',
-    model: 'Claude Sonnet 4.6',
-    release: '2026-02',
-    releaseMonth: 2026.08,
-    family: 'efficient frontier',
-    access: 'API / Claude',
-    aaIndex: 52,
-    valsIndex: 67.7,
-    inputPrice: 3.75,
-    outputPrice: 15,
-    outputSpeed: 51.4,
-    contextK: 1000,
-    note: 'A Sonnet-class example of the “frontier capability moving down-market” pattern.',
-  },
-  {
-    id: 'claude-opus-47',
-    company: 'Anthropic',
-    model: 'Claude Opus 4.7',
-    release: '2026-04',
-    releaseMonth: 2026.33,
-    family: 'frontier agent',
-    access: 'API / Claude / cloud partners',
-    aaIndex: 57,
-    valsIndex: 71.5,
-    sweBench: 82.0,
-    terminalBench: 68.5,
-    inputPrice: 6.25,
-    outputPrice: 25,
-    outputSpeed: 43.5,
-    contextK: 1000,
-    note: 'Often strong on professional-work suites, but slower and more expensive than many similarly capable alternatives.',
-  },
-  {
-    id: 'claude-mythos',
-    company: 'Anthropic',
-    model: 'Claude Mythos Preview',
-    release: '2026-04',
-    releaseMonth: 2026.33,
-    family: 'gated cyber / agent',
-    access: 'controlled research preview',
-    contextK: 1000,
-    note: 'Included as a deployment lesson, not as a public leaderboard point: capability may be identity-gated when risk is high.',
-  },
-  {
-    id: 'claude-fable-5',
-    company: 'Anthropic',
-    model: 'Claude Fable 5',
-    release: '2026-06',
-    releaseMonth: 2026.42,
-    family: 'safeguarded Mythos-class agent',
-    access: 'API / Claude / cloud partners',
-    aaIndex: 59.9,
-    sweBench: 80.0,
-    terminalBench: 83.1,
-    inputPrice: 10,
-    outputPrice: 50,
-    contextK: 1000,
-    releaseStatus: 'released',
-    note: 'Fable exposes Mythos-class capability through broad safety classifiers and automatic fallback. The deployed product can therefore be a routed system, not always a pure Fable response.',
-  },
-  {
-    id: 'claude-fable-51',
-    company: 'Anthropic',
-    model: 'Claude Fable 5.1',
-    release: '2026-09',
-    releaseMonth: 2026.67,
-    family: 'safeguarded long-running agent',
-    access: 'API / Claude / cloud partners',
-    inputPrice: 10,
-    outputPrice: 50,
-    contextK: 1000,
-    releaseStatus: 'released',
-    note: 'Fable 5.1 and restricted Mythos 5.1 share an underlying model but use different safeguards. Fable may route flagged cyber or biology requests to Opus-family fallbacks, so production evaluation must log the responding path.',
-  },
-  {
-    id: 'claude-opus-5',
-    company: 'Anthropic',
-    model: 'Claude Opus 5',
-    release: '2026-07',
-    releaseMonth: 2026.5,
-    family: 'everyday frontier agent',
-    access: 'API / Claude / cloud partners',
-    inputPrice: 5,
-    outputPrice: 25,
-    contextK: 1000,
-    releaseStatus: 'released',
-    note: 'Near-Fable capability at half Fable’s token price, with effort controls, 1M context, stronger self-verification, and less restrictive safeguards for everyday coding and knowledge work.',
-  },
-  {
-    id: 'kimi-k2-thinking',
-    company: 'Kimi',
-    model: 'Kimi K2 Thinking',
-    release: '2026-04',
-    releaseMonth: 2026.33,
-    family: 'open-weight challenger',
-    access: 'API / open-weight ecosystem',
-    aaIndex: 54,
-    inputPrice: 0.95,
-    outputPrice: 4,
-    outputSpeed: 31.3,
-    contextK: 256,
-    note: 'A strong challenger that looks much better on price-performance than on speed-performance.',
-  },
-  {
-    id: 'deepseek-v4-pro',
-    company: 'DeepSeek',
-    model: 'DeepSeek V4 Pro',
-    release: '2026-04',
-    releaseMonth: 2026.33,
-    family: 'open-weight reasoning',
-    access: 'API / open-weight ecosystem',
-    aaIndex: 52,
-    inputPrice: 1.74,
-    outputPrice: 3.48,
-    outputSpeed: 33.8,
-    contextK: 1000,
-    note: 'A useful counterpoint to closed frontier models: high aggregate capability with much lower token pricing.',
-  },
-  {
-    id: 'qwen3-max-thinking',
-    company: 'Alibaba',
-    model: 'Qwen3 Max Thinking',
-    release: '2026-01',
-    releaseMonth: 2026.0,
-    family: 'reasoning model',
-    access: 'API',
-    aaIndex: 40,
-    inputPrice: 1.2,
-    outputPrice: 6,
-    outputSpeed: 35.9,
-    contextK: 256,
-    note: 'Shows the breadth of Chinese frontier competition beyond one or two labs.',
-  },
-  {
-    id: 'qwen37-max',
-    company: 'Alibaba',
-    model: 'Qwen3.7-Max',
-    release: '2026-05',
-    releaseMonth: 2026.42,
-    family: 'proprietary agent foundation',
-    access: 'Alibaba Cloud Model Studio (announced)',
-    aaIndex: 57,
-    sweBench: 60.6,
-    terminalBench: 69.7,
-    gpqa: 92.4,
-    inputPrice: 2.5,
-    outputPrice: 7.5,
-    outputSpeed: 210.5,
-    contextK: 1000,
-    note: 'A proprietary Qwen release for agent scaffolds, office automation, coding, and long-horizon execution, with published examples above 1,000 tool calls.',
-  },
-  {
-    id: 'qwen38-max',
-    company: 'Alibaba',
-    model: 'Qwen3.8-Max',
-    release: '2026-07',
-    releaseMonth: 2026.5,
-    family: '2.4T open-weight agent model',
-    access: 'API / QwenWork / open-weight ecosystem',
-    inputPrice: 2,
-    outputPrice: 6,
-    contextK: 1000,
-    releaseStatus: 'released',
-    note: 'The 2.4T-parameter model graduated from preview in August. Alibaba released 2.4T-A95B weights and documents a 1M-token context; architecture and deployment claims remain provider-reported.',
-  },
-  {
-    id: 'minimax-m27',
-    company: 'MiniMax',
-    model: 'MiniMax-M2.7',
-    release: '2026-03',
-    releaseMonth: 2026.17,
-    family: 'open-weight challenger',
-    access: 'API / open-weight ecosystem',
-    aaIndex: 50,
-    inputPrice: 0.3,
-    outputPrice: 1.2,
-    outputSpeed: 45.4,
-    contextK: 205,
-    note: 'A strong price-performance point: not the top raw score, but very competitive once token cost is plotted.',
-  },
-  {
-    id: 'kimi-k26',
-    company: 'Kimi',
-    model: 'Kimi K2.6',
-    release: '2026-04',
-    releaseMonth: 2026.33,
-    family: 'open-weight agentic MoE',
-    access: 'API / open-weight ecosystem',
-    aaIndex: 54,
-    inputPrice: 0.95,
-    outputPrice: 4,
-    outputSpeed: 96.3,
-    contextK: 256,
-    note: 'A newer open-weight Kimi point with strong agentic and multimodal positioning: 1T total parameters, 32B active, and 256K context.',
-  },
-  {
-    id: 'kimi-k3',
-    company: 'Kimi',
-    model: 'Kimi K3',
-    release: '2026-07',
-    releaseMonth: 2026.5,
-    family: '2.8T multimodal sparse MoE',
-    access: 'Kimi / API / open-weight ecosystem',
-    inputPrice: 3,
-    outputPrice: 15,
-    contextK: 1000,
-    releaseStatus: 'released',
-    note: 'Moonshot released the full weights, technical report, MoonEP, FlashKDA, and AgentEnv on July 27. The report documents KDA/Gated-MLA mixing, Attention Residuals, and 16-of-896 expert routing; the exact pre-training data mixture remains undisclosed.',
-  },
-  {
-    id: 'deepseek-v4-flash',
-    company: 'DeepSeek',
-    model: 'DeepSeek V4 Flash',
-    release: '2026-04',
-    releaseMonth: 2026.33,
-    family: 'low-cost open-weight reasoning',
-    access: 'API / open-weight ecosystem',
-    aaIndex: 47,
-    inputPrice: 0.14,
-    outputPrice: 0.28,
-    outputSpeed: 97,
-    contextK: 1000,
-    note: 'The efficiency sibling of DeepSeek V4 Pro: lower raw score, but an unusually aggressive price point with 1M context.',
-  },
-  {
-    id: 'grok-43',
-    company: 'xAI',
-    model: 'Grok 4.3',
-    release: '2026-04',
-    releaseMonth: 2026.33,
-    family: 'cost-efficient proprietary reasoning',
-    access: 'xAI API / Grok',
-    aaIndex: 53,
-    inputPrice: 1.25,
-    outputPrice: 2.5,
-    outputSpeed: 209,
-    contextK: 1000,
-    note: 'A cost-efficiency pressure point: not the top raw intelligence score, but strong speed, 1M context, and low output-token pricing.',
-  },
-  {
-    id: 'glm-47',
-    company: 'Z AI',
-    model: 'GLM-4.7',
-    release: '2025-12',
-    releaseMonth: 2025.92,
-    family: 'open-weight coding agent',
-    access: 'Z.AI API / open-weight ecosystem',
-    aaIndex: 42,
-    sweBench: 73.8,
-    terminalBench: 41.0,
-    hle: 42.8,
-    inputPrice: 0.6,
-    outputPrice: 2.2,
-    outputSpeed: 99.9,
-    contextK: 200,
-    note: 'A Z.ai coding-oriented open model with stronger multi-step execution, frontend generation, and tool-use positioning.',
-  },
-  {
-    id: 'glm-52',
-    company: 'Z AI',
-    model: 'GLM-5.2',
-    release: '2026-06',
-    releaseMonth: 2026.42,
-    family: 'open-weight long-horizon MoE',
-    access: 'Z.AI API / MIT open weights',
-    sweBench: 62.1,
-    terminalBench: 81.0,
-    contextK: 1000,
-    releaseStatus: 'released',
-    note: 'An open 753B MoE with 1M context. IndexShare reuses one sparse-attention indexer across four layers, and its post-training pipeline targets compacted long-horizon agent trajectories.',
-  },
-  {
-    id: 'command-a-plus',
-    company: 'Cohere',
-    model: 'Command A+',
-    release: '2026-05',
-    releaseMonth: 2026.42,
-    family: 'enterprise open-weight',
-    access: 'Cohere API / open weights',
-    aaIndex: 37,
-    gpqa: 76,
-    hle: 11,
-    outputSpeed: 208.7,
-    contextK: 192,
-    note: 'A sovereign-AI and enterprise deployment point: lower frontier score, but open weights, strong speed, and conservative hallucination behavior.',
-  },
-  {
-    id: 'mistral-large-3',
-    company: 'Mistral',
-    model: 'Mistral Large 3',
-    release: '2025-12',
-    releaseMonth: 2025.92,
-    family: 'open-weight enterprise',
-    access: 'API / open-weight',
-    aaIndex: 23,
-    inputPrice: 0.5,
-    outputPrice: 1.5,
-    outputSpeed: 45.4,
-    contextK: 256,
-    note: 'Not a top raw scorer here, but relevant when customization, sovereignty, and open deployment matter.',
-  },
+    "id": "beam",
+    "company": "Reflection",
+    "model": "Beam",
+    "release": "2026-10-05",
+    "setting": "not reported",
+    "releaseStatus": "announced",
+    "source": "https://reflection.ai/blog/introducing-beam",
+    "note": "Announced/planned: early-access signup, with weights and technical artifacts promised later in October. No compatible AA result was verified.",
+    "releaseMonth": 2026.7609589041097,
+    "family": "AA v4.3.2 · not reported",
+    "access": "hosted access",
+    "noteKo": "발표·공개 예정 상태입니다. 사전 접근 신청을 받으며 가중치와 기술 자료는 10월 중 추후 공개 예정입니다. 호환되는 AA 결과는 확인되지 않았습니다."
+  }
 ];
 
 const metricLabels: Record<Locale, Record<MetricKey, string>> = {
@@ -778,6 +281,7 @@ const metricLabels: Record<Locale, Record<MetricKey, string>> = {
     gpqa: 'GPQA Diamond',
     hle: 'Humanity’s Last Exam',
     outputSpeed: 'Output speed',
+    contextK: 'Context window',
   },
   ko: {
     aaIndex: 'AA 지능 지수',
@@ -787,6 +291,7 @@ const metricLabels: Record<Locale, Record<MetricKey, string>> = {
     gpqa: 'GPQA Diamond',
     hle: 'Humanity’s Last Exam',
     outputSpeed: '출력 속도',
+    contextK: '문맥 길이',
   },
 };
 
@@ -797,139 +302,67 @@ const labels = {
       'Choose a benchmark, then change the x-axis to see whether the same model still looks strong by time, token cost, speed, or context budget.',
     benchmark: 'Benchmark',
     controlAria: 'Benchmark plot controls',
-    noPoints: 'No model in this filter reports the selected metric.',
+    noPoints: 'No verified points for this filter, axis, and metric.',
     selectModel: 'Select model',
     axisMode: 'X-axis',
     company: 'Company',
     all: 'All companies',
-    timeline: 'release date',
-    price: 'token price',
-    speed: 'output speed',
-    context: 'context window',
+    timeline: 'Release date',
+    price: 'Token price',
+    speed: 'Output speed',
+    context: 'Context limit',
     yAxis: 'Benchmark score',
     noScore: 'not reported',
     selected: 'Selected model',
     releaseTimeline: 'Release timeline',
     releaseTimelineHelp:
-      'Major public model releases from early 2024 onward. The pattern to watch is not one winner, but the shrinking gap between releases and the repeated shift from static QA to reasoning, agents, long context, and cost efficiency.',
+      'Selected releases and announcements in August–October 2026. Read changes in reasoning, agents, long-context handling, and cost efficiency alongside each source and its evaluation conditions.',
     blendedPrice: 'blended $/1M',
     outputSpeed: 'tok/s',
     detailContext: 'context',
     priceAxis: 'Lower is cheaper',
     source:
-      'Snapshot as of September 15, 2026. Values combine cited lab cards/release notes with Artificial Analysis and Vals AI public benchmark pages. A missing score means not reported under the mapped methodology, not zero. Promotional or long-context prices may have thresholds and expiry dates.',
+      'Snapshot as of 2026-10-13. Scores use AA Intelligence Index v4.3.2 with the effort/fallback configuration shown. Costs are benchmark workload observations, not equal-compute comparisons; speed is omitted where pages disagree. A missing score means not reported under the mapped methodology, not zero. Promotional or long-context prices may have thresholds and expiry dates.',
   },
   ko: {
-    title: '상업용 모델 Benchmark Map',
+    title: '상용 모델 비교 지도',
     subtitle:
-      'Benchmark를 고른 뒤 x축을 바꿔 보세요. 같은 모델도 시간, token cost, 속도, context budget 기준에서는 전혀 다르게 보입니다.',
-    benchmark: 'Benchmark',
-    controlAria: 'Benchmark 그래프 설정',
-    noPoints: '이 필터에서 선택한 metric을 공개한 모델이 없습니다.',
+      '지표와 x축을 바꿔 보세요. 같은 모델도 공개 시점, 토큰 단가, 평가 비용, 문맥 한도에 따라 다르게 보입니다.',
+    benchmark: '지표',
+    controlAria: '모델 비교 그래프 설정',
+    noPoints: '이 필터·축·지표에 필요한 값을 확인한 모델이 없습니다.',
     selectModel: '모델 선택',
     axisMode: 'X축',
     company: '회사',
     all: '전체 회사',
-    timeline: 'release date',
-    price: 'token price',
-    speed: 'output speed',
-    context: 'context window',
-    yAxis: 'Benchmark score',
+    timeline: '공개 시점',
+    price: '토큰 단가',
+    speed: '출력 속도',
+    context: '문맥 한도',
+    yAxis: '지표 값',
     noScore: '미공개',
     selected: '선택한 모델',
-    releaseTimeline: 'Release timeline',
+    releaseTimeline: '공개 일정',
     releaseTimelineHelp:
-      '2024년 초부터 공개된 주요 모델 release입니다. 한 모델의 승패보다 release 간격이 짧아지고, static QA에서 reasoning, agent, long context, cost efficiency로 개선축이 반복 이동하는 흐름을 보세요.',
-    blendedPrice: 'blended $/1M',
+      '2026년 8~10월의 주요 공개·발표 사례입니다. 추론, 에이전트, 장문 처리와 비용 효율의 변화는 각 사례의 출처와 평가 조건을 함께 읽어야 합니다.',
+    blendedPrice: '혼합 가격 $/1M',
     outputSpeed: 'tok/s',
-    detailContext: 'context',
+    detailContext: '문맥 길이',
     priceAxis: '왼쪽일수록 저렴',
     source:
-      '2026년 9월 15일 기준 snapshot입니다. 값은 본문에 인용한 lab card/release note와 Artificial Analysis, Vals AI public benchmark page를 함께 정리했습니다. 값이 없다는 것은 0점이 아니라 해당 methodology에서 미공개라는 뜻입니다. 프로모션 가격과 장문 입력 가격에는 만료일이나 별도 임계값이 있을 수 있습니다.',
+      '2026-10-13 기준 snapshot입니다. 점수는 표시된 추론 강도·fallback 조건의 AA 지능 지수 v4.3.2입니다. 평가 비용은 해당 과업의 관측값이며 동일 연산량 비교가 아닙니다. 출처 간 속도가 달라 속도 값은 넣지 않았습니다. 값이 없다는 것은 0점이 아니라 해당 methodology에서 미공개라는 뜻입니다. 프로모션 가격과 장문 입력 가격에는 만료일이나 별도 임계값이 있을 수 있습니다.',
   },
 };
 
-const notesKo: Partial<Record<string, string>> = {
-  'gpt-4': '오늘날의 agent benchmark 체계가 자리 잡기 전, 시험·coding 성능을 대표했던 역사적 기준점입니다.',
-  'gemini-15-pro': '1M-token preview와 MoE 효율을 앞세워 long-context multimodal work를 전면으로 끌어올렸습니다.',
-  'mistral-large': '다국어 reasoning과 enterprise API deployment를 겨냥한 유럽계 commercial flagship입니다.',
-  'claude-3-opus': '최고 품질 Opus, 균형형 Sonnet, 저비용 Haiku라는 product ladder를 명확히 만든 모델입니다.',
-  'gpt-4o': '텍스트 점수만이 아니라 실시간 음성·vision·latency·비용으로 경쟁축을 넓혔습니다.',
-  'claude-35-sonnet': '상위 capability가 더 저렴한 tier로 내려오는 capability compression을 보여 준 사례입니다.',
-  'mistral-large-2': 'code, math, multilingual support, function calling을 개선하며 open-weight enterprise 영역을 확장했습니다.',
-  'o1-preview': '더 오래 생각할수록 어려운 수학·과학·code 문제가 개선되는 inference-time reasoning을 제품 기능으로 만들었습니다.',
-  'gpt-5': '빠른 응답과 깊은 reasoning을 routing하는 unified system으로, 모델과 제품 시스템의 경계를 흐렸습니다.',
-  'qwen-25': '여러 크기와 modality를 공개해 Alibaba의 광범위한 open-model 전략을 보여 준 모델군입니다.',
-  'claude-35-sonnet-computer': '화면을 읽고 cursor, click, typing을 수행하면서 답변 모델에서 행동 모델로 넘어간 전환점입니다.',
-  'deepseek-v3': '671B 중 token당 37B만 활성화하는 MoE와 높은 학습 효율로 비용 논의를 바꿨습니다.',
-  'deepseek-r1': '대규모 RL로 학습한 open reasoning model이 폐쇄형 시스템과 경쟁할 수 있음을 보여 줬습니다.',
-  qwen3: 'thinking/non-thinking mode를 함께 제공해 reasoning budget을 제어 가능한 open-model 기능으로 만들었습니다.',
-  'minimax-m1': 'hybrid attention, 1M context, open weights를 결합해 long-context reasoning 비용을 낮췄습니다.',
-  'kimi-k2': 'coding, reasoning, autonomous tool use에 초점을 둔 trillion-parameter open MoE입니다.',
-  'gemini-25-pro': '장문·고속 특성이 aggregate score 1위와 별개인 축임을 보여 주는 사례입니다.',
-  'gemini-3-pro': 'Google의 빠른 multimodal profile을 유지하면서 reasoning 성능을 크게 끌어올렸습니다.',
-  'gemini-31-pro': 'frontier에 가까운 aggregate score와 높은 출력 속도를 함께 보여 주므로 price/speed 축 비교가 중요합니다.',
-  'gemini-35-flash': '1M input, 64K output을 지원하며 Flash tier를 agentic coding과 long-horizon workflow로 확장했습니다.',
-  'gemini-36-flash': '3.5 대비 output token 17% 감소, 더 적은 tool loop, coding·computer use 개선, 더 낮은 output price를 내세운 효율 업데이트입니다.',
-  'gemini-38-flash': 'long-horizon software engineering과 agentic knowledge work를 강화한 2026년 9월 모델입니다. 표시된 89.4는 Terminal-Bench 2.1 점수이며 프로모션 가격은 2026년 말까지입니다.',
-  'gpt-53-codex': '특화 coding agent가 일반 모델보다 workflow eval에서 앞설 수 있음을 보여 줍니다.',
-  'gpt-54': 'coding 전용 특화를 넘어 general-purpose agent 성능을 넓힌 후속 모델입니다.',
-  'gpt-55': '당시 높은 AA Index를 기록했지만, cost 축에서는 headline score와 다른 결론이 나옵니다.',
-  'gpt-56-sol': 'max reasoning과 multi-agent ultra를 추가한 flagship입니다. 출시 뒤 표준 API 가격이 인하됐으며, 긴 prompt에는 문서화된 별도 가격 배수가 적용됩니다.',
-  'gpt-56-terra': 'GPT-5.5급 품질을 더 낮은 가격에 제공하는 균형형 tier이며 Sol과 같은 1.05M context, 128K output을 지원합니다.',
-  'gpt-56-luna': 'Sol보다 aggregate 품질은 낮지만 표준 input 가격은 1/20, output 가격은 약 1/17인 capability compression 사례입니다.',
-  'gpt-6-astra': '2026년 9월 OpenAI flagship으로 computer use, professional artifact, science, 장기 coding을 강조합니다. AA 값은 v4.2 max effort 결과이며, cyber capability는 Critical로 분류돼 강화된 safeguard가 적용됩니다.',
-  'claude-sonnet-46': 'frontier capability가 더 저렴한 Sonnet tier로 내려오는 흐름을 보여 줍니다.',
-  'claude-opus-47': 'professional-work suite에 강하지만 비슷한 모델보다 느리고 비싼 trade-off가 있습니다.',
-  'claude-mythos': '공개 leaderboard 점이 아니라 위험이 높은 capability가 identity-gated될 수 있음을 보여 주는 deployment 사례입니다.',
-  'claude-fable-5': 'Mythos-class capability에 넓은 safety classifier와 fallback을 결합했습니다. 실제 제품 응답이 항상 순수 Fable은 아닐 수 있습니다.',
-  'claude-fable-51': 'Fable 5.1과 제한형 Mythos 5.1은 같은 underlying model에 다른 safeguard를 적용합니다. Fable이 민감한 요청을 Opus 계열로 route할 수 있어 실제 응답 경로를 기록해야 합니다.',
-  'claude-opus-5': 'Fable 절반 가격에 가까운 capability, effort control, 1M context, 강화된 self-verification을 제공합니다.',
-  'kimi-k2-thinking': 'raw score보다 price-performance에서 더 강하게 보이고 speed-performance에서는 불리한 challenger입니다.',
-  'deepseek-v4-pro': '높은 aggregate capability를 훨씬 낮은 token price에 제공하는 open-weight 대안입니다.',
-  'qwen3-max-thinking': '중국 frontier 경쟁이 한두 연구소에 국한되지 않음을 보여 줍니다.',
-  'qwen37-max': 'coding, office automation, multi-agent orchestration, 장기 실행을 위한 proprietary agent foundation입니다.',
-  'qwen38-max': '8월에 preview를 졸업했고 2.4T-A95B weights와 1M context가 공개됐습니다. 상세 architecture와 장기 실행 성과는 여전히 provider-reported claim으로 구분해야 합니다.',
-  'minimax-m27': 'raw score 1위는 아니지만 token cost를 함께 그리면 강한 price-performance 지점입니다.',
-  'kimi-k26': '1T total, 32B active, 256K context를 갖춘 multimodal agentic open-weight 모델입니다.',
-  'kimi-k3': '7월 27일 full weights, technical report, MoonEP, FlashKDA, AgentEnv가 공개됐습니다. KDA/Gated-MLA 혼합, AttnRes, 16-of-896 routing은 문서화됐지만 정확한 pre-training data mixture는 비공개입니다.',
-  'deepseek-v4-flash': '낮은 raw score 대신 1M context와 공격적인 가격을 택한 V4 Pro의 효율형 sibling입니다.',
-  'grok-43': '1M context, 빠른 출력, 낮은 output price로 cost-efficiency를 압박하는 proprietary 모델입니다.',
-  'glm-47': 'multi-step execution, frontend generation, tool use를 강화한 Z.ai의 open coding model입니다.',
-  'glm-52': '1M context를 지원하는 753B open MoE입니다. IndexShare와 compacted long-horizon trajectory 학습이 핵심 개선점입니다.',
-  'command-a-plus': '최고 raw score보다 sovereign AI, enterprise deployment, open weights, 빠른 serving에 초점을 둡니다.',
-  'mistral-large-3': '최고 점수는 아니지만 customization, sovereignty, open deployment가 중요할 때 유효합니다.',
-};
 
 const releaseStatusLabels: Record<Locale, Record<ReleaseStatus, string>> = {
   en: { released: 'released', preview: 'preview', announced: 'weights/report announced', restricted: 'restricted' },
   ko: { released: '공개 완료', preview: '프리뷰', announced: '가중치/리포트 공개 예정', restricted: '제한 공개' },
 };
 
-const companyOptions: CompanyKey[] = [
-  'All',
-  'OpenAI',
-  'Google',
-  'Anthropic',
-  'Kimi',
-  'DeepSeek',
-  'Alibaba',
-  'MiniMax',
-  'Mistral',
-  'xAI',
-  'Z AI',
-  'Cohere',
-];
+const companyOptions: CompanyKey[] = ['All', 'OpenAI', 'Google', 'Anthropic', 'DeepSeek', 'Z AI', 'Mistral', 'Reflection'];
 
-const metricOptions: MetricKey[] = [
-  'aaIndex',
-  'valsIndex',
-  'sweBench',
-  'terminalBench',
-  'gpqa',
-  'hle',
-  'outputSpeed',
-];
+const metricOptions: MetricKey[] = ['aaIndex', 'contextK'];
 
 const axisLabels: Record<Locale, Record<AxisMode, string>> = {
   en: {
@@ -937,12 +370,14 @@ const axisLabels: Record<Locale, Record<AxisMode, string>> = {
     price: 'Blended price, $/1M tokens',
     speed: 'Output tokens/sec',
     context: 'Context window, K tokens',
+    taskCost: 'AA evaluation cost, $/task',
   },
   ko: {
     timeline: '공개 시점',
     price: '혼합 가격, $/1M tokens',
     speed: '초당 출력 token',
-    context: 'Context window, K tokens',
+    context: '문맥 길이, K tokens',
+    taskCost: 'AA 평가 비용, $/과업',
   },
 };
 
@@ -954,8 +389,9 @@ function blendedPrice(row: ModelSnapshot) {
 }
 
 function xValue(row: ModelSnapshot, axisMode: AxisMode) {
-  if (axisMode === 'timeline') return row.releaseMonth;
+  if (axisMode === 'timeline') return Date.parse(row.release) / 86_400_000;
   if (axisMode === 'price') return blendedPrice(row);
+  if (axisMode === 'taskCost') return row.benchmarkCost;
   if (axisMode === 'speed') return row.outputSpeed;
   return row.contextK;
 }
@@ -973,19 +409,16 @@ function niceRange(values: number[], padRatio = 0.08) {
 }
 
 function formatX(value: number, axisMode: AxisMode) {
-  if (axisMode === 'timeline') {
-    const year = Math.floor(value);
-    const month = Math.max(1, Math.min(12, Math.round((value - year) * 12) + 1));
-    return `${year}-${String(month).padStart(2, '0')}`;
-  }
-  if (axisMode === 'price') return `$${value.toFixed(value < 2 ? 2 : 1)}`;
+  if (axisMode === 'timeline') return new Date(value * 86_400_000).toISOString().slice(0, 10);
+  if (axisMode === 'price' || axisMode === 'taskCost') return `$${value.toFixed(2)}`;
   if (axisMode === 'speed') return `${value.toFixed(0)}`;
-  return value >= 1000 ? '1M' : `${value.toFixed(0)}K`;
+  return formatContext(value, 'not reported');
 }
 
 function formatMetric(value: number | undefined, metric: MetricKey, missing: string) {
   if (typeof value !== 'number') return missing;
-  if (metric === 'aaIndex') return value.toFixed(1);
+  if (metric === 'aaIndex') return value.toFixed(0);
+  if (metric === 'contextK') return formatContext(value, missing);
   if (metric === 'outputSpeed') return `${value.toFixed(0)} tok/s`;
   return `${value.toFixed(1)}%`;
 }
@@ -1005,9 +438,9 @@ function companyClass(company: string) {
 
 export default function CommercialModelBenchmarkExplorer({ locale = 'en' }: { locale?: Locale }) {
   const [metric, setMetric] = useState<MetricKey>('aaIndex');
-  const [axisMode, setAxisMode] = useState<AxisMode>('timeline');
+  const [axisMode, setAxisMode] = useState<AxisMode>('taskCost');
   const [company, setCompany] = useState<CompanyKey>('All');
-  const [selectedId, setSelectedId] = useState('gpt-56-sol');
+  const [selectedId, setSelectedId] = useState('gpt-61-sol');
   const text = labels[locale];
 
   const plottedRows = useMemo(() => {
@@ -1021,21 +454,27 @@ export default function CommercialModelBenchmarkExplorer({ locale = 'en' }: { lo
   const selected = MODEL_SNAPSHOTS.find((row) => row.id === selectedId) ?? MODEL_SNAPSHOTS[0];
   const xValues = plottedRows.length > 0 ? plottedRows.map((point) => point.x) : [0, 1];
   const yValues = plottedRows.length > 0 ? plottedRows.map((point) => point.y) : [0, 1];
-  const [xMin, xMax] = niceRange(xValues);
-  const [yMin, yMax] = niceRange(yValues);
+  const [rawXMin, xMax] = niceRange(xValues);
+  const xMin = axisMode === 'timeline' ? rawXMin : Math.max(0, rawXMin);
+  const [rawYMin, yMax] = niceRange(yValues);
+  const yMin = Math.max(0, rawYMin);
   const innerWidth = chart.width - chart.left - chart.right;
   const innerHeight = chart.height - chart.top - chart.bottom;
 
   const sx = (value: number) => chart.left + ((value - xMin) / (xMax - xMin)) * innerWidth;
   const sy = (value: number) => chart.top + innerHeight - ((value - yMin) / (yMax - yMin)) * innerHeight;
 
-  const bestRows = [...MODEL_SNAPSHOTS]
-    .filter((row) => (company === 'All' || row.company === company) && typeof row[metric] === 'number')
+  const bestRows = plottedRows.map((point) => point.row)
     .sort((a, b) => (b[metric] as number) - (a[metric] as number))
     .slice(0, 5);
   const timelineRows = [...MODEL_SNAPSHOTS]
     .filter((row) => company === 'All' || row.company === company)
     .sort((a, b) => a.releaseMonth - b.releaseMonth);
+
+  useEffect(() => {
+    const eligible = plottedRows.length ? plottedRows.map((point) => point.row) : timelineRows;
+    setSelectedId((current) => eligible.some((row) => row.id === current) ? current : eligible[0]?.id ?? current);
+  }, [axisMode, company, metric]);
 
   const xTicks = [0, 0.25, 0.5, 0.75, 1].map((ratio) => xMin + (xMax - xMin) * ratio);
   const yTicks = [0, 0.25, 0.5, 0.75, 1].map((ratio) => yMin + (yMax - yMin) * ratio);
@@ -1054,6 +493,7 @@ export default function CommercialModelBenchmarkExplorer({ locale = 'en' }: { lo
       <div className="commercial-benchmark-header">
         <div>
           <h3>{text.title}</h3>
+          <p>{locale === 'ko' ? '2026-10-13 기준 · AA v4.3.2' : 'as of 2026-10-13 · AA v4.3.2'}</p>
           <p>{text.subtitle}</p>
         </div>
         <div className="commercial-benchmark-controls" aria-label={text.controlAria}>
@@ -1074,6 +514,7 @@ export default function CommercialModelBenchmarkExplorer({ locale = 'en' }: { lo
               <option value="price">{text.price}</option>
               <option value="speed">{text.speed}</option>
               <option value="context">{text.context}</option>
+              <option value="taskCost">{locale === 'ko' ? 'AA 평가 비용' : 'AA evaluation cost'}</option>
             </select>
           </label>
           <label>
@@ -1112,7 +553,7 @@ export default function CommercialModelBenchmarkExplorer({ locale = 'en' }: { lo
               <g key={`y-${tick}`}>
                 <line x1={chart.left} x2={chart.width - chart.right} y1={sy(tick)} y2={sy(tick)} className="plot-grid" />
                 <text x={chart.left - 12} y={sy(tick) + 4} textAnchor="end" className="plot-tick">
-                  {metric === 'aaIndex' || metric === 'outputSpeed' ? tick.toFixed(0) : `${tick.toFixed(0)}%`}
+                  {metric === 'contextK' ? formatContext(tick, text.noScore) : tick.toFixed(0)}
                 </text>
               </g>
             ))}
@@ -1161,7 +602,7 @@ export default function CommercialModelBenchmarkExplorer({ locale = 'en' }: { lo
                     className={`plot-dot company-${companyClass(point.row.company)}`}
                   />
                   {isSelected && (
-                    <text x={sx(point.x) + 10} y={sy(point.y) - 8} className="plot-label">
+                    <text x={sx(point.x) > chart.width / 2 ? sx(point.x) - 10 : sx(point.x) + 10} textAnchor={sx(point.x) > chart.width / 2 ? 'end' : 'start'} y={sy(point.y) - 8} className="plot-label">
                       {point.row.model}
                     </text>
                   )}
@@ -1175,7 +616,7 @@ export default function CommercialModelBenchmarkExplorer({ locale = 'en' }: { lo
           <span className={`provider-chip provider-${companyClass(selected.company)}`}>{selected.company}</span>
           <h4>{selected.model}</h4>
           <p className="commercial-detail-meta">
-            {selected.release} · {selected.family} · {selected.access}
+            {selected.release} · AA v4.3.2 · {selected.setting === 'not reported' ? text.noScore : selected.setting}
             {selected.releaseStatus ? ` · ${releaseStatusLabels[locale][selected.releaseStatus]}` : ''}
           </p>
           <div className="commercial-detail-grid">
@@ -1188,15 +629,22 @@ export default function CommercialModelBenchmarkExplorer({ locale = 'en' }: { lo
               <strong>{typeof blendedPrice(selected) === 'number' ? `$${blendedPrice(selected)?.toFixed(2)}` : text.noScore}</strong>
             </div>
             <div>
-              <span>{text.outputSpeed}</span>
-              <strong>{typeof selected.outputSpeed === 'number' ? selected.outputSpeed.toFixed(1) : text.noScore}</strong>
+              <span>{locale === 'ko' ? 'AA 평가 비용 ($/과업)' : 'AA evaluation cost ($/task)'}</span>
+              <strong>{typeof selected.benchmarkCost === 'number' ? `$${selected.benchmarkCost.toFixed(2)}` : text.noScore}</strong>
             </div>
             <div>
               <span>{text.detailContext}</span>
               <strong>{formatContext(selected.contextK, text.noScore)}</strong>
             </div>
           </div>
-          <p className="commercial-note">{locale === 'ko' ? notesKo[selected.id] ?? selected.note : selected.note}</p>
+          <p className="commercial-source-note">
+            <a href={selected.source}>{locale === 'ko' ? '공식 출처' : 'Primary source'}</a>
+            {selected.evaluation && <> · <a href={selected.evaluation}>{locale === 'ko' ? '평가 조건·출처' : 'Evaluation source'}</a></>}
+            {selected.noteSource && <> · <a href={selected.noteSource}>{locale === 'ko' ? '단가 변경 출처' : 'Pricing update'}</a></>}
+            {locale === 'ko' ? ' · 2026-10-13 기준' : ' · as of 2026-10-13'}
+          </p>
+          <p className="commercial-note">{locale === 'ko' ? selected.noteKo : selected.note}</p>
+          {!plottedRows.some((point) => point.row.id === selected.id) && <p className="commercial-note">{locale === 'ko' ? '선택한 모델은 이 축·지표에 필요한 값이 없어 그래프에서 제외됩니다.' : 'The selected model lacks a value required by this axis or metric and is omitted from the plot.'}</p>}
         </aside>
       </div>
 
@@ -1215,7 +663,7 @@ export default function CommercialModelBenchmarkExplorer({ locale = 'en' }: { lo
           <h4>{text.releaseTimeline}</h4>
           <p>{text.releaseTimelineHelp}</p>
         </div>
-        <div className="commercial-timeline-track" aria-label="Commercial model release timeline">
+        <div className="commercial-timeline-track" aria-label={text.releaseTimeline}>
           {timelineRows.map((row) => (
             <button
               key={row.id}
@@ -1226,7 +674,7 @@ export default function CommercialModelBenchmarkExplorer({ locale = 'en' }: { lo
             >
               <span>{row.release}</span>
               <strong>{row.model}</strong>
-              <em>{row.family}</em>
+              <em>{row.setting === 'not reported' ? text.noScore : row.setting}</em>
             </button>
           ))}
         </div>

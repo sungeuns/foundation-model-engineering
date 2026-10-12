@@ -90,6 +90,8 @@ $$
 
 아래의 단순화된 블록은 핵심 계산 아이디어를 보여 줍니다. history를 compact state로 만든 뒤, 그것을 query에 다시 적용하는 방식입니다.
 
+> **의도적으로 단순화한 예제.** 전체 시퀀스를 요약하는 양방향 블록이므로 앞의 출력이 뒤 토큰에 의존할 수 있습니다. causal decoder나 Gated DeltaNet 구현이 아닙니다. causal prefix scan·점진 상태·padding mask·분모 안정성·분산 커널은 빠져 있습니다.
+
 ```python
 import torch
 import torch.nn as nn
@@ -153,6 +155,13 @@ Linear Attention은 표준 어텐션을 이미 대체한 승자라기보다, 긴
 
 ---
 
+## 최근 연구: gating·delta update·상태를 가진 서빙
+
+**2026-10-13 기준.** Gated DeltaNet은 선택적 망각과 delta-rule의 목표 지향 update를 결합하고 하이브리드 어텐션 stack을 연구합니다 [[4]](#ref-4). 이는 특정 recurrent 메커니즘이며 양방향 선형 어텐션 출력에 gate를 곱하는 것과 같은 연산은 아닙니다.
+
+효율적인 레이어도 정확한 상태 계약이 필요합니다. 접두사 재사용에서는 recurrent 상태와 어텐션 KV를 같은 위치에서 복원해야 합니다. 분기형 speculation은 토큰 버퍼를 줄이는 것만으로 되돌릴 수 없는 상태를 격리해야 합니다. [12.1절](/ko/chapter-12/kv-cache-management)과 [12.4절](/ko/chapter-12/speculative-decoding)의 최근 통합 근거가 아키텍처의 메모리 절감에도 scheduler·복구 검증이 필요한 이유를 설명합니다. 처리량과 함께 연상 회상·위치 민감도·장문 품질·cold/복원 continuation을 평가합니다.
+
+
 ## Quizzes
 
 <details>
@@ -180,5 +189,6 @@ Linear Attention은 표준 어텐션을 이미 대체한 승자라기보다, 긴
 ## References
 
 1. <a id="ref-1"></a>Katharopoulos, A., et al. (2020). *Transformers are RNNs: Fast Autoregressive Transformers with Linear Attention.* [arXiv:2006.16236](https://arxiv.org/abs/2006.16236).
-2. <a id="ref-2"></a>Yang, S., et al. (2024). *DeltaNet: Linear-Time Sequence Modeling with Gated Delta Rule.* [arXiv:2406.06484](https://arxiv.org/abs/2406.06484).
+2. <a id="ref-2"></a>Yang, S., et al. (2024). *Parallelizing Linear Transformers with the Delta Rule over Sequence Length.* [arXiv:2406.06484](https://arxiv.org/abs/2406.06484).
 3. <a id="ref-3"></a>Dao, T., & Gu, A. (2024). *Transformers are SSMs: Generalized Models and Efficient Algorithms Through Structured State Space Duality.* [arXiv:2405.21060](https://arxiv.org/abs/2405.21060).
+4. <a id="ref-4"></a>Yang, S., Kautz, J., & Hatamizadeh, A. (2024). Gated Delta Networks: Improving Mamba2 with Delta Rule. [Source](https://arxiv.org/abs/2412.06464).

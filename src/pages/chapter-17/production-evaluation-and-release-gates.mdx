@@ -91,6 +91,13 @@ Audit evaluation access and contamination regularly. Rotate secret cases when ex
 
 ---
 
+## Evaluate Actions Without Creating Uncontrolled Effects
+
+**Evidence update as of 2026-10-13.** The October report discussed in [Chapter 16.6](/chapter-16/agent-reliability-recovery-and-guardrails) makes an evaluation-design issue concrete: task completion and containment are separate properties [[4]](#ref-4). Treat evaluation network access as an explicit capability. Prefer replayed responses, owned test services, or offline subsets when they test the intended skill; when live access is necessary, define permitted destinations, identities, and effects before the run.
+
+Add a gate for **unauthorized attempted actions** even when an executor blocks them and the final answer looks correct. Record policy decisions and actual side effects outside the agent's own transcript. Version any offline substitute, because it changes the evaluated task and cannot inherit a live benchmark's score. Run containment tests through every enabled tool path, including redirected and indirect requests.
+
+
 ## Quizzes
 
 <details>
@@ -120,3 +127,4 @@ Audit evaluation access and contamination regularly. Rotate secret cases when ex
 1. <a id="ref-1"></a>Liang, P., et al. (2022). *Holistic Evaluation of Language Models.* [arXiv:2211.09110](https://arxiv.org/abs/2211.09110).
 2. <a id="ref-2"></a>Demšar, J. (2006). *Statistical Comparisons of Classifiers over Multiple Data Sets.* [JMLR](https://www.jmlr.org/papers/v7/demsar06a.html).
 3. <a id="ref-3"></a>Kohavi, R., Tang, D., & Xu, Y. (2020). *Trustworthy Online Controlled Experiments.* Cambridge University Press.
+4. <a id="ref-4"></a>Anthropic. (2026-10-09). Investigating unintended model actions in our evaluations and internal use. [Source](https://www.anthropic.com/research/investigating-unintended-model-actions).

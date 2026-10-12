@@ -49,6 +49,8 @@ When the model later encounters out-of-distribution inputs in production, the ac
 
 Below is a PyTorch implementation demonstrating symmetric min-max calibration for a linear layer.
 
+> **Deliberately simplified example.** This isolates one quantization operation; it omits real packed kernels, calibration/export parity, tokenizer/loss-mask handling, distributed state and the complete training loop. It is not a smoke-tested production implementation.
+
 ```python
 import torch
 import torch.nn as nn
@@ -121,6 +123,8 @@ $$
 
 ### Engineering Fake Quantization with STE
 
+> **Deliberately simplified example.** This isolates one quantization operation; it omits real packed kernels, calibration/export parity, tokenizer/loss-mask handling, distributed state and the complete training loop. It is not a smoke-tested production implementation.
+
 ```python
 import torch
 import torch.nn as nn
@@ -153,13 +157,15 @@ class QATLinear(nn.Module):
         # Master weights remain in full precision
         self.weight = nn.Parameter(torch.randn(out_features, in_features) * 0.02)
         self.bias = nn.Parameter(torch.zeros(out_features))
+        if bits < 2:
+            raise ValueError("this signed integer example requires bits >= 2")
         self.bits = bits
         
     def forward(self, x):
         # Dynamically calculate scale for weights
         w_max = torch.max(torch.abs(self.weight))
         q_max = (1 << (self.bits - 1)) - 1
-        w_scale = w_max / q_max
+        w_scale = (w_max / q_max).clamp_min(torch.finfo(self.weight.dtype).tiny)
         
         # Apply fake quantization
         q_weight = fake_quantize(self.weight, w_scale, self.bits)
@@ -181,23 +187,21 @@ print(f"Master Weight Gradient Shape: {layer.weight.grad.shape}")
 
 ---
 
-## 4. State-of-the-Art Developments
+## 4. Memory and Mixed-Precision Design
 
-Historically, QAT was considered a luxury. It required storing the FP32 master weights, the INT4 fake-quantized weights, and the FP32 gradients simultaneously, effectively doubling the VRAM required compared to standard training. 
+QAT's memory cost depends on what is trainable, master-weight precision, optimizer state, activations, and whether fake-quantization intermediates are materialized or fused. It is not universally twice ordinary training or identical to LoRA. Account for parameters, gradients, optimizer states, activations, temporary buffers, collectives, checkpoints and evaluation separately; state precision, sharding, recomputation and sequence lengths.
 
-### Defeating the VRAM Tax
-Recent frameworks like **Unsloth** [[2]](#ref-2) have commoditized QAT. By writing custom Triton kernels that fuse the fake-quantization operation directly into the matrix multiplication, they compute the quantized weights on-the-fly in SRAM. This prevents the need to materialize the quantized tensors in High Bandwidth Memory (HBM), reducing the memory footprint of QAT to match standard LoRA fine-tuning.
+Mixed precision allocates formats to tensors or layers based on measured sensitivity and kernel support. A learned quantization scale adjusts a grid; it does not by itself choose the bit-width. Early/final layers are useful candidates for sensitivity sweeps, not guaranteed exceptions. Compare model quality and realized runtime under the exact packed format and hardware, including cache precision separately from weight precision.
 
-### Mixed-Precision and the $\gamma$ Scaling Factor
-Not all layers in a Transformer react equally to quantization. Recent research [[3]](#ref-3) introduces a theoretical framework for **Mixed-Precision Quantization**. Instead of uniformly applying 4-bit quantization, bits are allocated based on *layer sensitivity* and *weight variance*.
+Pin base/tokenizer/template, calibration or tuning data manifests, objective, quantization granularity, optimizer/learning rate, trainable modules, response caps, reference identity or explicit absence, and the export kernel. Native-template SFT needs assistant masks, BOS/EOS and truncation/padding checks, variable-length reductions, and packed-sample isolation. Quarantine evaluations and retain provenance, licenses, filter versions, sample IDs and shard hashes.
 
-The first few layers (which extract foundational features) and the final projection layers are highly sensitive to quantization noise. Redundant intermediate layers are robust. By introducing a learned scaling factor ($\gamma$), modern QAT algorithms dynamically allocate INT8 to sensitive layers and INT4/INT2 to robust layers, achieving up to a 68% reduction in model size while maintaining performance within 6% of the full-precision baseline.
+Monitor token-normalized loss and domain/retention slices, nonfinite/overflow, gradient/activation norms, saturation and quantization error, throughput, MFU, data wait and collectives/stragglers with batch IDs. Stop on predeclared numerical or quality failures. Save full sharded training state, scheduler/scaler, RNG, sampler/data cursor and artifact hashes; export weights, scales, packing metadata and kernel requirements atomically with checksums. Rehearse restore and rollback, and gate the exported artifact on paired quality, safety, format/tools, latency, cost and errors. Fake-quantized training quality alone does not validate the deployed packed kernel.
 
 ---
 
 ## 5. Interactive Component: Quantization Error Visualizer
 
-The visualization below demonstrates why PTQ fails at low bit-widths with high-variance weights, and how QAT mitigates this by allowing the model to "learn" an optimal scaling factor that trims extreme outliers to preserve the dense core of the distribution.
+The visualization illustrates a toy clipping/scaling trade-off. Its error curve is not a model-quality benchmark or evidence that PTQ always fails at low bit-width.
 
 
 <QuantizationErrorVisualizer client:load />
@@ -211,11 +215,11 @@ The visualization below demonstrates why PTQ fails at low bit-widths with high-v
 
 | Feature | Post-Training Quantization (PTQ) | Quantization-Aware Training (QAT) |
 | :--- | :--- | :--- |
-| **Complexity** | Low (Minutes to hours) | High (Requires full training/fine-tuning) |
-| **Data Required** | Small calibration set (100–1000 samples) | Full training/fine-tuning dataset |
-| **Accuracy** | Excellent for 8-bit; Poor for less than 4-bit | Superior for low-bit (4-bit, 2-bit, 1.58-bit) |
-| **Memory Overhead** | Minimal | Historically high (now optimized by fused kernels) |
-| **Best Use Case** | Rapid deployment of 8-bit models | SOTA edge AI and ultra-compressed LLMs |
+| **Complexity** | Calibration and conversion; workload-dependent | Additional training or adaptation |
+| **Data Required** | Representative calibration or data-free method, depending on algorithm | Representative adaptation data for the objective |
+| **Accuracy** | Depends on format, calibration, model and task | Can recover some low-bit degradation; not guaranteed |
+| **Memory Overhead** | Minimal | Depends on trainable state and kernel implementation |
+| **Best Use Case** | Compression with limited adaptation budget | Adaptation when PTQ misses the quality gate |
 
 As we move to the next section, we will explore specific algorithms that have evolved from these paradigms—such as GPTQ, AWQ, and GGUF—and analyze how they handle the physical layout of quantized tensors on modern hardware.
 
@@ -244,8 +248,8 @@ As we move to the next section, we will explore specific algorithms that have ev
 </details>
 
 <details>
-<summary>Quiz 5: Provide the explicit mathematical formulation for backpropagating gradients through a linear quantization node using the Straight-Through Estimator (STE). How is the local derivative bounded?</summary>
-*Let the forward pass be $q = \text{round}(x)$ with clipping boundaries $[x_{min}, x_{max}]$. The standard derivative is zero everywhere. In QAT via STE, the partial derivative is approximated using an indicator function: $\frac{\partial L}{\partial x} = \frac{\partial L}{\partial q} \cdot \mathbf{1}_{x_{min} \le x \le x_{max}}$. This formalization demonstrates that loss gradients flow back unchanged within the quantization boundaries, but are completely zeroed out if the continuous weight $x$ is clipped beyond the maximum bins.*
+<summary>Quiz 5: Does every straight-through estimator mask gradients outside clipping bounds?</summary>
+*No. The educational detach construction here uses an identity surrogate gradient. A clipping-aware STE instead multiplies by an in-range indicator. They are different backward contracts and must match the intended training implementation.*
 </details>
 
 ---
@@ -253,5 +257,3 @@ As we move to the next section, we will explore specific algorithms that have ev
 ## References
 
 1. <a id="ref-1"></a>Bengio, Y., Léonard, N., & Courville, A. (2013). *Estimating or Propagating Gradients Through Stochastic Neurons for Conditional Computation.* [arXiv:1308.3432](https://arxiv.org/abs/1308.3432).
-2. <a id="ref-2"></a>Unsloth AI. (2024). "Unsloth: Making LLM Fine-tuning 2x faster and use 70% less memory." [GitHub Repository](https://github.com/unslothai/unsloth).
-3. <a id="ref-3"></a>Hasan, J. (2024). *Optimizing Large Language Models through Quantization: A Comparative Analysis of PTQ and QAT Techniques.* [arXiv:2411.06084](https://arxiv.org/abs/2411.06084).

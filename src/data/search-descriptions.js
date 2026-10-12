@@ -13,6 +13,10 @@ export const searchDescriptions = {
     en: 'Allocate inference-time compute across sampling, search, and verification, accounting for tokens, latency, routing, and evaluation gates.',
     ko: '샘플링·탐색·검증에 추론 시점의 연산을 배분하고, 토큰 수뿐 아니라 지연 시간과 라우팅·평가 기준까지 함께 고려합니다.',
   },
+  '/chapter-15/reasoning-post-training-rlvr': {
+    en: 'Understand GRPO and verifiable-reward reasoning training, including length weighting, compositional generalization, hint dependence, rollout recovery, and release gates.',
+    ko: 'GRPO와 검증 가능한 보상을 이용한 추론 학습을 이해하고, 길이 가중치·구성적 일반화·힌트 의존·rollout 복구·출시 기준을 살펴봅니다.',
+  },
   '/chapter-15/verifiers-and-reward-models': {
     en: 'Compare discriminative reward models, generative verifiers, and self-correction loops, including their role in synthetic-data verification.',
     ko: '판별형 보상 모델, 생성형 검증기와 자기 수정 루프를 비교하고, 합성 데이터 검증 과정에서 각 방법이 맡는 역할을 살펴봅니다.',

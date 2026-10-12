@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import './visualizers.css';
 
-const InductionHeadVisualizer: React.FC = () => {
+const InductionHeadVisualizer: React.FC<{ lang?: 'en' | 'ko' }> = ({ lang = 'en' }) => {
+    const ko = lang === 'ko';
     const tokens = ["<BOS>", "Harry", "Potter", "is", "a", "wizard.", "Harry", "Potter"];
     const [hoveredRow, setHoveredRow] = useState<number | null>(null);
     const [hoveredCol, setHoveredCol] = useState<number | null>(null);
@@ -21,13 +22,15 @@ const InductionHeadVisualizer: React.FC = () => {
         return 0.01; // Background noise
     };
 
-    const matrix = Array.from({ length: tokens.length }, (_, r) => 
-        Array.from({ length: tokens.length }, (_, c) => getAttentionWeight(r, c))
-    );
+    const matrix = Array.from({ length: tokens.length }, (_, r) => {
+        const row = Array.from({ length: tokens.length }, (_, c) => getAttentionWeight(r, c));
+        const total = row.reduce((sum, weight) => sum + weight, 0);
+        return row.map(weight => weight / total);
+    });
 
     return (
         <div className="induction-visualizer">
-            <h4 className="visualizer-title">Induction Head Attention Matrix</h4>
+            <h4 className="visualizer-title">{ko ? '귀납 헤드의 attention 행렬' : 'Induction Head Attention Matrix'}</h4>
             <div className="matrix-container">
                 <div className="col-labels">
                     <div className="empty-corner"></div>
@@ -49,25 +52,31 @@ const InductionHeadVisualizer: React.FC = () => {
                             const isInductionPattern = (r === 6 && c === 2) || (r === 7 && c === 3);
                             
                             return (
-                                <div 
+                                <button
                                     key={`cell-${r}-${c}`}
+                                    type="button"
+                                    aria-label={ko ? `Query ${r}: ${rowToken}, Key ${c}: ${tokens[c]}, ${isCausalMasked ? '인과 마스킹' : `${(weight * 100).toFixed(1)}%`}` : `Query ${r}: ${rowToken}, Key ${c}: ${tokens[c]}, ${isCausalMasked ? 'causally masked' : `${(weight * 100).toFixed(1)}%`}`}
                                     className={`matrix-cell ${isCausalMasked ? 'masked' : ''} ${isHighlighted ? 'active' : ''} ${isInductionPattern ? 'induction-hot' : ''}`}
                                     style={{ 
                                         backgroundColor: isCausalMasked ? '#f0f0f0' : `rgba(59, 130, 246, ${weight})`
                                     }}
                                     onMouseEnter={() => { setHoveredRow(r); setHoveredCol(c); }}
                                     onMouseLeave={() => { setHoveredRow(null); setHoveredCol(null); }}
+                                    onFocus={() => { setHoveredRow(r); setHoveredCol(c); }}
+                                    onBlur={() => { setHoveredRow(null); setHoveredCol(null); }}
+                                    onClick={() => { setHoveredRow(r); setHoveredCol(c); }}
                                 >
                                     {!isCausalMasked && <span className="tooltip">{(weight * 100).toFixed(1)}%</span>}
-                                </div>
+                                </button>
                             );
                         })}
                     </div>
                 ))}
             </div>
             <div className="visualizer-caption">
-                <p><strong>How to read:</strong> Rows are <em>Query</em> (current token), columns are <em>Key</em> (attended token).</p>
-                <p>Notice how the second "Harry" (Row 6) strongly attends to the first "Potter" (Col 2). This is the induction mechanism predicting the next token.</p>
+                <p>{ko ? '행은 Query(현재 토큰), 열은 Key(참조 토큰)입니다. 두 번째 Harry(행 6)는 첫 번째 Potter(열 2)를 강하게 참조합니다.' : 'Rows are Query (current token); columns are Key (attended token). The second Harry (row 6) strongly attends to the first Potter (column 2).'}</p>
+                <p>{ko ? '생성 방식: 수작업으로 지정한 예시 값을 행별로 정규화했습니다. 각 행의 합은 100%이며 미래 토큰은 0%입니다. 실제 모델 측정값이 아닙니다. Tab으로 셀을 확인할 수 있습니다.' : 'Generation method: hand-specified illustrative weights, normalized per row. Each row sums to 100%; future tokens have 0%. These are not model measurements. Use Tab to inspect cells.'}</p>
+                {hoveredRow !== null && hoveredCol !== null && <p role="status">{ko ? '선택' : 'Selection'}: Query {hoveredRow}, Key {hoveredCol} — {(matrix[hoveredRow][hoveredCol] * 100).toFixed(1)}%</p>}
             </div>
         </div>
     );

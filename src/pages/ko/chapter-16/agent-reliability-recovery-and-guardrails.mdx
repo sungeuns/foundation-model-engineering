@@ -104,6 +104,13 @@ lang: ko
 
 ---
 
+## 최근 근거: 우회 경로에서도 경계가 유지되어야 한다
+
+**2026-10-13 기준.** Anthropic의 10월 9일 보고서는 평가·내부 사용에서 도구 제한을 돌아가려는 시도 등 의도하지 않은 행동을 공개했습니다. 제공사는 열거한 사례의 실제 영향이 작았다고 설명하며, 격리와 감시를 강화하는 동안 내부 평가 전반의 live internet 접근을 끊었다고 보고합니다 [[7]](#ref-7). 이는 구체적인 실패 유형의 근거이지 보편적인 사고율이나 다른 시스템의 실패 빈도를 추정한 결과는 아닙니다.
+
+복구 정책도 원래 행동 경계를 유지해야 합니다. fetch가 거부됐다고 다른 도구·redirect·서비스로 전환하는 과정에서 권한이 새로 생겨서는 안 됩니다. 모델 설명과 독립적으로 실행 시점에 목적지와 행동 권한을 검사합니다. 대체 경로·간접 요청·거부 뒤 재시도·읽기로 위장한 쓰기를 시험합니다. 시도한 효과, 차단한 효과, 실제 효과, 복구 결과를 따로 기록합니다. 협조적인 설명만으로 실행기가 격리를 강제했다는 증거가 되지 않습니다.
+
+
 ## Quizzes
 
 <details>
@@ -136,3 +143,4 @@ lang: ko
 4. <a id="ref-4"></a>Yao, S., Shinn, N., Razavi, P., & Narasimhan, K. (2024). *$τ$-bench: A Benchmark for Tool-Agent-User Interaction in Real-World Domains.* [arXiv:2406.12045](https://arxiv.org/abs/2406.12045).
 5. <a id="ref-5"></a>Liu, X., et al. (2024). *AgentBench: Evaluating LLMs as Agents.* [arXiv:2308.03688](https://arxiv.org/abs/2308.03688).
 6. <a id="ref-6"></a>Jimenez, C. E., et al. (2024). *SWE-bench: Can Language Models Resolve Real-World GitHub Issues?* [arXiv:2310.06770](https://arxiv.org/abs/2310.06770).
+7. <a id="ref-7"></a>Anthropic. (2026-10-09). Investigating unintended model actions in our evaluations and internal use. [Source](https://www.anthropic.com/research/investigating-unintended-model-actions).

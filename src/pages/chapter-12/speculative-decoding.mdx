@@ -14,7 +14,7 @@ Large Language Model (LLM) inference is notoriously slow and compute-intensive. 
 
 During LLM inference, loading the massive model weights from GPU memory (VRAM) to the compute cores (ALUs) takes orders of magnitude more time than the actual matrix multiplication. This is called a **memory-bandwidth bound** problem. 
 
-When generating tokens one by one, we are forced to load the entire model for *every single token*. This results in low GPU utilization. However, if we could process a batch of tokens at once, the cost of loading the weights would be amortized across the batch, leading to much higher efficiency.
+At low decode batch sizes, repeatedly streaming the active weights can dominate each step. Cache residency, MoE activation, concurrency, and kernels change the actual traffic. This results in low GPU utilization. However, if we could process a batch of tokens at once, the cost of loading the weights would be amortized across the batch, leading to much higher efficiency.
 
 ## The Core Concept: Draft and Verify
 
@@ -27,7 +27,7 @@ The process works in cycles:
 2.  **Verification**: The large target model $M_p$ processes all $K$ candidate tokens in a **single forward pass** (parallel decoding). It computes the logits for all $K$ positions simultaneously.
 3.  **Correction**: We compare the predictions of both models. We accept the draft tokens as long as they match the target model's distribution. The first rejected token determines where we stop, and we use the target model's prediction for that position. We then repeat the process.
 
-Even if the draft model is only correct $50\%$ of the time, generating several tokens per large model forward pass yields significant speedups (often $2\times$ to $3\times$).
+A useful acceptance rate can amortize target-model work, but speedup depends on drafting cost, verification shape, batching, and memory traffic. Measure the complete cycle rather than infer a universal multiplier from acceptance alone.
 
 ## The Mathematics of Rejection Sampling
 
@@ -76,89 +76,81 @@ The draft model and target model maintain different KV caches and may advance th
 
 Speculative decoding often improves average throughput, but it can complicate tail-latency behavior. Different requests may have very different acceptance rates depending on task type, prompt entropy, and temperature. In multi-tenant serving, operators therefore track not only tokens-per-second, but also acceptance-rate distributions and latency variance across request classes.
 
-## PyTorch Implementation of Verification
+## Educational Verification Reference
 
-Here is a PyTorch implementation demonstrating the core verification and rejection sampling logic of Speculative Decoding.
+The following standard-library reference isolates acceptance, residual sampling, and the all-accepted bonus condition.
+
+> **Deliberately simplified, smoke-tested Python reference.** It verifies one sequence with precomputed probabilities and a shared vocabulary. It omits model execution, logits processors, tensor/device/dtype behavior, batching, EOS/budget stopping, caches, and distributed serving. It is not a production decoder.
 
 ```python
-import torch
-import torch.nn.functional as F
+import math
+import random
 
-def verify_draft_tokens(draft_logits, target_logits, draft_tokens, temperature=1.0):
-    """
-    Verify draft tokens and apply rejection sampling.
-    
-    Args:
-        draft_logits: Logits from draft model. Shape (batch_size, K, vocab_size)
-        target_logits: Logits from target model. Shape (batch_size, K + 1, vocab_size)
-        draft_tokens: Tokens proposed by draft model. Shape (batch_size, K)
-        temperature: Sampling temperature.
-        
-    Returns:
-        accepted_tokens: List of accepted tokens.
-        num_accepted: Number of accepted tokens.
-    """
-    batch_size, K = draft_tokens.shape
-    
-    # Apply temperature
-    draft_probs = F.softmax(draft_logits / temperature, dim=-1)
-    target_probs = F.softmax(target_logits[:, :K, :] / temperature, dim=-1)
-    
-    accepted_tokens = []
-    
-    for i in range(K):
-        # Get probabilities for the specific draft token
-        q = draft_probs[:, i, draft_tokens[:, i]]
-        p = target_probs[:, i, draft_tokens[:, i]]
-        
-        # Acceptance probability
-        p_accept = torch.min(torch.ones_like(p), p / q)
-        
-        # Roll the dice
-        rand_val = torch.rand_like(p_accept)
-        accepted = rand_val < p_accept
-        
-        if accepted.all():
-            accepted_tokens.append(draft_tokens[:, i])
+
+def validate_distribution(probabilities):
+    if not probabilities or any(not math.isfinite(p) or p < 0 for p in probabilities):
+        raise ValueError("require finite nonnegative probabilities")
+    if not math.isclose(sum(probabilities), 1.0, abs_tol=1e-8):
+        raise ValueError("probabilities must sum to one")
+
+
+def draw(probabilities, rng):
+    threshold = rng.random()
+    cumulative = 0.0
+    for token, probability in enumerate(probabilities):
+        cumulative += probability
+        if threshold < cumulative:
+            return token
+    return len(probabilities) - 1  # floating-point rounding only
+
+
+def verify_draft_tokens(draft_probs, target_probs, draft_tokens, rng):
+    # One sequence: q has K rows; p has K+1 rows, including the bonus.
+    # Each p row is target-verified under the corresponding draft prefix.
+    k = len(draft_tokens)
+    if k < 1 or len(draft_probs) != k or len(target_probs) != k + 1:
+        raise ValueError("require K draft rows and K+1 target rows")
+    vocab = len(target_probs[0])
+    for row in [*draft_probs, *target_probs]:
+        validate_distribution(row)
+        if len(row) != vocab:
+            raise ValueError("draft and target must share a token space")
+
+    output = []
+    for i, token in enumerate(draft_tokens):
+        if not 0 <= token < vocab or draft_probs[i][token] <= 0:
+            raise ValueError("proposal must have positive draft probability")
+        q = draft_probs[i][token]
+        p = target_probs[i][token]
+        if rng.random() < min(1.0, p / q):
+            output.append(token)
         else:
-            # Rejection! Sample from adjusted distribution
-            # Note: For simplicity in this multi-batch simulation, we assume batch_size=1
-            # In full implementation, you handle mask per batch item
-            diff = target_probs[:, i, :] - draft_probs[:, i, :]
-            adjusted_probs = torch.clamp(diff, min=0.0)
-            
-            if adjusted_probs.sum() > 0:
-                adjusted_probs = adjusted_probs / adjusted_probs.sum(dim=-1, keepdim=True)
-                next_token = torch.multinomial(adjusted_probs, 1)
-            else:
-                # Fallback to target model's original distribution if difference is zero
-                next_token = torch.multinomial(target_probs[:, i, :], 1)
-                
-            accepted_tokens.append(next_token.squeeze(-1))
-            break
-            
-    # If all K tokens are accepted, we can also take the target model's prediction
-    # for the (K+1)-th position which was computed for free!
-    if len(accepted_tokens) == K:
-        last_probs = F.softmax(target_logits[:, K, :] / temperature, dim=-1)
-        next_token = torch.multinomial(last_probs, 1)
-        accepted_tokens.append(next_token.squeeze(-1))
-        
-    return torch.cat(accepted_tokens, dim=-1), len(accepted_tokens)
+            residual = [max(pj - qj, 0.0)
+                        for pj, qj in zip(target_probs[i], draft_probs[i])]
+            mass = sum(residual)
+            if mass <= 0:
+                raise ArithmeticError("rejection with no residual mass")
+            output.append(draw([value / mass for value in residual], rng))
+            return output, i  # accepted draft count; no bonus after rejection
 
-# Example Usage (Batch size 1)
-K = 4 # Draft lookahead
-vocab_size = 1000
+    output.append(draw(target_probs[k], rng))
+    return output, k  # bonus only when all K draft tokens were accepted
 
-draft_logits = torch.randn(1, K, vocab_size)
-target_logits = torch.randn(1, K + 1, vocab_size)
-# Simulate draft model choosing tokens
-draft_tokens = torch.argmax(draft_logits, dim=-1)
 
-accepted, count = verify_draft_tokens(draft_logits, target_logits, draft_tokens)
-print(f"Accepted {count} tokens.")
-print(f"Accepted token sequence: {accepted}")
+rng = random.Random(7)
+q = [[0.25, 0.75]]
+p = [[0.75, 0.25], [0.5, 0.5]]
+proposal = [draw(q[0], rng)]  # sample from q, not argmax(q)
+output, accepted_drafts = verify_draft_tokens(q, p, proposal, rng)
+print(output, accepted_drafts)
 ```
+
+## Tree Speculation Needs Branch-Safe State
+
+**Research snapshot as of 2026-10-13.** A September DeepSeek-V4-Flash study integrates tree speculation with compressed attention using branch-aware verification, isolated temporary state, and refresh of the accepted path [[3]](#ref-3). Different branches can compress shared prefixes into different states; ordinary token-index masking alone cannot guarantee state consistency. The study reports throughput saturation even as accepted draft length keeps growing.
+
+For engineering validation, compare with non-speculative sampling under the same effective temperature and top-k/top-p filters, not just the same raw logits. Test rejection at every depth, all-accepted bonus handling, EOS, cancellation, mixed batch lengths, and restoration of compressed/recurrent state. Measure accepted **draft** tokens separately from replacement and bonus tokens, and report total time including drafting, verification, state refresh, and scheduling. A longer accepted draft is not automatically a faster service.
+
 
 ## Quizzes
 
@@ -196,3 +188,4 @@ This mathematical formula demonstrates that increasing the draft length $K$ has 
 
 1. <a id="ref-1"></a>Leviathan, Y., et al. (2023). *Fast Inference from Transformers via Speculative Decoding*. [arXiv:2211.17192](https://arxiv.org/abs/2211.17192).
 2. <a id="ref-2"></a>Chen, C., et al. (2023). *Accelerating Large Language Model Decoding with Speculative Sampling*. [arXiv:2302.01318](https://arxiv.org/abs/2302.01318).
+3. <a id="ref-3"></a>Liu, C., & Li, Z. (2026). Adapting Tree-Structured Speculative Decoding to DeepSeek-V4 for Efficient Inference. [Source](https://arxiv.org/abs/2609.24698).

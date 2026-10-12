@@ -91,7 +91,7 @@ Optical context compression은 마지막 범주에 속합니다. 스캔 문서, 
 
 ## 오픈 모델 전선: 아키텍처와 공개 범위를 함께 읽기
 
-**근거 스냅샷: 2026년 9월 15일.**
+**과거 공개 스냅샷: 2026-09-15 기준.** 아래 로컬 문맥 정정과 10월 보강이 호스팅 제품·체크포인트 한도를 혼동한 설명을 대체합니다.
 
 제품명만 나열하는 표보다 더 유용한 것은 **주장의 경계**를 보여 주는 표입니다. 가중치와 설정 파일로 검증할 수 있는 사실, 출시 글에만 적힌 설명, 아직 약속 단계인 정보를 분리해야 합니다.
 
@@ -100,7 +100,7 @@ Optical context compression은 마지막 범주에 속합니다. 스캔 문서, 
 | GLM-5.2 | MIT 라이선스 가중치와 설정 공개 | 753B MoE, 78개 레이어, 앞쪽 3개 dense layer, 256 routed + 1 shared expert, 토큰당 routed expert 8개, 1M position, DeepSeek Sparse Attention, IndexShare, MTP layer 1개 [[8]](#ref-8) [[9]](#ref-9) | 전체 pre-training corpus 구성과 filtering recipe |
 | Kimi K3 | 출시/open-weight; weights, technical report, MoonEP, FlashKDA, AgentEnv 공개 [[14]](#ref-14) | 2.8T parameter, native multimodality, 1M context, Kimi Delta Attention, Attention Residuals, Stable LatentMoE, 16-of-896 expert routing [[11]](#ref-11) [[14]](#ref-14) | 정확한 pre-training data mixture와 전체 filtering recipe는 미공개 |
 | Qwen3.7 | agent 중심 Qwen 세대로 공개 | 1M-context 제품 설정과 long-horizon agent 사례 [[12]](#ref-12) | 이 정보는 Qwen3.8 내부 구조의 증거가 아님 |
-| Qwen3.8-Max | Qwen3.8-2.4T-A95B로 출시/open-weight [[15]](#ref-15) | 공개 weights와 configuration으로 2.4T total parameter, 95B active parameter, 1M context 확인 [[13]](#ref-13) [[15]](#ref-15) | 정확한 corpus mixture와 전체 data-filtering 및 post-training recipe는 미공개 |
+| Qwen3.8-Max | Qwen3.8-2.4T-A95B로 출시/open-weight [[15]](#ref-15) | 공개 weights와 configuration으로 2.4T total parameter, 95B active parameter, native 262,144 위치와 문서화된 문맥 확장 확인 [[13]](#ref-13) [[15]](#ref-15) | 정확한 corpus mixture와 전체 data-filtering 및 post-training recipe는 미공개 |
 
 여기서 “오픈”은 미래의 약속이나 API endpoint, parameter count 발표를 뜻하지 않습니다. 재현 가능한 엔지니어링 관점에서 open-weight 공개는 실제 weight file과 실행 가능한 설정이 올라온 시점부터입니다.
 
@@ -120,7 +120,31 @@ K3에는 흥미로운 제품 제약도 있습니다. Reasoning session에서는 
 
 ### Qwen3.8: 아티팩트가 도착하면 주장의 경계도 바뀐다
 
-Qwen3.8은 출시 과정 자체가 근거 규율을 가르쳐 준다는 점에서 유용합니다. Preview 시점에는 Alibaba가 2.4T 모델과 향후 open weights만 발표했으므로, 내부 구조는 Qwen3.7의 세부 정보를 물려받지 않고 **미공개**로 남겨야 했습니다 [[13]](#ref-13). 이후 Qwen3.8-2.4T-A95B repository가 공개되면서 주장의 경계가 바뀌었습니다. 이제 weights와 configuration은 total/active parameter와 1M context를 뒷받침합니다 [[15]](#ref-15). 그러나 정확한 corpus mixture와 전체 filtering·post-training recipe까지 공개된 것은 아닙니다. 살아 있는 기술 비교는 미래 약속이 처음 올라온 날이 아니라, 실제 artifact가 바뀐 날에 맞춰 수정되어야 합니다.
+Qwen3.8은 출시 과정 자체가 근거 규율을 가르쳐 준다는 점에서 유용합니다. Preview 시점에는 Alibaba가 2.4T 모델과 향후 open weights만 발표했으므로, 내부 구조는 Qwen3.7의 세부 정보를 물려받지 않고 **미공개**로 남겨야 했습니다 [[13]](#ref-13). 이후 Qwen3.8-2.4T-A95B repository가 공개되면서 주장의 경계가 바뀌었습니다. 이제 weights와 configuration은 total/active parameter와 native/확장 문맥의 구분을 뒷받침합니다 [[15]](#ref-15). 그러나 정확한 corpus mixture와 전체 filtering·post-training recipe까지 공개된 것은 아닙니다. 살아 있는 기술 비교는 미래 약속이 처음 올라온 날이 아니라, 실제 artifact가 바뀐 날에 맞춰 수정되어야 합니다.
+
+## 10월 업데이트: 연산·메모리·공개 상태를 구분하기
+
+**2026-10-13 기준.** 다음 내용은 현재의 1차 자료를 근거로 하며 위의 과거 9월 표를 보완합니다.
+
+| 모델 | 접근 상태 | 공개된 메커니즘 | 근거의 경계 |
+|---|---|---|---|
+| DeepSeek V4.1 Flash | 가중치 공개 완료 | Causal Encoder-Decoder(CED), CSA2의 레이어 간 캐시 재사용, FP4 KV, Engram 조건부 메모리 [[16]](#ref-16) [[17]](#ref-17) | backbone 파라미터와 lookup 메모리는 별도 항목이며 전체 데이터 혼합은 미공개 |
+| GLM-5.3 | 가중치 공개 완료 | 문서는 GLM-5.2 base의 사후 학습 개선, 텍스트 전용 입력, 항상 켜진 추론을 설명 [[18]](#ref-18) | 새 backbone을 가정하거나 별도 Flash 모델의 캐시 구성을 옮기지 않음 |
+| Mistral Large 4 | API 프리뷰 | 발표문은 1T 멀티모달 MoE와 52B 활성 파라미터를 보고 [[19]](#ref-19) | 가중치와 추가 기술 자료는 10월 중 추후 공개 예정 |
+| Beam | 발표·공개 예정 | 발표문은 501B MoE와 23B 활성 파라미터를 보고 [[20]](#ref-20) | 사전 접근 신청을 받으며 가중치·기술 자료는 10월 중 추후 공개 예정 |
+
+### 자기회귀 생성과 decoder-only는 같은 말이 아니다
+
+V4.1 Flash는 causal encoder 뒤에 decoder를 둡니다. 모델 카드는 전역 decoder KV를 decoder 각 레이어에서 별도로 만드는 대신 encoder의 최종 상태에서 투영한다고 설명합니다 [[16]](#ref-16). 이는 T5의 양방향 source encoder와 다르면서도 텍스트를 자기회귀로 생성합니다. 출력 확률의 분해 방식, 어텐션의 가시 범위, prefill/decode 실행 경로는 별도 설계 선택입니다.
+
+### 조건부 메모리는 다른 희소성 축이다
+
+Engram은 토큰 조건의 lookup을 MoE 연산과 함께 사용하는 방향을 연구합니다 [[21]](#ref-21). 결정적인 주소는 미리 가져오기를 가능하게 하지만 lookup에도 저장 용량·host 대역폭·전송 겹침·miss 처리가 필요합니다. RAG의 외부 갱신 가능한 문서 index와도 다릅니다. 배포 비교에서는 신경망 연산, lookup 저장 공간, KV 상태, 통신을 나누어 봅니다. 활성 파라미터 비율 하나로 네 항목을 설명할 수 없습니다.
+
+### 호스팅 Qwen3.8과 다운로드한 모델은 별도 아티팩트다
+
+로컬 Qwen3.8 설정은 `max_position_embeddings: 262144` 를 선언합니다 [[22]](#ref-22). 모델 카드는 native 262,144 위치와 1,010,000 토큰까지의 확장을 설명하며, 호스팅 Qwen3.8-Max는 추가 기능과 다른 기본 문맥을 갖습니다 [[15]](#ref-15). 스케일링 설정을 고정하고 목표 길이에서 검색·여러 문서 추론·위치 민감도·메모리·지연을 평가합니다. “1M 문맥”은 설정과 평가에 대한 주장이지 모든 서빙 경로가 자동으로 물려받는 보장이 아닙니다.
+
 
 ## 최신 아키텍처를 비교하는 더 좋은 방법
 
@@ -147,6 +171,8 @@ Qwen3.8은 출시 과정 자체가 근거 규율을 가르쳐 준다는 점에�
 ## PyTorch 구현: 간략화된 MLA
 
 하이브리드 어텐션이 주목받고 있어도, **Multi-head Latent Attention (MLA)** 는 서빙 병목을 아주 직관적으로 보여주는 예시입니다. 아래 간략화된 구현은 “저장할 것은 압축하고, 계산할 때만 복원한다”는 핵심 아이디어를 드러냅니다.
+
+> **의도적으로 단순화한 예제.** 이 교육용 저차원 어텐션은 K/V를 복원하며 운영 MLA의 캐시 projection 흡수·분리된 RoPE·점진 서빙·양자화·분산 커널은 구현하지 않습니다.
 
 ```python
 import torch
@@ -254,3 +280,10 @@ class SimpleLatentAttention(nn.Module):
 13. <a id="ref-13"></a>Alibaba Group. (2026). *Alibaba Unveils Qwen3.8-Max-Preview*. [Alibaba Group](https://www.alibabagroup.com/en-US/document-2016703577908576256).
 14. <a id="ref-14"></a>Moonshot AI. (2026). *Kimi K3 Open Day: weights, technical report, and infrastructure*. [Kimi](https://www.kimi.com/news/kimi-k3-open-source).
 15. <a id="ref-15"></a>Qwen Team. (2026). *Qwen3.8-2.4T-A95B*. [Hugging Face model repository](https://huggingface.co/Qwen/Qwen3.8-2.4T-A95B).
+16. <a id="ref-16"></a>DeepSeek-AI. (2026). DeepSeek-V4.1-Flash model card. [Source](https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash).
+17. <a id="ref-17"></a>DeepSeek-AI. (2026). DeepSeek-V4.1-Flash technical report. [Source](https://arxiv.org/abs/2609.19969).
+18. <a id="ref-18"></a>Z.ai. (2026). GLM-5.3 developer documentation. [Source](https://docs.z.ai/guides/llm/glm-5.3).
+19. <a id="ref-19"></a>Mistral. (2026). Introducing Mistral Large 4. [Source](https://mistral.ai/news/mistral-large-4/).
+20. <a id="ref-20"></a>Reflection. (2026). Introducing Beam. [Source](https://reflection.ai/blog/introducing-beam).
+21. <a id="ref-21"></a>Cheng, X., et al. (2026). Conditional Memory via Scalable Lookup. [Source](https://arxiv.org/abs/2601.07372).
+22. <a id="ref-22"></a>Qwen Team. (2026). Qwen3.8-2.4T-A95B configuration. [Source](https://huggingface.co/Qwen/Qwen3.8-2.4T-A95B/raw/main/config.json).

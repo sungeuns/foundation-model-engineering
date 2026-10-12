@@ -10,7 +10,7 @@ import QuantizationMethodVisualizer from '../../components/chapter-13/Quantizati
 
 In the previous section, we established the fundamental difference between Post-Training Quantization (PTQ) and Quantization-Aware Training (QAT). While QAT provides the highest accuracy floor by actively training the model to survive low precision, it requires significant computational resources. For the vast majority of deployments, engineers rely on advanced PTQ algorithms to compress pre-trained Foundation Models quickly and efficiently.
 
-The naive approach to PTQ—simply rounding weights to the nearest 4-bit integer—results in catastrophic accuracy loss for Large Language Models (LLMs). The distribution of weights and activations in LLMs contains extreme outliers that dictate the model's reasoning capabilities. If these outliers are clipped or rounded away, the model collapses. 
+The naive approach to PTQ—simply rounding weights to the nearest 4-bit integer—results in catastrophic accuracy loss for Large Language Models (LLMs). The distribution of weights and activations in LLMs contains extreme outliers that dictate the model's reasoning capabilities. If these outliers are clipped or rounded away, the model collapses.
 
 To solve this, the AI engineering community has developed highly sophisticated, mathematically rigorous methods to compress weights while preserving these critical outliers. In this section, we will dissect the three dominant paradigms of modern quantization: **GPTQ**, **AWQ**, and the **GGUF** ecosystem, concluding with an analysis of bit-level formats like **FP8**.
 
@@ -53,25 +53,25 @@ def gptq_core_loop(W, H_inv, bits=4):
     """
     W_q = torch.zeros_like(W)
     W_temp = W.clone()
-    
+
     in_features = W.shape[1]
-    
+
     for i in range(in_features):
         # 1. Extract the current column of weights
         w = W_temp[:, i]
         d = H_inv[i, i]
-        
+
         # 2. Quantize the current column
         q = quantize_to_nearest(w, bits)
         W_q[:, i] = q
-        
+
         # 3. Calculate the quantization error, scaled by the Hessian diagonal
         error = (w - q) / d
-        
+
         # 4. Compensate: Update all remaining unquantized weights
         # We subtract the error multiplied by the cross-correlation in the Hessian
         W_temp[:, i+1:] -= error.unsqueeze(1) @ H_inv[i, i+1:].unsqueeze(0)
-        
+
     return W_q
 
 # Example execution
@@ -93,15 +93,15 @@ GPTQ is highly effective but requires a careful calibration phase to compute the
 
 ## 2. AWQ: Activation-aware Weight Quantization
 
-While GPTQ focuses on mathematical error compensation, **AWQ** (Activation-aware Weight Quantization) [[2]](#ref-2) takes a deeply empirical approach. The authors of AWQ made a critical observation: **Not all weights are equally important.** 
+While GPTQ focuses on mathematical error compensation, **AWQ** (Activation-aware Weight Quantization) [[2]](#ref-2) takes a deeply empirical approach. The authors of AWQ made a critical observation: **Not all weights are equally important.**
 
 Approximately 1% of the weights in an LLM are "salient." If you skip quantizing this 1%, the model retains nearly all of its full-precision accuracy. However, keeping 1% of weights in FP16 while the rest are INT4 creates a nightmare for hardware execution, requiring complex sparse-matrix multiplication kernels.
 
 ### The Salience Paradox
-How do we identify these salient weights? Surprisingly, looking at the magnitude of the *weights* themselves does not work. A large weight might multiply against an activation that is always zero, rendering it useless. AWQ proves that salient weights must be identified by looking at the magnitude of the **activations** passing through them. 
+How do we identify these salient weights? Weight magnitude alone can miss activation-dependent sensitivity. A large weight might multiply against an activation that is always zero, rendering it useless. AWQ uses **activation statistics** to identify channels worth protecting in its evaluated quantization scheme. This does not prove that weight magnitude is useless for every compression method.
 
 ### The Scaling Trick
-To protect these salient weights without using mixed-precision hardware kernels, AWQ uses a mathematical equivalence trick. 
+To protect these salient weights without using mixed-precision hardware kernels, AWQ uses a mathematical equivalence trick.
 
 For a linear operation $Y = WX$, we can introduce a scaling vector $S$:
 $$ Y = WX = (W \cdot S) (X \cdot S^{-1}) $$
@@ -119,20 +119,20 @@ def awq_scale_weights(W, X, s_x=0.5):
     """
     # 1. Identify salient channels by averaging activation magnitudes
     act_magnitudes = X.abs().mean(dim=(0, 1)) # Shape: [in_features]
-    
+
     # 2. Calculate the scaling factor
     # We scale up weights where the corresponding activation is large
     scales = act_magnitudes ** s_x
     scales = scales / scales.max() # Normalize to prevent overflow
-    
+
     # 3. Apply the scale to the weights
     # Weights are multiplied by the scale (scaled UP)
     W_scaled = W * scales.unsqueeze(0)
-    
-    # 4. In a real deployment, the inverse scale is folded into the 
+
+    # 4. In a real deployment, the inverse scale is folded into the
     # preceding layer's bias/weights or applied to the activations.
     # X_scaled = X / scales
-    
+
     return W_scaled, scales
 
 # Example Execution
@@ -154,7 +154,7 @@ Introduced by researchers at Google in 2025 [[3]](#ref-3), **TurboQuant** tackle
 ### The Mechanism: Fast Walsh-Hadamard Transform (FWHT)
 Imagine a vector with a massive outlier: `[0.1, 0.2, 100.0, 0.1]`. Quantizing this directly is difficult. TurboQuant applies an orthogonal transformation, typically the Fast Walsh-Hadamard Transform (FWHT) or a random rotation matrix, to the weight or activation vectors.
 
-Because rotations are orthogonal, they preserve the inner product (the core operation of attention and linear layers). However, the rotation *spreads the energy* of the outlier across all dimensions. The resulting vector has a near-Gaussian (or concentrated Beta) distribution with virtually no extreme outliers. 
+Because rotations are orthogonal, they preserve the inner product (the core operation of attention and linear layers). However, the rotation *spreads the energy* of the outlier across all dimensions. The resulting vector has a near-Gaussian (or concentrated Beta) distribution with virtually no extreme outliers.
 
 1. **Rotate**: $x' = R \cdot x$ (Outliers are smoothed out).
 2. **Quantize**: $\hat{x}' = Q(x')$ (Quantization is now highly efficient and uniform).
@@ -175,13 +175,13 @@ Unlike standard PyTorch tensors, GGUF does not quantize an entire matrix at once
 ### K-Quants: Hierarchical Mixed Precision
 The defining feature of the GGUF ecosystem is the **k-quant** family (e.g., `Q4_K_M`, `Q5_K_S`). These represent a sophisticated hierarchy of mixed-precision quantization.
 
-Instead of applying a flat 4-bit quantization across the entire model, k-quants use 256-weight super-blocks split into smaller sub-blocks. More importantly, they apply different bit-widths to different *types* of layers. 
+Instead of applying a flat 4-bit quantization across the entire model, k-quants use 256-weight super-blocks split into smaller sub-blocks. More importantly, they apply different bit-widths to different *types* of layers.
 For example, in a `Q4_K_M` model:
 *   Attention projection layers ($Q, K, V$) might be quantized to 5-bit or 6-bit because they are highly sensitive to noise.
 *   Feed-Forward Network (FFN) expansion layers are quantized to a strict 4-bit because they contain redundant parameters and are robust to noise.
 *   The final `lm_head` is often kept in 8-bit.
 
-This manual, engineering-driven approach yields a superior Pareto frontier for size-vs-accuracy compared to uniform quantization.
+Mixed-bit allocation can improve size/accuracy trade-offs in evaluated settings, but the result depends on the model, calibration data, formats, and kernels.
 
 ---
 
@@ -190,7 +190,7 @@ This manual, engineering-driven approach yields a superior Pareto frontier for s
 Historically, PTQ relied entirely on Integer formats (INT8, INT4). However, the release of NVIDIA's Hopper architecture (H100) introduced native hardware support for **8-bit Floating Point (FP8)**, fundamentally altering the quantization landscape [[4]](#ref-4).
 
 ### Why Floating Point?
-Integer quantization distributes its bins uniformly. The distance between 1 and 2 is the same as the distance between 100 and 101. LLM weights, however, follow a normal (Gaussian) distribution: most values are clustered near zero, with a few extreme outliers. 
+Integer quantization distributes its bins uniformly. The distance between 1 and 2 is the same as the distance between 100 and 101. LLM weights, however, follow a normal (Gaussian) distribution: most values are clustered near zero, with a few extreme outliers.
 
 Floating-point formats use an exponent and a mantissa. This allows them to allocate high precision near zero (where the majority of weights live) while simultaneously maintaining a massive dynamic range to represent outliers without clipping them.
 
@@ -234,7 +234,7 @@ How much VRAM do you actually need to load a model? Here is a quick reference fo
 | **13B / 14B** | ~28 GB | ~14 GB | ~7 GB | ~3.5 GB | Single GPU (RTX 4070/4080) |
 | **70B** | ~140 GB | ~70 GB | ~35 GB | ~17.5 GB | 1x H100 or 2x RTX 3090/4090 |
 
-**Formula for rough estimation**: 
+**Formula for rough estimation**:
 $$\text{VRAM (GB)} \approx \frac{\text{Parameters (B)} \times \text{Bits per parameter}}{8} \times 1.2 \text{ (overhead)}$$
 *(Note: Add active KV Cache memory to this base footprint for total serving memory).*
 
@@ -242,7 +242,7 @@ $$\text{VRAM (GB)} \approx \frac{\text{Parameters (B)} \times \text{Bits per par
 
 ## 7. Interactive Component: Quantization Algorithm Simulator
 
-The interactive visualization below demonstrates how different PTQ algorithms handle a block of weights containing a massive outlier. 
+The interactive visualization below demonstrates how different PTQ algorithms handle a block of weights containing a massive outlier.
 *   **Uniform INT4** clips the outlier or destroys the precision of the smaller weights.
 *   **AWQ** scales the weights based on activation magnitude, preserving relative precision.
 *   **GPTQ** shifts the rounding error of the first weight onto the subsequent weights in the block.
