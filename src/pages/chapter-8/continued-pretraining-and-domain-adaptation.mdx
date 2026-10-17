@@ -34,6 +34,12 @@ The terminology identifies the data stream and operational intent:
 
 Write the intended sequence in the run specification. “Base checkpoint → DAPT → SFT → preference optimization” and “instruction checkpoint → temporal update” have different failure modes and cannot share an unqualified recipe.
 
+## Agentic Midtraining: Evaluate What Survives Post-training
+
+**Research snapshot as of 2026-10-18.** Singhal et al.'s October 15 preprint studies long-context midtraining on repositories, pull requests, commit histories, build logs, and agent traces before a fixed SFT stage. Their Nemotron experiments use 256K context, and base-model proxies do not reliably predict downstream agent results [[6]](#ref-6). The study is coding-focused, largely single-run, and does not establish superiority over spending the same extra tokens on pre-training or SFT.
+
+The engineering implication is to evaluate **post-trainability** as well as current loss. For a pilot, fork matched base checkpoints into a no-midtraining control and candidate mixtures, then run the same small SFT probe with fixed data, template, token budget, and harness. Reuse the operational contracts below; specifically record which tool-result tokens are supervised, repository-level split boundaries, agent-trace provenance, and packed-document attention policy. Compare task success, critical regressions, and total training cost. Stop if representation gains disappear after the fixed downstream stage. A better base perplexity alone is not a promotion gate.
+
 ## Choose the Starting Checkpoint
 
 Prefer a **base checkpoint** when the objective is broad distribution adaptation and a later SFT stage is available. It preserves a clean next-token-training contract and avoids depending on an undisclosed instruction-tuning mixture. Starting from an **instruction-tuned checkpoint** can preserve an already useful interface, but sustained CPT may weaken chat formatting, refusal behavior, tool use, and calibration. The risk must be measured rather than assumed.
@@ -175,3 +181,5 @@ The deliverable from CPT is therefore not a weight file. It is a versioned artif
 3. <a id="ref-3"></a>Hugging Face. *Tokenizer documentation: adding tokens and resizing embeddings*. [Transformers documentation](https://huggingface.co/docs/transformers/main_classes/tokenizer).
 4. <a id="ref-4"></a>PyTorch. *Distributed Checkpoint documentation*. [PyTorch documentation](https://docs.pytorch.org/docs/main/distributed.checkpoint.html).
 5. <a id="ref-5"></a>PyTorch. *Reproducibility*. [PyTorch developer notes](https://docs.pytorch.org/docs/stable/notes/randomness.html).
+
+6. <a id="ref-6"></a>Singhal, S., et al. (2026). *Priming Base Models for Agentic Post-Training: An Open Midtraining Recipe*. Preprint. [Source](https://arxiv.org/abs/2610.22019).

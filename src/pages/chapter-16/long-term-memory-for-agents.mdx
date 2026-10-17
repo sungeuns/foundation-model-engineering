@@ -120,6 +120,24 @@ The more successful a memory system becomes, the more it turns into a privacy sy
 
 ---
 
+### October Research: Test the Write Path Separately
+
+**Research snapshot as of 2026-10-18.** Hy-Memory-30B-A3B trains a memory writer through on-policy distillation and attributed rewards over policy-written banks. The paper evaluates fixed 20% benchmark subsamples across several harnesses; attribution is evidence-based, not a counterfactual proof that a particular write caused a correct answer [[5]](#ref-5). A specialized writer is not a general-purpose agent, and its benchmark average does not certify privacy or deletion correctness.
+
+FEB-30 takes a complementary approach: it generates documents from known fact-evolution trajectories and inspects the store after each ingestion. Its 30 trajectories expose cases where correct answers mask broken memory, or retrieval failures obscure correct memory [[6]](#ref-6). This is a diagnostic benchmark, not a representative production failure rate.
+
+An engineering evaluation should therefore separate three layers:
+
+| Layer | Controlled check | Failure it can isolate |
+|---|---|---|
+| Write/update | Inspect the bank after each event | Duplicate, stale, unsupported, or wrongly superseded facts |
+| Retrieval | Query a known-correct bank | Missing evidence, wrong entity, or authorization leak |
+| Answer/action | Supply verified evidence to the agent | Unsupported synthesis or unauthorized tool effect |
+
+For example: a user moves from New York to Chicago and later corrects the move date. Test current residence, historical residence, effective date, source identity, and deletion after each event. A final answer of “Chicago” cannot prove all five are correct.
+
+For learning-based writers, inherit the complete RLVR contracts in 15.5 and additionally pin the memory schema, bank snapshot/hash, writer and reader revisions, chunk boundaries, reward probes, storage penalty, and deletion policy. Checkpoint the exact persistent bank together with its rollout cursor. Monitor storage growth, unsupported additions, stale-fact retention, update/delete failures, and answerability by domain. Do not promote an apparent QA gain if any critical authorization or deletion slice regresses.
+
 ## 6. Interactive Visualizer: Memory Consolidation
 
 The visualizer below shows the intuition behind consolidation: temporary observations do not all belong in the same long-term store, and memory quality depends heavily on how the system routes information.
@@ -160,9 +178,18 @@ In the next section, we move from memory to reliability: how do we recover when 
 
 ---
 
+<details>
+<summary>Quiz 5: Why can a correct answer hide a memory-write bug?</summary>
+*The reader may recover the answer from the prompt or another source while the persistent bank remains wrong. Inspect the bank after each event and test retrieval and generation separately.*
+</details>
+
 ## References
 
 1. <a id="ref-1"></a>Park, J. S., et al. (2023). *Generative Agents: Interactive Simulacra of Human Behavior.* [arXiv:2304.03442](https://arxiv.org/abs/2304.03442).
 2. <a id="ref-2"></a>Packer, C., et al. (2023). *MemGPT: Towards LLMs as Operating Systems.* [arXiv:2310.08560](https://arxiv.org/abs/2310.08560).
 3. <a id="ref-3"></a>Gutiérrez, B. J., Shu, Y., Gu, Y., Yasunaga, M., & Su, Y. (2025). *HippoRAG: Neurobiologically Inspired Long-Term Memory for Large Language Models.* [arXiv:2405.14831](https://arxiv.org/abs/2405.14831).
 4. <a id="ref-4"></a>Zhong, W., et al. (2023). *MemoryBank: Enhancing Large Language Models with Long-Term Memory.* [arXiv:2305.10250](https://arxiv.org/abs/2305.10250).
+
+5. <a id="ref-5"></a>Fei, T., et al. (2026). *Hy-Memory-30B-A3B: Attributed Reinforcement Learning for Long-Term Memory Writing*. Preprint. [Source](https://arxiv.org/abs/2610.22196).
+
+6. <a id="ref-6"></a>Toma, S.-A., et al. (2026). *Beyond Downstream QA: Rethinking How We Evaluate Agent Memory*. Preprint. [Source](https://arxiv.org/abs/2610.22209).

@@ -6,129 +6,151 @@ lang: en
 
 import CommercialModelBenchmarkExplorer from '../../components/chapter-17/CommercialModelBenchmarkExplorer.tsx';
 
-# 17.6 Commercial Model Benchmarks
+# 17.6 Commercial and Open-weight Model Benchmarks
 
-A model release can change three things at once: what the system can solve, how much it costs to complete a task, and which deployment routes are actually available. Reading only the headline score misses the engineering decision. A public preview can be worth evaluating while still being unavailable for self-hosting; a cheap token can become an expensive task when a model emits long reasoning traces.
+A model release changes more than a leaderboard. It can change access, licensing, prompt encoding, pricing, output budgets, or the revision behind a stable API alias. Evaluate those contracts before treating a familiar name as a drop-in replacement.
 
-**As of 2026-10-13.** This page is a dated historical snapshot, not a live leaderboard. Availability and mutable values **must be reverified** before publication or procurement. The selected August–October releases below extend the previous September snapshot. Older releases remain useful historical examples elsewhere in the book; their old index values are not carried into the new comparison.
+**As of 2026-10-18.** This is a dated historical snapshot, not a live leaderboard. The sources below were rechecked for this pass and **must be reverified** before a later publication or procurement. The October 13 snapshot has been superseded here; the selected October milestones include broader access, weight releases, and checkpoint updates rather than pretending every date is an original announcement.
 
-## 1. One Evaluation Version, Explicit Operating Points
+## 1. Read the Evaluated System, Not Only the Model Name
 
-The chart uses **Artificial Analysis Intelligence Index v4.3.2**. Its methodology now includes Terminal-Bench 4.0 and revised professional-work evaluations [[1]](#ref-1). A score from the previous v4.2 snapshot is not a compatible longitudinal measurement. A lower number after a suite revision does not establish that model capability deteriorated.
+The index values below use Artificial Analysis Intelligence Index **v4.3.2**, a defined set of ten evaluations [[1]](#ref-1). The reported effort/fallback profile is part of each result. Models with different effort settings or provider routing are **not equal-compute or controlled weights-only comparisons**. Use the table to identify systems for a private evaluation at matched task, tool, latency, and budget constraints.
 
-All index observations below come from the evaluator's model-specific pages. **Effort and fallback settings are part of each system's identity.** Different providers' `max` settings do not imply equal FLOPs, tokens, or latency. These are observed quality/cost operating points under one evaluation suite, not a controlled experiment isolating model weights. Run matched-budget private evaluations before making a causal claim or replacement decision.
+Where the source does not state a numeric effort, the table says so. Do not infer one. The hosted Step 5 profile predates the new public weights; the September DeepSeek profile is not a verified evaluation of the October 17 revision. Unknown revision equivalence is a reason to run a new test, not to copy a score.
 
-<CommercialModelBenchmarkExplorer client:load />
+## 2. Reverified Release and Evaluation Record
 
-The default x-axis is measured **cost per AA evaluation task**. Switching to token price uses the explicit proxy $p_b=(3p_{in}+p_{out})/4$, where $p_{in}$ and $p_{out}$ are dollars per million uncached input and output tokens. This assumes a 3:1 token mixture and excludes cache writes/reads, service tiers, tools, retries, and long-context surcharges. It is not a task-cost estimate. Missing values are omitted from plots and shown as **not reported** in details; they never become zero.
-
-## 2. Verified Release and Evaluation Snapshot
-
-The selection is illustrative rather than exhaustive. Index values are **index points**, not percentages. The evaluator's per-task costs describe its workload, not your application. Scores for restricted and preview systems do not imply general access. Speed values are omitted because the retrieved leaderboard and individual pages did not consistently agree on the serving snapshot.
-
-| Model | Release / announcement | Access as of 2026-10-13 | AA v4.3.2 configuration | Index | $/AA task | Sources |
+| Model | Selected release milestone | Access as of 2026-10-18 | AA reasoning configuration | Index | $/AA task | Sources |
 |---|---|---|---|---:|---:|---|
-| GPT-6.1 Sol | 2026-09-29 | released/API-only | max | 52 | 0.72 | [[3]](#ref-3) [[4]](#ref-4) |
-| GPT-6 Sol | 2026-09-22 | released/API-only | not reported | not reported | not reported | [[5]](#ref-5) |
+| GPT-6.1 Sol | 2026-09-29 | released/API-only | max | 52 | 0.72 | [[2]](#ref-2) [[3]](#ref-3) |
+| GPT-6 Sol | 2026-09-22 | released/API-only | max | 48 | 1.04 | [[4]](#ref-4) [[5]](#ref-5) |
 | GPT-6 Luna | 2026-09-22 | released/API-only | max | 38 | 0.07 | [[6]](#ref-6) [[7]](#ref-7) |
 | GPT-6 Astra | 2026-09-03 | released/API-only | max | 53 | 3.26 | [[8]](#ref-8) [[9]](#ref-9) |
 | Claude Opus 5.5 | 2026-09-22 | released/API-only | max with fallback | 58 | 5.98 | [[10]](#ref-10) [[11]](#ref-11) |
-| Claude Sonnet 5.5 | 2026-09-28 | released/API-only | max with fallback | 56 | 5.46 | [[12]](#ref-12) [[13]](#ref-13) |
-| Claude Haiku 5.5 | 2026-10-07 | released/API-only | max | 43 | 0.21 | [[14]](#ref-14) [[15]](#ref-15) |
-| Gemini 4 Argon | 2026-09-30 | restricted preview | high | 53 | 1.99 | [[16]](#ref-16) [[17]](#ref-17) |
-| DeepSeek V4.1 Flash | 2026-09-10 | released/open-weight | max | 39 | 0.27 | [[18]](#ref-18) [[19]](#ref-19) |
-| GLM-5.3 | 2026-08-14 | released/open-weight | max | 45 | 2.01 | [[20]](#ref-20) [[21]](#ref-21) |
-| Mistral Large 4 | 2026-10-06 | preview/API-only | preview configuration | 38 | 1.13 | [[22]](#ref-22) [[23]](#ref-23) |
-| Beam | 2026-10-05 | announced/planned | not reported | not reported | not reported | [[24]](#ref-24) |
+| Claude Sonnet 5.5 | 2026-09-28 | released/API-only | max with fallback | 56 | 5.46 | [[12]](#ref-12) [[13]](#ref-13) [[14]](#ref-14) |
+| Claude Haiku 5.5 | 2026-10-07 | released/API-only | max | 43 | 0.21 | [[13]](#ref-13) [[15]](#ref-15) |
+| Gemini 4 Argon | 2026-10-13 | released/API-only | high | 53 | 1.99 | [[16]](#ref-16) [[17]](#ref-17) [[18]](#ref-18) [[19]](#ref-19) |
+| DeepSeek V4.1 Flash (September profile) | 2026-09-10 | released/open-weight | max | 39 | 0.27 | [[20]](#ref-20) [[21]](#ref-21) |
+| GLM-5.3 | 2026-08-14 | released/open-weight | max | 45 | 2.01 | [[22]](#ref-22) [[23]](#ref-23) |
+| Mistral Large 4 | 2026-10-06 | preview/API-only | preview configuration | 38 | 1.13 | [[24]](#ref-24) [[25]](#ref-25) |
+| Beam 1.0 | 2026-10-16 | released/open-weight | reasoning; effort not reported | 30 | 0.57 | [[26]](#ref-26) [[27]](#ref-27) [[28]](#ref-28) |
+| Muse Wonder | 2026-10-12 | released/API-only | max | 52 | 4.52 | [[29]](#ref-29) [[30]](#ref-30) |
+| Muse Wonder Full | 2026-10-12 | released/subscription-only | max | 56 | not reported | [[29]](#ref-29) [[31]](#ref-31) |
+| Muse Spark Open | 2026-10-15 | released/open-weight; gated download | xhigh | 39 | 0.84 | [[32]](#ref-32) [[33]](#ref-33) [[34]](#ref-34) |
+| Nemotron 3.5 Super VL | 2026-10-15 | released/open-weight | reasoning; effort not reported | 26 | 0.19 | [[35]](#ref-35) [[36]](#ref-36) |
+| Nemotron 3.5 Bolt 74B-A9B 24GB | 2026-10-15 | released/open-weight | reasoning; effort not reported | 21 | not reported | [[37]](#ref-37) [[38]](#ref-38) |
+| Step 5 Preview | 2026-10-15 | released/open-weight | reasoning; effort not reported | 44 | 1.03 | [[39]](#ref-39) [[40]](#ref-40) |
+| DeepSeek V4.1 Flash 1017 | 2026-10-17 | released/open-weight + API update | not reported | not reported | not reported | [[41]](#ref-41) [[42]](#ref-42) |
 
-## 3. What These Releases Change for Engineers
+An index is not a percentage. `not reported` is not zero and does not mean free. AA task costs are observed costs for its benchmark workload, including its token mix and generation behavior; they are not a matched-compute experiment or a price guarantee for another provider. The subscription-only Wonder Full profile has no reported public API task cost. The Bolt card's memory target likewise supplies no hosted price.
 
-### Hosted models: API compatibility is a release gate
+## 3. What Changed Since the Previous Pass
 
-GPT-6.1 Sol's documented contract differs from GPT-6 Sol: it does not support `none` reasoning, and tool calling uses Responses. Neither an endpoint's familiar name nor an unchanged token price proves request compatibility. Validate the exact model ID, effort, tool protocol, tokenizer behavior where exposed, maximum output, error handling, and routing before a canary. Input context and maximum output are different limits.
+### Public weights are a separate milestone
 
-The Claude 5.5 family adds another operational lesson. The independent Opus and Sonnet measurements above include **fallback**, so the evaluated object includes the provider's routing and safety policy. Haiku 5.5 exposes adjustable effort. The current overview lists input/output prices of $4/$20 for Opus, $2/$10 for Sonnet, and **from** $0.10/$0.50 for Haiku per million tokens [[2]](#ref-2). Preserve the price qualifier rather than assigning the minimum to every operating mode. Cache pricing also deserves its own versioned field: a release-day article can become stale without a model-name change.
+Beam moved from the October 5 announcement to released weights on October 16 [[26]](#ref-26). Its card describes BF16, FP8, and NVFP4 artifacts, a modified Harmony chat format, and a still-pending full technical report [[27]](#ref-27). Do not treat an NVFP4 file's packed tensor count as a different model architecture.
 
-### Open weights: inspect the artifact that will run
+Muse Spark Open is a released, gated checkpoint under the Muse Model License. The card distinguishes its additional safety post-training from the hosted Spark lineage [[33]](#ref-33). “Open-weight” does not imply an Apache license, unrestricted download, or complete data disclosure. Step 5 Preview now has public BF16 and lower-precision artifacts under its own license; its **Preview** name does not mean the weights are still only promised [[39]](#ref-39). Review the actual license and exact artifact revision before deployment.
 
-DeepSeek V4.1 Flash and GLM-5.3 have public model repositories. The former changes the architecture and cache contract; the latter documents text-only inputs and always-on reasoning. These are different migration problems. Weight availability does not disclose the full data mixture, establish a reproducible training recipe, or guarantee that your serving engine supports the intended precision, attention state, and chat template.
+### Hosted models and broader access are different again
 
-Kimi K3 and Qwen3.8 remain relevant open-weight examples in [Chapter 4.5](/chapter-4/various-llm-architectures). Keep their hosted and local artifacts distinct: Qwen3.8's local configuration declares 262,144 positions, while extended or hosted context claims require their own scaling and serving evidence. Do not transfer a hosted endpoint's result or limit to a similarly named downloadable checkpoint.
+Muse Wonder is available through Meta's API and Muse Code; Wonder Full is available through Muse Code subscriptions [[29]](#ref-29). Their announcement does not disclose parameter counts or a full training recipe. Do not transfer the API model's token price to the subscription-only variant.
 
-### Announcements: a future weight release is not present access
+Gemini 4 Argon's broader API access began October 13. The current model contract specifies a unified input/output window and separate synchronous versus long-decode output limits [[17]](#ref-17). Standard paid rates are \$2 input/\$10 output per million tokens through **2026-11-30**, then \$4/\$20 from **2026-12-01** [[18]](#ref-18). Model the expiry explicitly; neither a promotional rate nor the largest output allowance is a permanent universal contract.
 
-Mistral Large 4 is an API preview, with weights promised later in October. Beam's announcement invites early-access signup and also promises weights and technical artifacts later in October. Gemini 4 Argon's initial rollout is restricted to trusted cyber defenders. Their launch material can establish provider claims and release plans; it cannot establish completed self-hostable releases. In particular, Argon's announced 1M **output** limit must not be entered as a measured **input-context** value.
+### A stable alias can change the model
 
-## 4. A Benchmark Result Needs a Reproduction Record
+The October 17 DeepSeek changelog states that `deepseek-flash` now points to V4.1 Flash 1017 without an API-call or price change [[42]](#ref-42). Its model card reports gains with named harnesses and supplies protocol-aware encoding rather than a Jinja chat template [[41]](#ref-41). Those are provider results, not new AA measurements. Pin checkpoint/encoder revisions, preserve tool and image encoding, and compare the complete system before canarying the updated alias.
 
-Record the following before accepting a public result into an internal comparison:
+### Smaller storage is not a deployment guarantee
 
-| Field | Required distinction |
-|---|---|
-| Task | Dataset, split, version, exclusions, and contamination checks |
-| System | Model revision, provider fallback, scaffold, tools, and permissions |
-| Budget | Effort, sampling, attempts, token/context limits, timeout, and total cost |
-| Grader | Test suite or judge revision, prompt/rubric, and aggregation |
-| Evidence | Report date, source URL, uncertainty, and per-case outcomes where available |
+Nemotron 3.5 Super VL and Bolt disclose hybrid state-space/attention/MoE vision-language designs. Bolt's IQ2 QAT and 24GB packed-model target require compatible kernels and separate state/workspace accounting [[37]](#ref-37). The model name cannot establish the memory available for long context or concurrent requests. Section 13.5 separates nominal bit width from measured system capacity.
 
-Terminal-Bench 2.1, 3.0, and 4.0 are separate evaluations. SWE-bench Verified, Pro, DeepSWE, and private coding suites are also separate. HLE with tools and HLE without tools must not share a series. A GDPval-AA Elo-like rating must not receive a percent sign. A leaderboard's ranking can change when the harness, task mix, or population changes even if the model does not.
+Mistral Large 4 remains a public API preview with a later-October weight plan in its launch post [[24]](#ref-24). Claude pricing remains configuration-sensitive: the overview qualifies Haiku rates with “from” [[43]](#ref-43). Preserve such qualifiers rather than filling gaps with minimum prices or anticipated releases.
 
-## 5. From Public Signal to a Deployment Decision
+## 4. Explore Profiles Without Manufacturing Missing Data
 
-Start with a Pareto shortlist across quality, task cost, p95 latency, context behavior, deployment control, and safety. Then compare candidate and champion on the same private prompts, tool state, and declared budgets. Measure successful tasks per dollar and per minute, critical-slice failures, and repeated-run reliability. Averages must not hide unauthorized tool effects or severe failures.
+The chart plots only rows with values for the selected metric and axis. Its selection list is alphabetical; it is not a universal quality ranking. For token prices, the illustrative proxy is $(3p_{in}+p_{out})/4$, where $p_{in}$ and $p_{out}$ are uncached standard input/output prices per million tokens. It is a hypothetical 3:1 mix, excluding cache writes/hits, tools, image/audio charges, long-context tiers, and reasoning length. Only documented standard rates are included.
 
-For API models, record provider routing and model revisions and detect alias changes. For local models, pin weights, tokenizer, template, quantization scales, kernels, and distributed topology as one artifact bundle. Finish with a canary and a rehearsed switch to the last-known-good system, following [Chapter 17.5](/chapter-17/production-evaluation-and-release-gates).
+The context metric shows a declared limit, not measured long-context reasoning quality. Source-specific input/output semantics still apply. No speed curve is fabricated from incomparable providers or missing measurements.
+
+<CommercialModelBenchmarkExplorer client:load locale="en" />
+
+## 5. A Production Evaluation Gate
+
+Evaluate candidate profiles on the same private tasks with pinned scaffold, tools, effort, context/output budget, retries, and grader. Add supported-language, format, authorization, safety, retention, latency-tail, cost-per-success, and error-rate slices. Test local quantized checkpoints independently of hosted results. Use paired uncertainty or a justified sample size, and block release on critical-slice failure even if the average improves.
+
+Keep the model, tokenizer or encoding toolkit, template, runtime, tool schema, generation configuration, and policy hashes as one artifact bundle. Canary a replacement under bounded permissions, keep a known-good route, and rehearse rollback—including cached state and pending tool effects. A new release is an evaluation trigger, not a deployment instruction.
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: Why can a model's index decline after the evaluator changes its suite?</summary>
-*The tasks, versions, and weighting changed. Comparing v4.2 and v4.3.2 does not isolate model capability; rerun both systems under one version.*
+<summary>Quiz 1: Why is the October 17 DeepSeek update separate from the September AA row?</summary>
+*The mutable alias now points to a new revision, while the verified AA record does not establish revision equivalence. Provider benchmark gains cannot be substituted for an independent index score.*
 </details>
 
 <details>
-<summary>Quiz 2: Why is a 3:1 blended token price insufficient for choosing an agent model?</summary>
-*Agents consume different reasoning lengths, cached prefixes, retries, and tool calls. Measure completed-task cost and latency on the intended workload.*
+<summary>Quiz 2: Why is Step 5 Preview now described as released/open-weight?</summary>
+*Usable weight artifacts are public. The product name does not determine release state; the actual artifacts and license do.*
 </details>
 
 <details>
-<summary>Quiz 3: Can an announcement calling a model open-weight establish that weights are released?</summary>
-*No. Inspect accessible weight files and usable configuration. A promise of a later release remains announced/planned even when an API preview exists.*
+<summary>Quiz 3: Why does Wonder Full's missing task cost not mean it is the cheapest profile?</summary>
+*Its subscription access does not provide a public API task-price observation. Missing cost cannot be substituted with zero or the API sibling's rate.*
 </details>
 
 <details>
-<summary>Quiz 4: What changes when a benchmark explicitly includes fallback?</summary>
-*The measured system includes provider routing and safeguards. Its result cannot be attributed to the named model's weights alone.*
+<summary>Quiz 4: Why must Gemini's introductory rate have an expiry in a cost model?</summary>
+*The documented standard prices change after November 30. A workload crossing that boundary can have a different cost without any model-name change.*
 </details>
 
 <details>
-<summary>Quiz 5: Why keep a hosted context limit separate from a local checkpoint's configuration?</summary>
-*They can use different revisions, position scaling, templates, or serving policies. The local artifact must pass its own long-context correctness and capacity tests.*
+<summary>Quiz 5: Why do public weights and a hosted benchmark not establish local production readiness?</summary>
+*The local revision, quantization, encoding, kernels, state layout, and scaffold may differ. Validate the complete artifact bundle under the intended workload and release gates.*
 </details>
 
 ## References
 
-1. <a id="ref-1"></a>Artificial Analysis. (2026). Intelligence Index v4.3.2 methodology. [Source](https://artificialanalysis.ai/methodology/intelligence-benchmarking).
-2. <a id="ref-2"></a>Anthropic. (2026). Current model specifications and pricing. [Source](https://platform.claude.com/docs/en/models/overview).
-3. <a id="ref-3"></a>OpenAI. (2026). GPT-6.1 Sol: release or model documentation. [Source](https://developers.openai.com/api/docs/models/gpt-6.1-sol).
-4. <a id="ref-4"></a>Artificial Analysis. (2026). GPT-6.1 Sol (max): v4.3.2 evaluation. [Source](https://artificialanalysis.ai/models/gpt-6-1-sol).
-5. <a id="ref-5"></a>OpenAI. (2026). GPT-6 Sol: release or model documentation. [Source](https://developers.openai.com/api/docs/models/gpt-6-sol).
-6. <a id="ref-6"></a>OpenAI. (2026). GPT-6 Luna: release or model documentation. [Source](https://developers.openai.com/api/docs/models/gpt-6-luna).
-7. <a id="ref-7"></a>Artificial Analysis. (2026). GPT-6 Luna (max): v4.3.2 evaluation. [Source](https://artificialanalysis.ai/models/gpt-6-luna).
-8. <a id="ref-8"></a>OpenAI. (2026). GPT-6 Astra: release or model documentation. [Source](https://developers.openai.com/api/docs/models/gpt-6-astra).
-9. <a id="ref-9"></a>Artificial Analysis. (2026). GPT-6 Astra (max): v4.3.2 evaluation. [Source](https://artificialanalysis.ai/models/gpt-6-astra).
-10. <a id="ref-10"></a>Anthropic. (2026). Claude Opus 5.5: release or model documentation. [Source](https://www.anthropic.com/claude-opus-5-5).
-11. <a id="ref-11"></a>Artificial Analysis. (2026). Claude Opus 5.5 (max with fallback): v4.3.2 evaluation. [Source](https://artificialanalysis.ai/models/claude-opus-5-5).
-12. <a id="ref-12"></a>Anthropic. (2026). Claude Sonnet 5.5: release or model documentation. [Source](https://www.anthropic.com/claude-sonnet-5-5).
-13. <a id="ref-13"></a>Artificial Analysis. (2026). Claude Sonnet 5.5 (max with fallback): v4.3.2 evaluation. [Source](https://artificialanalysis.ai/models/claude-sonnet-5-5).
-14. <a id="ref-14"></a>Anthropic. (2026). Claude Haiku 5.5: release or model documentation. [Source](https://www.anthropic.com/claude-haiku-5-5).
-15. <a id="ref-15"></a>Artificial Analysis. (2026). Claude Haiku 5.5 (max): v4.3.2 evaluation. [Source](https://artificialanalysis.ai/models/claude-haiku-5-5).
-16. <a id="ref-16"></a>Google. (2026). Gemini 4 Argon: release or model documentation. [Source](https://blog.google/innovation-and-ai/models-and-research/gemini-models/gemini-4-argon/).
-17. <a id="ref-17"></a>Artificial Analysis. (2026). Gemini 4 Argon (high): v4.3.2 evaluation. [Source](https://artificialanalysis.ai/models/gemini-4-argon).
-18. <a id="ref-18"></a>DeepSeek. (2026). DeepSeek V4.1 Flash: release or model documentation. [Source](https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash).
-19. <a id="ref-19"></a>Artificial Analysis. (2026). DeepSeek V4.1 Flash (max): v4.3.2 evaluation. [Source](https://artificialanalysis.ai/models/deepseek-v4-1-flash).
-20. <a id="ref-20"></a>Z AI. (2026). GLM-5.3: release or model documentation. [Source](https://huggingface.co/zai-org/GLM-5.3).
-21. <a id="ref-21"></a>Artificial Analysis. (2026). GLM-5.3 (max): v4.3.2 evaluation. [Source](https://artificialanalysis.ai/models/glm-5-3).
-22. <a id="ref-22"></a>Mistral. (2026). Mistral Large 4: release or model documentation. [Source](https://mistral.ai/news/mistral-large-4/).
-23. <a id="ref-23"></a>Artificial Analysis. (2026). Mistral Large 4 (preview configuration): v4.3.2 evaluation. [Source](https://artificialanalysis.ai/models/mistral-large-4).
-24. <a id="ref-24"></a>Reflection. (2026). Beam: release or model documentation. [Source](https://reflection.ai/blog/introducing-beam).
+1. <a id="ref-1"></a>Artificial Analysis. (2026). *Intelligence Index v4.3.2 methodology*. Rechecked 2026-10-18. [Source](https://artificialanalysis.ai/methodology/intelligence-benchmarking).
+2. <a id="ref-2"></a>OpenAI. (2026). *GPT-6.1 Sol: primary release or model documentation*. Rechecked 2026-10-18. [Source](https://developers.openai.com/api/docs/models/gpt-6.1-sol).
+3. <a id="ref-3"></a>Artificial Analysis. (2026). *GPT-6.1 Sol: evaluated system profile*. Rechecked 2026-10-18. [Source](https://artificialanalysis.ai/models/gpt-6-1-sol).
+4. <a id="ref-4"></a>OpenAI. (2026). *GPT-6 Sol: primary release or model documentation*. Rechecked 2026-10-18. [Source](https://developers.openai.com/api/docs/models/gpt-6-sol).
+5. <a id="ref-5"></a>Artificial Analysis. (2026). *GPT-6 Sol: evaluated system profile*. Rechecked 2026-10-18. [Source](https://artificialanalysis.ai/models/gpt-6-sol).
+6. <a id="ref-6"></a>OpenAI. (2026). *GPT-6 Luna: primary release or model documentation*. Rechecked 2026-10-18. [Source](https://developers.openai.com/api/docs/models/gpt-6-luna).
+7. <a id="ref-7"></a>Artificial Analysis. (2026). *GPT-6 Luna: evaluated system profile*. Rechecked 2026-10-18. [Source](https://artificialanalysis.ai/models/gpt-6-luna).
+8. <a id="ref-8"></a>OpenAI. (2026). *GPT-6 Astra: primary release or model documentation*. Rechecked 2026-10-18. [Source](https://developers.openai.com/api/docs/models/gpt-6-astra).
+9. <a id="ref-9"></a>Artificial Analysis. (2026). *GPT-6 Astra: evaluated system profile*. Rechecked 2026-10-18. [Source](https://artificialanalysis.ai/models/gpt-6-astra).
+10. <a id="ref-10"></a>Anthropic. (2026). *Claude Opus 5.5: primary release or model documentation*. Rechecked 2026-10-18. [Source](https://www.anthropic.com/claude-opus-5-5).
+11. <a id="ref-11"></a>Artificial Analysis. (2026). *Claude Opus 5.5: evaluated system profile*. Rechecked 2026-10-18. [Source](https://artificialanalysis.ai/models/claude-opus-5-5).
+12. <a id="ref-12"></a>Anthropic. (2026). *Claude Sonnet 5.5: primary release or model documentation*. Rechecked 2026-10-18. [Source](https://www.anthropic.com/claude-sonnet-5-5).
+13. <a id="ref-13"></a>Anthropic. (2026). *Pricing/update documentation*. Rechecked 2026-10-18. [Source](https://www.anthropic.com/claude-haiku-5-5).
+14. <a id="ref-14"></a>Artificial Analysis. (2026). *Claude Sonnet 5.5: evaluated system profile*. Rechecked 2026-10-18. [Source](https://artificialanalysis.ai/models/claude-sonnet-5-5).
+15. <a id="ref-15"></a>Artificial Analysis. (2026). *Claude Haiku 5.5: evaluated system profile*. Rechecked 2026-10-18. [Source](https://artificialanalysis.ai/models/claude-haiku-5-5).
+16. <a id="ref-16"></a>Google. (2026). *Gemini 4 Argon: primary release or model documentation*. Rechecked 2026-10-18. [Source](https://blog.google/innovation-and-ai/models-and-research/gemini-models/introducing-gemini-4-argon/).
+17. <a id="ref-17"></a>Google. (2026). *Gemini 4 Argon: model/API specification or changelog*. Rechecked 2026-10-18. [Source](https://ai.google.dev/gemini-api/docs/models/gemini-4-argon).
+18. <a id="ref-18"></a>Google. (2026). *Pricing/update documentation*. Rechecked 2026-10-18. [Source](https://ai.google.dev/gemini-api/docs/pricing).
+19. <a id="ref-19"></a>Artificial Analysis. (2026). *Gemini 4 Argon: evaluated system profile*. Rechecked 2026-10-18. [Source](https://artificialanalysis.ai/models/gemini-4-argon).
+20. <a id="ref-20"></a>DeepSeek. (2026). *DeepSeek V4.1 Flash (September profile): primary release or model documentation*. Rechecked 2026-10-18. [Source](https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash).
+21. <a id="ref-21"></a>Artificial Analysis. (2026). *DeepSeek V4.1 Flash (September profile): evaluated system profile*. Rechecked 2026-10-18. [Source](https://artificialanalysis.ai/models/deepseek-v4-1-flash).
+22. <a id="ref-22"></a>Z AI. (2026). *GLM-5.3: primary release or model documentation*. Rechecked 2026-10-18. [Source](https://huggingface.co/zai-org/GLM-5.3).
+23. <a id="ref-23"></a>Artificial Analysis. (2026). *GLM-5.3: evaluated system profile*. Rechecked 2026-10-18. [Source](https://artificialanalysis.ai/models/glm-5-3).
+24. <a id="ref-24"></a>Mistral. (2026). *Mistral Large 4: primary release or model documentation*. Rechecked 2026-10-18. [Source](https://mistral.ai/news/mistral-large-4/).
+25. <a id="ref-25"></a>Artificial Analysis. (2026). *Mistral Large 4: evaluated system profile*. Rechecked 2026-10-18. [Source](https://artificialanalysis.ai/models/mistral-large-4).
+26. <a id="ref-26"></a>Reflection. (2026). *Beam 1.0: primary release or model documentation*. Rechecked 2026-10-18. [Source](https://reflection.ai/blog/beam-is-available).
+27. <a id="ref-27"></a>Reflection. (2026). *Beam 1.0: model/API specification or changelog*. Rechecked 2026-10-18. [Source](https://huggingface.co/reflection/Beam-1.0-501B-A23B).
+28. <a id="ref-28"></a>Artificial Analysis. (2026). *Beam 1.0: evaluated system profile*. Rechecked 2026-10-18. [Source](https://artificialanalysis.ai/models/reflection-beam).
+29. <a id="ref-29"></a>Meta. (2026). *Muse Wonder: primary release or model documentation*. Rechecked 2026-10-18. [Source](https://research.meta.ai/blog/muse-wonder).
+30. <a id="ref-30"></a>Artificial Analysis. (2026). *Muse Wonder: evaluated system profile*. Rechecked 2026-10-18. [Source](https://artificialanalysis.ai/models/muse-wonder).
+31. <a id="ref-31"></a>Artificial Analysis. (2026). *Muse Wonder Full: evaluated system profile*. Rechecked 2026-10-18. [Source](https://artificialanalysis.ai/models/muse-wonder-full).
+32. <a id="ref-32"></a>Meta. (2026). *Muse Spark Open: primary release or model documentation*. Rechecked 2026-10-18. [Source](https://research.meta.ai/blog/muse-spark-open).
+33. <a id="ref-33"></a>Meta. (2026). *Muse Spark Open: model/API specification or changelog*. Rechecked 2026-10-18. [Source](https://huggingface.co/meta-models/Muse-Spark-Open-816B-A42B).
+34. <a id="ref-34"></a>Artificial Analysis. (2026). *Muse Spark Open: evaluated system profile*. Rechecked 2026-10-18. [Source](https://artificialanalysis.ai/models/muse-spark-open).
+35. <a id="ref-35"></a>NVIDIA. (2026). *Nemotron 3.5 Super VL: primary release or model documentation*. Rechecked 2026-10-18. [Source](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-BF16).
+36. <a id="ref-36"></a>Artificial Analysis. (2026). *Nemotron 3.5 Super VL: evaluated system profile*. Rechecked 2026-10-18. [Source](https://artificialanalysis.ai/models/nemotron-3-5-super-vl).
+37. <a id="ref-37"></a>NVIDIA. (2026). *Nemotron 3.5 Bolt 74B-A9B 24GB: primary release or model documentation*. Rechecked 2026-10-18. [Source](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Bolt-74B-A9B-24GB).
+38. <a id="ref-38"></a>Artificial Analysis. (2026). *Nemotron 3.5 Bolt 74B-A9B 24GB: evaluated system profile*. Rechecked 2026-10-18. [Source](https://artificialanalysis.ai/models/nemotron-3-5-bolt-74b-a9b).
+39. <a id="ref-39"></a>StepFun. (2026). *Step 5 Preview: primary release or model documentation*. Rechecked 2026-10-18. [Source](https://huggingface.co/stepfun-ai/Step-5-Preview-BF16).
+40. <a id="ref-40"></a>Artificial Analysis. (2026). *Step 5 Preview: evaluated system profile*. Rechecked 2026-10-18. [Source](https://artificialanalysis.ai/models/step-5).
+41. <a id="ref-41"></a>DeepSeek. (2026). *DeepSeek V4.1 Flash 1017: primary release or model documentation*. Rechecked 2026-10-18. [Source](https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017).
+42. <a id="ref-42"></a>DeepSeek. (2026). *DeepSeek V4.1 Flash 1017: model/API specification or changelog*. Rechecked 2026-10-18. [Source](https://api-docs.deepseek.com/updates).
+43. <a id="ref-43"></a>Primary documentation, as of 2026-10-18. [Source](https://platform.claude.com/docs/en/models/overview).

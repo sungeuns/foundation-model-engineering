@@ -120,6 +120,24 @@ import MemorySubstrateVisualizer from '../../../components/chapter-16/MemorySubs
 
 ---
 
+### 10월 연구: 쓰기 경로를 따로 검증한다
+
+**2026-10-18 기준 연구 정리.** Hy-Memory-30B-A3B는 정책이 작성한 메모리 저장 상태에서 on-policy distillation과 기여도를 배분한 보상으로 쓰기 모델을 학습합니다. 여러 harness의 고정된 20% 벤치마크 부분집합을 평가하며, 기여도는 근거 기반이지 특정 쓰기가 정답을 야기했다는 반사실적 증명이 아닙니다 [[5]](#ref-5). 전문 쓰기 모델은 범용 에이전트가 아니며, 평균 점수는 프라이버시나 삭제 정확성을 인증하지 않습니다.
+
+FEB-30은 알려진 사실 변화 궤적에서 문서를 생성하고, 매번 입력한 뒤 저장소를 직접 검사합니다. 30개 궤적에서 정답이 잘못된 메모리를 가리거나, 검색 실패 때문에 올바른 메모리까지 틀린 것으로 평가되는 사례를 보여 줍니다 [[6]](#ref-6). 이는 진단용 벤치마크이며 프로덕션의 대표 실패율은 아닙니다.
+
+실무 평가도 세 층을 분리해야 합니다.
+
+| 층 | 통제된 검사 | 분리할 수 있는 실패 |
+|---|---|---|
+| 쓰기·갱신 | 사건마다 저장 상태 검사 | 중복·오래된 사실·근거 없는 추가·잘못된 대체 |
+| 검색 | 올바른 저장 상태를 고정하고 질의 | 근거 누락·엔티티 혼동·권한 밖 정보 노출 |
+| 답변·행동 | 검증된 근거를 에이전트에 제공 | 근거 없는 종합·권한 밖 도구 효과 |
+
+예를 들어 사용자가 뉴욕에서 시카고로 이사하고, 나중에 이사 날짜를 정정했다고 합시다. 사건마다 현재 거주지·과거 거주지·유효 날짜·출처·삭제 결과를 검사합니다. 최종 답변이 “시카고”라는 사실만으로 이 다섯 항목이 모두 맞다고 할 수 없습니다.
+
+학습형 쓰기 모델은 15.5절의 RLVR 실행 계약에 더해 메모리 스키마, 저장 상태의 스냅샷·해시, 쓰기·읽기 모델 리비전, 청크 경계, 보상 탐침, 저장량 페널티, 삭제 정책을 고정합니다. 체크포인트에는 실제 저장 상태와 rollout cursor를 함께 넣습니다. 저장량 증가·근거 없는 추가·오래된 사실 잔존·갱신 및 삭제 실패·영역별 답변 가능성을 관측합니다. QA가 좋아져도 중요한 권한·삭제 평가가 회귀하면 승격하지 않습니다.
+
 ## 6. 인터랙티브 시각화: 메모리 통합
 
 아래 시각화는 consolidation의 감각을 보여 줍니다. 모든 임시 관찰을 같은 장기 저장소에 넣는 것이 아니라, 정보의 성격에 따라 적절한 위치로 보내야 메모리 품질이 올라갑니다.
@@ -160,9 +178,18 @@ import MemorySubstrateVisualizer from '../../../components/chapter-16/MemorySubs
 
 ---
 
+<details>
+<summary>Quiz 5: 정답을 맞혀도 메모리 쓰기 버그가 숨을 수 있는 이유는 무엇인가요?</summary>
+*읽기 모델이 프롬프트나 다른 출처에서 답을 찾았어도 영구 저장 상태는 틀릴 수 있습니다. 사건마다 저장 상태를 검사하고 검색·생성을 따로 검증해야 합니다.*
+</details>
+
 ## References
 
 1. <a id="ref-1"></a>Park, J. S., et al. (2023). *Generative Agents: Interactive Simulacra of Human Behavior.* [arXiv:2304.03442](https://arxiv.org/abs/2304.03442).
 2. <a id="ref-2"></a>Packer, C., et al. (2023). *MemGPT: Towards LLMs as Operating Systems.* [arXiv:2310.08560](https://arxiv.org/abs/2310.08560).
 3. <a id="ref-3"></a>Gutiérrez, B. J., Shu, Y., Gu, Y., Yasunaga, M., & Su, Y. (2025). *HippoRAG: Neurobiologically Inspired Long-Term Memory for Large Language Models.* [arXiv:2405.14831](https://arxiv.org/abs/2405.14831).
 4. <a id="ref-4"></a>Zhong, W., et al. (2023). *MemoryBank: Enhancing Large Language Models with Long-Term Memory.* [arXiv:2305.10250](https://arxiv.org/abs/2305.10250).
+
+5. <a id="ref-5"></a>Fei, T., et al. (2026). *Hy-Memory-30B-A3B: Attributed Reinforcement Learning for Long-Term Memory Writing*. Preprint. [Source](https://arxiv.org/abs/2610.22196).
+
+6. <a id="ref-6"></a>Toma, S.-A., et al. (2026). *Beyond Downstream QA: Rethinking How We Evaluate Agent Memory*. Preprint. [Source](https://arxiv.org/abs/2610.22209).

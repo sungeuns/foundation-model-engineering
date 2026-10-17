@@ -8,7 +8,7 @@ lang: ko
 
 앞 절에서 살펴본 검증기는 추론 시 좋은 답을 고르는 데 쓰입니다. 같은 검증 결과를 학습 신호로도 사용할 수 있습니다. 프로그램이 숨겨진 테스트를 통과하거나 수학 답이 신뢰할 수 있는 검사기를 만족하면, 강화학습으로 그 행동의 생성 확률을 높입니다. 이것이 **검증 가능한 보상을 이용한 강화학습(RLVR)** 입니다. 후보를 생성하는 정책을 바꾸지만 신뢰할 수 있는 검증기의 필요성은 사라지지 않습니다.
 
-**2026-10-13 기준 연구 스냅샷.** 아래에서는 논문이 공개한 메커니즘과 운영상 권고를 구분합니다. 소개하는 9월 연구는 제한된 실험 근거를 가진 preprint이며, 모든 모델에 성립하는 학습법으로 확립된 것은 아닙니다.
+**2026-10-18 기준 연구 스냅샷.** 아래에서는 논문이 공개한 메커니즘과 운영상 권고를 구분합니다. 소개하는 9월 연구는 제한된 실험 근거를 가진 preprint이며, 모든 모델에 성립하는 학습법으로 확립된 것은 아닙니다.
 
 ## 1. PPO에서 그룹 상대 업데이트로
 
@@ -57,6 +57,14 @@ He 등의 연구는 결정적으로 보상을 계산할 수 있는 자료구조 
 HATCH는 **힌트에 의한 보상 이동(hinted reward shift)** 을 연구합니다. 어려운 문제에 힌트를 주면 보상 대비가 생기지만, 평가에서는 힌트가 없어도 도움받은 성공 궤적이 업데이트를 지배할 수 있습니다. 제안한 힌트 기여도 감소와 그래디언트 투영은 소형 모델의 수학 추론에서 평가됐습니다 [[5]](#ref-5).
 
 도움을 별도 데이터 조건으로 다룹니다. 힌트 출처와 사용 가능 여부를 기록하고, 해답에서 만든 힌트를 평가로 유출하지 않으며, 봉인된 **힌트 없는** 평가셋을 기준으로 출시합니다. 도움받은 rollout의 보상이 빨리 오른다고 독립적인 추론이 개선된 것은 아닙니다. 이 연구는 frontier 에이전트의 자율적인 재귀 개선을 입증하지 않습니다.
+
+### 10월 연구: 보상을 부여하는 단위가 응답보다 클 수 있다
+
+**2026-10-18 기준**, Mosaic은 문맥 압축이나 분기된 세션을 잇는 궤적을 연구합니다. 궤적 수준의 세션 사용 신호와 세션별 advantage 조정을 결합하며, BrowseComp 실험은 Qwen3.5-4B를 사용합니다 [[7]](#ref-7). 모든 에이전트 모델에 일반화된 개선을 입증하지는 않습니다. 특히 주변 정보 이득 신호는 학습 시 정답 정보를 사용하므로 배포 시 이용 가능한 정답 판별기로 설명하면 안 됩니다.
+
+다른 10월 프리프린트는 문서에 근거한 과학 아이디어 집합을 한 번에 생성하고, 개별 품질과 앞선 아이디어 대비 새로움을 함께 보상합니다 [[8]](#ref-8). 과제별 결과와 전문가 4명의 파일럿은 해당 설정에 관한 근거이며 과학적 타당성의 자동 검증은 아닙니다. 이런 학습·루브릭 보상은 실행 가능한 검증기와 구별해야 합니다.
+
+실험에서는 보상 단위가 토큰·응답·세션·궤적·후보 집합 중 무엇인지 명시합니다. 다중 세션 rollout에는 부모·자식 세션 ID, 압축 전후 입력, 생성 토큰 마스크, 세션별 이전 로그 확률, 최종 도구 효과를 남깁니다. 집합 보상에서는 구성원을 분할·재표집할 때도 함께 유지해야 합니다. 독립 표본으로 취급하면 불확실성을 과소평가합니다. 총예산을 맞추고 고정된 외부 평가로 성공률과 자원 사용을 비교합니다. 종료 보상을 모든 세션에 복사하는 것은 중립적 기본값이 아니라 기여도 할당의 선택입니다.
 
 ## 4. 첫 rollout 전에 정하는 실험 계약
 
@@ -134,3 +142,7 @@ RLVR는 신뢰할 수 있는 피드백으로 후보 분포를 바꾸는 방법�
 4. <a id="ref-4"></a>He, Y., Li, Y., Wang, Y., & Vitercik, E. (2026). *Compositional Reasoning in Language Models under Reinforcement Learning Post-Training*. [arXiv:2609.19465](https://arxiv.org/abs/2609.19465).
 5. <a id="ref-5"></a>Wang, Z., et al. (2026). *Teach to Learn: Hint Annealing for Self-improving LLM Reasoning*. [arXiv:2609.34975](https://arxiv.org/abs/2609.34975).
 6. <a id="ref-6"></a>Gholipour, N., et al. (2026). *Rollout Efficiency in Reinforcement Learning for Reasoning Large Language Models: A Taxonomy and Future Directions*. [arXiv:2609.25463](https://arxiv.org/abs/2609.25463).
+
+7. <a id="ref-7"></a>Xu, Y., et al. (2026). *Mosaic: Multi-Session Agentic Reinforcement Learning*. Preprint. [Source](https://arxiv.org/abs/2610.22174).
+
+8. <a id="ref-8"></a>Wadhwa, M., et al. (2026). *Training Reasoning Models to Generate Diverse Scientific Ideas*. Under review. [Source](https://arxiv.org/abs/2610.22324).

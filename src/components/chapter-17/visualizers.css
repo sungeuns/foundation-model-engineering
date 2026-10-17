@@ -931,3 +931,8 @@
   50% { opacity: 0.8; }
   100% { opacity: 1; }
 }
+
+.commercial-benchmark-explorer .company-reflection { fill: #6d28d9; }
+.commercial-benchmark-explorer .company-meta { fill: #4338ca; }
+.commercial-benchmark-explorer .company-nvidia { fill: #4d7c0f; }
+.commercial-benchmark-explorer .company-stepfun { fill: #be185d; }

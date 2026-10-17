@@ -8,7 +8,7 @@ lang: en
 
 A verifier can select a good answer at inference time, as the previous section explained. It can also provide a training signal. If a program passes a hidden test suite or a mathematical answer satisfies a trusted checker, reinforcement learning can increase the probability of that behavior. This is **reinforcement learning with verifiable rewards (RLVR)**. It changes how the policy generates candidates; it does not remove the need for a trustworthy verifier.
 
-**Research snapshot as of 2026-10-13.** Distinguish published mechanisms from deployment advice below. The September studies discussed here are preprints with bounded experimental evidence, not established universal recipes.
+**Research snapshot as of 2026-10-18.** Distinguish published mechanisms from deployment advice below. The September studies discussed here are preprints with bounded experimental evidence, not established universal recipes.
 
 ## 1. From PPO to Group-Relative Updates
 
@@ -57,6 +57,14 @@ The engineering implication is a test design, not a universal theorem about all 
 HATCH studies **hinted reward shift**: hints recover reward contrast on difficult problems, but the successful assisted trajectories can dominate updates even though hints are absent at evaluation. Its proposed hint annealing and gradient projection are evaluated on small-model mathematical reasoning [[5]](#ref-5).
 
 Treat assistance as a separate data condition. Record hint provenance and availability, isolate solution-derived hints from evaluation, and release against a sealed **unassisted** set. Faster reward growth on hinted rollouts is insufficient evidence of improved unaided reasoning. The result does not establish autonomous recursive improvement of frontier agents.
+
+### October Research: The Reward Unit Can Be Larger Than a Response
+
+**As of 2026-10-18**, Mosaic studies trajectories spanning compacted contexts or forked sessions. It combines trajectory-level session-usage signals with session-level advantage shaping; its BrowseComp experiments use Qwen3.5-4B [[7]](#ref-7). The reported evidence does not establish a general improvement for all agent models. In particular, the marginal-information-gain signal uses training-time answer information and must not be described as a deployable ground-truth oracle.
+
+A separate October preprint scores a jointly generated set of document-grounded scientific ideas, combining quality with novelty relative to earlier ideas [[8]](#ref-8). Its task-specific results and four-expert pilot are evidence about that setup, not automated scientific validity. Such learned or rubric-based rewards differ from an executable verifier.
+
+For an experiment, record the reward unit explicitly: token, response, session, trajectory, or candidate set. For multi-session rollouts, retain parent/child session IDs, compaction inputs and outputs, sampled-token masks, old log probabilities for each session, and final tool effects. For set rewards, keep all members together during splitting and resampling; treating them as independent observations understates uncertainty. Compare success and resource use at matched total budgets, with a frozen external evaluation. Copying a terminal reward to every session is a credit-assignment choice, not a neutral default.
 
 ## 4. An Experiment Contract Before the First Rollout
 
@@ -134,3 +142,7 @@ RLVR is a way to change the candidate distribution using trusted feedback. The b
 4. <a id="ref-4"></a>He, Y., Li, Y., Wang, Y., & Vitercik, E. (2026). *Compositional Reasoning in Language Models under Reinforcement Learning Post-Training*. [arXiv:2609.19465](https://arxiv.org/abs/2609.19465).
 5. <a id="ref-5"></a>Wang, Z., et al. (2026). *Teach to Learn: Hint Annealing for Self-improving LLM Reasoning*. [arXiv:2609.34975](https://arxiv.org/abs/2609.34975).
 6. <a id="ref-6"></a>Gholipour, N., et al. (2026). *Rollout Efficiency in Reinforcement Learning for Reasoning Large Language Models: A Taxonomy and Future Directions*. [arXiv:2609.25463](https://arxiv.org/abs/2609.25463).
+
+7. <a id="ref-7"></a>Xu, Y., et al. (2026). *Mosaic: Multi-Session Agentic Reinforcement Learning*. Preprint. [Source](https://arxiv.org/abs/2610.22174).
+
+8. <a id="ref-8"></a>Wadhwa, M., et al. (2026). *Training Reasoning Models to Generate Diverse Scientific Ideas*. Under review. [Source](https://arxiv.org/abs/2610.22324).

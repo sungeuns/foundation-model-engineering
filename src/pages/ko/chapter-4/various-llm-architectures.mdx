@@ -186,46 +186,46 @@ class SimpleLatentAttention(nn.Module):
         self.n_heads = n_heads
         self.d_head = d_head
         self.d_latent = d_latent # 압축된 KV의 차원
-        
+
         # 표준 Query 투영
         self.q_proj = nn.Linear(d_model, n_heads * d_head)
-        
+
         # KV 압축: 입력을 더 작은 잠재 공간으로 투영
         self.kv_compress = nn.Linear(d_model, d_latent)
-        
+
         # KV 복원: 잠재 공간에서 K와 V를 재구성
-        self.kv_decompress = nn.Linear(d_latent, n_heads * d_head * 2) 
-        
+        self.kv_decompress = nn.Linear(d_latent, n_heads * d_head * 2)
+
         self.o_proj = nn.Linear(n_heads * d_head, d_model)
-        
+
     def forward(self, x):
         batch_size, seq_len, _ = x.size()
-        
+
         # 1. Query 투영
         q = self.q_proj(x).view(batch_size, seq_len, self.n_heads, self.d_head)
         q = q.transpose(1, 2) # (B, H, S, d_head)
-        
+
         # 2. KV 압축
         # 이 'latent' 벡터가 바로 KV Cache에 저장되는 대상입니다!
         latent = self.kv_compress(x) # (B, S, d_latent)
-        
+
         # 3. 어텐션 연산을 위한 KV 복원
         kv = self.kv_decompress(latent).view(batch_size, seq_len, self.n_heads, self.d_head, 2)
         k = kv[..., 0].transpose(1, 2) # (B, H, S, d_head)
         v = kv[..., 1].transpose(1, 2) # (B, H, S, d_head)
-        
+
         # 4. Scaled Dot-Product Attention
         scores = torch.matmul(q, k.transpose(-2, -1)) / (self.d_head ** 0.5)
-        
+
         # 인과적 마스크 적용 (간략화)
         mask = torch.tril(torch.ones(seq_len, seq_len, device=x.device))
         scores = scores.masked_fill(mask == 0, float('-inf'))
-        
+
         attn = F.softmax(scores, dim=-1)
-        
+
         context = torch.matmul(attn, v) # (B, H, S, d_head)
         context = context.transpose(1, 2).contiguous().view(batch_size, seq_len, -1)
-        
+
         return self.o_proj(context)
 ```
 
@@ -238,6 +238,25 @@ class SimpleLatentAttention(nn.Module):
 <AttentionMaskVisualizer client:load lang="ko" />
 
 ---
+
+## 10월 18일 업데이트: 아티팩트·아키텍처·상태를 구분한다
+
+**2026-10-18 기준.** 위의 9월·10월 13일 표는 당시의 기록입니다. 아래 1차 자료는 공개 상태를 갱신하고 서로 다른 설계를 추가합니다. 과거의 발표일을 소급해 바꾸는 것은 아닙니다.
+
+| 모델·이정표 | 현재 공개 상태 | 공개한 내용 | 그것만으로 입증되지 않는 것 |
+|---|---|---|---|
+| Beam 1.0, 10월 16일 가중치 | 가중치 공개·Apache 2.0 | 카드의 전체 501.3B·활성 23.4B, gated GQA·sliding window, 수정 Harmony 템플릿 [[23]](#ref-23) | 전체 학습 혼합·아직 예정인 완전한 기술 보고서 |
+| Muse Spark Open, 10월 15일 | 가중치 공개·승인형 Muse Model License | Meta의 전체 816B·활성 42B, 멀티모달 입력·텍스트 출력 [[24]](#ref-24) | 호스팅 Spark와의 동일성·무제한 다운로드 |
+| Muse Wonder·Wonder Full, 10월 12일 | 호스팅 공개·Full은 구독 | 발표문의 API·구독 접근 구분 [[25]](#ref-25) | 파라미터 수·세부 구조·전체 학습법은 미공개 |
+| Nemotron 3.5 Super VL, 10월 15일 | 가중치 공개·OpenMDW-1.1 | 카드의 전체 120B·활성 12B, Mamba-2·MoE·attention 교차 구조와 비전 인코더 [[26]](#ref-26) | Attention KV만으로 전체 서빙 상태를 설명할 수 있다는 주장 |
+| Nemotron 3.5 Bolt 74B-A9B, 10월 15일 | 가중치 공개·OpenMDW-1.1 | 카드의 전체 74B·활성 9B, hybrid LatentMoE·IQ2 QAT [[27]](#ref-27) | 모든 문맥·배치의 24GB 실행 메모리 보장 |
+| Step 5 Preview, 10월 가중치 공개 | 가중치 공개·StepFun Model License 1.0 | 카드의 전체 600B·활성 27B MoE [[28]](#ref-28) | Preview라서 가중치가 없거나 MIT 라이선스라는 추정 |
+| DeepSeek V4.1 Flash 1017, 10월 17일 | 가중치 공개·MIT·API 별칭 갱신 | 리비전과 프로토콜 인식 인코딩 안내 [[29]](#ref-29) | 새 독립 지수나 새로 공개한 backbone 설계 |
+| Hy-Memory-30B-A3B, 10월 15일 | 가중치 공개·Apache 2.0 | 외부 메모리 전문 쓰기 모델과 프로토콜 통합 [[30]](#ref-30) | 범용 에이전트 품질·모델 내부의 영구 메모리 |
+
+실무에서 구분해야 할 것은 **아키텍처 → 수치 아티팩트 → 런타임 → 배포 시스템** 입니다. 패킹은 논리적 파라미터 수를 바꾸지 않고 텐서 원소 수를 바꿀 수 있습니다. 하이브리드 모델은 attention 캐시에 순환 상태를 더하고, 전문 메모리 쓰기 모델은 외부 저장 상태를 갱신합니다. 파라미터 수나 문맥 길이 하나로는 어느 쪽도 올바르게 평가할 수 없습니다.
+
+도입 시 모델·수치 형식, 토크나이저 또는 인코딩 도구, 템플릿, 시각 전처리, 커널, 상태 layout, 도구 스키마를 고정합니다. 실제로 공개한 세부사항을 확인하고, 호스팅 점수를 다른 아티팩트에 옮기지 말고 로컬 능력·메모리·지연·복구를 시험합니다. 17.6절은 날짜별 공개·평가 프로필을, 12.5·13.5·16.5절은 상태·압축·메모리 계약을 다룹니다.
 
 ## Quizzes
 
@@ -287,3 +306,19 @@ class SimpleLatentAttention(nn.Module):
 20. <a id="ref-20"></a>Reflection. (2026). Introducing Beam. [Source](https://reflection.ai/blog/introducing-beam).
 21. <a id="ref-21"></a>Cheng, X., et al. (2026). Conditional Memory via Scalable Lookup. [Source](https://arxiv.org/abs/2601.07372).
 22. <a id="ref-22"></a>Qwen Team. (2026). Qwen3.8-2.4T-A95B configuration. [Source](https://huggingface.co/Qwen/Qwen3.8-2.4T-A95B/raw/main/config.json).
+
+23. <a id="ref-23"></a>Reflection. (2026). *Beam 1.0 model card*. [Source](https://huggingface.co/reflection/Beam-1.0-501B-A23B).
+
+24. <a id="ref-24"></a>Meta. (2026-10-15). *Muse Spark Open release*. [Source](https://research.meta.ai/blog/muse-spark-open).
+
+25. <a id="ref-25"></a>Meta. (2026-10-12). *Muse Wonder release*. [Source](https://research.meta.ai/blog/muse-wonder).
+
+26. <a id="ref-26"></a>NVIDIA. (2026). *Nemotron 3.5 Super VL model card*. [Source](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-BF16).
+
+27. <a id="ref-27"></a>NVIDIA. (2026). *Nemotron 3.5 Bolt model card*. [Source](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Bolt-74B-A9B-24GB).
+
+28. <a id="ref-28"></a>StepFun. (2026). *Step 5 Preview model card*. [Source](https://huggingface.co/stepfun-ai/Step-5-Preview-BF16).
+
+29. <a id="ref-29"></a>DeepSeek. (2026-10-17). *DeepSeek V4.1 Flash 1017 model card*. [Source](https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017).
+
+30. <a id="ref-30"></a>Tencent. (2026). *Hy-Memory-30B-A3B model card*. [Source](https://huggingface.co/tencent/Hy-Memory-30B-A3B).

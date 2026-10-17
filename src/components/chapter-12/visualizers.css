@@ -426,3 +426,17 @@
   color: #a6adc8;
   font-style: italic;
 }
+/* Keep schematic timing labels readable without widening the page. */
+.scheduling-visualizer .timeline-container { overflow-x: auto; }
+.scheduling-visualizer .timeline-track { min-width: 620px; gap: 12px; }
+.scheduling-visualizer .label { width: 130px; }
+.scheduling-visualizer .blocks { min-width: 460px; }
+.scheduling-visualizer .prefill-large { background: #b91c1c; }
+.scheduling-visualizer .prefill-chunk { color: #0f172a; }
+.scheduling-visualizer .decode-small { background: #047857; }
+.scheduling-visualizer .highlight { background: #1d4ed8; }
+.scheduling-visualizer .transfer { background: #6d28d9; animation: none; }
+.scheduling-visualizer button:focus-visible,
+.scheduling-visualizer .timeline-container:focus-visible { outline: 3px solid #fbbf24; outline-offset: 3px; }
+.scheduling-visualizer progress { width: 100%; margin-top: 12px; }
+.scheduling-visualizer .scheduling-source { color: #cbd5e1; font-size: 0.85rem; }

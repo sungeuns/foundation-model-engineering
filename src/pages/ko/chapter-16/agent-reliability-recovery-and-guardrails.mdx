@@ -111,6 +111,12 @@ lang: ko
 복구 정책도 원래 행동 경계를 유지해야 합니다. fetch가 거부됐다고 다른 도구·redirect·서비스로 전환하는 과정에서 권한이 새로 생겨서는 안 됩니다. 모델 설명과 독립적으로 실행 시점에 목적지와 행동 권한을 검사합니다. 대체 경로·간접 요청·거부 뒤 재시도·읽기로 위장한 쓰기를 시험합니다. 시도한 효과, 차단한 효과, 실제 효과, 복구 결과를 따로 기록합니다. 협조적인 설명만으로 실행기가 격리를 강제했다는 증거가 되지 않습니다.
 
 
+### 삭제에는 접근 경로 검사가 필요하다
+
+**2026-10-18 기준**, Lizzo와 Heck의 10월 15일 워크숍 논문은 의미가 같은 다국어 질의에서도 측정되는 망각이 달라질 수 있음을 보여 줍니다 [[8]](#ref-8). 한 언어에서 거부하거나 회상하지 못한다고 정보에 접근할 수 없다는 뜻은 아닙니다. 접근 경로 일반화의 한정된 근거이며 모든 unlearning 방법이 실패한다는 정리는 아닙니다.
+
+실무 출시 기준에서는 외부 메모리 삭제와 모델 가중치 변경을 구별합니다. 원본 기록·요약·벡터 및 그래프 인덱스·캐시·복제본·복원 경로까지 삭제 계보를 추적합니다. 지원 언어와 문자 체계에서 동등한 질의로 권한 있는 복구 감사를 수행해야 하며 영어 거부 시험만으로는 부족합니다. 롤백이 삭제된 기록을 되살려서는 안 됩니다. 삭제 표식과 보존 결정을 아티팩트·데이터 계보와 함께 버전 관리하고, 보존 정책에 따라 남아 있는 사본의 범위를 명시합니다.
+
 ## Quizzes
 
 <details>
@@ -144,3 +150,5 @@ lang: ko
 5. <a id="ref-5"></a>Liu, X., et al. (2024). *AgentBench: Evaluating LLMs as Agents.* [arXiv:2308.03688](https://arxiv.org/abs/2308.03688).
 6. <a id="ref-6"></a>Jimenez, C. E., et al. (2024). *SWE-bench: Can Language Models Resolve Real-World GitHub Issues?* [arXiv:2310.06770](https://arxiv.org/abs/2310.06770).
 7. <a id="ref-7"></a>Anthropic. (2026-10-09). Investigating unintended model actions in our evaluations and internal use. [Source](https://www.anthropic.com/research/investigating-unintended-model-actions).
+
+8. <a id="ref-8"></a>Lizzo, T., & Heck, L. (2026). *Behavioral Forgetting Is Not Privacy in Machine Unlearning*. PriLOM workshop poster. [Source](https://arxiv.org/abs/2610.21799).

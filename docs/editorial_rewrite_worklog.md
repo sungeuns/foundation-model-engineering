@@ -258,7 +258,9 @@ This pass scanned all 20 chapters and the 102 current EN/KO pairs for mutable cl
 - Replaced the speculative-decoding toy implementation with a standard-library reference. Smoke checks covered last-position rejection, all-accepted bonus sampling, and a 40,000-trial marginal-distribution check (target 0.75; observed 0.750125). Other educational tensor examples explicitly state their integration limits.
 - Synchronized EN/KO body structure, quizzes, code, formulas, reference anchors and URLs for the changed pairs. Added the missing terminology baseline and 15.5 search metadata.
 
-The following table is the current canonical inventory, in navigation order. `Inspected 2026-10-13` applies only to the listed current SHA-256 content hashes. `Mechanical only` preserves earlier review records and makes no new editorial-completion claim. The hashes bind evidence to each language file; subsequent content edits require a fresh inspection record.
+## Current Canonical Inventory (as of 2026-10-18)
+
+This maintained table is in navigation order. Each inspected row binds its own inspection date to the current EN/KO SHA-256 content hashes. The original 2026-10-13 table is preserved in commit `423311d`; rows re-inspected on October 18 carry new dates and hashes below. `Mechanical only` retains earlier historical records without claiming a fresh editorial inspection. Subsequent edits require fresh inspection evidence.
 
 | Number | Route | October review evidence | EN SHA-256 | KO SHA-256 |
 |---|---|---|---|---|
@@ -279,7 +281,7 @@ The following table is the current canonical inventory, in navigation order. `In
 | 4.2 | `/chapter-4/decoder-only` | Mechanical only | — | — |
 | 4.3 | `/chapter-4/encoder-decoder` | Inspected 2026-10-13 | c0372544843683d2e7b80936ba33fd4c343a4b6850c40844ae59ccc34362f918 | d1c77e9b87235b6e7d00b7350a01d5d813567221ce8ca91edf14e5241f400905 |
 | 4.4 | `/chapter-4/hybrid-prefix-lm` | Mechanical only | — | — |
-| 4.5 | `/chapter-4/various-llm-architectures` | Inspected 2026-10-13 | 4a2439bcb08d342a543c912ddeeca92cbd97b17d2ff3550c5caf8833b9f32673 | e6947013caf3d4efa1903a1753946cc00bce285a929b3845f7dffbc1a463c390 |
+| 4.5 | `/chapter-4/various-llm-architectures` | Inspected 2026-10-18 | e5ab846a5d0f42a9d98dabadc677e0187ac9b2af55ef0b7401d5ee5885e5f5ef | 4d2caa746cf1be755510835ecf6990c99cb06bb88a7a0b5b20760d09568a5c06 |
 | 5.1 | `/chapter-5/sparse-vs-dense-models` | Mechanical only | — | — |
 | 5.2 | `/chapter-5/routing-algorithms` | Mechanical only | — | — |
 | 5.3 | `/chapter-5/expert-parallelism` | Mechanical only | — | — |
@@ -298,7 +300,7 @@ The following table is the current canonical inventory, in navigation order. `In
 | 8.2 | `/chapter-8/chinchilla-optimality` | Mechanical only | — | — |
 | 8.3 | `/chapter-8/over-training-vs-optimal-training` | Mechanical only | — | — |
 | 8.4 | `/chapter-8/transfer-learning-and-generalization` | Mechanical only | — | — |
-| 8.5 | `/chapter-8/continued-pretraining-and-domain-adaptation` | Mechanical only | — | — |
+| 8.5 | `/chapter-8/continued-pretraining-and-domain-adaptation` | Inspected 2026-10-18 | e0f895c99ea0caeac0672686fd1fddfba31f5d152c26d4a46db04c218edd6d73 | 1765e765a81279832270081b021b78064d9fbc7f0a831e1d83bd6767cafda069 |
 | 9.1 | `/chapter-9/sft-fundamentals` | Mechanical only | — | — |
 | 9.2 | `/chapter-9/dataset-quality-vs-quantity` | Mechanical only | — | — |
 | 9.3 | `/chapter-9/parameter-efficient-fine-tuning-peft` | Mechanical only | — | — |
@@ -310,7 +312,7 @@ The following table is the current canonical inventory, in navigation order. `In
 | 10.4 | `/chapter-10/kto-and-ipo` | Mechanical only | — | — |
 | 10.5 | `/chapter-10/alignment-tax` | Mechanical only | — | — |
 | 11.1 | `/chapter-11/vision-language-bridges` | Mechanical only | — | — |
-| 11.2 | `/chapter-11/audio-and-speech-integration` | Mechanical only | — | — |
+| 11.2 | `/chapter-11/audio-and-speech-integration` | Inspected 2026-10-18 | 9716e972a70dab2c1fab1d4bfa6ef1652e41ab729ec838a95c28dcce5f835631 | 2aadfb431511e02306f7fadb56796f174f17a35ff76866e690d43a1e755cef8c |
 | 11.3 | `/chapter-11/unified-multimodal-any-to-any` | Inspected 2026-10-13 | 63b49653980ac69e7662b92d1423aad27976789545651d8f21bb97c04a0993a2 | 05b4775ea2e63d295a8def6928b0a7280187755f1e95669da1a9db2ad9134158 |
 | 11.4 | `/chapter-11/image-diffusion-models` | Mechanical only | — | — |
 | 11.5 | `/chapter-11/video-generation-foundations` | Mechanical only | — | — |
@@ -319,13 +321,13 @@ The following table is the current canonical inventory, in navigation order. `In
 | 12.2 | `/chapter-12/paged-attention-vllm` | Mechanical only | — | — |
 | 12.3 | `/chapter-12/continuous-batching` | Mechanical only | — | — |
 | 12.4 | `/chapter-12/speculative-decoding` | Inspected 2026-10-13 | 5a4f09e5002a2b8dd95fc1163467670b65af96c8fe24ef5d4f974dd211f81392 | dda212e58d258cba460d4717b754bfd848f879e0d40f2afe883548f15ac73116 |
-| 12.5 | `/chapter-12/long-context-serving` | Mechanical only | — | — |
+| 12.5 | `/chapter-12/long-context-serving` | Inspected 2026-10-18 | 82f413a5a2e2731fe01603c7036b42dee434b010cc76410eba7e0807d73742e8 | 59933e962b9f0bef0f8b50e9889ec628fd92ade6d7d0fb91636981793bd83052 |
 | 12.6 | `/chapter-12/serving-policies-slos-and-fallbacks` | Mechanical only | — | — |
 | 13.1 | `/chapter-13/ptq-vs-qat` | Inspected 2026-10-13 | 803bc13a7ecf2cbde30264bbff3e63b8e9bb65d52e3188225be6594f747d145e | 758e33133a4a94ead9935a6c57162530ec924e9550b22c69be5fed557a0c5ac7 |
 | 13.2 | `/chapter-13/quantization-methods` | Inspected 2026-10-13 | 17786fe86f7f3bc6edf5f5cd8020b3132963266c7083d452d1e629555eb8df91 | 5eb38a0204b52eeadf4b7a019f9a64452d38f6da7e2a5b3ca7be301f46d24fbc |
 | 13.3 | `/chapter-13/weight-sparsification` | Mechanical only | — | — |
 | 13.4 | `/chapter-13/knowledge-distillation` | Mechanical only | — | — |
-| 13.5 | `/chapter-13/advanced-quantization` | Mechanical only | — | — |
+| 13.5 | `/chapter-13/advanced-quantization` | Inspected 2026-10-18 | 27a364583a8df29cdea48119e65184594a4c27ab9f8f22437778a330596d4a3b | b55fe9860d8cf44911a1bf6508787d6c865bfbdf548adff861878ccdf10fd691 |
 | 14.1 | `/chapter-14/lexical-to-semantic-search` | Inspected 2026-10-13 | aa4ad303530afbceb80e8823140d329b4a0f398a4d5697899b5eb9aefea900f0 | a7f23d5c7a926362f71db95949eb760e6f682cd9275fb39f341f6d63ba782c69 |
 | 14.2 | `/chapter-14/vector-indexing-and-db-solutions` | Mechanical only | — | — |
 | 14.3 | `/chapter-14/advanced-retrieval` | Mechanical only | — | — |
@@ -336,23 +338,23 @@ The following table is the current canonical inventory, in navigation order. `In
 | 15.2 | `/chapter-15/tree-graph-of-thoughts` | Mechanical only | — | — |
 | 15.3 | `/chapter-15/search-time-compute` | Mechanical only | — | — |
 | 15.4 | `/chapter-15/verifiers-and-reward-models` | Mechanical only | — | — |
-| 15.5 | `/chapter-15/reasoning-post-training-rlvr` | Inspected 2026-10-13 | adb5b5717d12125a26e7af3b6a3fd442a8f117e1e8629d279c5f039c52aaac2b | 54d5fea3b4fc5f6328de91e12ce86c31042794802928c42f1033b4b4df7e45a1 |
+| 15.5 | `/chapter-15/reasoning-post-training-rlvr` | Inspected 2026-10-18 | 5d7b0b2af95b466bfd3261c57d4597e27ec2abc2c2dca49a750cefa2ff7e4c7f | ad356581811918d430e3f75ddb4fab33d944cbe31a1a87ce59eeefaaaf02d7fd |
 | 16.1 | `/chapter-16/function-calling-and-tool-use` | Inspected 2026-10-13 | 2c1926ca9a765c43ce7cef9a2ae1e9a6ba7ce2e27419c81e91f94ee274d0367c | 495ad575c567acc70c086386aebbc5ce1013f711d2a54735c4291f7c05a87b86 |
 | 16.2 | `/chapter-16/autonomous-agents` | Mechanical only | — | — |
 | 16.3 | `/chapter-16/self-improving-agents` | Mechanical only | — | — |
 | 16.4 | `/chapter-16/multi-agent-collaboration` | Mechanical only | — | — |
-| 16.5 | `/chapter-16/long-term-memory-for-agents` | Mechanical only | — | — |
-| 16.6 | `/chapter-16/agent-reliability-recovery-and-guardrails` | Inspected 2026-10-13 | 52e62702837e7826aeb2cbad89844683663d4dfe4ea3227539e3000cde39a9d2 | fb565e9e2b3040fa5edbaf79ceadf69a5aff68f4f4ae492117361bc15639125e |
+| 16.5 | `/chapter-16/long-term-memory-for-agents` | Inspected 2026-10-18 | d78fd0ce9cfd59df202f453ddcf591390c84b0db818ffe1bc861f8dff0e93ef4 | e55ac6124d47b4da197e7230e8c9e0c1d258989e81542896136ad213d9e2a751 |
+| 16.6 | `/chapter-16/agent-reliability-recovery-and-guardrails` | Inspected 2026-10-18 | 9ee3f7d060df8846906b0d0a23d7e625252a98cc7c63f94eb301492f1d178ba0 | 3541f27611c1f8e43bd68ae98658c3a7d9d8913734830a514e4f4d4f27323f59 |
 | 17.1 | `/chapter-17/academic-benchmarks` | Mechanical only | — | — |
-| 17.2 | `/chapter-17/llm-as-a-judge` | Mechanical only | — | — |
+| 17.2 | `/chapter-17/llm-as-a-judge` | Inspected 2026-10-18 | b9ad37a58310ad8c790ac4c8988342a2233b3c96889f8fae279810964a470374 | df7b1b47ce2477bb8949d82cfa3e8336eb19b383bc7e9bdc25f940fb771c800f |
 | 17.3 | `/chapter-17/elo-rating-and-leaderboards` | Mechanical only | — | — |
 | 17.4 | `/chapter-17/contamination-issues` | Mechanical only | — | — |
 | 17.5 | `/chapter-17/production-evaluation-and-release-gates` | Inspected 2026-10-13 | 5d35307a30661bc74be66c3fda51ba7dba5e72b94178a8ba20c6f6504ba2fd84 | 187f256cc5b3b64f82e3d4afae03ed6ea2ba45f5156ff232e9c75cb185dd2464 |
-| 17.6 | `/chapter-17/commercial-model-benchmarks` | Inspected 2026-10-13 | 2fdef240d5b9304a5dc9b591c5445a80468b9297e4480d567bd19d4da3d4dc9f | cb2c31e8047b0216e2207e8dcfe4f7a64cb38b9752779c35dfa990e2d9a7020a |
+| 17.6 | `/chapter-17/commercial-model-benchmarks` | Inspected 2026-10-18 | a6f30277a1f03e0022bf508b4ad7978dc64848a8371bbdccdf119faa231a3c6d | c65130bbc3b3017a61bd1274fa594b178aa8643f2bf7620f7dbbd48635f5b3e9 |
 | 18.1 | `/chapter-18/red-teaming` | Mechanical only | — | — |
 | 18.2 | `/chapter-18/jailbreaking-and-defense` | Mechanical only | — | — |
 | 18.3 | `/chapter-18/hallucination-detection` | Mechanical only | — | — |
-| 18.4 | `/chapter-18/scalable-oversight` | Mechanical only | — | — |
+| 18.4 | `/chapter-18/scalable-oversight` | Inspected 2026-10-18 | ddc4e57280940d9f2de2d5e5f551b035d60ae4feeb324a2a84256e798feb9c7f | 5536d313417dd89e9909d73ed8762c85d7450129338432d8a05ea21c7ee99f3b |
 | 19.1 | `/chapter-19/mechanistic-interpretability` | Inspected 2026-10-13 | e78ed254abbd08dcc580e5d937948f89757d22138640f21b47a48ef61b6769c4 | fae2f16d1ef936dafbbe54ff2d8896e6110a4a9ecf1d33d5c29e0fd3599aff63 |
 | 19.2 | `/chapter-19/logit-lens-and-attention-visualization` | Mechanical only | — | — |
 | 19.3 | `/chapter-19/probing-classifiers` | Mechanical only | — | — |
@@ -365,7 +367,7 @@ The following table is the current canonical inventory, in navigation order. `In
 | 20.6 | `/chapter-20/diffusion-based-llms` | Inspected 2026-10-13 | f2236899fbf327ac90e1c1edae9c77a4173fb6721102a7364fbf85542541d836 | 0d5a117e60a90c1f8d746e5b29f01a13cc4929aa7a0e729e93fc003611ef22ed |
 | 20.7 | `/chapter-20/path-to-agi-and-world-models` | Mechanical only | — | — |
 
-### Verification for the October pass
+### Verification for the October 13 pass
 
 - Node v24.19.0; `SITE_BASE=/foundation-model-engineering ASTRO_TELEMETRY_DISABLED=1 npm run build` generated 206 pages successfully. The final build log contained no warnings or errors.
 - `npm run test:content` passed; direct execution confirmed 10 content-contract assertions, including ordered inventory, EN/KO page numbers, citations/imports, and inspected-file hashes. All 11 repository test files passed after the final build, including deployed-path/search metadata checks.
@@ -373,7 +375,7 @@ The following table is the current canonical inventory, in navigation order. `In
 - Browser verification used an isolated headless browser and the final static site at its deployment base, with browser caching disabled. It exercised 80 benchmark metric/axis/provider combinations per language, filtered selection/ranking, missing data, keyboard selection, DSPy cancellation/restart/reset, all topology tabs, normalized induction rows and keyboard focus, new-page math, and 1280px/390px layouts. All four changed interactions passed in EN/KO with no runtime exceptions.
 - The content pass finished before both home-page update dates were set to 2026-10-13. `git diff --check` passed. No publication or deployment was performed.
 
-The inspected interactive-source hashes below bind the UI verification to the current implementations.
+The following hashes bind the historical October 13 UI verification to the implementations inspected then. They are not current evidence for subsequently changed files; the October 18 verification is recorded separately below.
 
 | Interactive source | SHA-256 |
 |---|---|
@@ -383,3 +385,44 @@ The inspected interactive-source hashes below bind the UI verification to the cu
 | `src/components/chapter-6/ClusterTopologyExplorer.tsx` | a855e146a63d97f7287a69deec36709bbdbdd8fade3688d46bcff747612984a9 |
 | `src/components/chapter-6/visualizers.css` | c4d501c8a07e98e360b28dc1a5e5ad84a552b42d28f59c3d5cae5ddd7108b435 |
 | `src/components/chapter-9/DSPyCompilerVisualizer.tsx` | e9ab01ec69997d82609438e2bbedf89c85df47ae36e40bfbabf5201dfcbd44a0 |
+
+## 2026-10-18 Release and Research Update
+
+Scope: inspected and updated 11 EN/KO pairs after screening the 102-pair inventory for relevant mutable claims and technical risks. This is not a claim that every other chapter received a fresh deep review. The current inventory above separates retained October 13 inspection evidence from October 18 inspection evidence.
+
+- Reverified 19 release/evaluation profiles using primary model documentation and AA v4.3.2 pages. Added Muse Wonder/Full, Muse Spark Open, Nemotron 3.5 Super VL and Bolt, Step 5 Preview's weight milestone, and DeepSeek Flash 1017; corrected Beam's released weights and Gemini Argon's broader API access. Weights were checked through repository file metadata, including gated access, rather than announcement wording alone.
+- Preserved the September DeepSeek evaluation as a separate profile; no independent score was copied onto the October 17 checkpoint. Kept unknown costs missing, distinguished subscription access and promotional expiry, and replaced the implied top-five ranking with an alphabetical selection list. Removed the unpopulated speed axis.
+- Added bounded October research on agentic midtraining, multi-session RL, set-level scientific ideation, memory writers, intrinsic memory evaluation, context-difficulty axes, rating-scale sensitivity, multilingual unlearning access paths, and evidence-grounded review. Preprints and provider claims remain labeled.
+- Rewrote long-context serving around KV heads, correct GiB accounting, workload-specific bottlenecks, state handoff, and quality/latency gates. Replaced the misleading square-matmul scheduler code with a smoke-tested accounting helper.
+- Reworked advanced quantization, audio integration, judge evaluation, and scalable oversight to remove unsupported precision floors, all-addition claims, audio/KV budget conflation, false calibration guarantees, and random-model “agreement” as validation.
+- The two modified interactions are the model-profile explorer and the explicitly schematic scheduling visualizer. The latter now has localized controls, keyboard focus, replay after completion, reduced-motion behavior, and a visible generation-method caption.
+
+Inspection of current files and EN/KO equations, code semantics, quizzes, references, and adjacent-page transitions was completed before recording the October 18 hashes. Verification results are recorded below.
+
+### October 18 Verification Results
+
+- Node v24.19.0. Ordered navigation/page/ledger inventory and current inspection hashes passed `npm run test:content` before the build. The final deployment-base build generated all 206 pages with no warnings or errors.
+- All 12 repository test files passed after the final build, including the new profile-schema, bilingual table/data parity, and revision-isolation checks. The content-contract file contains 10 checks; the new model-snapshot file contains 3 checks.
+- All 117 distinct external URLs in the changed pages and model dataset resolved with HTTP 200. Newly cited research was read through primary paper pages/full text; the release profiles were checked against official documentation/model cards and model-specific AA records.
+- The KV accounting helper passed 7 smoke checks: two GQA sizes, the query/KV-head comparison, and four invalid-input cases. The educational RVQ/latent-attention examples are not claimed to be smoke-tested training or serving integrations.
+- The final static site was exercised with caching disabled in an isolated headless browser. EN and KO each passed 88 metric/axis/provider combinations, 14 empty combinations, filtered selections, alphabetical selection lists, keyboard selection, missing subscription cost, and isolation of the unmeasured DeepSeek revision. All 3 scheduling modes, keyboard replay after completion, reduced motion, and 1280px/390px layouts passed. All 11 changed pages rendered in both languages with the expected quizzes, no broken images or KaTeX errors, and no runtime exceptions. Desktop/mobile screenshots were visually inspected.
+- API alias, unified context/output contract, introductory-price expiry, weight-file existence, and gated access were rechecked immediately before commit. The table below records the verified repository revisions and safetensors shard listings, not downloaded or locally evaluated model weights. The Mistral launch still described the later-month weight plan; the publisher search did not verify a Large 4 weight release.
+- Both home pages now show 2026-10-18 after the content pass. `git diff --check` passed; this pass preserves the pre-existing book inventory and changes 11 EN/KO pairs rather than claiming a new deep inspection of all other pages.
+
+| Weight artifact | Verified revision | Safetensors shards | Access listing |
+|---|---|---:|---|
+| `reflection/Beam-1.0-501B-A23B` | `78f8f654d40a40919b8e9954b40dd879ecb9a692` | 188 | not gated |
+| `meta-models/Muse-Spark-Open-816B-A42B` | `0fb02478b02565b2ce7fc57e6051c91172774ac9` | 65 | gated/manual |
+| `stepfun-ai/Step-5-Preview-BF16` | `7734b7ffac118d70d8398bfa3eb0fab007eb45b1` | 28 | not gated |
+| `nvidia/NVIDIA-Nemotron-3.5-Bolt-74B-A9B-24GB` | `c6cc2e8ffa353403213d6b9b18aaf8eb684d705a` | 90 | not gated |
+| `nvidia/NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-BF16` | `1f8953f7f0935358e3605150d22bc15df062061c` | 64 | not gated |
+| `tencent/Hy-Memory-30B-A3B` | `64a460a94d5498b7316fb02395c72d01c47a7347` | 51 | not gated |
+| `deepseek-ai/DeepSeek-V4.1-Flash-1017` | `1bae0e1088993b9b82de08f59de5be5a34e42170` | 48 | not gated |
+
+| October 18 interactive/data source | SHA-256 |
+|---|---|
+| `src/data/commercial-model-snapshot.json` | 1c8aa5f00a38bfb08e9a0ae09627da145b50bef447df5b342592dd1c9c384cb2 |
+| `src/components/chapter-17/CommercialModelBenchmarkExplorer.tsx` | 5229c27cb233d02aca0ba6b24d9629431c6b02206a217358a9bf02e1e2c8c125 |
+| `src/components/chapter-17/visualizers.css` | 6e037bb95ea59b7753666fa0519489c8a39a12cb4f380956a1c9928eaa534247 |
+| `src/components/chapter-12/SchedulingVisualizer.tsx` | 7c677ebf310739fb9d41c6e19ae2f48472f1b6f93b2339a61a3000e921cf1d22 |
+| `src/components/chapter-12/visualizers.css` | 00487f06517370442b9ac351cf8e398581d74508cc91656bcfbd62a2f8a0f287 |

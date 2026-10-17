@@ -191,3 +191,18 @@ During this editorial overhaul, every English/Korean sub-chapter pair was review
 ## 2026-10-13 Current Inspection Evidence
 
 The October pass mechanically scanned all 20 chapters and 102 EN/KO pairs, then inspected and updated 28 affected pairs. The other 74 pairs retain historical inspection evidence; this entry does not certify a fresh deep review of those files. The ordered current inventory, inspection dates, and SHA-256 hashes for the 28 current inspected pairs are recorded in [the October worklog](editorial_rewrite_worklog.md#2026-10-13-evidence-update-and-technical-review). New section 15.5 was inspected in both languages before its completion mark was recorded.
+
+## 2026-10-18 Current Inspection Evidence
+
+Inspected and updated 11 EN/KO pairs in this pass. Current per-file inspection dates and hashes are in [the canonical inventory](editorial_rewrite_worklog.md#current-canonical-inventory-as-of-2026-10-18). The remaining pairs retain their earlier evidence or mechanical-only status; no fresh full-book deep inspection is claimed.
+- [x] `chapter-11/audio-and-speech-integration` — EN/KO current files inspected 2026-10-18; hashes in the current inventory.
+- [x] `chapter-12/long-context-serving` — EN/KO current files inspected 2026-10-18; hashes in the current inventory.
+- [x] `chapter-13/advanced-quantization` — EN/KO current files inspected 2026-10-18; hashes in the current inventory.
+- [x] `chapter-15/reasoning-post-training-rlvr` — EN/KO current files inspected 2026-10-18; hashes in the current inventory.
+- [x] `chapter-16/agent-reliability-recovery-and-guardrails` — EN/KO current files inspected 2026-10-18; hashes in the current inventory.
+- [x] `chapter-16/long-term-memory-for-agents` — EN/KO current files inspected 2026-10-18; hashes in the current inventory.
+- [x] `chapter-17/commercial-model-benchmarks` — EN/KO current files inspected 2026-10-18; hashes in the current inventory.
+- [x] `chapter-17/llm-as-a-judge` — EN/KO current files inspected 2026-10-18; hashes in the current inventory.
+- [x] `chapter-18/scalable-oversight` — EN/KO current files inspected 2026-10-18; hashes in the current inventory.
+- [x] `chapter-4/various-llm-architectures` — EN/KO current files inspected 2026-10-18; hashes in the current inventory.
+- [x] `chapter-8/continued-pretraining-and-domain-adaptation` — EN/KO current files inspected 2026-10-18; hashes in the current inventory.

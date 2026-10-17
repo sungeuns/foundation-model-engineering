@@ -66,7 +66,7 @@
 * **8.2 Chinchilla Optimality:** 주어진 연산 자원 내에서 가장 효율적인 파라미터-데이터 비율.
 * **8.3 Over-training vs Optimal-training:** Llama 3처럼 가이드라인 이상으로 학습시키는 이유.
 * **8.4 Transfer Learning & Generalization:** 사전 학습 지식이 전이되는 원리.
-* **8.5 Continued Pre-training & Domain Adaptation:** 기존 체크포인트를 도메인에 적응시키는 데이터 혼합, 파일럿, 복구, 망각 방지 실무.
+* **8.5 Continued Pre-training & Domain Adaptation:** 기존 체크포인트의 도메인 적응과 에이전트 중간 학습, 데이터 혼합, 후속 SFT 탐침, 복구·능력 보존 실무.
 * **Summary:** 무작정 키우는 것이 아닌, 수학적 근거를 바탕으로 자원을 배분하는 '스케일링의 과학'을 설명합니다.
 
 ### **Chapter 9: Post-training: SFT & Instruction Tuning**
@@ -90,7 +90,7 @@
 ### **Chapter 11: Multimodal Learning**
 
 * **11.1 Vision-Language Bridges:** CLIP, Flamingo 아키텍처와 Projection Layer.
-* **11.2 Audio & Speech Integration:** Whisper, AudioLM 등 소리를 이해하고 생성하는 법.
+* **11.2 Audio & Speech Integration:** 코덱·RVQ·연속 잠재 표현과 스트리밍 음성의 예산·중단·행동 권한 계약.
 * **11.3 Unified Multimodal (Any-to-Any):** 입출력 지원 범위, 시간 정렬, 공개된 표현·생성 경로와 native의 의미.
 * **11.4 Image Diffusion Models:** 확산(Diffusion) 모델의 원리와 Stable Diffusion, Flux 등 대표적인 이미지 생성 모델 소개.
 * **11.5 Video Generation Foundations:** Diffusion Transformer (DiT)와 공간-시간 어텐션.
@@ -152,7 +152,7 @@
 * **17.3 Elo Rating & Leaderboards:** LMSYS Chatbot Arena와 같은 인간 선호도 기반 평가.
 * **17.4 Contamination Issues:** 학습 데이터에 평가셋이 포함되는 문제와 검증법.
 * **17.5 Production Evaluation and Release Gates:** offline eval, judge calibration, canary, rollout gate를 실제 릴리스 프로세스와 연결하는 방법.
-* **17.6 Commercial Model Benchmarks:** 2026-10-13 기준 GPT-6.1 Sol, Claude 5.5, Gemini 4 Argon, DeepSeek V4.1 Flash, GLM-5.3, Mistral Large 4, Beam을 평가 버전·과업 비용·공개 상태와 비교하는 interactive map.
+* **17.6 Commercial Model Benchmarks:** 2026-10-18 기준 19개 모델 프로필에서 Muse Wonder·Spark Open, Nemotron 3.5, Step 5, Beam 공개와 DeepSeek 1017 갱신을 평가 조건·과업 비용·공개 상태로 탐색.
 * **Summary:** 모델의 '진짜 실력'을 객관적이고 공정하게 측정하기 위한 평가 방법론과 지표를 다룹니다.
 
 ### **Chapter 18: AI Safety & Alignment Research**

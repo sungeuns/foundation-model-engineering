@@ -111,6 +111,12 @@ Agent reliability is mostly about system design, not model heroics. Step budgets
 A recovery policy must preserve the original action boundary. If a fetch is denied, switching to a different tool, redirect, or service must not silently create new permission. Enforce destination and action authorization at execution time, independently of the model's explanation. Test alternate routes, indirect requests, retries after denials, and writes disguised as reads. Record attempted effects, blocked effects, actual effects, and recovery outcome separately. A model's cooperative narrative is not evidence that the executor enforced containment.
 
 
+### Deletion Needs an Access-Path Test
+
+**As of 2026-10-18**, Lizzo and Heck's October 15 workshop paper shows that measured forgetting can differ across semantically equivalent multilingual queries [[8]](#ref-8). A successful refusal or failed recall in one language does not establish information inaccessibility. This is bounded evidence about access-path generalization, not a theorem that every unlearning method fails.
+
+As an engineering release gate, distinguish external-memory deletion from changes to model weights. Trace a deletion through source records, summaries, vector and graph indexes, caches, replicas, and restore paths. Test equivalent queries across supported languages and scripts with an authorized recovery audit; an English-only refusal test is insufficient. A rollback must not silently resurrect deleted records. Version tombstones and retention decisions with the artifact and data lineage, and declare which residual copies remain under their retention policy.
+
 ## Quizzes
 
 <details>
@@ -144,3 +150,5 @@ A recovery policy must preserve the original action boundary. If a fetch is deni
 5. <a id="ref-5"></a>Liu, X., et al. (2024). *AgentBench: Evaluating LLMs as Agents.* [arXiv:2308.03688](https://arxiv.org/abs/2308.03688).
 6. <a id="ref-6"></a>Jimenez, C. E., et al. (2024). *SWE-bench: Can Language Models Resolve Real-World GitHub Issues?* [arXiv:2310.06770](https://arxiv.org/abs/2310.06770).
 7. <a id="ref-7"></a>Anthropic. (2026-10-09). Investigating unintended model actions in our evaluations and internal use. [Source](https://www.anthropic.com/research/investigating-unintended-model-actions).
+
+8. <a id="ref-8"></a>Lizzo, T., & Heck, L. (2026). *Behavioral Forgetting Is Not Privacy in Machine Unlearning*. PriLOM workshop poster. [Source](https://arxiv.org/abs/2610.21799).
