@@ -37,7 +37,7 @@ Raw, rendered, tokenized form에 cascade를 적용합니다.
 4. code AST, identifier-normalized, test-fixture similarity
 5. embedding retrieval과 semantic neighbor cluster review
 
-<NgramContaminationVisualizer client:load />
+<NgramContaminationVisualizer client:load locale="ko" />
 
 Overlap score에 보편 cutoff는 없습니다. Language, tokenizer, document length, data type별 known duplicate, paraphrase, legitimate-domain-neighbor pair로 **threshold를 보정(calibrate)** 합니다. Precision/recall을 보고하고 uncertain band를 review로 보냅니다. 13개 matching token이나 0.8 similarity 같은 고정 수치는 일반 경계가 아닙니다.
 

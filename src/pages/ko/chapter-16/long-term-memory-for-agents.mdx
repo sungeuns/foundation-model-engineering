@@ -33,9 +33,9 @@ import MemorySubstrateVisualizer from '../../../components/chapter-16/MemorySubs
 
 ## 2. 메모리는 벡터 저장소 하나로 끝나지 않는다
 
-가장 단순한 에이전트 메모리는 과거 대화를 통째로 저장하고 나중에 retrieval로 꺼내는 방식입니다. 출발점으로는 괜찮지만, 그것만으로는 부족한 경우가 많습니다.
+원본 이력 검색은 중요한 기준선입니다. 구조화된 저장은 과업 개선과 운영 요구로 복잡성을 정당화해야 합니다. 검색만 사용해도 출처·접근 통제·갱신·삭제는 필요합니다.
 
-현재의 에이전트 시스템은 보통 최소 세 층을 구분해야 합니다.
+설계에서는 다음 세 층을 구분해 생각할 수 있습니다.
 
 - **working memory:** 현재 컨텍스트 윈도우
 - **episodic memory:** 과거의 특정 사건, 행동, 결과
@@ -154,6 +154,14 @@ FEB-30은 알려진 사실 변화 궤적에서 문서를 생성하고, 매번 �
 
 ---
 
+## 10월 22일 연구: 원본 이력 기준선 유지
+
+**2026-10-25 기준**, Bao 등의 Raw-RAG 프리프린트는 대화 원본에 대한 밀집 검색·재순위화를 네 메모리 벤치마크에서 평가합니다. 비교한 메모리 시스템 중 일곱 벤치마크/모델 설정의 여섯에서 선두라고 보고하며 전체 문맥 참조 실행은 별도 비교입니다 [[7]](#ref-7). 특정 reader·근거 예산·평가 설정의 결과이지 구조화 메모리가 항상 불필요하다는 증명은 아닙니다.
+
+핵심은 메커니즘입니다. 요약·사실 저장소가 나중 질문에 필요한 관계나 의존 경로를 버릴 수 있습니다. 학습된 writer나 그래프를 추가하기 전에 reader·코퍼스 시간 경계·근거 예산·채점기를 맞춰 원본 검색과 비교하세요. 근거 포괄률·활용률·답 정확도·수집/저장 비용·검색 지연·갱신/삭제 정확성을 따로 측정합니다. 원본 보존도 동의·보존 정책 안에서만 가능하며 모든 것을 영구 보관하라는 뜻은 아닙니다.
+
+검색 기준선이 강해도 접근 통제·시간적 유효성·출처·삭제 계보가 필요합니다. 범위가 정해진 쓰기·읽기 판단은 [16.7절의 판단 계약](/chapter-16/decision-models-and-selective-prediction)과 연결하고 압축 자체보다 후속 효과를 검증하세요.
+
 ## Quizzes
 
 <details>
@@ -193,3 +201,4 @@ FEB-30은 알려진 사실 변화 궤적에서 문서를 생성하고, 매번 �
 5. <a id="ref-5"></a>Fei, T., et al. (2026). *Hy-Memory-30B-A3B: Attributed Reinforcement Learning for Long-Term Memory Writing*. Preprint. [Source](https://arxiv.org/abs/2610.22196).
 
 6. <a id="ref-6"></a>Toma, S.-A., et al. (2026). *Beyond Downstream QA: Rethinking How We Evaluate Agent Memory*. Preprint. [Source](https://arxiv.org/abs/2610.22209).
+7. <a id="ref-7"></a>Bao, Z., et al. (2026-10-22). *Is Complex Agentic Memory Always Needed? Naive RAG Is Stronger Than We Thought.* Preprint. [arXiv:2610.30755v1](https://arxiv.org/abs/2610.30755v1).

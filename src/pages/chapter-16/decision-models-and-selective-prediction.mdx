@@ -1,0 +1,131 @@
+---
+layout: ../../layouts/BookLayout.astro
+title: 16.7 Decision Models and Selective Prediction
+lang: en
+---
+
+import DecisionPolicyExplorer from '../../components/chapter-16/DecisionPolicyExplorer.tsx';
+
+# 16.7 Decision Models and Selective Prediction
+
+A support router needs a department, not a paragraph. A retrieval filter needs a relevance judgment, not an essay about relevance. When the next consumer is software, generating and parsing text can add work without improving the decision. **Decision models** expose a narrower contract: a state, a question, permitted answers, and a distribution over those answers. This connects foundation models to classification, ranking, uncertainty estimation, and decision theory.
+
+**As of 2026-10-25.** “System One” is a provider's product framing, not a standardized architecture or proof of human-like cognition. A typed API describes observable behavior; it does not disclose the hosted model's parameter count, attention mask, training mixture, or internal number of passes. Keep those details **undisclosed** unless a primary technical source supplies them.
+
+## 1. What Changes When the Output Is a Decision?
+
+Let $x$ be the input state, $q$ the question and rubric, and $\mathcal{A}$ the declared answer set. A decision interface returns $p_\theta(a\mid x,q,\mathcal{A})$ for $a\in\mathcal{A}$. The application then chooses an action, including deferral. The probabilities describe the question under its supplied context; they do not establish that the context is complete or true.
+
+| Approach | Output contract | Useful when | Remaining burden |
+|---|---|---|---|
+| Supervised classifier or encoder with a head | Fixed label vocabulary | Stable, well-labeled domain tasks | Data collection, shift monitoring, calibration |
+| Generative model with Structured Outputs | A generated object conforming to a schema | Extraction, explanations, variable content | Semantic verification, decode latency, field uncertainty |
+| Typed decision model | Declared options, predicates, or ordered rubric levels | Routing, triage, passage filtering, bounded judgments | Option coverage, calibration, cost policy, authorization |
+| Rules or a database query | Deterministic result over explicit facts | Exact limits, balances, permissions | Correct data and maintained rules |
+
+A generative model can classify, and a decision model may reuse a generative backbone. The useful distinction is the **served computation and output contract**, not a universal encoder-versus-decoder divide. An argmax label alone loses uncertainty; a distribution lets the application change its policy without pretending the model has become more accurate.
+
+## 2. A Source-bounded Map of the New Models
+
+This is an access and disclosure map **as of 2026-10-25**, not a common-benchmark ranking.
+
+| System | Verified access | Disclosed contract | Boundary to preserve |
+|---|---|---|---|
+| TypeSafe Jev 1.14 | Hosted API; `jev-1.14.0`, released October 14 | State plus Choice, Score, or Noul questions; current stable alias points to 1.14 | Weights and full architecture are undisclosed. Default 64k request and 32k per-question limits are different constraints [[1]](#ref-1) [[2]](#ref-2). |
+| OpenAI Decisions with GPT-6 Luna | Hosted API; generally available October 22 | Predicate, choice, score; text, image, JSON and conversation inputs; up to 400 questions/request | A Decisions result is not a Responses tool call. Provider speed claims require workload-specific verification [[3]](#ref-3) [[4]](#ref-4). |
+| Liquid AI d1-3B / d1-omni-600M | Released/open-weight; October 7 | Single-pass decision outputs; d1-3B uses a decoder-derived backbone, omni a bidirectional encoder | Model-specific LFM license. Omni's card reports 587M parameters, image **or** audio paths, 30-second speech clips, and 896 text tokens with images; no omni inference-latency measurement is reported [[5]](#ref-5) [[6]](#ref-6). |
+| inclusionAI LemonDecider 4B | Released/open-weight; Apache 2.0 card, model ID `lemondecider-4b-20261015-v2` | Qwen3.5-4B-derived hybrid backbone with a 255-way readout; valid-option probabilities | The card explicitly calls the temperature-1.0 readout **uncalibrated**. The positional window is not evidence of reliable decision quality throughout it [[7]](#ref-7). |
+
+Jev's `confidence` is a statistic derived from the answer distribution, with question-type-specific formulas; it is **not automatically the probability that the selected answer is correct** [[2]](#ref-2). Likewise, an ordinal Score's expected level can fall between levels without being an interval-scale measurement. A severity rubric of “minor, major, critical” needs explicit policy; arithmetic on its indices does not supply one.
+
+Do not paste a chat-completions example into a decision checkpoint because a Hub widget suggests it. Load the model's actual runtime and question schema. Pin revision, processor, option serialization, pooling, precision, calibration parameters, and rejection/truncation behavior. SDK source availability is not model-weight availability.
+
+## 3. From Probabilities to Actions
+
+Consider a binary condition with estimated probability $p=P(y=1\mid x)$. Let $C_{FP}$ be the cost of a false positive and $C_{FN}$ the cost of a false negative; assume correct actions have zero cost. Acting positive has expected loss $(1-p)C_{FP}$; acting negative has loss $pC_{FN}$. Choose positive when:
+
+$$
+p \geq \frac{C_{FP}}{C_{FP}+C_{FN}}.
+$$
+
+This rule assumes relevant, calibrated probabilities and an adequate cost model. A 0.5 threshold is justified only by symmetric costs under these assumptions. With a review action costing $C_R$, choose among the three expected losses:
+
+$$
+a^*(x)=\arg\min\{(1-p)C_{FP},\;pC_{FN},\;C_R\}.
+$$
+
+A constant $C_R$ assumes review resolves the case correctly. Real review has delay, limited capacity, and residual error: include those costs when they matter. Add an explicit “insufficient evidence/other” option when the answer set is incomplete; merely renormalizing over two wrong options can create artificial certainty. For mutually exclusive alternatives, one Choice distribution is different from several independently asked predicates. Their marginals need not sum to one.
+
+### Explore the Trade-off
+
+The following experiment uses a separate probability floor after a cost-based binary choice. It illustrates selective prediction rather than implementing the full three-action optimum. Move costs and the floor, then introduce label shift. The curve is empirical on a small fixed synthetic set; monotonic risk improvement is not assumed.
+
+<DecisionPolicyExplorer client:load locale="en" />
+
+**Coverage** is the fraction automatically processed. **Selective risk** is the error rate among accepted cases. At zero coverage the conditional error rate is undefined, not zero. A system that defers everything may avoid automatic mistakes while failing its throughput or review-capacity goal.
+
+## 4. What Recent Research Adds
+
+**Option labels can override definitions.** Sun et al.'s October 8 revision changes only the mapping between option names and definitions, evaluating choices at the definition level. Their tests find substantial decision instability despite zero type errors; polarity-bearing names are an important confound [[8]](#ref-8). This is evidence about tested systems and tasks, not a measured failure rate for Jev 1.14. Add name/order permutations, neutral identifiers, contradictory name-definition pairs, and missing-evidence cases to your own suite. Preserve semantics when comparing outputs.
+
+**Calibration and coherence are different.** Li et al.'s September preprint checks related probabilities, including a proposition and its complement, on 160 items from two datasets [[9]](#ref-9). It finds nonzero coherence violations in both the tested Jev and Qwen readouts. A score can look calibrated across a population while logically linked questions disagree within a case. Check complementarity, mutually exclusive partitions, conjunctions, and paraphrases; do not multiply unrelated answers as if conditional independence were established. These are early, bounded studies, not a settled category-wide verdict.
+
+**Open weights expose different mechanisms.** Liquid's release distinguishes decoder-derived d1-3B from encoder-based omni; LemonDecider documents a dedicated readout and its precision policy [[5]](#ref-5) [[7]](#ref-7). These examples undermine an architecture claim inferred only from the phrase “decision model.” They also make local protocol and calibration audits possible. Public benchmark editions, private partitions, and provider self-evaluations still need separate attribution; a Decision Index value cannot be spliced into the generative AA index in Section 17.6.
+
+## 5. Evaluation and Release Contract
+
+Build an evaluation registry before selecting thresholds. Keep entities, conversations, near duplicates, synthetic siblings, prompts, and rubric variants out of training and calibration data. Separate a fit/calibration set, a threshold-selection set, and an untouched release set, grouping related examples before splitting. Record label provenance and adjudicate ambiguous cases.
+
+| Question | Required evidence |
+|---|---|
+| Does it answer the intended question? | Per-class precision/recall, macro metrics, language/domain slices, option permutations, missing evidence, prompt injection, human-adjudicated errors |
+| Can probabilities drive a policy? | Log loss, Brier score, reliability diagrams with bin counts, calibration by slice, risk–coverage curves, cost at the declared operating point |
+| Do related answers fit together? | Complement and partition checks, paraphrase consistency, repeat-call variation; no assumed independence |
+| Does it improve the complete pipeline? | Cost per successful workflow, p50/p95/p99 end-to-end latency, timeouts, review yield/capacity, downstream quality and unauthorized-effect rate |
+
+For multiclass outcomes, the Brier score is $N^{-1}\sum_{i=1}^{N}\sum_{a\in\mathcal{A}}(p_{ia}-\mathbf{1}[y_i=a])^2$, where $N$ is the number of labeled cases, $p_{ia}$ the predicted probability, and $y_i$ the true label. State the convention when a binary implementation uses only one class and therefore a different scale. Calibration error depends on binning and sample size; accompany it with counts and uncertainty. Temperature fitting does not guarantee calibration after domain or prevalence shift.
+
+Evaluate a simple classifier, rules, and a small structured-output generative baseline under the same inputs and budgets. Measure state encoding, question fan-out, network, queuing, retry, and review overhead. Zero generated output tokens do not mean zero inference cost or constant latency.
+
+Ship the checkpoint/API revision, state schema, questions/options, calibration transform, thresholds, costs, and executor policy as an immutable **artifact bundle**. Log reconstructable case identifiers and versions without retaining unnecessary private input. Canary with paired uncertainty and critical-slice gates; define an owner, observation window, abort thresholds, a known-good route, and a rollback rehearsal. Revalidate when an alias, rubric, base rate, or upstream extractor changes.
+
+A decision is evidence for an action. **Authorization remains an independent execution-time check**: “the user seems to want a refund” does not authorize issuing money. Connect this boundary to Section 16.6's recovery controls, and use generation when the task actually needs an explanation or new content.
+
+## Quizzes
+
+<details>
+<summary>Quiz 1: Why does a type-correct choice not establish a correct decision?</summary>
+*The answer can belong to the permitted set while following a misleading option name, missing evidence, or an incorrect rubric. Type validity, semantic correctness, calibration, and authorization require separate checks.*
+</details>
+
+<details>
+<summary>Quiz 2: With false-positive cost 9 and false-negative cost 1, when should a calibrated binary predictor choose positive?</summary>
+*At p ≥ 0.9 under the stated zero-cost-for-correct-actions model. Review may still be preferable if its expected loss is smaller; cost asymmetry does not improve the underlying predictions.*
+</details>
+
+<details>
+<summary>Quiz 3: Why is zero coverage not a zero-risk deployment?</summary>
+*No accepted cases means selective error is undefined. Review cost, delay, capacity, and residual human errors still determine whether the overall workflow succeeds.*
+</details>
+
+<details>
+<summary>Quiz 4: Why does a calibrated predicate not guarantee coherent answers to several related questions?</summary>
+*Calibration is an aggregate relation to outcomes. Complementarity and partition consistency constrain probabilities within the same case; separate questions can violate those identities.*
+</details>
+
+<details>
+<summary>Quiz 5: What must change in an evaluation when Jev's stable alias changes?</summary>
+*Resolve and record the revision, then repeat semantic, calibration, cost, latency, and critical-slice checks with the same pinned questions and executor. Neither an earlier paper nor an unchanged API schema establishes revision equivalence.*
+</details>
+
+## References
+
+1. <a id="ref-1"></a>TypeSafe. *Models*. Verified 2026-10-25. [Official documentation](https://docs.typesafe.ai/models).
+2. <a id="ref-2"></a>TypeSafe. *Confidence*. Verified 2026-10-25. [Official documentation](https://docs.typesafe.ai/confidence).
+3. <a id="ref-3"></a>OpenAI. *Decisions*. Verified 2026-10-25. [Official documentation](https://developers.openai.com/api/docs/guides/decisions).
+4. <a id="ref-4"></a>OpenAI. *API changelog: October 22 GA*. Verified 2026-10-25. [Official changelog](https://developers.openai.com/api/docs/changelog).
+5. <a id="ref-5"></a>Liquid AI. (2026-10-07). *Open d1: Edge decision models for text, vision, and audio*. [Release](https://www.liquid.ai/blog/d1-open).
+6. <a id="ref-6"></a>Liquid AI. *d1-omni-600M model card*, revision `02b55d7076f15129e59ab3f94783f32c4b088674`, verified 2026-10-25. [Card](https://huggingface.co/LiquidAI/d1-omni-600M).
+7. <a id="ref-7"></a>inclusionAI. *LemonDecider model card*, revision `9a2f41d590a4ea0ed88af1938865695f9d6d8330`, verified 2026-10-25. [Card](https://huggingface.co/inclusionAI/LemonDecider).
+8. <a id="ref-8"></a>Sun, Y., et al. (2026). *Type-Safe Is Not Error-Free: Typed Decision Models Follow the Option Name, Not the Definition Bound to It*. October 8 revision; preprint. [arXiv:2609.26758v3](https://arxiv.org/abs/2609.26758v3).
+9. <a id="ref-9"></a>Li, K., et al. (2026). *Beyond Calibration: Do a Typed-Decision Model's Probabilities Obey the Probability Axioms?* September 27 preprint. [arXiv:2609.33209v1](https://arxiv.org/abs/2609.33209v1).

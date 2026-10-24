@@ -201,10 +201,10 @@ Monitor token-normalized loss and domain/retention slices, nonfinite/overflow, g
 
 ## 5. Interactive Component: Quantization Error Visualizer
 
-The visualization illustrates a toy clipping/scaling trade-off. Its error curve is not a model-quality benchmark or evidence that PTQ always fails at low bit-width.
+The interaction computes rounding and clipping error on eight authored scalar values. PTQ and QAT share the forward quantizer; QAT mode illustrates a clipped straight-through gradient, not a trained distribution or a model-quality benchmark.
 
 
-<QuantizationErrorVisualizer client:load />
+<QuantizationErrorVisualizer client:load locale="en" />
 
 
 

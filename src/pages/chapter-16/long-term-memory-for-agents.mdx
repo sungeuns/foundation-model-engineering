@@ -33,9 +33,9 @@ This may sound mundane, but it is one of the clearest differences between toy me
 
 ## 2. Memory Is More Than a Vector Store
 
-The simplest version of agent memory is to dump previous conversations into a retrieval system and search them later. That can help, but it is not enough.
+Raw-history retrieval is an important baseline. More structured storage should earn its complexity through measured task gains and operational requirements; retrieval alone still needs provenance, access control, updates, and deletion.
 
-Current agent systems usually need at least three layers:
+A useful design vocabulary distinguishes three layers:
 
 - **working memory:** the active context window
 - **episodic memory:** specific past events, actions, and outcomes
@@ -154,6 +154,14 @@ In the next section, we move from memory to reliability: how do we recover when 
 
 ---
 
+## October 22 Research: Preserve a Raw-history Baseline
+
+**As of 2026-10-25**, Bao et al.'s Raw-RAG preprint evaluates dense retrieval and reranking over raw conversation history across four memory benchmarks. It reports first place among compared memory systems in six of seven benchmark/model settings; full-context references are a separate comparison [[7]](#ref-7). The result is bounded by its readers, evidence budgets, and evaluation setup, not proof that structured memory is always unnecessary.
+
+The mechanism matters: summaries and fact stores can discard relations or dependency paths needed by a later question. Before adding a learned writer or graph, compare with raw-history retrieval under the same reader, corpus cutoff, evidence budget, and grader. Measure evidence coverage, utilization, answer accuracy, ingestion/storage cost, retrieval latency, and update/delete correctness separately. Preserving raw evidence is conditional on consent and retention policy; it is not permission to keep everything forever.
+
+A retrieval baseline can be strong while still needing access control, temporal validity, provenance, and deletion lineage. Route bounded write/read judgments through [Section 16.7's decision contract](/chapter-16/decision-models-and-selective-prediction), then validate their downstream effect rather than rewarding compression alone.
+
 ## Quizzes
 
 <details>
@@ -193,3 +201,4 @@ In the next section, we move from memory to reliability: how do we recover when 
 5. <a id="ref-5"></a>Fei, T., et al. (2026). *Hy-Memory-30B-A3B: Attributed Reinforcement Learning for Long-Term Memory Writing*. Preprint. [Source](https://arxiv.org/abs/2610.22196).
 
 6. <a id="ref-6"></a>Toma, S.-A., et al. (2026). *Beyond Downstream QA: Rethinking How We Evaluate Agent Memory*. Preprint. [Source](https://arxiv.org/abs/2610.22209).
+7. <a id="ref-7"></a>Bao, Z., et al. (2026-10-22). *Is Complex Agentic Memory Always Needed? Naive RAG Is Stronger Than We Thought.* Preprint. [arXiv:2610.30755v1](https://arxiv.org/abs/2610.30755v1).

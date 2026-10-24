@@ -330,4 +330,4 @@
   border: 1px solid #313244;
   border-radius: 8px;
   padding: 0.5rem;
-}
+}@media(max-width:600px){.attention-visualizer-container .attention-controls{flex-wrap:wrap}.attention-visualizer-container .frames-container{flex-wrap:wrap}.attention-visualizer-container{box-sizing:border-box;min-width:0}}

@@ -10,147 +10,176 @@ import CommercialModelBenchmarkExplorer from '../../components/chapter-17/Commer
 
 A model release changes more than a leaderboard. It can change access, licensing, prompt encoding, pricing, output budgets, or the revision behind a stable API alias. Evaluate those contracts before treating a familiar name as a drop-in replacement.
 
-**As of 2026-10-18.** This is a dated historical snapshot, not a live leaderboard. The sources below were rechecked for this pass and **must be reverified** before a later publication or procurement. The October 13 snapshot has been superseded here; the selected October milestones include broader access, weight releases, and checkpoint updates rather than pretending every date is an original announcement.
+**As of 2026-10-25.** This is a dated historical snapshot, not a live leaderboard. Release sources and AA profiles were rechecked for this pass and **must be reverified** before a later publication or procurement. Dates are selected milestones: announcement, broader access, weight publication, or an explicitly identified artifact revision. They are not all initial launch dates.
 
-## 1. Read the Evaluated System, Not Only the Model Name
+## 1. Read the Evaluated System
 
-The index values below use Artificial Analysis Intelligence Index **v4.3.2**, a defined set of ten evaluations [[1]](#ref-1). The reported effort/fallback profile is part of each result. Models with different effort settings or provider routing are **not equal-compute or controlled weights-only comparisons**. Use the table to identify systems for a private evaluation at matched task, tool, latency, and budget constraints.
+The index uses Artificial Analysis Intelligence Index **v4.3.2**, comprising ten evaluations [[1]](#ref-1). Effort, fallback, scaffold, tools, sampling, context, grader, and revision are part of a result. Different profiles are not equal-compute or controlled weights-only comparisons. An index is not a percentage, and a declared context limit is not long-context reasoning accuracy.
 
-Where the source does not state a numeric effort, the table says so. Do not infer one. The hosted Step 5 profile predates the new public weights; the September DeepSeek profile is not a verified evaluation of the October 17 revision. Unknown revision equivalence is a reason to run a new test, not to copy a score.
+The table is a selection of 26 profiles, not a complete release catalog. Where AA does not identify effort, it remains not reported. New checkpoints do not inherit their base model's score, and missing prices do not mean free. Candidate selection should use the quality/cost/latency/context/openness/safety Pareto surface and a private evaluation under matched operational constraints.
 
 ## 2. Reverified Release and Evaluation Record
 
-| Model | Selected release milestone | Access as of 2026-10-18 | AA reasoning configuration | Index | $/AA task | Sources |
+| Model | Selected release milestone | Access as of 2026-10-25 | AA reasoning configuration | Index | $/AA task | Sources |
 |---|---|---|---|---:|---:|---|
 | GPT-6.1 Sol | 2026-09-29 | released/API-only | max | 52 | 0.72 | [[2]](#ref-2) [[3]](#ref-3) |
 | GPT-6 Sol | 2026-09-22 | released/API-only | max | 48 | 1.04 | [[4]](#ref-4) [[5]](#ref-5) |
 | GPT-6 Luna | 2026-09-22 | released/API-only | max | 38 | 0.07 | [[6]](#ref-6) [[7]](#ref-7) |
 | GPT-6 Astra | 2026-09-03 | released/API-only | max | 53 | 3.26 | [[8]](#ref-8) [[9]](#ref-9) |
 | Claude Opus 5.5 | 2026-09-22 | released/API-only | max with fallback | 58 | 5.98 | [[10]](#ref-10) [[11]](#ref-11) |
-| Claude Sonnet 5.5 | 2026-09-28 | released/API-only | max with fallback | 56 | 5.46 | [[12]](#ref-12) [[13]](#ref-13) [[14]](#ref-14) |
+| Claude Sonnet 5.5 | 2026-09-28 | released/API-only | max with fallback | 56 | 5.46 | [[12]](#ref-12) [[14]](#ref-14) |
 | Claude Haiku 5.5 | 2026-10-07 | released/API-only | max | 43 | 0.21 | [[13]](#ref-13) [[15]](#ref-15) |
-| Gemini 4 Argon | 2026-10-13 | released/API-only | high | 53 | 1.99 | [[16]](#ref-16) [[17]](#ref-17) [[18]](#ref-18) [[19]](#ref-19) |
-| DeepSeek V4.1 Flash (September profile) | 2026-09-10 | released/open-weight | max | 39 | 0.27 | [[20]](#ref-20) [[21]](#ref-21) |
+| Gemini 4 Argon | 2026-10-13 | released/API-only | high | 53 | 1.99 | [[16]](#ref-16) [[17]](#ref-17) [[19]](#ref-19) |
+| DeepSeek V4.1 Flash (September profile) | 2026-09-10 | released/open-weight | max | 39 | 0.48 | [[20]](#ref-20) [[21]](#ref-21) |
 | GLM-5.3 | 2026-08-14 | released/open-weight | max | 45 | 2.01 | [[22]](#ref-22) [[23]](#ref-23) |
 | Mistral Large 4 | 2026-10-06 | preview/API-only | preview configuration | 38 | 1.13 | [[24]](#ref-24) [[25]](#ref-25) |
-| Beam 1.0 | 2026-10-16 | released/open-weight | reasoning; effort not reported | 30 | 0.57 | [[26]](#ref-26) [[27]](#ref-27) [[28]](#ref-28) |
-| Muse Wonder | 2026-10-12 | released/API-only | max | 52 | 4.52 | [[29]](#ref-29) [[30]](#ref-30) |
+| Beam 1.0 | 2026-10-16 | released/open-weight | reasoning; effort not reported | 30 | 0.23 | [[26]](#ref-26) [[27]](#ref-27) [[28]](#ref-28) |
+| Muse Wonder | 2026-10-12 | released/API-only | max | 52 | 4.54 | [[29]](#ref-29) [[30]](#ref-30) |
 | Muse Wonder Full | 2026-10-12 | released/subscription-only | max | 56 | not reported | [[29]](#ref-29) [[31]](#ref-31) |
 | Muse Spark Open | 2026-10-15 | released/open-weight; gated download | xhigh | 39 | 0.84 | [[32]](#ref-32) [[33]](#ref-33) [[34]](#ref-34) |
 | Nemotron 3.5 Super VL | 2026-10-15 | released/open-weight | reasoning; effort not reported | 26 | 0.19 | [[35]](#ref-35) [[36]](#ref-36) |
 | Nemotron 3.5 Bolt 74B-A9B 24GB | 2026-10-15 | released/open-weight | reasoning; effort not reported | 21 | not reported | [[37]](#ref-37) [[38]](#ref-38) |
 | Step 5 Preview | 2026-10-15 | released/open-weight | reasoning; effort not reported | 44 | 1.03 | [[39]](#ref-39) [[40]](#ref-40) |
-| DeepSeek V4.1 Flash 1017 | 2026-10-17 | released/open-weight + API update | not reported | not reported | not reported | [[41]](#ref-41) [[42]](#ref-42) |
+| DeepSeek V4.1 Flash 1017 | 2026-10-17 | released/open-weight + API update | max | 45 | 0.26 | [[41]](#ref-41) [[42]](#ref-42) [[43]](#ref-43) |
+| MiniMax M3.1 Flash | 2026-10-23 | released/open-weight + API | reasoning; effort not reported | 43 | 0.22 | [[44]](#ref-44) [[45]](#ref-45) [[46]](#ref-46) [[47]](#ref-47) |
+| Kimi K3.1 Pro | 2026-10-24 | released/API-only; weights planned | reasoning; effort not reported | 55 | 2.11 | [[48]](#ref-48) [[49]](#ref-49) |
+| Kimi K3.1 Pro Highspeed | 2026-10-24 | released/API-only | not reported | not reported | not reported | [[48]](#ref-48) |
+| Ling 3.1 Flash | 2026-10-20 | released/open-weight | reasoning; effort not reported | 41 | 1.01 | [[50]](#ref-50) [[51]](#ref-51) [[52]](#ref-52) |
+| Ling 3.0 Flash Sante | 2026-10-22 | released/open-weight | reasoning; effort not reported | not reported | not reported | [[53]](#ref-53) [[54]](#ref-54) |
+| Smaug Nemotron 3.5 NVFP4 | 2026-10-22 | released/open-weight | not reported | not reported | not reported | [[55]](#ref-55) [[56]](#ref-56) [[57]](#ref-57) |
+| Nemotron 3.5 Bolt E4B 4GB | 2026-10-23 | released/open-weight | not reported | not reported | not reported | [[58]](#ref-58) [[59]](#ref-59) [[60]](#ref-60) |
 
-An index is not a percentage. `not reported` is not zero and does not mean free. AA task costs are observed costs for its benchmark workload, including its token mix and generation behavior; they are not a matched-compute experiment or a price guarantee for another provider. The subscription-only Wonder Full profile has no reported public API task cost. The Bolt card's memory target likewise supplies no hosted price.
+AA task costs are observed costs for its benchmark token mix, cache use, and generation behavior, not a price guarantee or a matched-compute experiment. Wonder Full has no reported public API task cost. The September DeepSeek profile, Beam, and Wonder now show rechecked task costs of \$0.48, \$0.23, and \$4.54 respectively [[21]](#ref-21) [[28]](#ref-28) [[30]](#ref-30).
 
-## 3. What Changed Since the Previous Pass
+## 3. What the October 19–25 Releases Change
 
-### Public weights are a separate milestone
+### API availability and weights are different events
 
-Beam moved from the October 5 announcement to released weights on October 16 [[26]](#ref-26). Its card describes BF16, FP8, and NVFP4 artifacts, a modified Harmony chat format, and a still-pending full technical report [[27]](#ref-27). Do not treat an NVFP4 file's packed tensor count as a different model architecture.
+MiniMax M3.1 Flash launched through hosted products on October 19; public weight files are now present in its official repository, with the October 23 revision recorded separately. The card describes all-layer sparse attention, quantization-aware training and a DSpark draft head, under the MiniMax Community License [[44]](#ref-44) [[45]](#ref-45). The card reports approximately 428B total and 23B active parameters: a Hub's packed tensor count is not a substitute for architectural parameter count. Its standard launch rates are \$0.15 input/\$0.60 output per million tokens; cache hits are a separate rate. Check the serving recipe rather than treating the draft head as a universal speed multiplier.
 
-Muse Spark Open is a released, gated checkpoint under the Muse Model License. The card distinguishes its additional safety post-training from the hosted Spark lineage [[33]](#ref-33). “Open-weight” does not imply an Apache license, unrestricted download, or complete data disclosure. Step 5 Preview now has public BF16 and lower-precision artifacts under its own license; its **Preview** name does not mean the weights are still only promised [[39]](#ref-39). Review the actual license and exact artifact revision before deployment.
+Kimi K3.1 Pro and Highspeed are usable through hosted channels. The October 24 technical post promises full Pro weights **by November 4**; no separate Highspeed weight artifact is verified, so neither is labeled released/open-weight here [[48]](#ref-48). “3T-class” is the provider's description; exact total/active counts and the full training mixture are undisclosed in the post. A hosted score does not resolve those gaps. Highspeed's claimed 2–3× speed is not transferred into a cross-provider latency plot. Its separately unverified context limit, price and index remain not reported.
 
-### Hosted models and broader access are different again
+Mistral Large 4 still has a preview/API contract and later-October weight plan [[24]](#ref-24). A promised date becoming close is not evidence that weights have arrived. Conversely, Step 5 **Preview** has public weights: the name does not determine release state [[39]](#ref-39).
 
-Muse Wonder is available through Meta's API and Muse Code; Wonder Full is available through Muse Code subscriptions [[29]](#ref-29). Their announcement does not disclose parameter counts or a full training recipe. Do not transfer the API model's token price to the subscription-only variant.
+The rechecked Mistral changelog still labels Large 4 Public Preview and says open weights are coming soon [[61]](#ref-61).
 
-Gemini 4 Argon's broader API access began October 13. The current model contract specifies a unified input/output window and separate synchronous versus long-decode output limits [[17]](#ref-17). Standard paid rates are \$2 input/\$10 output per million tokens through **2026-11-30**, then \$4/\$20 from **2026-12-01** [[18]](#ref-18). Model the expiry explicitly; neither a promotional rate nor the largest output allowance is a permanent universal contract.
+### Pin the revision behind the familiar name
 
-### A stable alias can change the model
+DeepSeek V4.1 Flash 1017 now has its own AA max-effort profile: index 45 and \$0.26 observed task cost [[43]](#ref-43). These are independently recorded for the named revision, not borrowed from September. Its mutable API alias and protocol-aware encoding still require migration checks [[42]](#ref-42).
 
-The October 17 DeepSeek changelog states that `deepseek-flash` now points to V4.1 Flash 1017 without an API-call or price change [[42]](#ref-42). Its model card reports gains with named harnesses and supplies protocol-aware encoding rather than a Jinja chat template [[41]](#ref-41). Those are provider results, not new AA measurements. Pin checkpoint/encoder revisions, preserve tool and image encoding, and compare the complete system before canarying the updated alias.
+Ling 3.1 Flash's public MIT card specifies a hybrid KDA/gated-MLA stack and a 560B-total/25B-active MoE [[50]](#ref-50). The table's October 20 date is the checked artifact revision, not a claim about its first hosted release. AA also exposes a distinct **1019 hosted profile**; its relationship to this public checkpoint is unverified, so this row retains the explicitly matched original profile's 41 and \$1.01 [[51]](#ref-51). A higher score under a similar name is insufficient revision evidence.
 
-### Smaller storage is not a deployment guarantee
+### Small memory targets describe a particular artifact
 
-Nemotron 3.5 Super VL and Bolt disclose hybrid state-space/attention/MoE vision-language designs. Bolt's IQ2 QAT and 24GB packed-model target require compatible kernels and separate state/workspace accounting [[37]](#ref-37). The model name cannot establish the memory available for long context or concurrent requests. Section 13.5 separates nominal bit width from measured system capacity.
+NVIDIA's October 23 Bolt E4B 4GB release derives from Gemma-4-E4B, unlike the hybrid Mamba/MoE Bolt 74B. Its card specifies 8B total/4B effective parameters, OpenMDW-1.1, and separate up-to-64K input and output limits [[58]](#ref-58) [[59]](#ref-59). Do not sum those into a verified unified window or infer its architecture from the family name. The “4GB” target does not reserve memory for arbitrary context, concurrency, or a voice pipeline.
 
-Mistral Large 4 remains a public API preview with a later-October weight plan in its launch post [[24]](#ref-24). Claude pricing remains configuration-sensitive: the overview qualifies Haiku rates with “from” [[43]](#ref-43). Preserve such qualifiers rather than filling gaps with minimum prices or anticipated releases.
+Smaug Nemotron 3.5 NVFP4 is an OpenMDW-1.1 fine-tune with public weight files. Abacus describes adaptation that accounts for rounding into the served format [[55]](#ref-55) [[56]](#ref-56). This motivates testing the **merged quantized artifact**, not just the floating-point adapter. Provider-reported gains and base-model results are not a revision-specific AA score. Section 13.5 covers state and workspace accounting beyond nominal weight bits.
 
-## 4. Explore Profiles Without Manufacturing Missing Data
+Ling 3.0 Flash Sante is an MIT healthcare research checkpoint; its card reports 124B total/5.1B active and domain evaluations [[53]](#ref-53). Those results are not clinical validation or evidence of a universal general-purpose gain. Use domain-specific review and an appropriate task baseline rather than manufacture an AA value from medical benchmarks.
 
-The chart plots only rows with values for the selected metric and axis. Its selection list is alphabetical; it is not a universal quality ranking. For token prices, the illustrative proxy is $(3p_{in}+p_{out})/4$, where $p_{in}$ and $p_{out}$ are uncached standard input/output prices per million tokens. It is a hypothetical 3:1 mix, excluding cache writes/hits, tools, image/audio charges, long-context tiers, and reasoning length. Only documented standard rates are included.
+## 4. Explore Profiles Without Filling Missing Values
 
-The context metric shows a declared limit, not measured long-context reasoning quality. Source-specific input/output semantics still apply. No speed curve is fabricated from incomparable providers or missing measurements.
+Only rows with both plotted values appear for a metric/axis/filter combination; the alphabetical selector is not a universal ranking. Token-price points use the illustrative proxy $(3p_{in}+p_{out})/4$, with uncached standard input/output rates per million tokens. It excludes cache writes/hits, tools, modalities, long-context tiers and output-length differences. Missing values remain not reported, including empty company/axis combinations.
+
+The context metric preserves provider-specific semantics. For Bolt E4B it is the declared input limit; Gemini 4 Argon's contract uses a unified window. Promotional prices also have expiry: Google's documented introductory Argon rates run through November 30 [[17]](#ref-17) [[18]](#ref-18). No incomparable speed measurements are combined into a fabricated curve.
 
 <CommercialModelBenchmarkExplorer client:load locale="en" />
 
-## 5. A Production Evaluation Gate
+## 5. Evaluate the Pipeline and Its Decision Boundaries
 
-Evaluate candidate profiles on the same private tasks with pinned scaffold, tools, effort, context/output budget, retries, and grader. Add supported-language, format, authorization, safety, retention, latency-tail, cost-per-success, and error-rate slices. Test local quantized checkpoints independently of hosted results. Use paired uncertainty or a justified sample size, and block release on critical-slice failure even if the average improves.
+Jev, OpenAI Decisions, open d1 and LemonDecider expose bounded decisions rather than free-form answer generation. Their option probabilities, calibration, and selective risk need their own evaluation; a Decision Index result is not an AA generative index point. [Section 16.7](/chapter-16/decision-models-and-selective-prediction) explains their disclosed mechanisms, abstention policies, and release gates.
 
-Keep the model, tokenizer or encoding toolkit, template, runtime, tool schema, generation configuration, and policy hashes as one artifact bundle. Canary a replacement under bounded permissions, keep a known-good route, and rehearse rollback—including cached state and pending tool effects. A new release is an evaluation trigger, not a deployment instruction.
+For generation or decisions, evaluate the same private tasks with pinned scaffold, tool permissions, effort, input/output budget, retries, and grader. Include language/domain, base-capability retention, format/tool, safety, latency-tail, review capacity, cost per successful workflow, and error-rate slices. Test local quantizations independently of hosted profiles. Use paired uncertainty or justified sample sizes; critical-slice failure blocks release even if the average improves.
+
+Keep weights/API revision, tokenizer/encoding, template, calibration and decision policy, runtime, tool schema, generation configuration, and safety policy hashes in one artifact bundle. Canary under bounded permissions, retain a known-good route, and rehearse rollback with cached state and pending effects. A new release is a reason to evaluate the complete system.
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: Why is the October 17 DeepSeek update separate from the September AA row?</summary>
-*The mutable alias now points to a new revision, while the verified AA record does not establish revision equivalence. Provider benchmark gains cannot be substituted for an independent index score.*
+<summary>Quiz 1: Why is Kimi K3.1 Pro not marked released/open-weight yet?</summary>
+*The provider promises full weights by November 4. Hosted access and a benchmark record do not establish public weight availability as of October 25.*
 </details>
 
 <details>
-<summary>Quiz 2: Why is Step 5 Preview now described as released/open-weight?</summary>
-*Usable weight artifacts are public. The product name does not determine release state; the actual artifacts and license do.*
+<summary>Quiz 2: Why can DeepSeek 1017 now have an index while Smaug remains unscored?</summary>
+*A separate revision-specific AA profile now exists for 1017. Smaug is a different fine-tune and cannot inherit its base model’s index.*
 </details>
 
 <details>
-<summary>Quiz 3: Why does Wonder Full's missing task cost not mean it is the cheapest profile?</summary>
-*Its subscription access does not provide a public API task-price observation. Missing cost cannot be substituted with zero or the API sibling's rate.*
+<summary>Quiz 3: Why is Bolt E4B not assigned Bolt 74B’s architecture?</summary>
+*The E4B card identifies a Gemma-derived design, while the 74B card describes a different hybrid architecture. Family branding is not an architecture specification.*
 </details>
 
 <details>
-<summary>Quiz 4: Why must Gemini's introductory rate have an expiry in a cost model?</summary>
-*The documented standard prices change after November 30. A workload crossing that boundary can have a different cost without any model-name change.*
+<summary>Quiz 4: Why not copy Ling 1019’s higher score to the public Ling checkpoint?</summary>
+*The hosted profile and public weight revision have not been established as equivalent. Similar naming is insufficient provenance.*
 </details>
 
 <details>
-<summary>Quiz 5: Why do public weights and a hosted benchmark not establish local production readiness?</summary>
-*The local revision, quantization, encoding, kernels, state layout, and scaffold may differ. Validate the complete artifact bundle under the intended workload and release gates.*
+<summary>Quiz 5: Why are decision models outside this index chart?</summary>
+*Their typed outputs, calibration and selective risk require compatible task-specific evaluation. Different benchmark indexes cannot be combined as if they measured the same quantity.*
 </details>
 
 ## References
 
-1. <a id="ref-1"></a>Artificial Analysis. (2026). *Intelligence Index v4.3.2 methodology*. Rechecked 2026-10-18. [Source](https://artificialanalysis.ai/methodology/intelligence-benchmarking).
-2. <a id="ref-2"></a>OpenAI. (2026). *GPT-6.1 Sol: primary release or model documentation*. Rechecked 2026-10-18. [Source](https://developers.openai.com/api/docs/models/gpt-6.1-sol).
-3. <a id="ref-3"></a>Artificial Analysis. (2026). *GPT-6.1 Sol: evaluated system profile*. Rechecked 2026-10-18. [Source](https://artificialanalysis.ai/models/gpt-6-1-sol).
-4. <a id="ref-4"></a>OpenAI. (2026). *GPT-6 Sol: primary release or model documentation*. Rechecked 2026-10-18. [Source](https://developers.openai.com/api/docs/models/gpt-6-sol).
-5. <a id="ref-5"></a>Artificial Analysis. (2026). *GPT-6 Sol: evaluated system profile*. Rechecked 2026-10-18. [Source](https://artificialanalysis.ai/models/gpt-6-sol).
-6. <a id="ref-6"></a>OpenAI. (2026). *GPT-6 Luna: primary release or model documentation*. Rechecked 2026-10-18. [Source](https://developers.openai.com/api/docs/models/gpt-6-luna).
-7. <a id="ref-7"></a>Artificial Analysis. (2026). *GPT-6 Luna: evaluated system profile*. Rechecked 2026-10-18. [Source](https://artificialanalysis.ai/models/gpt-6-luna).
-8. <a id="ref-8"></a>OpenAI. (2026). *GPT-6 Astra: primary release or model documentation*. Rechecked 2026-10-18. [Source](https://developers.openai.com/api/docs/models/gpt-6-astra).
-9. <a id="ref-9"></a>Artificial Analysis. (2026). *GPT-6 Astra: evaluated system profile*. Rechecked 2026-10-18. [Source](https://artificialanalysis.ai/models/gpt-6-astra).
-10. <a id="ref-10"></a>Anthropic. (2026). *Claude Opus 5.5: primary release or model documentation*. Rechecked 2026-10-18. [Source](https://www.anthropic.com/claude-opus-5-5).
-11. <a id="ref-11"></a>Artificial Analysis. (2026). *Claude Opus 5.5: evaluated system profile*. Rechecked 2026-10-18. [Source](https://artificialanalysis.ai/models/claude-opus-5-5).
-12. <a id="ref-12"></a>Anthropic. (2026). *Claude Sonnet 5.5: primary release or model documentation*. Rechecked 2026-10-18. [Source](https://www.anthropic.com/claude-sonnet-5-5).
-13. <a id="ref-13"></a>Anthropic. (2026). *Pricing/update documentation*. Rechecked 2026-10-18. [Source](https://www.anthropic.com/claude-haiku-5-5).
-14. <a id="ref-14"></a>Artificial Analysis. (2026). *Claude Sonnet 5.5: evaluated system profile*. Rechecked 2026-10-18. [Source](https://artificialanalysis.ai/models/claude-sonnet-5-5).
-15. <a id="ref-15"></a>Artificial Analysis. (2026). *Claude Haiku 5.5: evaluated system profile*. Rechecked 2026-10-18. [Source](https://artificialanalysis.ai/models/claude-haiku-5-5).
-16. <a id="ref-16"></a>Google. (2026). *Gemini 4 Argon: primary release or model documentation*. Rechecked 2026-10-18. [Source](https://blog.google/innovation-and-ai/models-and-research/gemini-models/introducing-gemini-4-argon/).
-17. <a id="ref-17"></a>Google. (2026). *Gemini 4 Argon: model/API specification or changelog*. Rechecked 2026-10-18. [Source](https://ai.google.dev/gemini-api/docs/models/gemini-4-argon).
-18. <a id="ref-18"></a>Google. (2026). *Pricing/update documentation*. Rechecked 2026-10-18. [Source](https://ai.google.dev/gemini-api/docs/pricing).
-19. <a id="ref-19"></a>Artificial Analysis. (2026). *Gemini 4 Argon: evaluated system profile*. Rechecked 2026-10-18. [Source](https://artificialanalysis.ai/models/gemini-4-argon).
-20. <a id="ref-20"></a>DeepSeek. (2026). *DeepSeek V4.1 Flash (September profile): primary release or model documentation*. Rechecked 2026-10-18. [Source](https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash).
-21. <a id="ref-21"></a>Artificial Analysis. (2026). *DeepSeek V4.1 Flash (September profile): evaluated system profile*. Rechecked 2026-10-18. [Source](https://artificialanalysis.ai/models/deepseek-v4-1-flash).
-22. <a id="ref-22"></a>Z AI. (2026). *GLM-5.3: primary release or model documentation*. Rechecked 2026-10-18. [Source](https://huggingface.co/zai-org/GLM-5.3).
-23. <a id="ref-23"></a>Artificial Analysis. (2026). *GLM-5.3: evaluated system profile*. Rechecked 2026-10-18. [Source](https://artificialanalysis.ai/models/glm-5-3).
-24. <a id="ref-24"></a>Mistral. (2026). *Mistral Large 4: primary release or model documentation*. Rechecked 2026-10-18. [Source](https://mistral.ai/news/mistral-large-4/).
-25. <a id="ref-25"></a>Artificial Analysis. (2026). *Mistral Large 4: evaluated system profile*. Rechecked 2026-10-18. [Source](https://artificialanalysis.ai/models/mistral-large-4).
-26. <a id="ref-26"></a>Reflection. (2026). *Beam 1.0: primary release or model documentation*. Rechecked 2026-10-18. [Source](https://reflection.ai/blog/beam-is-available).
-27. <a id="ref-27"></a>Reflection. (2026). *Beam 1.0: model/API specification or changelog*. Rechecked 2026-10-18. [Source](https://huggingface.co/reflection/Beam-1.0-501B-A23B).
-28. <a id="ref-28"></a>Artificial Analysis. (2026). *Beam 1.0: evaluated system profile*. Rechecked 2026-10-18. [Source](https://artificialanalysis.ai/models/reflection-beam).
-29. <a id="ref-29"></a>Meta. (2026). *Muse Wonder: primary release or model documentation*. Rechecked 2026-10-18. [Source](https://research.meta.ai/blog/muse-wonder).
-30. <a id="ref-30"></a>Artificial Analysis. (2026). *Muse Wonder: evaluated system profile*. Rechecked 2026-10-18. [Source](https://artificialanalysis.ai/models/muse-wonder).
-31. <a id="ref-31"></a>Artificial Analysis. (2026). *Muse Wonder Full: evaluated system profile*. Rechecked 2026-10-18. [Source](https://artificialanalysis.ai/models/muse-wonder-full).
-32. <a id="ref-32"></a>Meta. (2026). *Muse Spark Open: primary release or model documentation*. Rechecked 2026-10-18. [Source](https://research.meta.ai/blog/muse-spark-open).
-33. <a id="ref-33"></a>Meta. (2026). *Muse Spark Open: model/API specification or changelog*. Rechecked 2026-10-18. [Source](https://huggingface.co/meta-models/Muse-Spark-Open-816B-A42B).
-34. <a id="ref-34"></a>Artificial Analysis. (2026). *Muse Spark Open: evaluated system profile*. Rechecked 2026-10-18. [Source](https://artificialanalysis.ai/models/muse-spark-open).
-35. <a id="ref-35"></a>NVIDIA. (2026). *Nemotron 3.5 Super VL: primary release or model documentation*. Rechecked 2026-10-18. [Source](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-BF16).
-36. <a id="ref-36"></a>Artificial Analysis. (2026). *Nemotron 3.5 Super VL: evaluated system profile*. Rechecked 2026-10-18. [Source](https://artificialanalysis.ai/models/nemotron-3-5-super-vl).
-37. <a id="ref-37"></a>NVIDIA. (2026). *Nemotron 3.5 Bolt 74B-A9B 24GB: primary release or model documentation*. Rechecked 2026-10-18. [Source](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Bolt-74B-A9B-24GB).
-38. <a id="ref-38"></a>Artificial Analysis. (2026). *Nemotron 3.5 Bolt 74B-A9B 24GB: evaluated system profile*. Rechecked 2026-10-18. [Source](https://artificialanalysis.ai/models/nemotron-3-5-bolt-74b-a9b).
-39. <a id="ref-39"></a>StepFun. (2026). *Step 5 Preview: primary release or model documentation*. Rechecked 2026-10-18. [Source](https://huggingface.co/stepfun-ai/Step-5-Preview-BF16).
-40. <a id="ref-40"></a>Artificial Analysis. (2026). *Step 5 Preview: evaluated system profile*. Rechecked 2026-10-18. [Source](https://artificialanalysis.ai/models/step-5).
-41. <a id="ref-41"></a>DeepSeek. (2026). *DeepSeek V4.1 Flash 1017: primary release or model documentation*. Rechecked 2026-10-18. [Source](https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017).
-42. <a id="ref-42"></a>DeepSeek. (2026). *DeepSeek V4.1 Flash 1017: model/API specification or changelog*. Rechecked 2026-10-18. [Source](https://api-docs.deepseek.com/updates).
-43. <a id="ref-43"></a>Primary documentation, as of 2026-10-18. [Source](https://platform.claude.com/docs/en/models/overview).
+1. <a id="ref-1"></a>Artificial Analysis: Intelligence Index v4.3.2 methodology. Rechecked 2026-10-25. [Source](https://artificialanalysis.ai/methodology/intelligence-benchmarking).
+2. <a id="ref-2"></a>GPT-6.1 Sol: primary documentation. Rechecked 2026-10-25. [Source](https://developers.openai.com/api/docs/models/gpt-6.1-sol).
+3. <a id="ref-3"></a>GPT-6.1 Sol: evaluated system profile. Rechecked 2026-10-25. [Source](https://artificialanalysis.ai/models/gpt-6-1-sol).
+4. <a id="ref-4"></a>GPT-6 Sol: primary documentation. Rechecked 2026-10-25. [Source](https://developers.openai.com/api/docs/models/gpt-6-sol).
+5. <a id="ref-5"></a>GPT-6 Sol: evaluated system profile. Rechecked 2026-10-25. [Source](https://artificialanalysis.ai/models/gpt-6-sol).
+6. <a id="ref-6"></a>GPT-6 Luna: primary documentation. Rechecked 2026-10-25. [Source](https://developers.openai.com/api/docs/models/gpt-6-luna).
+7. <a id="ref-7"></a>GPT-6 Luna: evaluated system profile. Rechecked 2026-10-25. [Source](https://artificialanalysis.ai/models/gpt-6-luna).
+8. <a id="ref-8"></a>GPT-6 Astra: primary documentation. Rechecked 2026-10-25. [Source](https://developers.openai.com/api/docs/models/gpt-6-astra).
+9. <a id="ref-9"></a>GPT-6 Astra: evaluated system profile. Rechecked 2026-10-25. [Source](https://artificialanalysis.ai/models/gpt-6-astra).
+10. <a id="ref-10"></a>Claude Opus 5.5: primary documentation. Rechecked 2026-10-25. [Source](https://www.anthropic.com/claude-opus-5-5).
+11. <a id="ref-11"></a>Claude Opus 5.5: evaluated system profile. Rechecked 2026-10-25. [Source](https://artificialanalysis.ai/models/claude-opus-5-5).
+12. <a id="ref-12"></a>Claude Sonnet 5.5: primary documentation. Rechecked 2026-10-25. [Source](https://www.anthropic.com/claude-sonnet-5-5).
+13. <a id="ref-13"></a>Claude Sonnet 5.5: primary documentation. Rechecked 2026-10-25. [Source](https://www.anthropic.com/claude-haiku-5-5).
+14. <a id="ref-14"></a>Claude Sonnet 5.5: evaluated system profile. Rechecked 2026-10-25. [Source](https://artificialanalysis.ai/models/claude-sonnet-5-5).
+15. <a id="ref-15"></a>Claude Haiku 5.5: evaluated system profile. Rechecked 2026-10-25. [Source](https://artificialanalysis.ai/models/claude-haiku-5-5).
+16. <a id="ref-16"></a>Gemini 4 Argon: primary documentation. Rechecked 2026-10-25. [Source](https://blog.google/innovation-and-ai/models-and-research/gemini-models/introducing-gemini-4-argon/).
+17. <a id="ref-17"></a>Gemini 4 Argon: primary documentation. Rechecked 2026-10-25. [Source](https://ai.google.dev/gemini-api/docs/models/gemini-4-argon).
+18. <a id="ref-18"></a>Gemini 4 Argon: primary documentation. Rechecked 2026-10-25. [Source](https://ai.google.dev/gemini-api/docs/pricing).
+19. <a id="ref-19"></a>Gemini 4 Argon: evaluated system profile. Rechecked 2026-10-25. [Source](https://artificialanalysis.ai/models/gemini-4-argon).
+20. <a id="ref-20"></a>DeepSeek V4.1 Flash (September profile): primary documentation. Rechecked 2026-10-25. [Source](https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash).
+21. <a id="ref-21"></a>DeepSeek V4.1 Flash (September profile): evaluated system profile. Rechecked 2026-10-25. [Source](https://artificialanalysis.ai/models/deepseek-v4-1-flash).
+22. <a id="ref-22"></a>GLM-5.3: primary documentation. Rechecked 2026-10-25. [Source](https://huggingface.co/zai-org/GLM-5.3).
+23. <a id="ref-23"></a>GLM-5.3: evaluated system profile. Rechecked 2026-10-25. [Source](https://artificialanalysis.ai/models/glm-5-3).
+24. <a id="ref-24"></a>Mistral Large 4: primary documentation. Rechecked 2026-10-25. [Source](https://mistral.ai/news/mistral-large-4/).
+25. <a id="ref-25"></a>Mistral Large 4: evaluated system profile. Rechecked 2026-10-25. [Source](https://artificialanalysis.ai/models/mistral-large-4).
+26. <a id="ref-26"></a>Beam 1.0: primary documentation. Rechecked 2026-10-25. [Source](https://reflection.ai/blog/beam-is-available).
+27. <a id="ref-27"></a>Beam 1.0: primary documentation. Rechecked 2026-10-25. [Source](https://huggingface.co/reflection/Beam-1.0-501B-A23B).
+28. <a id="ref-28"></a>Beam 1.0: evaluated system profile. Rechecked 2026-10-25. [Source](https://artificialanalysis.ai/models/reflection-beam).
+29. <a id="ref-29"></a>Muse Wonder: primary documentation. Rechecked 2026-10-25. [Source](https://research.meta.ai/blog/muse-wonder).
+30. <a id="ref-30"></a>Muse Wonder: evaluated system profile. Rechecked 2026-10-25. [Source](https://artificialanalysis.ai/models/muse-wonder).
+31. <a id="ref-31"></a>Muse Wonder Full: evaluated system profile. Rechecked 2026-10-25. [Source](https://artificialanalysis.ai/models/muse-wonder-full).
+32. <a id="ref-32"></a>Muse Spark Open: primary documentation. Rechecked 2026-10-25. [Source](https://research.meta.ai/blog/muse-spark-open).
+33. <a id="ref-33"></a>Muse Spark Open: primary documentation. Rechecked 2026-10-25. [Source](https://huggingface.co/meta-models/Muse-Spark-Open-816B-A42B).
+34. <a id="ref-34"></a>Muse Spark Open: evaluated system profile. Rechecked 2026-10-25. [Source](https://artificialanalysis.ai/models/muse-spark-open).
+35. <a id="ref-35"></a>Nemotron 3.5 Super VL: primary documentation. Rechecked 2026-10-25. [Source](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-BF16).
+36. <a id="ref-36"></a>Nemotron 3.5 Super VL: evaluated system profile. Rechecked 2026-10-25. [Source](https://artificialanalysis.ai/models/nemotron-3-5-super-vl).
+37. <a id="ref-37"></a>Nemotron 3.5 Bolt 74B-A9B 24GB: primary documentation. Rechecked 2026-10-25. [Source](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Bolt-74B-A9B-24GB).
+38. <a id="ref-38"></a>Nemotron 3.5 Bolt 74B-A9B 24GB: evaluated system profile. Rechecked 2026-10-25. [Source](https://artificialanalysis.ai/models/nemotron-3-5-bolt-74b-a9b).
+39. <a id="ref-39"></a>Step 5 Preview: primary documentation. Rechecked 2026-10-25. [Source](https://huggingface.co/stepfun-ai/Step-5-Preview-BF16).
+40. <a id="ref-40"></a>Step 5 Preview: evaluated system profile. Rechecked 2026-10-25. [Source](https://artificialanalysis.ai/models/step-5).
+41. <a id="ref-41"></a>DeepSeek V4.1 Flash 1017: primary documentation. Rechecked 2026-10-25. [Source](https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017).
+42. <a id="ref-42"></a>DeepSeek V4.1 Flash 1017: primary documentation. Rechecked 2026-10-25. [Source](https://api-docs.deepseek.com/updates).
+43. <a id="ref-43"></a>DeepSeek V4.1 Flash 1017: evaluated system profile. Rechecked 2026-10-25. [Source](https://artificialanalysis.ai/models/deepseek-v4-1-flash-1017).
+44. <a id="ref-44"></a>MiniMax M3.1 Flash: primary documentation. Rechecked 2026-10-25. [Source](https://huggingface.co/MiniMaxAI/MiniMax-M3.1-Flash).
+45. <a id="ref-45"></a>MiniMax M3.1 Flash: primary documentation. Rechecked 2026-10-25. [Source](https://www.minimax.io/blog/minimax-m31f).
+46. <a id="ref-46"></a>MiniMax M3.1 Flash: evaluated system profile. Rechecked 2026-10-25. [Source](https://artificialanalysis.ai/models/minimax-m3-1-flash).
+47. <a id="ref-47"></a>MiniMax M3.1 Flash: public repository file metadata. Rechecked 2026-10-25. [Source](https://huggingface.co/api/models/MiniMaxAI/MiniMax-M3.1-Flash).
+48. <a id="ref-48"></a>Kimi K3.1 Pro: primary documentation. Rechecked 2026-10-25. [Source](https://www.kimi.ai/blog/kimi-k3-1-pro).
+49. <a id="ref-49"></a>Kimi K3.1 Pro: evaluated system profile. Rechecked 2026-10-25. [Source](https://artificialanalysis.ai/models/kimi-k3-1-pro).
+50. <a id="ref-50"></a>Ling 3.1 Flash: primary documentation. Rechecked 2026-10-25. [Source](https://huggingface.co/inclusionAI/Ling-3.1-flash).
+51. <a id="ref-51"></a>Ling 3.1 Flash: evaluated system profile. Rechecked 2026-10-25. [Source](https://artificialanalysis.ai/models/ling-3-1-flash).
+52. <a id="ref-52"></a>Ling 3.1 Flash: public repository file metadata. Rechecked 2026-10-25. [Source](https://huggingface.co/api/models/inclusionAI/Ling-3.1-flash).
+53. <a id="ref-53"></a>Ling 3.0 Flash Sante: primary documentation. Rechecked 2026-10-25. [Source](https://huggingface.co/inclusionAI/Ling-3.0-flash-Sante).
+54. <a id="ref-54"></a>Ling 3.0 Flash Sante: public repository file metadata. Rechecked 2026-10-25. [Source](https://huggingface.co/api/models/inclusionAI/Ling-3.0-flash-Sante).
+55. <a id="ref-55"></a>Smaug Nemotron 3.5 NVFP4: primary documentation. Rechecked 2026-10-25. [Source](https://huggingface.co/abacusai/Smaug-Nemotron-3.5-NVFP4).
+56. <a id="ref-56"></a>Smaug Nemotron 3.5 NVFP4: primary documentation. Rechecked 2026-10-25. [Source](https://blog.abacus.ai/blog/2026/10/22/smaug-nemotron-3-5-nvfp4-an-agentic-fine-tune-that-lives-in-4-bits/).
+57. <a id="ref-57"></a>Smaug Nemotron 3.5 NVFP4: public repository file metadata. Rechecked 2026-10-25. [Source](https://huggingface.co/api/models/abacusai/Smaug-Nemotron-3.5-NVFP4).
+58. <a id="ref-58"></a>Nemotron 3.5 Bolt E4B 4GB: primary documentation. Rechecked 2026-10-25. [Source](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Bolt-E4B-4GB).
+59. <a id="ref-59"></a>Nemotron 3.5 Bolt E4B 4GB: primary documentation. Rechecked 2026-10-25. [Source](https://research.nvidia.com/labs/nemotron/NVIDIA-Nemotron-3.5-Bolt-E4B-4GB/).
+60. <a id="ref-60"></a>Nemotron 3.5 Bolt E4B 4GB: public repository file metadata. Rechecked 2026-10-25. [Source](https://huggingface.co/api/models/nvidia/NVIDIA-Nemotron-3.5-Bolt-E4B-4GB).
+61. <a id="ref-61"></a>Mistral. *Current model changelog*. Verified 2026-10-25. [Documentation](https://docs.mistral.ai/resources/changelogs).

@@ -351,3 +351,4 @@
   text-align: center;
   font-weight: 500;
 }
+@media(max-width:600px){.poly-wrapper{box-sizing:border-box;min-width:0}.poly-wrapper .poly-layout{flex-direction:column}.poly-wrapper .poly-visualization{min-width:0;width:100%}.poly-wrapper .poly-svg{width:100%;height:auto}.logit-lens-container{box-sizing:border-box;min-width:0}.logit-lens-container .tokens-grid{overflow-x:auto;max-width:100%}.logit-lens-container .slider-container{flex-wrap:wrap}}

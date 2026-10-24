@@ -119,6 +119,14 @@ Retain an immutable bundle of model/endpoint revision, codec or audio preprocess
 
 Audio integration is a joint representation and state-management problem. The following section generalizes those issues to multiple modalities without assuming a single shared encoder or unrestricted output generation.
 
+**As of 2026-10-25**, the October 22 changelog marks Decisions with GPT-6 Luna generally available, including up to 400 questions per request, prompt caching and JSON input [[5]](#ref-5). Native voice integration is a capability contract, not a guarantee that acting on a partial transcript is safe. Evaluate transcript revisions, duplicate triggers, decision latency and authorization; see [Section 16.7](/chapter-16/decision-models-and-selective-prediction).
+
+### Voxtral 3: Keep Speech Models and Agent Orchestration Separate
+
+**As of 2026-10-25**, Mistral's October 20 changelog lists four Voxtral 3 models in **public API preview**: Mini TTS, Mini Transcribe, Mini Transcribe Realtime, and Small Transcribe. It also introduces a Voice Agents SDK/pipeline [[7]](#ref-7). The release offers self-deployment, which does not by itself establish a publicly downloadable open-weight checkpoint [[8]](#ref-8).
+
+Treat these as different contracts: offline transcription, streaming transcription, speech synthesis, and an orchestrated agent are not interchangeable benchmarks. The TTS card and launch page describe different language coverage, so verify the exact SKU and endpoint before promising support [[8]](#ref-8) [[9]](#ref-9). Evaluate WER/CER and diarization for transcription, pronunciation and first-audio latency for TTS, and turn-taking, interruptions, transcript corrections, tool authorization and cost per completed task for the complete voice agent. Provider launch charts are not a matched end-to-end comparison of those systems.
+
 ## Quizzes
 
 <details>
@@ -152,5 +160,8 @@ Audio integration is a joint representation and state-management problem. The fo
 2. <a id="ref-2"></a>Wang, C., et al. (2023). *Neural Codec Language Models are Zero-Shot Text to Speech Synthesizers (VALL-E)*. [Paper](https://arxiv.org/abs/2301.02111).
 3. <a id="ref-3"></a>Rubenstein, P. K., et al. (2023). *AudioPaLM: A Large Language Model That Can Speak and Listen*. [Paper](https://arxiv.org/abs/2306.12925).
 4. <a id="ref-4"></a>Rouard, S., et al. (2025). *Continuous Audio Language Models*. [Paper](https://arxiv.org/abs/2509.06926).
-5. <a id="ref-5"></a>OpenAI. (2026). *API changelog: October 15–16 voice updates*. As of 2026-10-18. [Official documentation](https://developers.openai.com/api/docs/changelog).
+5. <a id="ref-5"></a>OpenAI. (2026). *API changelog: October 15–22 voice and Decisions updates*. As of 2026-10-25. [Official documentation](https://developers.openai.com/api/docs/changelog).
 6. <a id="ref-6"></a>OpenAI. (2026). *Connect voice to Decisions*. As of 2026-10-18. [Official documentation](https://developers.openai.com/api/docs/guides/decisions-voice).
+7. <a id="ref-7"></a>Mistral. *Changelog: October 20 Voxtral 3 and Voice Agents preview*. Verified 2026-10-25. [Documentation](https://docs.mistral.ai/resources/changelogs).
+8. <a id="ref-8"></a>Mistral. (2026-10-20). *Voxtral 3*. [Release](https://mistral.ai/news/voxtral-3/).
+9. <a id="ref-9"></a>Mistral. *Voxtral TTS 3 model/API card*. Verified 2026-10-25. [Card](https://docs.mistral.ai/models/voxtral-mini-tts-3-0).

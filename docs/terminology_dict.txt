@@ -19,3 +19,9 @@ evidence dispersion = 근거 분산
 rating scale sensitivity = 평정 척도 민감도
 memory write path = 메모리 쓰기 경로
 access-path generalization = 접근 경로 일반화
+
+decision model = 판단 모델
+selective prediction = 선택적 예측
+selective risk = 선택 위험
+coverage (selective prediction) = 자동 처리율
+probabilistic coherence = 확률 정합성

@@ -1,99 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import './visualizers.css';
 
-const DataQualityVisualizer: React.FC = () => {
-  const [datasetSize, setDatasetSize] = useState<number>(10); // 1k to 100k
-  const [noiseLevel, setNoiseLevel] = useState<number>(10); // 0% to 50%
-  const [duplicationRate, setDuplicationRate] = useState<number>(0); // 0% to 100%
-  const [performance, setPerformance] = useState<number>(50);
-
-  useEffect(() => {
-    // Calculate performance based on empirical scaling heuristics
-    // 1. Base score from size (Logarithmic scaling)
-    const sizeScore = Math.min(100, Math.log10(datasetSize * 1000) * 18) - 40; 
-    
-    // 2. Noise penalty (Scales with size, as larger noisy datasets degrade performance faster)
-    const noisePenalty = (noiseLevel / 100) * (datasetSize * 0.8 + 10);
-    
-    // 3. Duplication multiplier (Sweet spot ~25%, collapse towards 100%)
-    let dupMultiplier = 1;
-    if (duplicationRate <= 25) {
-      dupMultiplier = 1 + (duplicationRate / 25) * 0.15; // Max 15% boost at 25% duplication
-    } else {
-      dupMultiplier = 1.15 - ((duplicationRate - 25) / 75) * 0.6; // Drops heavily after 25%
-    }
-    
-    // Final Calculation
-    let finalScore = (sizeScore - noisePenalty) * dupMultiplier;
-    finalScore = Math.max(0, Math.min(100, finalScore)); // Clamp between 0 and 100
-    
-    setPerformance(finalScore);
-  }, [datasetSize, noiseLevel, duplicationRate]);
-
-  return (
-    <div className="dq-visualizer-container">
-      <h3 className="dq-title">Data Quality vs. Quantity Simulator</h3>
-      <p className="dq-subtitle">Adjust the sliders to see how data curation impacts SFT model performance.</p>
-      
-      <div className="dq-controls">
-        <div className="dq-control-group">
-          <label>Dataset Size: {datasetSize}k examples</label>
-          <input 
-            type="range" 
-            min="1" 
-            max="100" 
-            value={datasetSize} 
-            onChange={(e) => setDatasetSize(Number(e.target.value))}
-          />
-        </div>
-        
-        <div className="dq-control-group">
-          <label>Noise Level (Label Entropy): {noiseLevel}%</label>
-          <input 
-            type="range" 
-            min="0" 
-            max="50" 
-            value={noiseLevel} 
-            onChange={(e) => setNoiseLevel(Number(e.target.value))}
-          />
-        </div>
-        
-        <div className="dq-control-group">
-          <label>Duplication Rate: {duplicationRate}%</label>
-          <input 
-            type="range" 
-            min="0" 
-            max="100" 
-            value={duplicationRate} 
-            onChange={(e) => setDuplicationRate(Number(e.target.value))}
-          />
-        </div>
-      </div>
-
-      <div className="dq-result-section">
-        <h4>Estimated Model Performance (OOD Generalization)</h4>
-        <div className="dq-progress-bar-bg">
-          <div 
-            className="dq-progress-bar-fill" 
-            style={{ 
-              width: `${performance}%`,
-              backgroundColor: performance > 75 ? '#10b981' : performance > 40 ? '#f59e0b' : '#ef4444'
-            }}
-          >
-            <span className="dq-score-text">{performance.toFixed(1)} / 100</span>
-          </div>
-        </div>
-        
-        <div className="dq-insight">
-          {performance > 80 && "Excellent! The model is learning a sharp reasoning manifold with minimal noise."}
-          {performance <= 80 && performance > 50 && "Good, but there is room for optimization. Check noise or duplication."}
-          {performance <= 50 && noiseLevel > 30 && "Warning: High noise is flattening the predictive distribution (Alignment Tax)."}
-          {performance <= 50 && duplicationRate > 50 && "Warning: Extreme duplication is causing catastrophic overfitting and OOD collapse."}
-          {performance <= 50 && datasetSize < 5 && noiseLevel <= 30 && duplicationRate <= 50 && "Dataset is too small to build a robust alignment representation."}
-        </div>
-      </div>
+export default function DataQualityVisualizer({ locale = 'en' }: { locale?: 'en' | 'ko' }) {
+  const ko = locale === 'ko';
+  const [size, setSize] = useState(10000), [noise, setNoise] = useState(10), [duplicates, setDuplicates] = useState(20);
+  const usable = Math.round(size * (1 - noise / 100) * (1 - duplicates / 100));
+  return <section className="dq-visualizer-container">
+    <h3>{ko ? '데이터 수와 유효 사례 수' : 'Dataset size and usable unique cases'}</h3>
+    <p>{ko ? '성능 예측기가 아닌 단순 수량 모형입니다. 중복을 제거한 뒤 잘못된 레이블 비율이 같다고 가정합니다.' : 'A counting model, not a performance predictor. Assume the same invalid-label fraction after deduplication.'}</p>
+    <div className="dq-controls">
+      <label>{ko ? '원본 사례 수' : 'Raw examples'}: {size}<input type="range" min="1000" max="100000" step="1000" value={size} onChange={e => setSize(Number(e.target.value))} /></label>
+      <label>{ko ? '잘못된 레이블 비율' : 'Invalid-label fraction'}: {noise}%<input type="range" min="0" max="100" value={noise} onChange={e => setNoise(Number(e.target.value))} /></label>
+      <label>{ko ? '중복 제거로 제외할 비율' : 'Fraction removed by deduplication'}: {duplicates}%<input type="range" min="0" max="100" value={duplicates} onChange={e => setDuplicates(Number(e.target.value))} /></label>
     </div>
-  );
-};
-
-export default DataQualityVisualizer;
+    <p aria-live="polite"><strong>{ko ? '유효한 고유 사례 추정' : 'Estimated usable unique cases'}: {usable}</strong> = {size} × (1 − {duplicates / 100}) × (1 − {noise / 100})</p>
+    <p>{ko ? '직접 만든 교육용 수량 모형입니다. 중복·오류의 상관관계, 도메인·난도 분포, 유용한 반복 학습을 모형화하지 않습니다. 특정 중복률의 성능 최적점이나 OOD 정확도를 뜻하지 않습니다. 관련 사례를 묶어 분할한 뒤 보류 평가셋에서 실제 품질·학습 비용을 비교하세요.' : 'Authored educational counting model. It omits correlations between duplication and errors, domain/difficulty distributions, and useful repetition. It establishes neither an optimal duplication rate nor OOD accuracy. Group related examples before splitting, then compare measured quality and training cost on held-out evaluations.'}</p>
+  </section>;
+}

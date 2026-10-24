@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-const DiffusionVisualizer: React.FC = () => {
+const DiffusionVisualizer = ({ locale = 'en' }: { locale?: 'en' | 'ko' }) => {
+    const ko = locale === 'ko';
     const [step, setStep] = useState(0);
     const [isPlaying, setIsPlaying] = useState(false);
     const [direction, setDirection] = useState<'forward' | 'reverse'>('forward');
@@ -63,7 +64,7 @@ const DiffusionVisualizer: React.FC = () => {
         ctx.beginPath();
         ctx.arc(width / 2, height / 2, width / 4, 0, Math.PI * 2);
         ctx.fill();
-        
+
         ctx.fillStyle = '#fef08a'; // Yellow
         ctx.beginPath();
         ctx.arc(width / 2 - 20, height / 2 - 20, 10, 0, Math.PI * 2);
@@ -75,18 +76,17 @@ const DiffusionVisualizer: React.FC = () => {
             const imageData = ctx.getImageData(0, 0, width, height);
             const data = imageData.data;
             const noiseAmount = step / maxSteps;
+            let noiseState = 12345;
+            const noise = () => {
+                noiseState = (Math.imul(noiseState, 1664525) + 1013904223) >>> 0;
+                return noiseState / 4294967296 * 255;
+            };
 
             for (let i = 0; i < data.length; i += 4) {
-                // Generate random noise
-                const noiseR = (Math.random() - 0.5) * 255 * noiseAmount;
-                const noiseG = (Math.random() - 0.5) * 255 * noiseAmount;
-                const noiseB = (Math.random() - 0.5) * 255 * noiseAmount;
-
-                // Blend original pixel with noise
-                // As step increases, noise dominates
-                data[i] = Math.min(255, Math.max(0, data[i] + noiseR));
-                data[i + 1] = Math.min(255, Math.max(0, data[i + 1] + noiseG));
-                data[i + 2] = Math.min(255, Math.max(0, data[i + 2] + noiseB));
+                // Fixed uniform pixel noise: a blend illustration, not a DDPM sampler.
+                data[i] = data[i] * (1 - noiseAmount) + noise() * noiseAmount;
+                data[i + 1] = data[i + 1] * (1 - noiseAmount) + noise() * noiseAmount;
+                data[i + 2] = data[i + 2] * (1 - noiseAmount) + noise() * noiseAmount;
             }
             ctx.putImageData(imageData, 0, 0);
         }
@@ -103,31 +103,35 @@ const DiffusionVisualizer: React.FC = () => {
             maxWidth: '400px',
             margin: '20px auto'
         }}>
+            <p>{ko ? '알려진 원본과 고정 균등 픽셀 잡음을 섞은 교육용 그림입니다. Gaussian 확산 스케줄이나 학습된 잡음 제거 모델을 실행하지 않습니다. 되감기는 생성이 아닙니다.' : 'Educational blend of a known clean image with fixed uniform pixel noise. No Gaussian diffusion schedule or learned denoiser runs here. Replaying is not generation.'}</p>
             <div style={{ textAlign: 'center', marginBottom: '15px' }}>
-                <h3 style={{ color: '#f5e0dc', marginBottom: '5px' }}>Diffusion Visualizer</h3>
-                <p style={{ fontSize: '14px', color: '#a6adc8' }}>Step t: {step} / {maxSteps}</p>
+                <h3 style={{ color: '#f5e0dc', marginBottom: '5px' }}>{ko ? '고정 픽셀 잡음 실험' : 'Fixed pixel-noise illustration'}</h3>
+                <p style={{ fontSize: '14px', color: '#a6adc8' }}>{ko ? '단계 t' : 'Step t'}: {step} / {maxSteps}</p>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
-                <canvas 
-                    ref={canvasRef} 
-                    width={256} 
-                    height={256} 
-                    style={{ 
-                        borderRadius: '8px', 
+                <canvas
+                    ref={canvasRef}
+                    width={256}
+                    height={256}
+                    role="img"
+                    aria-label={ko ? `잡음 혼합 ${step}% 이미지` : `Image with ${step}% noise blending`}
+                    style={{
+                        borderRadius: '8px',
                         border: '2px solid #45475a',
                         boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
-                    }} 
+                    }}
                 />
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                 <div>
-                    <input 
-                        type="range" 
-                        min="0" 
-                        max={maxSteps} 
-                        value={step} 
+                    <input
+                        aria-label={ko ? '잡음 혼합 단계' : 'Noise blending step'}
+                        type="range"
+                        min="0"
+                        max={maxSteps}
+                        value={step}
                         onChange={(e) => {
                             setIsPlaying(false);
                             setStep(parseInt(e.target.value));
@@ -135,13 +139,13 @@ const DiffusionVisualizer: React.FC = () => {
                         style={{ width: '100%', accentColor: '#f5e0dc' }}
                     />
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#a6adc8' }}>
-                        <span>Clear Image (x₀)</span>
-                        <span>Pure Noise (x_T)</span>
+                        <span>{ko ? '원본 이미지 (x₀)' : 'Clean image (x₀)'}</span>
+                        <span>{ko ? '픽셀 잡음 (x_T)' : 'Pixel noise (x_T)'}</span>
                     </div>
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px' }}>
-                    <button 
+                    <button
                         onClick={() => {
                             setDirection('forward');
                             setIsPlaying(true);
@@ -159,9 +163,9 @@ const DiffusionVisualizer: React.FC = () => {
                             transition: 'all 0.2s'
                         }}
                     >
-                        Forward (Add Noise)
+                        {ko ? '잡음으로 진행' : 'Blend toward noise'}
                     </button>
-                    <button 
+                    <button
                         onClick={() => {
                             setDirection('reverse');
                             setIsPlaying(true);
@@ -179,11 +183,11 @@ const DiffusionVisualizer: React.FC = () => {
                             transition: 'all 0.2s'
                         }}
                     >
-                        Reverse (Denoise)
+                        {ko ? '원본으로 되감기' : 'Replay toward clean'}
                     </button>
                 </div>
 
-                <button 
+                <button
                     onClick={() => setIsPlaying(false)}
                     style={{
                         padding: '10px',
@@ -195,7 +199,7 @@ const DiffusionVisualizer: React.FC = () => {
                         fontWeight: 'bold'
                     }}
                 >
-                    Stop
+                    {ko ? '정지' : 'Stop'}
                 </button>
             </div>
         </div>

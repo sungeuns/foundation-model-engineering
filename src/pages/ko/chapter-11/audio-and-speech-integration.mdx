@@ -119,6 +119,14 @@ CALM은 consistency 기반 다음 프레임 생성기와 자기회귀 연속 오
 
 오디오 통합은 표현과 상태 관리의 결합 문제입니다. 다음 절은 하나의 공유 인코더나 제한 없는 출력을 가정하지 않고 이를 여러 모달리티로 확장합니다.
 
+**2026-10-25 기준**, 10월 22일 변경 기록은 GPT-6 Luna Decisions의 정식 제공과 요청당 최대 400개 질문·프롬프트 캐싱·JSON 입력을 명시합니다 [[5]](#ref-5). Native 음성 통합은 기능 계약이며 부분 전사로 행동해도 안전하다는 보장은 아닙니다. 전사 수정·중복 트리거·판단 지연·권한을 평가하세요. [16.7절](/chapter-16/decision-models-and-selective-prediction)과 연결됩니다.
+
+### Voxtral 3: 음성 모델과 에이전트 조율 구분
+
+**2026-10-25 기준**, Mistral의 10월 20일 변경 기록은 Voxtral 3의 Mini TTS·Mini Transcribe·Mini Transcribe Realtime·Small Transcribe 네 모델을 **공개 API 프리뷰** 로 명시하고 Voice Agents SDK/파이프라인도 소개합니다 [[7]](#ref-7). 발표문은 자체 배포를 제공하지만 그것만으로 누구나 내려받을 수 있는 공개 가중치 체크포인트가 입증되지는 않습니다 [[8]](#ref-8).
+
+오프라인 전사·스트리밍 전사·음성 합성·조율된 에이전트는 다른 계약이며 벤치마크도 교환할 수 없습니다. TTS 카드와 출시 페이지의 지원 언어 범위가 다르므로 정확한 SKU·엔드포인트를 확인한 뒤 지원을 약속하세요 [[8]](#ref-8) [[9]](#ref-9). 전사는 WER/CER·화자 분리, TTS는 발음·첫 오디오 지연, 전체 음성 에이전트는 발화 전환·끼어들기·전사 수정·도구 권한·완료 과업당 비용을 평가합니다. 제공사의 출시 그래프는 이 시스템들의 동일 조건 전체 비교가 아닙니다.
+
 ## Quizzes
 
 <details>
@@ -152,5 +160,8 @@ CALM은 consistency 기반 다음 프레임 생성기와 자기회귀 연속 오
 2. <a id="ref-2"></a>Wang, C., et al. (2023). *Neural Codec Language Models are Zero-Shot Text to Speech Synthesizers (VALL-E)*. [Paper](https://arxiv.org/abs/2301.02111).
 3. <a id="ref-3"></a>Rubenstein, P. K., et al. (2023). *AudioPaLM: A Large Language Model That Can Speak and Listen*. [Paper](https://arxiv.org/abs/2306.12925).
 4. <a id="ref-4"></a>Rouard, S., et al. (2025). *Continuous Audio Language Models*. [Paper](https://arxiv.org/abs/2509.06926).
-5. <a id="ref-5"></a>OpenAI. (2026). *API changelog: October 15–16 voice updates*. As of 2026-10-18. [Official documentation](https://developers.openai.com/api/docs/changelog).
+5. <a id="ref-5"></a>OpenAI. (2026). *API changelog: October 15–22 voice and Decisions updates*. As of 2026-10-25. [Official documentation](https://developers.openai.com/api/docs/changelog).
 6. <a id="ref-6"></a>OpenAI. (2026). *Connect voice to Decisions*. As of 2026-10-18. [Official documentation](https://developers.openai.com/api/docs/guides/decisions-voice).
+7. <a id="ref-7"></a>Mistral. *Changelog: October 20 Voxtral 3 and Voice Agents preview*. Verified 2026-10-25. [Documentation](https://docs.mistral.ai/resources/changelogs).
+8. <a id="ref-8"></a>Mistral. (2026-10-20). *Voxtral 3*. [Release](https://mistral.ai/news/voxtral-3/).
+9. <a id="ref-9"></a>Mistral. *Voxtral TTS 3 model/API card*. Verified 2026-10-25. [Card](https://docs.mistral.ai/models/voxtral-mini-tts-3-0).

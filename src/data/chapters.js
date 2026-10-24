@@ -174,6 +174,7 @@ export const chapters = [
       { id: "16-4", title: { en: "16.4 Multi-agent Collaboration", ko: "16.4 멀티 에이전트 협업" }, path: "/chapter-16/multi-agent-collaboration" },
       { id: "16-5", title: { en: "16.5 Long-term Memory for Agents", ko: "16.5 에이전트를 위한 장기 기억" }, path: "/chapter-16/long-term-memory-for-agents" },
       { id: "16-6", title: { en: "16.6 Agent Reliability, Recovery, and Guardrails", ko: "16.6 에이전트 신뢰성, 복구, 그리고 가드레일" }, path: "/chapter-16/agent-reliability-recovery-and-guardrails" },
+      { id: "16-7", title: { en: "16.7 Decision Models and Selective Prediction", ko: "16.7 판단 모델과 선택적 예측" }, path: "/chapter-16/decision-models-and-selective-prediction" },
     ]
   },
   {

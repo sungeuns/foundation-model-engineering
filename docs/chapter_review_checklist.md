@@ -2,6 +2,8 @@
 
 Date: 2026-04-20
 
+Historical checklist: these April entries are not a fresh inspection of every current file. Use the dated canonical inventory in `editorial_rewrite_worklog.md` for current scope and hashes.
+
 - Status legend: `[x]` reviewed in this pass
 - Scope: `src/pages/chapter-*` and matching `src/pages/ko/chapter-*` pages for Chapters 1-20
 - Notes: this checklist records completion for every sub-chapter pair; detailed historical notes remain in `docs/exhaustive_subchapter_audit.md`.
@@ -174,3 +176,9 @@ Inspected and updated 11 EN/KO pairs in this pass. Current per-file inspection d
 - [x] `chapter-18/scalable-oversight` — EN/KO current files inspected 2026-10-18; hashes in the current inventory.
 - [x] `chapter-4/various-llm-architectures` — EN/KO current files inspected 2026-10-18; hashes in the current inventory.
 - [x] `chapter-8/continued-pretraining-and-domain-adaptation` — EN/KO current files inspected 2026-10-18; hashes in the current inventory.
+
+## 2026-10-25 Update Review
+
+- [x] `chapter-16/decision-models-and-selective-prediction` — EN/KO inspected 2026-10-25; numbered navigation, search metadata, references, equations, quizzes, and browser behavior checked. Current hashes are in the canonical inventory.
+
+The October 25 pass compares the complete ordered inventory (103 EN/KO pairs), changes 19 pairs, and checks all 53 mounted interactions in both languages at desktop/mobile widths. Seven pages received full editorial inspection; other changes received focused or mechanical review. This does not mark the entire book freshly reviewed. See the October 25 evidence in `editorial_rewrite_worklog.md`.

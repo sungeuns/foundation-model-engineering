@@ -55,7 +55,7 @@ $$
 \operatorname{pass@}k = 1-\frac{\binom{n-c}{k}}{\binom{n}{k}}, \qquad n\ge k.
 $$
 
-<PassAtKVisualizer client:load />
+<PassAtKVisualizer client:load locale="en" />
 
 Report $n$, $k$, temperature, token/compute budget, timeout, sandbox, dependencies, test version, and retry policy. For agents, task success must include side-effect correctness and budget; a verbal claim of success is not completion.
 
@@ -93,6 +93,8 @@ Before publishing or using a score, verify:
 The final recommendation should describe a quality/cost/latency/context/openness/safety Pareto surface and call for private evaluation, not name a universal best model.
 
 ---
+
+The interactive estimator does not model a deployed selector. A best-of-k system must also pay for all candidates and identify a valid answer; use end-to-end success and cost rather than interpreting pass@k as guaranteed selection accuracy.
 
 ## Quizzes
 

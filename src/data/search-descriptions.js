@@ -45,6 +45,10 @@ export const searchDescriptions = {
     en: 'Improve agent reliability with bounded loops, checkpoints before risky actions, tool-execution policies, human approval, and recovery procedures.',
     ko: '루프 제한, 위험한 작업 전 체크포인트, 도구 실행 정책과 사람의 승인 및 복구 절차를 통해 에이전트의 신뢰성을 높입니다.',
   },
+  '/chapter-16/decision-models-and-selective-prediction': {
+    en: 'Compare Jev, OpenAI Decisions and open-weight decision models through typed outputs, probability calibration, abstention, error costs and release gates.',
+    ko: 'Jev·OpenAI Decisions·공개 가중치 판단 모델의 타입 출력, 확률 보정, 판단 보류, 오판 비용과 릴리스 게이트를 비교합니다.',
+  },
   '/chapter-17/academic-benchmarks': {
     en: 'Evaluate language and multimodal models with benchmark methodology, compatible metrics, statistical comparisons, and contamination checks.',
     ko: '벤치마크 방법론, 호환 가능한 지표, 통계적 비교와 오염 점검을 통해 언어·멀티모달 모델의 평가 결과를 해석합니다.',

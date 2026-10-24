@@ -117,6 +117,8 @@ A recovery policy must preserve the original action boundary. If a fetch is deni
 
 As an engineering release gate, distinguish external-memory deletion from changes to model weights. Trace a deletion through source records, summaries, vector and graph indexes, caches, replicas, and restore paths. Test equivalent queries across supported languages and scripts with an authorized recovery audit; an English-only refusal test is insufficient. A rollback must not silently resurrect deleted records. Version tombstones and retention decisions with the artifact and data lineage, and declare which residual copies remain under their retention policy.
 
+A bounded decision model can supply a routing or review signal, but it cannot grant execution authority. [Section 16.7](/chapter-16/decision-models-and-selective-prediction) separates typed outputs, calibrated probabilities, abstention, and the independent executor policy.
+
 ## Quizzes
 
 <details>

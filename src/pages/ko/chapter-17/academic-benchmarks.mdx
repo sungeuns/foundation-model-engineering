@@ -55,7 +55,7 @@ $$
 \operatorname{pass@}k = 1-\frac{\binom{n-c}{k}}{\binom{n}{k}}, \qquad n\ge k.
 $$
 
-<PassAtKVisualizer client:load />
+<PassAtKVisualizer client:load locale="ko" />
 
 $n$, $k$, temperature, token/compute budget, timeout, sandbox, dependency, test version, retry policy를 보고합니다. Agent는 side-effect correctness와 budget까지 성공 조건에 포함해야 하며 말로 성공했다고 주장하는 것은 completion이 아닙니다.
 
@@ -93,6 +93,8 @@ Score를 공개하거나 의사결정에 쓰기 전에 확인합니다.
 최종 권고는 universal best model을 지목하는 대신 quality/cost/latency/context/openness/safety Pareto surface를 설명하고 private evaluation을 요구해야 합니다.
 
 ---
+
+위 추정량은 배포 시스템의 선택기를 모형화하지 않습니다. Best-of-k 시스템은 모든 후보의 비용을 지불하고 유효한 답을 실제로 골라야 합니다. Pass@k를 선택 정확도의 보장으로 읽지 말고 전체 성공률·비용을 측정하세요.
 
 ## Quizzes
 

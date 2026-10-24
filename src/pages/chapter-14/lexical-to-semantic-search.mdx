@@ -12,7 +12,7 @@ import lexicalSearchImg from '../../assets/images/chapter-14/lexical_vs_semantic
 
 In Chapter 13, we explored how to make Large Language Models smaller and faster through quantization and compression. While these techniques allow us to run powerful models on limited hardware, they do not solve a fundamental limitation of all foundation models: **static parametric knowledge**.
 
-A model's knowledge is frozen at the point of its training cut-off. It cannot answer questions about events after that date, nor can it access your private data or proprietary documents. 
+A model's parameters do not automatically track later events or private records. It can reason from new information supplied in context, but unsupported recall is not a reliable access path to fresh or proprietary facts.
 
 To bridge this gap, we need **Retrieval-Augmented Generation (RAG)**. Instead of trying to bake all the world's knowledge into the model's parameters (which is expensive and leads to hallucinations), RAG allows the model to dynamically search an external database for relevant information at query time.
 
@@ -35,10 +35,10 @@ If a user searches for "automobile" but the source document uses the word "car,"
 The word "bank" can mean a financial institution or the side of a river. Lexical search cannot distinguish between these meanings without additional context words, often leading to irrelevant results.
 
 ### C. Cross-Lingual Limitations
-Keyword search is strictly bound to the language of the query. A search in English cannot retrieve a relevant document written in Korean or Spanish, even if the content is exactly what the user needs.
+Without translation, multilingual expansion, or shared terms, lexical matching can miss relevant documents in another language. Cross-lingual retrieval depends on the complete query and indexing pipeline.
 
 ### D. The Solution: Vector Embeddings
-To overcome these limits, we represent text as high-dimensional vectors where geometric distance corresponds to semantic similarity. An embedding model (like a fine-tuned BERT or a modern contrastive model) maps the concept of "automobile" and "car" to nearby points in the vector space, solving the synonym problem and enabling cross-lingual retrieval.
+To overcome these limits, we represent text as high-dimensional vectors where geometric distance corresponds to semantic similarity. An embedding model (like a fine-tuned BERT or a modern contrastive model) maps the concept of "automobile" and "car" to nearby points in the vector space, helping with vocabulary mismatch and, when the model is trained for it, cross-lingual retrieval. These capabilities require evaluation rather than follow from vector geometry alone.
 
 ---
 
@@ -46,14 +46,16 @@ To overcome these limits, we represent text as high-dimensional vectors where ge
 
 To understand the trade-offs, let's look at a conceptual diagram and then interact with the visualizer below. We have a small database of documents covering various topics.
 
-<Image src={lexicalSearchImg} alt="Lexical vs Semantic Search Diagram" /> 
+<Image src={lexicalSearchImg} alt="Lexical vs Semantic Search Diagram" />
 
-Try searching for concepts not explicitly mentioned in the text (e.g., searching for "puppy" when the text says "young dog") to see how semantic search shines, and observe where keyword search might still be necessary (e.g., for specific product codes).
+Choose “flat tire,” “XJ-992-B,” or “AI book” to compare the authored outcomes. An arbitrary query has no semantic measurement in this demo.
 
-<SearchComparisonVisualizer client:load />
+The demo uses substring counts and authored semantic rankings. Presets run immediately; unsupported queries show an explicit missing-example state. It runs neither BM25 nor an embedding model.
+
+<SearchComparisonVisualizer client:load locale="en" />
 
 ### The Keyword Stronghold: Precision on Specifics
-As demonstrated above, semantic search is not a silver bullet. It tends to "blur" highly specific tokens like serial numbers, part codes, or rare proper nouns into general categories. For example, searching for `Err-404` might retrieve documents about "web errors" in general rather than the specific log entry containing that exact string. 
+As demonstrated above, semantic search is not a silver bullet. It tends to "blur" highly specific tokens like serial numbers, part codes, or rare proper nouns into general categories. For example, searching for `Err-404` might retrieve documents about "web errors" in general rather than the specific log entry containing that exact string.
 
 This is why enterprise RAG systems almost always employ **Hybrid Search** (combining both methods), which we will cover in sub-chapter 14.3.
 
@@ -102,9 +104,9 @@ Here:
 
 In large-scale systems, storing high-dimensional vectors (e.g., 768 or 1536 dimensions) for billions of documents becomes extremely expensive in terms of memory and search latency.
 
-**Matryoshka Representation Learning (MRL)** [[1]](#ref-1) solves this by training the model to pack information into the early dimensions of the vector. Inspired by Russian nesting dolls (Matryoshka), MRL ensures that the first $K$ dimensions (e.g., 64, 128, 256) are independently capable of high-quality retrieval.
+**Matryoshka Representation Learning (MRL)** jointly trains nested representation prefixes for use at several dimensions [[1]](#ref-1). This enables dimension/quality trade-offs; retained quality must be evaluated at each chosen prefix.
 
-Developers can truncate a 768-dimensional vector to just 128 dimensions. This reduces storage and compute costs by $6\times$ while retaining up to 95% of the original retrieval performance. This "elastic" embedding capability is crucial for optimizing cost-performance trade-offs in production RAG pipelines.
+Developers can truncate a 768-dimensional vector to just 128 dimensions. This reduces raw vector payload by $6\times$; total index cost and retrieval quality depend on dimension, normalization, index, corpus, and task. Measure recall and relevance at every chosen prefix dimension rather than assuming a fixed retained-quality percentage.
 
 ---
 
@@ -128,8 +130,8 @@ A new embedding model or dimension creates a **new index version**. Re-embed doc
 </details>
 
 <details>
-<summary>Quiz 3: Formulate the mathematical hybrid similarity score $S_{hybrid}(q, d)$ that explicitly combines BM25 lexical scoring with Dense Passage Retrieval (DPR) dot-product similarity. Why is normalization required?</summary>
-*The hybrid score is formulated as a convex combination of normalized scores: $S_{hybrid}(q, d) = \alpha \cdot \text{Norm}(S_{BM25}(q, d)) + (1 - \alpha) \cdot \text{Norm}(E_Q(q)^T E_D(d))$, where $\alpha \in [0, 1]$ is the balancing hyperparameter. Because BM25 is unbounded ($[0, \infty)$) while dot products are bounded by vector magnitudes, explicit normalization (like Min-Max pool scaling) is mathematically required to prevent one score distribution from flat-lining or hijacking the fused relevance ranking.*
+<summary>Quiz 3: Must hybrid retrieval always normalize raw scores?</summary>
+*No. A weighted score combination needs compatible or learned score scales, but rank fusion such as RRF uses ordinal ranks instead. Fit weights or normalization on separate validation data and test distribution shift; neither strategy is universally optimal.*
 </details>
 
 ---

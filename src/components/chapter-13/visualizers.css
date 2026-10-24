@@ -467,4 +467,5 @@
   background: #f1f5f9;
   padding: 12px;
   border-radius: 6px;
-}
+}@media(max-width:600px){.quant-method-container{box-sizing:border-box;min-width:0}.quant-method-container .quant-tabs{flex-wrap:wrap}.quant-method-container .weights-grid{gap:2px}.quant-method-container .weight-bar-container{min-width:0}.quant-method-container .weight-value{font-size:.6rem}}
+.quantization-visualizer label{display:block;min-width:0}.quantization-visualizer input{display:block;width:100%}.quant-error-table{overflow-x:auto;max-width:100%}.quantization-visualizer :is(input,button,.quant-error-table):focus-visible{outline:3px solid #2563eb;outline-offset:3px}

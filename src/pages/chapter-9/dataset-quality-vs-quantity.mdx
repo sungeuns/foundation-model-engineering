@@ -25,7 +25,9 @@ Post-training data is a control surface, not a bag of examples. A smaller curate
 
 Do not infer that noise always requires exponential compute or that one duplication percentage is optimal. Repetition acts like sample weighting; its effect varies with model, schedule, example difficulty, and evaluation distribution. Measure unique and repeated-token exposure and compare controlled mixtures.
 
-<DataQualityVisualizer client:load />
+The counting experiment below separates raw volume from usable unique cases. It does not predict model quality or establish an optimal duplication rate.
+
+<DataQualityVisualizer client:load locale="en" />
 
 The visualizer is an intuition aid, not an empirical law or a source of default thresholds.
 

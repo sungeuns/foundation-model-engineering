@@ -6,6 +6,7 @@ type ZeROMemoryVisualizerProps = {
 };
 
 const ZeROMemoryVisualizer = ({ lang = 'en' }: ZeROMemoryVisualizerProps) => {
+  const controlId = React.useId();
   const [paramsB, setParamsB] = useState(70);
   const [gpus, setGpus] = useState(8);
 
@@ -23,7 +24,7 @@ const ZeROMemoryVisualizer = ({ lang = 'en' }: ZeROMemoryVisualizerProps) => {
         zero2: 'ZeRO Stage 2',
         zero3: 'ZeRO Stage 3',
         limit: 'H100 80GB 한계',
-        footer: '*빨간색은 80GB GPU에서 OOM을 의미합니다. 활성화 메모리는 포함하지 않습니다.',
+        footer: '*빨강은 모델 상태만으로 80GB를 초과한다는 뜻입니다. 그 이하여도 적재를 보장하지 않습니다. Activation·임시 버퍼·통신·평가 메모리는 별도입니다.',
       }
     : {
         title: 'ZeRO Memory Footprint Simulator',
@@ -38,14 +39,14 @@ const ZeROMemoryVisualizer = ({ lang = 'en' }: ZeROMemoryVisualizerProps) => {
         zero2: 'ZeRO Stage 2',
         zero3: 'ZeRO Stage 3',
         limit: 'H100 80GB Limit',
-        footer: '*Red indicates Out-Of-Memory (OOM) on an 80GB GPU. Note: This only calculates Model States, not Activations.',
+        footer: '*Red means model states alone exceed 80GB. A lower value does not guarantee fit: activations, temporary buffers, communication and evaluation need separate memory.',
       };
 
   // Formulas for memory footprint in GB per GPU
-  // 1 Billion params = 10^9 parameters. 
+  // 1 Billion params = 10^9 parameters.
   // 1 GB = 10^9 bytes (simplified for visualizer)
   // Therefore, memory per parameter in bytes directly translates to GB for Billion parameters.
-  
+
   const ddpMemory = 16 * paramsB;
   const zero1Memory = (4 + 12 / gpus) * paramsB;
   const zero2Memory = (2 + 14 / gpus) * paramsB;
@@ -72,23 +73,21 @@ const ZeROMemoryVisualizer = ({ lang = 'en' }: ZeROMemoryVisualizerProps) => {
 
       <div className="zero-controls">
         <div className="control-group">
-          <label>{copy.modelSize}: <strong>{paramsB} {copy.paramsUnit}</strong> {copy.parameters}</label>
-          <input 
-            type="range" 
-            min="1" 
-            max="200" 
-            value={paramsB} 
+          <label htmlFor={`${controlId}-1`}>{copy.modelSize}: <strong>{paramsB} {copy.paramsUnit}</strong> {copy.parameters}</label>
+          <input id={`${controlId}-1`} type="range"
+            min="1"
+            max="200"
+            value={paramsB}
             onChange={(e) => setParamsB(Number(e.target.value))}
             className="slider"
           />
         </div>
         <div className="control-group">
-          <label>{copy.clusterSize}: <strong>{gpus} {copy.gpus}</strong></label>
-          <input 
-            type="range" 
-            min="1" 
-            max="128" 
-            value={gpus} 
+          <label htmlFor={`${controlId}-2`}>{copy.clusterSize}: <strong>{gpus} {copy.gpus}</strong></label>
+          <input id={`${controlId}-2`} type="range"
+            min="1"
+            max="128"
+            value={gpus}
             onChange={(e) => setGpus(Number(e.target.value))}
             className="slider"
           />
@@ -103,7 +102,7 @@ const ZeROMemoryVisualizer = ({ lang = 'en' }: ZeROMemoryVisualizerProps) => {
             <span className="chart-value">{ddpMemory.toFixed(1)} GB</span>
           </div>
         </div>
-        
+
         <div className="chart-row">
           <div className="chart-label">{copy.zero1}</div>
           <div className="chart-bar-container">
@@ -133,7 +132,7 @@ const ZeROMemoryVisualizer = ({ lang = 'en' }: ZeROMemoryVisualizerProps) => {
           <div className="limit-label">{copy.limit}</div>
         </div>
       </div>
-      
+
       <div className="zero-visualizer-footer">
         <small>{copy.footer}</small>
       </div>

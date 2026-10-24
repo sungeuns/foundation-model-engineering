@@ -141,6 +141,14 @@ In the next section, we move from agents that control their actions to agents th
 
 ---
 
+## October Evidence: Plan Compliance and Cost per Success
+
+**Research snapshot as of 2026-10-25.** Liu et al.'s ASE study examines 16,991 SWE-agent trajectories across four models, two SWE-bench variants, and eight plan variations. Plans and reminders can help in its experiments, but a poor or unnecessarily extended plan can hurt [[6]](#ref-6). Do not equate a detailed written plan with actual compliance: record step transitions, skipped validation, tool effects, and the evidence supporting each milestone. Compare outcomes and plan adherence separately.
+
+Siraj and Barbati's October 14 preprint studies model choice per successfully completed task, with a pilot on 15 open-weight models and two multistep tasks [[7]](#ref-7). Its crossover argument explains why lower per-call cost need not minimize cost, time, or energy per success. A toy independent-step model gives success $p^L$ for per-step success $p$ and length $L$, but real failures and retries are correlated. Measure complete trajectories, failed-attempt resources, recovery, and review rather than extrapolating a universal crossover from a model's parameter count.
+
+A small decision model can route easy cases or screen evidence, while a generator handles open-ended work. Evaluate the cascade with its escalation and authorization policy, including false acceptances and extra retries; [Section 16.7](/chapter-16/decision-models-and-selective-prediction) develops that contract.
+
 ## Quizzes
 
 <details>
@@ -172,3 +180,5 @@ In the next section, we move from agents that control their actions to agents th
 3. <a id="ref-3"></a>Shinn, N., et al. (2023). *Reflexion: Language Agents with Verbal Reinforcement Learning.* [arXiv:2303.11366](https://arxiv.org/abs/2303.11366).
 4. <a id="ref-4"></a>Liu, X., et al. (2024). *AgentBench: Evaluating LLMs as Agents.* [arXiv:2308.03688](https://arxiv.org/abs/2308.03688).
 5. <a id="ref-5"></a>Jimenez, C. E., Yang, J., Wettig, A., Yao, S., Pei, K., Press, O., & Narasimhan, K. (2024). *SWE-bench: Can Language Models Resolve Real-World GitHub Issues?* [arXiv:2310.06770](https://arxiv.org/abs/2310.06770).
+6. <a id="ref-6"></a>Liu, S., et al. (2026-10-12). *From Plan to Action: How Well Do Agents Follow the Plan?* ASE. [IBM Research](https://research.ibm.com/publications/from-plan-to-action-how-well-do-agents-follow-the-plan).
+7. <a id="ref-7"></a>Siraj, S., & Barbati, M. (2026-10-14). *When Is Smaller Greener? Right-Sizing Language Models for Agentic AI.* Preprint. [arXiv:2610.19345v1](https://arxiv.org/abs/2610.19345v1).

@@ -143,6 +143,7 @@
 * **16.4 Multi-agent Collaboration:** 서로 다른 역할을 가진 모델들의 협업 시스템.
 * **16.5 Long-term Memory for Agents:** 유저와의 대화 이력을 기억하고 활용하는 아키텍처.
 * **16.6 Agent Reliability, Recovery, and Guardrails:** 에이전트 루프의 실패 복구, 체크포인팅, human-in-the-loop, destructive action guardrail 설계.
+* **16.7 Decision Models and Selective Prediction:** Jev·Decisions·open d1·LemonDecider의 출력 계약, 확률 보정, 판단 보류, 오판 비용과 실행 권한을 연결.
 * **Summary:** AI가 단순 챗봇을 넘어 스스로 도구를 사용하고 과업을 수행하는 '에이전트'로 진화하는 과정을 다룹니다.
 
 ### **Chapter 17: AI Evaluation & Benchmarking**
@@ -152,7 +153,7 @@
 * **17.3 Elo Rating & Leaderboards:** LMSYS Chatbot Arena와 같은 인간 선호도 기반 평가.
 * **17.4 Contamination Issues:** 학습 데이터에 평가셋이 포함되는 문제와 검증법.
 * **17.5 Production Evaluation and Release Gates:** offline eval, judge calibration, canary, rollout gate를 실제 릴리스 프로세스와 연결하는 방법.
-* **17.6 Commercial Model Benchmarks:** 2026-10-18 기준 19개 모델 프로필에서 Muse Wonder·Spark Open, Nemotron 3.5, Step 5, Beam 공개와 DeepSeek 1017 갱신을 평가 조건·과업 비용·공개 상태로 탐색.
+* **17.6 Commercial Model Benchmarks:** 2026-10-25 기준 26개 프로필. MiniMax M3.1 Flash·Kimi K3.1 Pro·Ling·Smaug·Bolt E4B의 실제 공개 상태와 리비전별 평가·비용을 탐색.
 * **Summary:** 모델의 '진짜 실력'을 객관적이고 공정하게 측정하기 위한 평가 방법론과 지표를 다룹니다.
 
 ### **Chapter 18: AI Safety & Alignment Research**

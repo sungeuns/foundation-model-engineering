@@ -474,3 +474,4 @@
 
 .result-box.success { background-color: #d1e7dd; color: #0f5132; }
 .result-box.danger { background-color: #f8d7da; color: #842029; }
+.semantic-entropy-container{min-width:0;max-width:100%;box-sizing:border-box}.semantic-entropy-container .controls,.semantic-entropy-container .step-controls{display:flex;flex-wrap:wrap;gap:.5rem}.semantic-entropy-container button{white-space:normal}.semantic-entropy-container button:focus-visible{outline:3px solid #2563eb;outline-offset:3px}.semantic-entropy-container .samples-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr))}

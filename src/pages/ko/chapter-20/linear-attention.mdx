@@ -162,6 +162,10 @@ Linear Attention은 표준 어텐션을 이미 대체한 승자라기보다, 긴
 효율적인 레이어도 정확한 상태 계약이 필요합니다. 접두사 재사용에서는 recurrent 상태와 어텐션 KV를 같은 위치에서 복원해야 합니다. 분기형 speculation은 토큰 버퍼를 줄이는 것만으로 되돌릴 수 없는 상태를 격리해야 합니다. [12.1절](/ko/chapter-12/kv-cache-management)과 [12.4절](/ko/chapter-12/speculative-decoding)의 최근 통합 근거가 아키텍처의 메모리 절감에도 scheduler·복구 검증이 필요한 이유를 설명합니다. 처리량과 함께 연상 회상·위치 민감도·장문 품질·cold/복원 continuation을 평가합니다.
 
 
+### 10월 배포 사례: 계층마다 다른 상태
+
+**2026-10-25 기준**, Ling 3.1 Flash 공개 카드는 KDA 63계층·gated-MLA 9계층의 7:1 하이브리드를 명시합니다 [[5]](#ref-5). 공개된 구체적 스택이며 모든 “선형” 모델이 같은 순환식을 쓴다는 근거는 아닙니다. 순환 상태와 어텐션 KV를 따로 계산하고 실제 런타임에서 정확한 회상·접두사 재사용·분기·롤백을 시험하세요. 호스팅 1019 프로필과 공개 가중치 리비전의 동등성은 확인되지 않았습니다. 출처 범위 안의 비교는 17.6절을 보세요.
+
 ## Quizzes
 
 <details>
@@ -192,3 +196,4 @@ Linear Attention은 표준 어텐션을 이미 대체한 승자라기보다, 긴
 2. <a id="ref-2"></a>Yang, S., et al. (2024). *Parallelizing Linear Transformers with the Delta Rule over Sequence Length.* [arXiv:2406.06484](https://arxiv.org/abs/2406.06484).
 3. <a id="ref-3"></a>Dao, T., & Gu, A. (2024). *Transformers are SSMs: Generalized Models and Efficient Algorithms Through Structured State Space Duality.* [arXiv:2405.21060](https://arxiv.org/abs/2405.21060).
 4. <a id="ref-4"></a>Yang, S., Kautz, J., & Hatamizadeh, A. (2024). Gated Delta Networks: Improving Mamba2 with Delta Rule. [Source](https://arxiv.org/abs/2412.06464).
+5. <a id="ref-5"></a>inclusionAI. *Ling-3.1-flash model card*, revision `93e96ab91e800998388563295340a4238ff3e962`, verified 2026-10-25. [Card](https://huggingface.co/inclusionAI/Ling-3.1-flash).

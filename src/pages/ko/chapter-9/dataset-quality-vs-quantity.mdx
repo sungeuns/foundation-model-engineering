@@ -25,7 +25,9 @@ Post-training 데이터는 단순한 예시 모음이 아니라 모델 행동을
 
 노이즈에는 항상 지수적으로 더 많은 compute가 필요하다거나 특정 duplication 비율이 최적이라고 추론하면 안 됩니다. 반복은 sample weighting처럼 작동하며 효과는 모델, schedule, example difficulty, evaluation distribution에 따라 달라집니다. unique/repeated token exposure를 측정하고 통제된 mixture로 비교합니다.
 
-<DataQualityVisualizer client:load />
+아래 수량 실험은 원본 규모와 유효한 고유 사례 수를 구분합니다. 모델 품질을 예측하거나 최적 중복률을 정하지 않습니다.
+
+<DataQualityVisualizer client:load locale="ko" />
 
 이 시각화는 직관을 돕는 도구이지 경험 법칙이나 기본 threshold의 근거가 아닙니다.
 

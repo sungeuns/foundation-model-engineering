@@ -515,4 +515,5 @@ button:disabled {
   color: #6c7086;
   border-top: 1px solid #313244;
   padding-top: 0.75rem;
-}
+}.dq-controls label{display:block;min-width:0}.dq-controls input{display:block;width:100%}.dq-controls input:focus-visible{outline:3px solid #2563eb;outline-offset:3px}
+@media(max-width:600px){.lora-visualizer .stats{flex-direction:column}.lora-visualizer .stat-box{min-width:0;width:auto}.lora-visualizer .controls{flex-wrap:wrap}.lora-visualizer .param-count{font-size:1.3rem}.visualizer-container .evolution-tracker{flex-wrap:wrap;gap:.5rem}.visualizer-container .tracker-step{min-width:0;flex:1 1 70px}.visualizer-container .evolution-tracker::before{display:none}.visualizer-container .controls{flex-wrap:wrap}.visualizer-container button{white-space:normal}}

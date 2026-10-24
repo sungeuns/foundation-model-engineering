@@ -150,6 +150,10 @@ Linear attention is best understood as an important efficiency direction rather 
 An efficient layer still needs an exact state contract. Prefix reuse must restore recurrent state and any attention KV at the same position. Branching speculation must isolate state that cannot be rolled back by merely shortening a token buffer. The recent integration evidence in [Chapter 12.1](/chapter-12/kv-cache-management) and [Chapter 12.4](/chapter-12/speculative-decoding) explains why architecture-level memory gains require scheduler and recovery validation. Evaluate associative recall, position sensitivity, long-context quality, and cold-versus-restored continuation alongside throughput.
 
 
+### October Deployment Case: Different Layers, Different State
+
+**As of 2026-10-25**, Ling 3.1 Flash's public card specifies 63 KDA layers and nine gated-MLA layers, a 7:1 hybrid pattern [[5]](#ref-5). That is a concrete disclosed stack, not evidence that every “linear” model uses the same recurrence. Keep recurrent state and attention KV accounting separate; test exact recall, prefix reuse, branching and rollback against the actual runtime. Its hosted 1019 profile is not established as identical to the public weight revision. See Section 17.6 for the source-bound comparison.
+
 ## Quizzes
 
 <details>
@@ -180,3 +184,4 @@ An efficient layer still needs an exact state contract. Prefix reuse must restor
 2. <a id="ref-2"></a>Yang, S., et al. (2024). *Parallelizing Linear Transformers with the Delta Rule over Sequence Length.* [arXiv:2406.06484](https://arxiv.org/abs/2406.06484).
 3. <a id="ref-3"></a>Dao, T., & Gu, A. (2024). *Transformers are SSMs: Generalized Models and Efficient Algorithms Through Structured State Space Duality.* [arXiv:2405.21060](https://arxiv.org/abs/2405.21060).
 4. <a id="ref-4"></a>Yang, S., Kautz, J., & Hatamizadeh, A. (2024). Gated Delta Networks: Improving Mamba2 with Delta Rule. [Source](https://arxiv.org/abs/2412.06464).
+5. <a id="ref-5"></a>inclusionAI. *Ling-3.1-flash model card*, revision `93e96ab91e800998388563295340a4238ff3e962`, verified 2026-10-25. [Card](https://huggingface.co/inclusionAI/Ling-3.1-flash).

@@ -19,7 +19,9 @@ type CompanyKey =
   | 'Reflection'
   | 'Meta'
   | 'NVIDIA'
-  | 'StepFun';
+  | 'StepFun'
+  | 'InclusionAI'
+  | 'Abacus AI';
 type MetricKey = 'aaIndex' | 'contextK';
 type AxisMode = 'timeline' | 'price' | 'context' | 'taskCost';
 type ReleaseStatus = 'released' | 'preview' | 'announced' | 'restricted';
@@ -86,7 +88,7 @@ const labels = {
     detailContext: 'context',
     priceAxis: 'Lower is cheaper',
     source:
-      'Snapshot as of 2026-10-18. Scores use AA Intelligence Index v4.3.2 with the effort/fallback configuration shown. Configurations without a numeric effort are marked not reported; no equal-effort ranking is implied. Costs are observed AA workload costs, not token-price estimates. Local checkpoints require their own evaluations. Speed is omitted. A missing score means not reported under the mapped methodology, not zero. Promotional or long-context prices may have thresholds and expiry dates.',
+      'Snapshot as of 2026-10-25. Scores use AA Intelligence Index v4.3.2 with the effort/fallback configuration shown. Configurations without a numeric effort are marked not reported; no equal-effort ranking is implied. Costs are observed AA workload costs, not token-price estimates. Local checkpoints require their own evaluations. Speed is omitted. A missing score means not reported under the mapped methodology, not zero. Promotional or long-context prices may have thresholds and expiry dates.',
   },
   ko: {
     title: '상용 모델 비교 지도',
@@ -114,7 +116,7 @@ const labels = {
     detailContext: '문맥 길이',
     priceAxis: '왼쪽일수록 저렴',
     source:
-      '2026-10-18 기준입니다. 점수는 표시된 추론·fallback 조건의 AA v4.3.2 시스템 프로필입니다. 세부 추론 강도가 없으면 미공개로 표시하며 동일 예산의 순위를 뜻하지 않습니다. 비용은 AA 과업의 관측값입니다. 로컬 체크포인트는 별도 평가가 필요하며 속도는 표시하지 않습니다. 값이 없다는 것은 0점이 아니라 해당 methodology에서 미공개라는 뜻입니다. 프로모션 가격과 장문 입력 가격에는 만료일이나 별도 임계값이 있을 수 있습니다.',
+      '2026-10-25 기준입니다. 점수는 표시된 추론·fallback 조건의 AA v4.3.2 시스템 프로필입니다. 세부 추론 강도가 없으면 미공개로 표시하며 동일 예산의 순위를 뜻하지 않습니다. 비용은 AA 과업의 관측값입니다. 로컬 체크포인트는 별도 평가가 필요하며 속도는 표시하지 않습니다. 값이 없다는 것은 0점이 아니라 해당 methodology에서 미공개라는 뜻입니다. 프로모션 가격과 장문 입력 가격에는 만료일이나 별도 임계값이 있을 수 있습니다.',
   },
 };
 
@@ -124,7 +126,7 @@ const releaseStatusLabels: Record<Locale, Record<ReleaseStatus, string>> = {
   ko: { released: '공개 완료', preview: '프리뷰', announced: '가중치/리포트 공개 예정', restricted: '제한 공개' },
 };
 
-const companyOptions: CompanyKey[] = ['All', 'OpenAI', 'Google', 'Anthropic', 'DeepSeek', 'Z AI', 'Mistral', 'Reflection', 'Meta', 'NVIDIA', 'StepFun'];
+const companyOptions: CompanyKey[] = ['All', ...Array.from(new Set(MODEL_SNAPSHOTS.map(row => row.company))).sort()];
 
 const metricOptions: MetricKey[] = ['aaIndex', 'contextK'];
 
@@ -254,7 +256,7 @@ export default function CommercialModelBenchmarkExplorer({ locale = 'en' }: { lo
       <div className="commercial-benchmark-header">
         <div>
           <h3>{text.title}</h3>
-          <p>{locale === 'ko' ? '2026-10-18 기준 · AA v4.3.2' : 'as of 2026-10-18 · AA v4.3.2'}</p>
+          <p>{locale === 'ko' ? '2026-10-25 기준 · AA v4.3.2' : 'as of 2026-10-25 · AA v4.3.2'}</p>
           <p>{text.subtitle}</p>
         </div>
         <div className="commercial-benchmark-controls" aria-label={text.controlAria}>
@@ -291,7 +293,7 @@ export default function CommercialModelBenchmarkExplorer({ locale = 'en' }: { lo
       </div>
 
       <div className="commercial-plot-layout">
-        <div className="commercial-plot-panel">
+        <div className="commercial-plot-panel" role="region" aria-label={locale === 'ko' ? '모델 비교 그래프: 가로 스크롤 가능' : 'Model comparison chart: horizontally scrollable'} tabIndex={0}>
           <svg viewBox={`0 0 ${chart.width} ${chart.height}`} className="commercial-scatter" role="img">
             <title>{locale === 'ko' ? `${metricLabels[locale][metric]} · ${axisLabels[locale][axisMode]}` : `${metricLabels[locale][metric]} by ${axisLabels[locale][axisMode]}`}</title>
             <rect
@@ -403,7 +405,7 @@ export default function CommercialModelBenchmarkExplorer({ locale = 'en' }: { lo
             {selected.specification && <> · <a href={selected.specification}>{locale === 'ko' ? '모델·API 규격' : 'Model/API specification'}</a></>}
             {selected.evaluation && <> · <a href={selected.evaluation}>{locale === 'ko' ? '평가 조건·출처' : 'Evaluation source'}</a></>}
             {selected.noteSource && <> · <a href={selected.noteSource}>{locale === 'ko' ? '단가 변경 출처' : 'Pricing update'}</a></>}
-            {locale === 'ko' ? ' · 2026-10-18 기준' : ' · as of 2026-10-18'}
+            {locale === 'ko' ? ' · 2026-10-25 기준' : ' · as of 2026-10-25'}
           </p>
           <p className="commercial-note">{locale === 'ko' ? selected.noteKo : selected.note}</p>
           {!plottedRows.some((point) => point.row.id === selected.id) && <p className="commercial-note">{locale === 'ko' ? '선택한 모델은 이 축·지표에 필요한 값이 없어 그래프에서 제외됩니다.' : 'The selected model lacks a value required by this axis or metric and is omitted from the plot.'}</p>}

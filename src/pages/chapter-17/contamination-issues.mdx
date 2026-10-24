@@ -37,7 +37,7 @@ Use a cascade on raw, rendered, and tokenized forms:
 4. code AST, identifier-normalized, or test-fixture similarity;
 5. embedding retrieval and cluster review for semantic neighbors.
 
-<NgramContaminationVisualizer client:load />
+<NgramContaminationVisualizer client:load locale="en" />
 
 An overlap score has no universal cutoff. **Calibrate the threshold** on known duplicate, paraphrase, and legitimate-domain-neighbor pairs for each language, tokenizer, document length, and data type. Report precision/recall and send the uncertain band to review. A fixed number such as 13 matching tokens or 0.8 similarity is not a general boundary.
 
