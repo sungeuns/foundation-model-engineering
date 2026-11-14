@@ -22,10 +22,10 @@ RNNs process tokens sequentially, one by one. The model maintains a hidden state
 #### 2. CNNs (Convolutional Neural Networks): Local Order
 CNNs apply filters to local windows of text (e.g., n-grams). By looking at words in groups of 3 or 5, the model **captures local order** and proximity. It knows which words are adjacent.
 
-#### 3. Transformers (Self-Attention): Permutation Invariance
+#### 3. Transformers (Self-Attention): Permutation Equivariance
 In contrast, Self-Attention processes all tokens in the sequence **simultaneously in parallel**.
 $$Attention(Q, K, V) = softmax\left(\frac{QK^T}{\sqrt{d_k}}\right)V$$
-Notice that there is no concept of index or position in this formula. If you shuffle the words in the input sentence, the output vectors will be exactly the same, just shuffled in the same way. The model treats the input as a **set of words** (or a bag of words), not a sequence.
+For unmasked self-attention without position-dependent inputs, there is no index in this formula. If you shuffle the words in the input sentence, the output vectors will be exactly the same, just shuffled in the same way. The model treats the input as a **set of words** (or a bag of words), not a sequence.
 
 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', margin: '20px 0' }}>
 <div style={{ maxWidth: '800px', width: '100%' }}>
@@ -170,13 +170,13 @@ For a $d$-dimensional vector, we group dimensions into $d/2$ pairs and apply a 2
 
 The magic happens in the attention score calculation. Let $q_m$ be the query at position $m$ and $k_n$ be the key at position $n$:
 $$(RoPE(q_m, m))^T (RoPE(k_n, n)) = q_m^T R_m^T R_n k_n = q_m^T R_{n-m} k_n$$
-Because $R_m^T R_n = R_{n-m}$, the dot product depends only on the relative distance $n-m$.
+Because $R_m^T R_n = R_{n-m}$, the positional component depends on $n-m$, while the dot product also depends on $q$ and $k$.
 
 ### Why RoPE Dominates Modern LLMs (Insights)
 
-1.  **Perfect Relative Awareness**: Unlike absolute encodings where the model has to *learn* to extract relative distance, RoPE mathematically guarantees that the attention score is a function of relative distance.
-2.  **Decay with Distance**: By using different frequencies, the correlation between tokens naturally decays as the distance increases. This matches human language intuition: closer words usually matter more.
-3.  **Length Extrapolation**: RoPE handles sequences longer than those seen during training much better than absolute encodings. Techniques like **RoPE Scaling** (e.g., Linear Scaling or NTK-aware scaling) allow models trained on 4K context to extend to 128K or more by simply scaling the frequencies.
+1. **Relative positional component:** Position enters through $n-m$, while the score still depends on query and key content.
+2. **No pointwise monotonic decay:** Rotations and frequencies do not make every query–key score decrease monotonically with distance.
+3. **Validated extrapolation:** Frequency scaling changes training/evaluation conditions. Test retrieval, position sensitivity, reasoning and serving memory at each target length; a 4K-trained model does not automatically gain reliable 128K behavior.
 
 ---
 
@@ -192,19 +192,19 @@ import math
 class PositionalEncoding(nn.Module):
     def __init__(self, d_model, max_len=5000):
         super(PositionalEncoding, self).__init__()
-        
+
         # Create a matrix of shape (max_len, d_model)
         pe = torch.zeros(max_len, d_model)
         position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
         div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
-        
+
         # Fill sine and cosine values
         pe[:, 0::2] = torch.sin(position * div_term)
         pe[:, 1::2] = torch.cos(position * div_term)
-        
+
         # Add a batch dimension (1, max_len, d_model)
         pe = pe.unsqueeze(0)
-        
+
         # Register as buffer (won't be updated by optimizer)
         self.register_buffer('pe', pe)
 
@@ -265,8 +265,8 @@ Visualize the positional encoding matrix. The horizontal axis represents the emb
 </details>
 
 <details>
-<summary>Quiz 6: Mathematically formulate the RoPE rotation matrix for a 2D subspace at position $m$, and prove that the inner product of a query at position $m$ and a key at position $n$ depends strictly on the relative distance $m-n$.</summary>
-*For a 2D vector $x = [x_1, x_2]^T$, the RoPE matrix at position $m$ is $\mathbf{R}_m = \begin{bmatrix} \cos(m\theta) & -\sin(m\theta) \\ \sin(m\theta) & \cos(m\theta) \end{bmatrix}$. Let $\mathbf{q}$ and $\mathbf{k}$ be 2D representations of a query and a key. The inner product of their RoPE-encoded versions is $\langle \mathbf{R}_m \mathbf{q}, \mathbf{R}_n \mathbf{k} \rangle = (\mathbf{R}_m \mathbf{q})^T (\mathbf{R}_n \mathbf{k}) = \mathbf{q}^T \mathbf{R}_m^T \mathbf{R}_n \mathbf{k}$. Since $\mathbf{R}_m$ is an orthogonal matrix representing a rotation by angle $m\theta$, its transpose is its inverse, which is a rotation by $-m\theta$. Therefore, $\mathbf{R}_m^T \mathbf{R}_n$ represents a combined rotation by $n\theta - m\theta = (n-m)\theta$, which is $\mathbf{R}_{n-m}$. Thus, $\langle \mathbf{R}_m \mathbf{q}, \mathbf{R}_n \mathbf{k} \rangle = \mathbf{q}^T \mathbf{R}_{n-m} \mathbf{k}$, which explicitly depends only on the relative distance $n-m$ and perfectly preserves relative position information.*
+<summary>Quiz 6: Which part of a RoPE score depends on relative position?</summary>
+*For rotation $R_m$ by $m\theta$, $(R_mq)^T(R_nk)=q^TR_{n-m}k$. Position enters as a relative displacement, but content vectors $q,k$ still determine the score. Neither monotonic distance decay nor quality beyond trained lengths follows from this identity.*
 </details>
 
 ---

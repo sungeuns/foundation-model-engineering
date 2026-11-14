@@ -100,7 +100,7 @@ The most useful comparison is not a product-name table. It is a **claim-boundary
 | GLM-5.2 | MIT-licensed weights and configuration are public | 753B MoE, 78 layers, first 3 dense layers, 256 routed + 1 shared expert, 8 routed experts per token, 1M positions, DeepSeek Sparse Attention, IndexShare, and one MTP layer [[8]](#ref-8) [[9]](#ref-9) | The complete pre-training corpus mixture and filtering recipe are not published |
 | Kimi K3 | Released/open-weight; weights, technical report, MoonEP, FlashKDA, and AgentEnv are public [[14]](#ref-14) | 2.8T parameters, native multimodality, 1M context, Kimi Delta Attention, Attention Residuals, Stable LatentMoE, and 16-of-896 expert routing [[11]](#ref-11) [[14]](#ref-14) | The exact pre-training data mixture and complete filtering recipe remain undisclosed |
 | Qwen3.7 | Released as an agent-oriented Qwen generation | 1M-context product configuration and long-horizon agent examples are documented [[12]](#ref-12) | It is not evidence for Qwen3.8 internals |
-| Qwen3.8-Max | Released/open-weight as Qwen3.8-2.4T-A95B [[15]](#ref-15) | Public weights and configuration establish 2.4T total parameters, 95B active parameters, 262,144 native positions, and documented context extension [[13]](#ref-13) [[15]](#ref-15) | The exact corpus mixture and complete data-filtering and post-training recipes remain undisclosed |
+| Qwen3.8-2.4T-A95B (downloadable checkpoint) | Released/open-weight as Qwen3.8-2.4T-A95B [[15]](#ref-15) | Public weights and configuration establish 2.4T total parameters, 95B active parameters, 262,144 native positions, and documented context extension [[13]](#ref-13) [[15]](#ref-15) | The exact corpus mixture and complete data-filtering and post-training recipes remain undisclosed |
 
 This distinction matters. “Open” is not a future promise, an API endpoint, or a parameter-count announcement. For reproducible engineering, an open-weight claim starts when the actual weight files and a usable configuration are available.
 
@@ -239,9 +239,9 @@ To better understand how these different architectures control information flow,
 
 ---
 
-## October 18 Update: Artifacts, Architecture, and State Must Be Separated
+## November 15 Update: Artifacts, Architecture, and State Must Be Separated
 
-**As of 2026-10-18.** The September and October 13 tables above are historical records. The following primary artifacts update their release states and add distinct designs; they do not retroactively change earlier announcement dates.
+**As of 2026-11-15.** The September and October 13 tables above are historical records. The following primary artifacts update their release states and add distinct designs; they do not retroactively change earlier announcement dates.
 
 | Model / milestone | Current release state | What is disclosed | What the disclosure does not establish |
 |---|---|---|---|
@@ -251,12 +251,26 @@ To better understand how these different architectures control information flow,
 | Nemotron 3.5 Super VL, October 15 | released/open-weight, OpenMDW-1.1 | The card reports 120B total/12B active, interleaved Mamba-2/MoE/attention and a vision encoder [[26]](#ref-26) | That attention KV alone describes its serving state |
 | Nemotron 3.5 Bolt 74B-A9B, October 15 | released/open-weight, OpenMDW-1.1 | The card reports 74B total/9B active, hybrid LatentMoE and IQ2 QAT [[27]](#ref-27) | A universal 24GB running-memory guarantee at all contexts and batches |
 | Step 5 Preview, October weight milestone | released/open-weight, StepFun Model License 1.0 | The card reports a 600B total/27B active MoE [[28]](#ref-28) | That a Preview name means unavailable weights, or that its license is MIT |
-| DeepSeek V4.1 Flash 1017, October 17 | released/open-weight, MIT; API alias updated | The card publishes a revision and protocol-aware encoding guidance [[29]](#ref-29) | An independently measured new index score or a newly disclosed backbone design |
+| DeepSeek V4.1 Flash 1017, October 17 | released/open-weight, MIT; API alias updated | The card publishes a revision and protocol-aware encoding guidance [[29]](#ref-29) | A redesigned backbone or equivalence to September; Section 17.6 separately records the 1017/max evaluation |
 | Hy-Memory-30B-A3B, October 15 | released/open-weight, Apache 2.0 | A specialized external-memory writer and its protocol integrations [[30]](#ref-30) | General-purpose agent quality or model-internal permanent memory |
 
 The engineering distinction is **architecture → numerical artifact → runtime → deployed system**. Packed storage may change tensor element counts without changing logical parameter count. A hybrid model adds recurrent state to its attention cache; a specialized memory writer updates an external bank instead. Neither can be evaluated correctly by reading a single parameter or context number.
 
 For adoption, pin the model and numerical format, tokenizer or encoding toolkit, template, vision preprocessing, kernels, state layout, and tool schema. Verify which details are actually disclosed. Run local capability, memory, latency, and recovery checks rather than transferring a hosted score to a different artifact. Section 17.6 tracks the dated release/evaluation profiles; Sections 12.5, 13.5, and 16.5 examine the resulting state, compression, and memory contracts.
+
+### November artifact additions
+
+**As of 2026-11-15.** These rows supersede earlier planned-weight states; revision dates are not assumed to be first launch dates.
+
+| Artifact / milestone | Public disclosure | Boundary |
+|---|---|---|
+| Mistral Large 4, weights October 29 | Public multimodal MoE weights; 1T total/52B active [[31]](#ref-31) | Custom ecosystem license; Model-as-a-Service businesses need an additional agreement |
+| Kimi K3.1 Pro, checked November 5 revision | Public 2.8T total/104B active; KDA plus gated sparse attention and QAT formats [[32]](#ref-32) | Hosted Highspeed is a separate profile; full training mixture undisclosed |
+| Inkling 2 Small, weights November 12 | Apache-2.0, 594B total/17B active, text/image input, mixed formats and draft head [[33]](#ref-33) | Packed storage is not logical parameter count or a throughput guarantee |
+| Qwen3.8 Flash Next, checked November 7 revision | Main network 125B/6B active, separate 51B n-gram embeddings and 4B MTP; native context 262,144 [[34]](#ref-34) | Do not merge parameter categories or identify it with hosted Flash |
+| GLM-5.3 Flash, checked October 15 revision | MIT, separately trained multimodal base, 320B/18B active [[35]](#ref-35) | Do not inherit the text-only GLM-5.3 description |
+
+GPT-6.1 Terra and Claude Fable/Mythos 5.2 add hosted operating points, but their parameter counts and detailed training recipes remain undisclosed. Section 17.6 separates their access, pricing and evaluated profiles from these downloadable artifacts.
 
 ## Quizzes
 
@@ -322,3 +336,13 @@ For adoption, pin the model and numerical format, tokenizer or encoding toolkit,
 29. <a id="ref-29"></a>DeepSeek. (2026-10-17). *DeepSeek V4.1 Flash 1017 model card*. [Source](https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017).
 
 30. <a id="ref-30"></a>Tencent. (2026). *Hy-Memory-30B-A3B model card*. [Source](https://huggingface.co/tencent/Hy-Memory-30B-A3B).
+
+31. <a id="ref-31"></a>Mistral Large 4. Model card, verified 2026-11-15. [Source](https://huggingface.co/mistralai/Mistral-Large-4-1T-A52B).
+
+32. <a id="ref-32"></a>Kimi K3.1 Pro. Model card, verified 2026-11-15. [Source](https://huggingface.co/moonshotai/Kimi-K3.1-Pro).
+
+33. <a id="ref-33"></a>Inkling 2 Small. Model card, verified 2026-11-15. [Source](https://huggingface.co/thinkingmachines/Inkling-2-Small).
+
+34. <a id="ref-34"></a>Qwen3.8 Flash Next. Model card, verified 2026-11-15. [Source](https://huggingface.co/Qwen/Qwen3.8-Flash-Next).
+
+35. <a id="ref-35"></a>GLM-5.3 Flash. Model card, verified 2026-11-15. [Source](https://huggingface.co/zai-org/GLM-5.3-Flash).

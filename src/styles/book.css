@@ -2,9 +2,9 @@
   --bg-color: #fcfbf9;
   --text-color: #2c3e50;
   --accent-color: #8e44ad;
-  --secondary-color: #7f8c8d;
+  --secondary-color: #52616b;
   --border-color: #bdc3c7;
-  --sidebar-width: 350px;
+  --sidebar-width: 290px;
 }
 body {
   font-family: 'Pretendard', 'Noto Sans CJK', 'Noto Sans KR', 'Noto Sans JP', 'Noto Sans SC', sans-serif;
@@ -103,8 +103,8 @@ header {
   margin-bottom: 2rem;
 }
 
-header h1 {
-  font-size: 2rem;
+header .book-title {
+  font-size: 1.25rem;
   margin: 0;
   font-weight: 700;
 }
@@ -231,8 +231,8 @@ header h1 {
 }
 
 main {
-  font-size: 1.2rem;
-  font-weight: 300;
+  font-size: 1.125rem;
+  font-weight: 400;
 }
 
 /* Code Block Styles */
@@ -335,7 +335,7 @@ h1, h2, h3 {
   cursor: pointer;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   html,
   body {
     max-width: 100%;
@@ -360,12 +360,88 @@ h1, h2, h3 {
     padding-left: 3rem; /* Make space for toggle */
     gap: 1rem;
   }
-  header h1 {
+  header .book-title {
     font-size: 1.35rem;
   }
 }
 
-/* Fix for KaTeX duplicate rendering (hide MathML) */
+/* Keep the semantic MathML accessible without displaying a second formula. */
 .katex-mathml {
-  display: none !important;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
+
+[hidden] { display: none !important; }
+html { scroll-padding-top: 1.5rem; }
+:focus-visible { outline: 3px solid #7650a2; outline-offset: 3px; }
+.skip-link { position: fixed; top: -6rem; left: 1rem; z-index: 1100; padding: .75rem 1rem; background: white; color: #542a72; }
+.skip-link:focus { top: .5rem; }
+.sidebar h1 { font-size: 1.2rem; margin: 0 0 1rem; }
+.sidebar h2 { font-size: .95rem; line-height: 1.5; margin-top: 1.5rem; color: #3c4756; }
+.sidebar a { font-size: .9rem; line-height: 1.5; padding: .45rem .55rem; }
+.sidebar ul { padding-left: .25rem; }
+.sidebar a.active { border-left: 3px solid var(--accent-color); background: #eee5f4; }
+.chapter-search-label { display: block; font-size: .85rem; font-weight: 600; margin-bottom: .3rem; }
+#chapterSearch { box-sizing: border-box; width: 100%; min-height: 44px; font: inherit; font-size: .85rem; padding: .5rem .65rem; border: 1px solid #8b929b; border-radius: 6px; background: white; color: #243447; }
+.search-empty { font-size: .9rem; }
+.sidebar-backdrop { position: fixed; inset: 0; background: rgb(15 23 42 / 45%); border: 0; z-index: 998; }
+.menu-open { overflow: hidden; }
+.container { max-width: 1020px; padding: 2rem 3rem; }
+main > p, main > ul, main > ol, main > blockquote { max-width: 76ch; }
+main > h1 { font-size: clamp(1.75rem, 3vw, 2.35rem); line-height: 1.3; margin: 1.5rem 0; letter-spacing: -.025em; overflow-wrap: anywhere; }
+main > h2 { margin-top: 2.75rem; padding-top: .5rem; font-size: 1.5rem; line-height: 1.4; border-top: 1px solid #e1ddd8; }
+main > h3 { font-size: 1.2rem; line-height: 1.5; margin-top: 2rem; }
+main > p { margin-block: 1.2rem; }
+main a { color: #70408d; text-underline-offset: .18em; overflow-wrap: anywhere; }
+main > blockquote { margin-inline: 0; padding: .5rem 1.25rem; border-left: 3px solid #a98abd; background: #f3eef6; }
+main > table { display: block; max-width: 100%; overflow-x: auto; }
+main .katex-display { max-width: 100%; overflow-x: auto; overflow-y: hidden; padding-block: .4rem; }
+main > details { padding: .85rem 1rem; margin-block: .75rem; background: #fff; border: 1px solid #d9d4df; border-radius: 8px; }
+main > details > summary { cursor: pointer; font-weight: 600; line-height: 1.6; }
+main > details[open] > summary { margin-bottom: .75rem; }
+.page-outline { margin-block: 1rem 2rem; padding: .8rem 1rem; border: 1px solid #d9d4df; border-radius: 8px; background: #f6f3f8; font-size: .95rem; }
+.page-outline summary { cursor: pointer; font-weight: 600; }
+.page-outline ol { padding-left: 1.4rem; margin-bottom: .25rem; }
+.page-outline a { color: #633b7c; text-underline-offset: .15em; }
+code { font-size: .9em; overflow-wrap: anywhere; }
+pre code { overflow-wrap: normal; }
+@media (max-width: 1100px) { .container { padding: 1.5rem 2rem; } }
+@media (max-width: 900px) {
+  .sidebar { width: min(340px, calc(100vw - 48px)); padding-top: 4.5rem; }
+  .container { padding: 1.25rem; }
+  header { min-height: 3rem; padding-left: 6rem; align-items: flex-start; gap: .5rem; }
+  header .book-title { font-size: 1rem; line-height: 1.4; }
+  .header-actions { gap: .4rem; }
+  .github-link { display: none; }
+  main { font-size: 1.05rem; }
+  pre, .astro-code { padding: 1rem !important; }
+  pre code, .astro-code code { font-size: .875rem; }
+  th, td { padding: .6rem .75rem; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; } }
+@media print {
+  .sidebar, .menu-toggle, .sidebar-backdrop, .header-actions, .page-outline, .navigation-links, .skip-link { display: none !important; }
+  .content-wrapper { margin: 0; width: 100%; }
+  .container { max-width: none; padding: 0; }
+  main { font-size: 11pt; }
+  main > table { display: table; font-size: 9pt; }
+  pre { white-space: pre-wrap; }
+  h2, h3 { break-after: avoid; }
+}
+
+/* A full-width mobile contents bar avoids a floating control over prose. */
+@media (max-width: 900px) {
+  body { padding-top: 3.1rem; }
+  .menu-toggle { top: 0; left: 0; width: 100%; min-height: 3.1rem; text-align: left; border-radius: 0; padding: .6rem 1.25rem; background: #f8fafc; color: #173e66; border-bottom: 1px solid #cbd5e1; }
+  .sidebar { top: 3.1rem; height: calc(100dvh - 3.1rem); }
+  header { padding-left: 0; }
+  :target { scroll-margin-top: 4rem; }
+}
+@media print { body { padding-top: 0; } }

@@ -14,24 +14,18 @@ export default function AttentionVisualizer({ lang = 'en' }: AttentionVisualizer
     7: { "The": 0.01, "animal": 0.45, "didn't": 0.02, "cross": 0.05, "the": 0.01, "street": 0.15, "because": 0.01, "it": 0.20, "was": 0.02, "too": 0.03, "tired": 0.05 }
   };
 
-  const getDefaultWeights = () => {
-    const obj: { [key: string]: number } = {};
-    sentence.forEach(w => obj[w] = 1 / sentence.length);
-    return obj;
-  };
-
-  const weights = attentionData[selectedWord] || getDefaultWeights();
+  const weights = attentionData[selectedWord];
 
   const labels = {
     en: {
       title: "Sentence: \"The animal didn't cross the street because it was too tired.\"",
       subtitle: "Selected Word Attends To:",
-      hint: "Click on a word to see its attention weights."
+      hint: "Authored weights are available for “it” only; other tokens show missing data."
     },
     ko: {
       title: "문장: \"The animal didn't cross the street because it was too tired.\"",
       subtitle: "선택된 단어가 주목하는 대상:",
-      hint: "단어를 클릭하여 어텐션 가중치를 확인하세요."
+      hint: "설명용 가중치는 “it”에만 있습니다. 다른 토큰에는 데이터 없음을 표시합니다."
     }
   };
 
@@ -50,7 +44,7 @@ export default function AttentionVisualizer({ lang = 'en' }: AttentionVisualizer
         {sentence.map((word, idx) => (
           <button
             key={idx}
-            onClick={() => setSelectedWord(idx)}
+            aria-pressed={selectedWord === idx} onClick={() => setSelectedWord(idx)}
             className={`tv-btn ${selectedWord === idx ? 'tv-btn-active' : ''}`}
             style={{
               backgroundColor: selectedWord === idx ? '#8e44ad' : 'white',
@@ -70,8 +64,9 @@ export default function AttentionVisualizer({ lang = 'en' }: AttentionVisualizer
 
       <div style={{ marginTop: '30px', textAlign: 'center' }}>
         <div style={{ fontSize: '0.9rem', color: '#7f8c8d', marginBottom: '10px' }}>{t.subtitle}</div>
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', flexWrap: 'wrap', alignItems: 'flex-end', height: '120px' }}>
-          {sentence.map((w, idx) => {
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', flexWrap: 'wrap', alignItems: 'flex-end', minHeight: '120px' }}>
+          {!weights && <p role="status">{lang === "ko" ? "이 토큰의 가중치는 제공되지 않았습니다." : "Weights for this token are not provided."}</p>}
+          {weights && sentence.map((w, idx) => {
             const weight = weights[w] || 0;
             return (
               <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>

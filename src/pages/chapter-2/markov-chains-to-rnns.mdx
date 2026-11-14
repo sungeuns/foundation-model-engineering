@@ -105,7 +105,7 @@ class SimpleRNN(nn.Module):
     def __init__(self, input_size, hidden_size, output_size):
         super(SimpleRNN, self).__init__()
         self.hidden_size = hidden_size
-        
+
         # RNN Cell operations
         self.i2h = nn.Linear(input_size + hidden_size, hidden_size)
         self.i2o = nn.Linear(input_size + hidden_size, output_size)
@@ -181,8 +181,8 @@ Visualize how the hidden state changes as words are processed. Notice how early 
 </details>
 
 <details>
-<summary>Quiz 6: Mathematically derive the gradient $\frac{\partial L_t}{\partial \mathbf{h}_k}$ for $k \ll t$ in a recurrent neural network using Backpropagation Through Time (BPTT), and explain how the term $\prod_{j=k+1}^t \frac{\partial \mathbf{h}_j}{\partial \mathbf{h}_{j-1}}$ causes vanishing gradients.</summary>
-*The hidden state update is $\mathbf{h}_j = \tanh(\mathbf{W}_{hh}\mathbf{h}_{j-1} + \mathbf{W}_{xh}\mathbf{x}_j + \mathbf{b}_h)$. By the chain rule, the gradient of the loss $L_t$ at step $t$ with respect to hidden state $\mathbf{h}_k$ is: $\frac{\partial L_t}{\partial \mathbf{h}_k} = \frac{\partial L_t}{\partial \mathbf{h}_t} \frac{\partial \mathbf{h}_t}{\partial \mathbf{h}_k} = \frac{\partial L_t}{\partial \mathbf{h}_t} \prod_{j=k+1}^t \frac{\partial \mathbf{h}_j}{\partial \mathbf{h}_{j-1}}$. The Jacobian matrix is $\frac{\partial \mathbf{h}_j}{\partial \mathbf{h}_{j-1}} = \text{diag}(1 - \tanh^2(\mathbf{W}_{hh}\mathbf{h}_{j-1} + \dots)) \mathbf{W}_{hh}^T$. If the weights are small or the activation saturates (value close to $\pm 1$), the absolute value of the eigenvalues of the Jacobian is less than $1$. As $t - k$ becomes large, the product $\prod_{j=k+1}^t \frac{\partial \mathbf{h}_j}{\partial \mathbf{h}_{j-1}}$ geometrically approaches zero, causing the gradient to vanish.*
+<summary>Quiz 6: What is a sufficient condition for vanishing gradients in the BPTT Jacobian product?</summary>
+*For column-vector states, $J_j=\operatorname{diag}(1-h_j^2)W_{hh}$ and $\partial h_t/\partial h_k=J_t\cdots J_{k+1}$. If every operator norm satisfies $\|J_j\|_2\le\rho<1$, the product norm is at most $\rho^{t-k}$. Individual eigenvalues do not establish the behavior of a noncommuting product. Column-vector loss gradients propagate through the transpose of this ordered product.*
 </details>
 
 ---

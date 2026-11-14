@@ -20,15 +20,17 @@ import AutomatedRedTeamingVisualizer from '../../../components/chapter-18/Automa
 
 과거 사이버 보안의 레드티밍은 **MITRE ATT&CK** 와 같은 프레임워크에 의해 주도되었습니다. ATT&CK는 인프라 내부로의 측면 이동(Lateral Movement)을 위해 공격자가 사용하는 전술, 기법, 절차(TTPs)를 매핑합니다.
 
-하지만 전통적인 프레임워크는 신경망(Neural Network) 자체가 가진 고유한 취약점을 설명하지 못합니다. 공격자는 LLM에서 민감한 데이터를 추출하기 위해 호스트 서버를 해킹할 필요가 없습니다. 단지 입력 프롬프트를 통해 수학적 가중치(Weights)를 조작하기만 하면 됩니다.
+프롬프트 공격은 호스트 침해 없이도 모델이나 도구의 동작을 잘못 유도할 수 있습니다. 일반적인 추론에서는 입력이 활성화와 출력 분포를 바꾸며, 저장된 가중치를 직접 수정하지는 않습니다. 개인정보·시스템 지시·도구 권한은 서로 다른 공격면이므로 각각 검증합니다.
 
 이를 해결하기 위해 업계는 **MITRE ATLAS** (Adversarial Threat Landscape for Artificial-Intelligence Systems) [[1]](#ref-1) 를 도입했습니다. 2025년과 2026년 업데이트를 거치며, ATLAS는 AI 특화 TTP에 대한 표준 분류 체계로 자리 잡았습니다.
 
 ### Key MITRE ATLAS Tactics
+
+분류 확인 기준: **as of 2026-11-15**, ATLAS 2026.07 데이터 [[1]](#ref-1).
 AI 레드티밍은 루트 권한 획득이 아니라 모델의 행동 조작에 초점을 맞춥니다:
-- **ML Attack Staging (AML.TA0004)** : 안전 가드레일을 우회하도록 설계된 적대적 입력(예: Prompt Injection, Jailbreaking)을 구성합니다.
-- **Exfiltration (AML.TA0009)** : 추론(Inference) 과정을 탐색하여 모델의 학습 데이터, 독점적인 시스템 프롬프트, 또는 내장된 API 키를 추출합니다.
-- **Impact (AML.TA0014)** : 모델을 무한 생성 루프에 빠뜨려 서비스 거부(Denial of Wallet, DoW) 공격을 실행하거나, Agentic AI 시스템을 악용하여 외부 환경에서 승인되지 않은 명령을 실행합니다.
+- **ML Attack Staging (AML.TA0001)** : 안전 가드레일을 우회하도록 설계된 적대적 입력(예: Prompt Injection, Jailbreaking)을 구성합니다.
+- **Exfiltration (AML.TA0010)** : 추론(Inference) 과정을 탐색하여 모델의 학습 데이터, 독점적인 시스템 프롬프트, 또는 내장된 API 키를 추출합니다.
+- **Impact (AML.TA0011)** : 모델을 무한 생성 루프에 빠뜨려 서비스 거부(Denial of Wallet, DoW) 공격을 실행하거나, Agentic AI 시스템을 악용하여 외부 환경에서 승인되지 않은 명령을 실행합니다.
 
 엔터프라이즈 AI 서비스에서는 여기에 제품 고유의 공격면이 추가됩니다. 공격자는 모델 자체만 공격하지 않습니다. 검색 인덱스, 플러그인 권한, tool schema, 세션 메모리, 사용자 업로드 문서, 로그 파이프라인, human escalation workflow까지 함께 봅니다.
 
@@ -80,7 +82,7 @@ GCG의 목표는 유해한 프롬프트 뒤에 의미 없는 "적대적 접미�
 
 1. **Forward Pass**: 프롬프트를 모델에 통과시켜 Logit을 얻습니다.
 2. **Gradient Extraction**: 타겟 응답(긍정적 수락)에 대한 Cross-Entropy Loss를 계산합니다. 역전파(Backpropagation)를 수행하여 접미사의 One-hot 토큰 임베딩에 대한 Loss의 그래디언트를 구합니다.
-3. **Candidate Selection**: 어휘 사전(Vocabulary) 내 특정 토큰의 그래디언트가 음수라는 것은, 현재 토큰을 이 새로운 토큰으로 교체할 때 Loss가 감소(타겟 응답이 나올 확률이 증가)함을 의미합니다.
+3. **Candidate Selection**: 그래디언트의 1차 근사로 토큰 교체 후보를 순위화합니다. 실제 이산 교체의 손실 감소를 보장하지 않으므로 후보를 직접 평가합니다.
 4. **Greedy Search**: Loss를 가장 많이 줄이는 Top-$k$ 개의 대체 토큰을 선택하고, 이를 Forward Pass로 평가한 뒤 접미사를 탐욕적으로(Greedily) 업데이트합니다.
 
 아래는 GCG 알고리즘의 핵심인 그래디언트 추출 단계를 보여주는 PyTorch 구현 예시입니다.
@@ -91,42 +93,42 @@ import torch.nn.functional as F
 from transformers import PreTrainedModel
 
 def compute_token_gradients(
-    model: PreTrainedModel, 
-    input_ids: torch.Tensor, 
-    target_slice: slice, 
+    model: PreTrainedModel,
+    input_ids: torch.Tensor,
+    target_slice: slice,
     loss_fn: torch.nn.Module
 ) -> torch.Tensor:
     """
-    Greedy Coordinate Gradient (GCG) 공격에서 입력 토큰의 One-hot 임베딩에 대한 
+    Greedy Coordinate Gradient (GCG) 공격에서 입력 토큰의 One-hot 임베딩에 대한
     Loss의 그래디언트를 계산합니다.
     """
     # 1. 연속적인(Continuous) 임베딩 행렬에 접근
     embed_layer = model.get_input_embeddings()
     vocab_size = embed_layer.weight.shape[0]
-    
+
     # 2. 그래디언트 추적을 위해 이산적인 input_ids를 One-hot 벡터로 변환
     # 형태: (1, seq_len, vocab_size)
     one_hot = F.one_hot(input_ids, num_classes=vocab_size).to(embed_layer.weight.dtype)
     one_hot.requires_grad_()
-    
+
     # 3. One-hot 벡터를 연속적인 임베딩 공간으로 투영
     # (1, seq_len, vocab_size) @ (vocab_size, hidden_dim) -> (1, seq_len, hidden_dim)
     embeddings = torch.matmul(one_hot, embed_layer.weight)
-    
+
     # 4. 연속적인 임베딩을 사용하여 Forward Pass 수행
     outputs = model(inputs_embeds=embeddings)
     logits = outputs.logits # 형태: (1, seq_len, vocab_size)
-    
+
     # 5. 타겟 응답 토큰에 대해서만 Loss 계산
     # 다음 토큰 예측과 맞추기 위해 Logit을 1칸 이동(Shift)
     shift_logits = logits[0, target_slice.start - 1 : target_slice.stop - 1, :]
     shift_labels = input_ids[0, target_slice]
-    
+
     loss = loss_fn(shift_logits, shift_labels)
-    
+
     # 6. One-hot 행렬에 대한 그래디언트를 계산하기 위해 Backward Pass 수행
     loss.backward()
-    
+
     # 결과 그래디언트는 Loss가 가장 가파르게 상승하는 방향을 나타냅니다.
     # Loss를 최소화하려면 가장 음수인 그래디언트 값을 찾아야 합니다.
     return one_hot.grad[0]
@@ -155,7 +157,7 @@ def get_top_k_replacements(gradients: torch.Tensor, k: int = 256) -> torch.Tenso
 
 #### Interactive PAIR Simulation
 
-아래의 인터랙티브 시각화 도구를 사용하여 시뮬레이션된 PAIR 공격 루프를 단계별로 살펴보십시오. Attacker LLM이 Critic의 피드백을 바탕으로 전략을 조정하여, 마침내 Target 모델의 안전 가드레일을 우회하는 과정을 관찰할 수 있습니다.
+아래 교육용 시각화는 정책 테스트의 반복과 평가자 오판을 보여줍니다. 결과를 실제 모델의 탈옥 성공으로 해석하지 않습니다.
 
 <AutomatedRedTeamingVisualizer lang="ko" client:load />
 
@@ -178,11 +180,9 @@ Attacker는 상위 수준의 정책("신뢰 구축 -> 가상 시나리오 도입
 
 ## The Refusal Gap
 
-레드티밍 기술이 공격적으로 발전함에 따라, 모델 개발자들 역시 안전 가드레일을 대폭 강화하며 대응하고 있습니다. 이런 군비 경쟁 속에서 AI 안전 평가에서 **Refusal Gap(거부 격차)** 이라는 지표의 중요성이 커졌습니다 [[4]](#ref-4).
+Chen 등의 논문에서 refusal gap은 내부 은닉 상태의 refusal probe와 외부 안전 평가자가 내린 판단의 불일치입니다 [[4]](#ref-4). 어느 평가자도 정답으로 가정하지 않으며, probe의 타당성과 평가자 오류를 따로 검증해야 합니다.
 
-자동화된 레드티밍을 방어하기 위해 모델이 강도 높은 적대적 학습(Adversarial Training)을 거치게 되면, 종종 지나치게 방어적인 태도를 취하게 됩니다. 모델은 적대적 프롬프트와 구조적으로 유사하다는 이유만으로 완벽하게 안전하고 무해한 요청조차 거부하기 시작하는데, 이러한 현상을 *과잉 거부(Over-refusal)* 라고 합니다.
-
-Refusal Gap은 모델의 실제 거부 행동과 외부 안전 평가자의 판단(또는 모델 내부의 이상적인 안전 기준) 사이의 불일치를 측정합니다. 고도로 발전된 모델은 GCG 공격을 견뎌내는 동시에, 악의적인 프롬프트와 복잡하게 구성된 정상적인 사용자 쿼리를 정확하게 구별할 수 있어야 합니다.
+정상 요청의 과잉 거부는 별도 지표입니다. 악성 요청에 대한 공격 성공률과 정상 요청의 거부율을 함께 보고하고, 제품별 심각한 도구·정보 유출 실패를 평균에 숨기지 않습니다.
 
 ## Enterprise Red Team 운영 플레이북
 
@@ -242,19 +242,19 @@ Refusal Gap은 모델의 실제 거부 행동과 외부 안전 평가자의 판�
 </details>
 
 <details>
-<summary>Quiz 5: "Refusal Gap"이란 무엇이며, 이것이 지나치게 공격적인 적대적 학습(Adversarial Training)의 부정적인 결과인 이유는 무엇입니까?</summary>
-*Refusal Gap은 모델의 실제 안전 경계와 실제 거부 행동 사이의 불일치를 의미합니다. 공격적인 적대적 학습은 모델을 지나치게 조심스럽게 만들어 "과잉 거부(Over-refusal)"를 유발할 수 있습니다. 이 경우 모델은 단순히 알려진 공격과 구조적 유사성을 공유한다는 이유만으로 완벽하게 무해하고 안전한 요청(예: 해커에 대한 허구의 소설 작성)조차 거부하게 되어 사용성을 크게 떨어뜨립니다.*
+<summary>Quiz 5: Refusal gap과 정상 요청의 과잉 거부는 같은 지표인가요?</summary>
+*아닙니다. 인용 논문의 refusal gap은 내부 refusal probe와 외부 안전 평가자의 불일치입니다. 정상 요청의 거부율은 별도로 측정하며, 두 평가자 모두 오류가 있을 수 있습니다.*
 </details>
 
 ---
 
 ## References
 
-1. <a id="ref-1"></a>MITRE ATLAS (2025). *Adversarial Threat Landscape for Artificial-Intelligence Systems*. MITRE Corporation.
+1. <a id="ref-1"></a>MITRE ATLAS. *Adversarial Threat Landscape for Artificial-Intelligence Systems*, 2026.07 data. [Versioned taxonomy](https://github.com/mitre-atlas/atlas-data/tree/v2026.07).
 2. <a id="ref-2"></a>Zou, A., et al. (2023). *Universal and Transferable Adversarial Attacks on Aligned Language Models*. [arXiv:2307.15043](https://arxiv.org/abs/2307.15043).
 3. <a id="ref-3"></a>Chao, P., et al. (2023). *Jailbreaking Black Box Large Language Models in Twenty Queries*. [arXiv:2310.08419](https://arxiv.org/abs/2310.08419).
 4. <a id="ref-4"></a>Chen, Y., Du, X., Zou, X., Zhao, C., Deng, H., Li, H., & Kuang, X. (2025). *Refusal-Aware Red Teaming: Exposing Inconsistency in Safety Evaluations.* [ACL Anthology](https://aclanthology.org/2025.emnlp-main.49/).
 5. <a id="ref-5"></a>Microsoft. (2016). *Learning from Tay's introduction.* [Official Microsoft Blog](https://blogs.microsoft.com/blog/2016/03/25/learning-tays-introduction/).
 6. <a id="ref-6"></a>Moore, M. (2023). *Samsung bans ChatGPT use after employee leak.* [TechRadar](https://www.techradar.com/news/samsung-bans-chatgpt-use-after-employee-leak).
 7. <a id="ref-7"></a>Carter, L. (2023). *Chevrolet Dealer's AI Chatbot Goes Rogue Thanks To Pranksters.* [Jalopnik](https://www.jalopnik.com/chevrolet-dealer-ai-help-chatbot-goes-rogue-pranksters-1851112556/).
-8. <a id="ref-8"></a>Civil Resolution Tribunal. (2024). *Moffatt v. Air Canada, 2024 BCCRT 149.* [CanLII](https://www.canlii.org/en/bc/bccrt/doc/2024/2024bccrt149/2024bccrt149.html).
+8. <a id="ref-8"></a>Civil Resolution Tribunal. (2024). *Moffatt v. Air Canada, 2024 BCCRT 149.* [CanLII](https://www.canlii.org/en/bc/bccrt/doc/2024/2024bccrt149/2024bccrt149.html); [decision PDF mirror](https://www.thesedonaconference.org/sites/default/files/meeting_paper/Moffet%20v%20AirCanada.pdf).

@@ -8,7 +8,7 @@ import ZeROMemoryVisualizer from '../../../components/chapter-7/ZeROMemoryVisual
 
 # 7.2 ZeRO (Zero Redundancy Optimizer)
 
-이전 장에서 우리는 Distributed Data Parallel (DDP) 이 데이터셋을 여러 GPU에 분할하여 연산량을 선형적으로 확장하는 방법을 살펴보았습니다. 하지만 DDP는 치명적인 물리적 한계를 내포하고 있습니다: **클러스터 내의 모든 GPU는 모델과 학습 상태(Training states)의 완벽하고 동일한 복제본을 유지해야 합니다.** 
+이전 장에서 우리는 Distributed Data Parallel (DDP) 이 데이터셋을 여러 GPU에 분할하여 연산량을 선형적으로 확장하는 방법을 살펴보았습니다. 하지만 DDP는 치명적인 물리적 한계를 내포하고 있습니다: **클러스터 내의 모든 GPU는 모델과 학습 상태(Training states)의 완벽하고 동일한 복제본을 유지해야 합니다.**
 
 Foundation Model 의 크기가 2019년 10억(1B) 개 수준에서 2020년 1,000억(100B) 개 이상으로 폭발적으로 증가함에 따라, 엔지니어들은 **Memory Wall** (메모리 장벽) 이라는 거대한 물리적 한계에 부딪혔습니다. 클러스터에 아무리 많은 GPU를 추가하더라도, 모델이 *단일* GPU의 VRAM에 들어가지 않는다면 학습 자체가 수학적으로 불가능했습니다.
 
@@ -17,6 +17,8 @@ Foundation Model 의 크기가 2019년 10억(1B) 개 수준에서 2020년 1,000�
 ---
 
 ## 1. GPU 메모리의 해부학 (The Anatomy of GPU Memory)
+
+이 절은 FP16/BF16 파라미터·그래디언트 각 2바이트, FP32 마스터 가중치 4바이트와 Adam 모멘트 8바이트를 사용하는 **예시 회계 모델** 입니다. FP32 그래디언트나 마스터 복사본이 없는 구현은 다릅니다. 활성화·임시 버퍼·collective·체크포인트·평가 여유를 별도로 더하며, 시퀀스 길이·재계산·샤딩 구성을 명시해야 합니다.
 
 ZeRO가 메모리를 어떻게 최적화하는지 이해하려면, 학습 중에 메모리가 어디로 증발하는지 먼저 해부해 보아야 합니다.
 
@@ -32,9 +34,9 @@ Foundation Model 의 표준인 혼합 정밀도(Mixed-precision) 학습을 진�
    - Variance: $4\Phi$ 바이트
    - *Total Optimizer State:* $12\Phi$ 바이트.
 
-**총 Model State 메모리 = $16\Phi$ 바이트.** 
+**총 Model State 메모리 = $16\Phi$ 바이트.**
 
-여기서 매우 놀라운 사실을 발견할 수 있습니다: **옵티마이저 상태(Optimizer states)가 전체 메모리의 75%를 차지합니다 ($16\Phi$ 중 $12\Phi$).** 
+여기서 매우 놀라운 사실을 발견할 수 있습니다: **옵티마이저 상태(Optimizer states)가 전체 메모리의 75%를 차지합니다 ($16\Phi$ 중 $12\Phi$).**
 
 만약 Llama 3 70B와 같은 700억 파라미터 모델을 학습시키려 한다고 가정해 봅시다. Model States 에만 $16 \times 70 \text{ billion} \approx 1.12 \text{ Terabytes}$ 의 VRAM이 필요합니다. 최신 NVIDIA H100 GPU의 VRAM은 80GB에 불과합니다. 표준 DDP 환경에서는 1대의 GPU를 쓰든 10,000대의 GPU를 쓰든, 이 모델을 학습시키는 것은 수학적으로 불가능합니다.
 
@@ -54,18 +56,18 @@ ZeRO는 모델 상태를 복제하는 대신, 클러스터 내의 $N$ 개 GPU에
 - GPU $i$ 는 전체 파라미터 중 자신에게 할당된 특정 파티션의 옵티마이저 상태만 저장합니다.
 - GPU $i$ 는 자신에게 할당된 가중치 조각(Slice)을 업데이트할 책임만 집니다.
 - **Memory Footprint:**  $16\Phi$ 에서 $4\Phi + \frac{12\Phi}{N}$ 로 감소합니다.
-- **Communication Overhead:**  **0%**. All-Reduce 대신, ZeRO는 그래디언트에 대해 *Reduce-Scatter* 를 수행한 뒤, 업데이트된 가중치에 대해 *All-Gather* 를 수행합니다. 네트워크를 통해 전송되는 총 데이터 양은 표준 DDP의 All-Reduce와 수학적으로 정확히 동일합니다.
+- **통신:** 이상화한 바이트 수는 DDP All-Reduce와 같을 수 있지만 실행 시간 추가 비용이 0이라는 뜻은 아닙니다. collective 시작, 버킷 크기, 스케줄과 메모리 복사가 영향을 줍니다.
 
 ### Stage 2: Gradient Partitioning ($P_{os+g}$)
 GPU $i$ 가 가중치의 파티션 $i$ 만 업데이트할 책임이 있다면, 전체 그래디언트 텐서를 들고 있을 필요가 없습니다. ZeRO-2에서는 역전파 중 그래디언트 버킷이 계산되는 즉시, 해당 그래디언트를 책임지는 GPU로 축소 및 분산(Reduce-Scatter)시킨 후 로컬 복제본을 즉각 폐기합니다.
 - **Memory Footprint:**  $2\Phi + \frac{14\Phi}{N}$ 로 감소합니다.
-- **Communication Overhead:**  **0%**. Stage 1과 정확히 동일한 Reduce-Scatter / All-Gather 프리미티브를 사용합니다.
+- **통신:** 이상화한 바이트 수는 DDP All-Reduce와 같을 수 있지만 실행 시간 추가 비용이 0이라는 뜻은 아닙니다. collective 시작, 버킷 크기, 스케줄과 메모리 복사가 영향을 줍니다.
 
 ### Stage 3: Parameter Partitioning ($P_{os+g+p}$)
 분산 학습의 궁극적인 형태로, PyTorch 생태계에서는 **FSDP (Fully Sharded Data Parallel)** 라고도 불립니다. ZeRO-3는 파라미터 자체마저 분할합니다. 이제 어떤 GPU도 완전한 모델을 들고 있지 않습니다.
 - **Mechanism:**  특정 Transformer 레이어가 순전파(Forward) 또는 역전파(Backward) 연산을 수행해야 할 때, ZeRO-3는 Just-In-Time (JIT) 방식으로 *All-Gather* 를 수행하여 해당 레이어의 가중치만 일시적으로 재구성합니다. 해당 레이어의 연산이 끝나는 즉시 가중치는 메모리에서 삭제됩니다.
 - **Memory Footprint:**  GPU 대수에 비례하여 선형적으로 확장됩니다: $\frac{16\Phi}{N}$.
-- **Communication Overhead:**  **~1.5x**. 순전파와 역전파 *모두* 에서 가중치를 All-Gather 해야 하므로, DDP에 비해 네트워크 볼륨이 50% 증가합니다. 하지만 이 오버헤드는 레이어 $L$ 의 통신과 레이어 $L-1$ 의 연산을 중첩(Overlap)시킴으로써 대부분 숨길 수 있습니다.
+- **통신:** 단순화한 ZeRO-3 회계는 DDP 대비 약 1.5배 전송량을 추정합니다. 실제 수치는 파라미터 유지·재계산·prefetch 정책에 따라 달라지며 겹침도 측정해야 합니다.
 
 ---
 
@@ -85,7 +87,7 @@ ZeRO-3를 사용하면 GPU를 추가함에 따라 메모리를 선형적으로 �
 
 DeepSpeed 팀은 전체 시스템의 메모리 계층 구조를 쥐어짜내기 위해 **ZeRO-Offload** [[2]](#ref-2) 와 **ZeRO-Infinity** [[3]](#ref-3) 를 도입했습니다.
 
-*   **ZeRO-Offload (CPU RAM):**  CPU는 연산 속도는 느리지만 방대한 메모리(종종 1TB 이상의 시스템 RAM)를 가지고 있습니다. ZeRO-Offload는 $12\Phi$ 크기의 옵티마이저 상태와 Adam 연산을 CPU로 넘깁니다(Offload). GPU가 스텝 $t$ 의 순전파/역전파를 계산하는 동안, CPU는 비동기적으로 스텝 $t-1$ 의 가중치를 업데이트하고 PCIe를 통해 GPU로 다시 전송합니다. 이를 통해 단일 GPU에서도 130억(13B) 파라미터 모델을 학습시킬 수 있습니다.
+* **ZeRO-Offload (CPU RAM):** 옵티마이저 상태와 연산을 CPU로 옮겨 GPU 메모리를 줄입니다. CPU 연산·PCIe 전송·GPU 연산을 겹치려면 업데이트 의존성을 지켜야 합니다. 한 스텝 늦춘 업데이트는 별도의 알고리즘 선택이지 기본 동기식 Adam과 같은 동작이 아닙니다. 논문의 단일 GPU 결과는 해당 실험 구성에 대한 것입니다.
 *   **ZeRO-Infinity (NVMe Storage):**  오프로드 개념을 고속 NVMe SSD로 확장한 기술입니다. 고속 NVMe 스토리지를 거대한 가상 메모리 풀로 취급하고 메모리 중심의 타일링(Tiling) 기법을 사용함으로써, ZeRO-Infinity는 단일 머신에서 **수조 개(Trillions)** 의 파라미터를 가진 모델을 호스팅하고 미세 조정(Fine-tuning)할 수 있게 해줍니다. GPU 메모리 장벽을 완전히 분쇄한 것입니다.
 
 ---
@@ -127,7 +129,7 @@ def train():
     with deepspeed.zero.Init(config_dict_or_path="ds_config.json"):
         model = SimpleLLM(vocab_size=32_000, d_model=4_096)
 
-    engine, _, _, loader = deepspeed.initialize(
+    engine, _, loader, _ = deepspeed.initialize(
         model=model,
         model_parameters=model.parameters(),
         training_data=TokenDataset(),
@@ -143,7 +145,7 @@ def train():
         engine.step()
         if dist.get_rank() == 0:
             print(float(loss))
-            break
+        break  # All ranks stop together after this demonstration step.
 ```
 
 해석된 전역 배치는 microbatch × accumulation × data-parallel 차수와 같아야 합니다. 상주 샤딩 상태 외에도 최대 all-gather 파라미터 그룹, 활성화, 임시 버퍼, 단편화, 통신 overlap을 계산합니다. 확장 전에 단일 노드와 다중 노드의 최대 메모리·스텝 시간을 비교합니다.
@@ -159,15 +161,15 @@ ZeRO-3는 마법 같지만 만능은 아닙니다. 가중치를 런타임(JIT)�
 
 ZeRO는 분산 학습을 '하드웨어에 종속된 물리적 한계'에서 '소프트웨어로 정의 가능한 스케일링 문제'로 탈바꿈시켰습니다. 표준 Data Parallelism 이 동일한 상태를 복제하여 VRAM을 낭비한다는 점을 간파하고, 옵티마이저 상태(Stage 1), 그래디언트(Stage 2), 파라미터(Stage 3)를 분할(Partitioning)하는 혁신을 이루어냈습니다.
 
-여기에 CPU 및 NVMe 오프로딩(Offloading) 기술이 결합되면서, ZeRO는 상대적으로 평범한 하드웨어에서도 거대 모델을 학습시킬 수 있도록 Foundation Model 의 진입 장벽을 크게 낮추었습니다. 그러나 모델의 크기가 5,000억(500B) 파라미터를 넘어서면, 수천 대의 GPU에 걸친 ZeRO-3조차도 네트워크 혼잡 현상을 겪기 시작합니다. 이를 해결하기 위해 우리는 행렬 곱셈 연산 그 자체를 물리적으로 쪼개야만 합니다. 다음 장인 **7.3 Model & Pipeline Parallelism** 에서는 이를 위한 텐서 및 파이프라인 병렬화 기술을 깊이 있게 파헤칠 것입니다.
+오프로딩과 샤딩은 GPU 메모리를 줄이지만 통신 병목이 시작되는 보편적인 500B 임계값은 없습니다. 네트워크·레이어 크기·배치·스케줄이 함께 결정합니다. 다음 7.3절에서는 텐서·파이프라인 병렬화를 조합하는 방법을 다룹니다.
 
 ---
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: ZeRO Stage 1과 Stage 2가 표준 Distributed Data Parallel (DDP) 과 비교하여 추가적인 네트워크 통신 오버헤드를 전혀 발생시키지 않는 이유는 무엇인가?</summary>
-*표준 DDP는 All-Reduce 연산을 사용하는데, 이는 수학적으로 'Reduce-Scatter'를 수행한 뒤 'All-Gather'를 수행하는 것과 정확히 동일합니다. DDP에서는 All-Reduce를 통해 그래디언트를 동기화합니다. 반면 ZeRO-1/2 프레임워크는 그래디언트에 대해 Reduce-Scatter를 수행하여 (각 GPU가 분할된 조각만 받도록 함), 각 GPU가 자신의 가중치 조각만 업데이트한 다음, 업데이트된 가중치를 All-Gather로 브로드캐스트합니다. 결과적으로 네트워크를 통해 전송되는 총 데이터 볼륨은 원래의 All-Reduce와 완벽하게 동일하게 유지됩니다.*
+<summary>Quiz 1: 이상화한 전송 바이트가 같으면 실행 시간도 같나요?</summary>
+*아닙니다. Reduce-Scatter와 All-Gather의 이상화한 총 바이트는 DDP All-Reduce와 같을 수 있지만, 시작 비용·버킷 크기·순서·메모리 복사와 연산 겹침은 달라질 수 있습니다.*
 </details>
 
 <details>
@@ -181,8 +183,8 @@ ZeRO는 분산 학습을 '하드웨어에 종속된 물리적 한계'에서 '소
 </details>
 
 <details>
-<summary>Quiz 4: 혼합 정밀도(FP16/FP32) 학습에서, 옵티마이저 상태(Optimizer states)가 모델의 파라미터 자체보다 훨씬 더 많은 메모리를 소비하는 이유는 무엇인가?</summary>
-*파라미터는 16비트 부동소수점(FP16/BF16)으로 저장되어 파라미터당 2바이트를 차지합니다. 하지만 Adam과 같은 옵티마이저는 미세한 그래디언트 업데이트 과정에서 수치적 언더플로우(Underflow)가 발생하는 것을 막기 위해 높은 정밀도를 요구합니다. 따라서 Adam은 마스터 가중치의 FP32(4바이트) 복제본, FP32 모멘텀 텐서, 그리고 FP32 분산 텐서를 유지해야 합니다. 이는 파라미터당 총 12바이트에 달하며, 원래의 FP16 가중치보다 6배나 더 큰 공간을 차지하게 됩니다.*
+<summary>Quiz 4: 이 절의 16바이트 예산에서 옵티마이저 관련 상태는 무엇인가요?</summary>
+*FP32 마스터 가중치 4바이트와 두 FP32 모멘트 8바이트를 합쳐 파라미터당 12바이트입니다. 이는 예시 구현의 회계이며 Adam 자체가 모든 환경에서 별도 FP32 마스터 복사본을 요구하는 것은 아닙니다.*
 </details>
 
 ---

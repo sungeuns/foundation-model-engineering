@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import test from 'node:test';
 import { chapters } from '../src/data/chapters.js';
 import { searchDescriptions } from '../src/data/search-descriptions.js';
@@ -101,4 +101,17 @@ test('sitemap preserves canonical route order and uses only available content da
     const source = route === '/' ? 'src/pages/index.astro' : route === '/ko' ? 'src/pages/ko/index.astro' : `src/pages${route}.mdx`;
     assert.equal(entry.match(/<lastmod>(.*?)<\/lastmod>/)?.[1], dates.get(source), route);
   }
+});
+
+test('built chapter mathematics never falls back to a KaTeX error', () => {
+  function inspect(dir) {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const file = `${dir}/${entry.name}`;
+      if (entry.isDirectory()) inspect(file);
+      else if (entry.name.endsWith('.html')) {
+        assert.doesNotMatch(readFileSync(file, 'utf8'), /class="katex-error"/, file);
+      }
+    }
+  }
+  inspect(outputDir);
 });

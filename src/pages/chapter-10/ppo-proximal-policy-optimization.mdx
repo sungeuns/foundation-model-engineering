@@ -47,7 +47,7 @@ The RM must use its own pinned tokenizer/template and calibrated domain. A scala
 With value prediction $V_t$, temporal-difference residual
 
 $$
-\delta_t = r_t + \gamma V_{t+1} - V_t,
+\delta_t = r_t + \gamma(1-d_t)V_{t+1} - V_t,
 $$
 
 and **Generalized Advantage Estimation (GAE)**
@@ -127,6 +127,8 @@ Abort on persistent nonfinite values, value divergence, KL/entropy/length outsid
 Research systems propose decoupled rollouts, alternative trust regions, replay, and hybrid-policy methods such as Outer-PPO or HP3O. These are **emerging** design points, not a replacement for understanding the canonical loop. Compare them only with matched models, reward models, rollout budgets, data, and evaluation; describe maturity and implementation availability explicitly.
 
 ---
+
+Here $d_t=1$ means a genuine terminal state, such as the task’s EOS termination. An administrative length/time cutoff is not automatically the same event: specify bootstrapping at truncation when the task continues.
 
 ## Quizzes
 

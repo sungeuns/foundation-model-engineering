@@ -26,94 +26,70 @@ If most user traffic still looks like "find the paragraph that says X," vector R
 
 ---
 
-## 2. Ontology in the Era of LLMs
+## 2. Ontology and extraction schemas
 
-An **Ontology** is the formal blueprint of a knowledge graph. It defines the categories of entities (nodes) and the relationships (edges) that can exist within a specific domain. 
+An ontology defines entity types, relations and semantic constraints. RDF/OWL and property graphs are different representation choices; using an LLM does not eliminate schema design or governance.
 
-Historically, building an ontology for the Semantic Web (using frameworks like RDF or OWL) was a grueling, human-curated process. It required strict schemas and rigid triple-stores (Subject-Predicate-Object). This brittleness made traditional knowledge graphs difficult to scale.
+An LLM can propose relations from text. Attach source document/span, extractor version, validity interval and access controls to each candidate. A schema-valid edge can still be false. Resolve entities using identifiers, time, types and source evidence, not names or embedding similarity alone; retain a reversible merge record.
 
-In the foundation model era, the paradigm has shifted to **LLM-extracted Property Graphs**. We no longer need armies of humans to define schemas. Instead, we use a lightweight JSON schema and prompt the LLM to dynamically extract the ontology from raw text.
-
-*   **Nodes (Entities):** `Person`, `Organization`, `Technology`, `Location`.
-*   **Edges (Relationships):** `FOUNDED_BY`, `ACQUIRED`, `USES_FRAMEWORK`.
-*   **Properties:** Metadata attached to nodes or edges (e.g., `acquisition_date: "2024-01-15"`).
-
-When an LLM processes a document, it acts as a universal parser, outputting structured graph data. This transforms unstructured text into a queryable mathematical structure.
-
----
 
 ## 3. Practical Implementation: Extracting Entities and Relationships
 
 To build a Knowledge Graph from unstructured text, we prompt an LLM to identify entities and their relationships, returning them in a structured format (like JSON).
 
-Here is a Python example using OpenAI's structured outputs to extract graph data.
+The following offline Python example checks the structure of an authored extraction.
+
+> **Educational offline example.** Validates an authored extraction structure only. It omits extraction, factual verification, authorization, validity checks and persistence.
 
 ```python
-from typing import List
-from pydantic import BaseModel, Field
-from openai import OpenAI
+# Authored extraction output: this example does not call an LLM.
+def validate_graph(graph):
+    nodes = graph["entities"]
+    ids = [node["id"] for node in nodes]
+    if len(ids) != len(set(ids)):
+        raise ValueError("duplicate entity IDs")
+    allowed_relations = {"ACQUIRED_BY", "HAS_CEO"}
+    for edge in graph["relationships"]:
+        if edge["source"] not in ids or edge["target"] not in ids:
+            raise ValueError("edge references an unknown entity")
+        if edge["type"] not in allowed_relations or not edge["source_span"]:
+            raise ValueError("unsupported relation or missing evidence")
+    return graph  # Structural validation, not verification of factual truth.
 
-client = OpenAI()
-
-class Entity(BaseModel):
-    id: str = Field(description="Unique identifier for the entity, usually the name.")
-    type: str = Field(description="Category of entity (e.g., Person, Company, Tech)")
-    description: str = Field(description="Short description or role of the entity.")
-
-class Relationship(BaseModel):
-    source: str = Field(description="ID of the source entity.")
-    target: str = Field(description="ID of the target entity.")
-    type: str = Field(description="Type of relationship (e.g., FOUNDED_BY, ACQUIRED_BY)")
-
-class KnowledgeGraph(BaseModel):
-    entities: List[Entity]
-    relationships: List[Relationship]
-
-def extract_graph(text: str) -> KnowledgeGraph:
-    response = client.beta.chat.completions.parse(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": "Extract a knowledge graph from the text."},
-            {"role": "user", "content": text}
-        ],
-        response_format=KnowledgeGraph,
-    )
-    return response.choices[0].message.parsed
-
-text = "Elon Musk founded SpaceX in 2002. Later, SpaceX launched the Falcon 1."
-graph = extract_graph(text)
-print(graph.model_dump_json(indent=2))
+graph = validate_graph({
+    "entities": [{"id": "Orion"}, {"id": "Northstar"}, {"id": "Mina"}],
+    "relationships": [
+        {"source": "Orion", "target": "Northstar", "type": "ACQUIRED_BY",
+         "source_span": "Fictional memo A: Northstar acquired Orion."},
+        {"source": "Northstar", "target": "Mina", "type": "HAS_CEO",
+         "source_span": "Fictional memo B: Mina is Northstar's CEO."},
+    ],
+})
+print(len(graph["relationships"]))  # 2
 ```
 
 ---
 
 
-## 4. The Multi-Hop Traversal Problem
+## 4. Multi-hop traversal
 
-When a user asks a multi-hop question, the orchestrator (discussed in Chapter 14.3) must traverse the graph to retrieve the correct context. 
+Suppose fictional documents say Orion was acquired by Northstar and Mina is Northstar's CEO. Following `Orion → Northstar → Mina` provides candidate evidence for an answer. Validity dates and source passages still need checking, and the generator can still answer incorrectly.
 
-If the query is *"Who is the CEO of the company that acquired GitHub?"*:
-1.  **Vector Search** embeds the query and finds the node `[GitHub]`.
-2.  **Graph Traversal** walks the edges: `[GitHub] --(ACQUIRED_BY)--> [Microsoft] --(HAS_CEO)--> [Satya Nadella]`.
-3.  The LLM is fed this exact subgraph and answers correctly.
+The interaction contrasts retrieval paths. Vector retrieval can also find the right documents; a graph can fail because of missing or incorrect edges.
 
-Interact with the visualizer below to see how Vector RAG misses the connection, while GraphRAG successfully traverses the relational edges.
-
-
-
-
-
-<GraphVisualizer client:load />
+<GraphVisualizer client:load lang="en" />
 
 ### Engineering Graph Retrieval: Random Walk with Restart (RWR)
 
-In production, we do not manually write Cypher queries for every possible multi-hop path. Instead, graph databases use mathematical algorithms to score the relevance of surrounding nodes. A standard approach is **Random Walk with Restart (RWR)**, a variant of PageRank. 
+In production, we do not manually write Cypher queries for every possible multi-hop path. Instead, graph databases use mathematical algorithms to score the relevance of surrounding nodes. A standard approach is **Random Walk with Restart (RWR)**, a variant of PageRank.
 
 Given a starting distribution $\mathbf{p}_0$ (the initial nodes found via vector search), the algorithm simulates a random walker traversing the graph's edges. To prevent the walker from drifting too far into irrelevant territory, it has a probability $c$ of "teleporting" back to the start.
 
-$$ \mathbf{p}_{t+1} = (1 - c) \mathbf{W} \mathbf{p}_t + c \mathbf{p}_0 $$
+$$ \mathbf{p}_{t+1}=(1-c)(\mathbf W\mathbf p_t+\mathbf p_0\mathbf d^T\mathbf p_t)+c\mathbf p_0. $$
 
-Where $\mathbf{W}$ is the column-normalized adjacency matrix. Below is a realistic PyTorch implementation of this retrieval mechanism.
+Here $\mathbf W$ normalizes non-dangling adjacency columns and leaves dangling columns zero. Entry $d_j$ is 1 for a dangling node and 0 otherwise. The mass $\mathbf d^T\mathbf p_t$ is redistributed to the initial distribution $\mathbf p_0$. The code below implements this completed transition.
+
+> **Educational dense CPU example.** Dangling mass returns to the initial distribution. Storage and each step cost $O(V^2)$ for $V$ nodes. Real graphs need sparse operators, device handling, permissions, convergence checks and provenance. Scores measure proximity, not truth.
 
 ```python
 import torch
@@ -130,57 +106,66 @@ class GraphRetriever:
             edges: Tensor of shape (2, num_edges). edges[0] is source, edges[1] is target.
             restart_prob: Probability (c) of teleporting back to the initial search nodes.
         """
+        if num_nodes < 1 or not 0 < restart_prob <= 1:
+            raise ValueError("Require nodes > 0 and restart probability in (0, 1]")
         self.num_nodes = num_nodes
         self.restart_prob = restart_prob
-        
+
         # Initialize adjacency matrix
         self.adj_matrix = torch.zeros(num_nodes, num_nodes)
-        
+
         # For a column-stochastic matrix where p_{t+1} = W * p_t,
         # columns represent source nodes, rows represent target nodes.
         self.adj_matrix[edges[1], edges[0]] = 1.0
-        
+
         # Normalize adjacency matrix (column-stochastic)
         out_degree = self.adj_matrix.sum(dim=0, keepdim=True)
-        out_degree[out_degree == 0] = 1.0 # Prevent division by zero for sink nodes
+        self.dangling = (out_degree.squeeze(0) == 0)
+        out_degree = out_degree.clamp_min(1.0)
         self.trans_matrix = self.adj_matrix / out_degree
 
     def retrieve_subgraph(self, initial_nodes: torch.Tensor, num_steps: int = 15) -> torch.Tensor:
         """
         Args:
-            initial_nodes: Tensor (num_nodes, 1) representing the starting distribution 
+            initial_nodes: Tensor (num_nodes, 1) representing the starting distribution
                            (e.g., nodes found via initial vector embedding search).
         Returns:
             Relevance scores for all nodes in the graph.
         """
         # Normalize initial distribution
+        if initial_nodes.shape != (self.num_nodes, 1):
+            raise ValueError("Expected initial_nodes shape [num_nodes, 1]")
+        if not torch.isfinite(initial_nodes).all() or (initial_nodes < 0).any() or initial_nodes.sum() <= 0:
+            raise ValueError("Initial distribution must have finite nonnegative positive mass")
         p_0 = initial_nodes / initial_nodes.sum()
         p_t = p_0.clone()
-        
+
         # Power iteration to compute the stationary distribution
         for _ in range(num_steps):
-            p_t = (1 - self.restart_prob) * torch.matmul(self.trans_matrix, p_t) + self.restart_prob * p_0
-            
+            dangling_mass = p_t[self.dangling].sum()
+            walk = self.trans_matrix @ p_t + dangling_mass * p_0
+            p_t = (1 - self.restart_prob) * walk + self.restart_prob * p_0
+
         return p_t
 
 # --- Example Execution ---
 if __name__ == "__main__":
     # Simulate a small ontology graph with 5 nodes
-    # e.g., 0: User Query, 1: GitHub, 2: Microsoft, 3: Satya Nadella, 4: OpenAI
+    # e.g., 0: User Query, 1: Orion, 2: Northstar, 3: Mina, 4: OpenAI
     edges = torch.tensor([
         [1, 2, 2], # Source nodes
         [2, 3, 4]  # Target nodes
     ])
-    
+
     retriever = GraphRetriever(num_nodes=5, edges=edges, restart_prob=0.2)
-    
-    # Simulate a vector search that highly ranks Node 1 (GitHub)
+
+    # Simulate a vector search that highly ranks Node 1 (Orion)
     initial_dist = torch.zeros(5, 1)
-    initial_dist[1, 0] = 1.0 
-    
+    initial_dist[1, 0] = 1.0
+
     # Retrieve the multi-hop subgraph context
     relevance_scores = retriever.retrieve_subgraph(initial_dist, num_steps=20)
-    
+
     # Select the top-k nodes to inject into the LLM context window
     top_k = torch.topk(relevance_scores.squeeze(), k=3)
     print(f"Top retrieved node indices: {top_k.indices.tolist()}")
@@ -193,9 +178,9 @@ Recent graph-enhanced retrievers also push this idea further. HippoRAG, for exam
 
 ## 5. Microsoft's GraphRAG: Global Sensemaking
 
-While traversing edges solves multi-hop questions (Local Search), it does not solve the hardest problem in RAG: **Global Sensemaking**. 
+While traversing edges solves multi-hop questions (Local Search), it does not solve the hardest problem in RAG: **Global Sensemaking**.
 
-If a user asks, *"What are the main themes in this entire dataset?"*, vector search fails completely. It will retrieve the top 10 chunks that semantically align with the word "theme," missing 99% of the corpus. 
+A few top-k passages may not represent a corpus-wide theme question. This is a limitation of a simple retrieval setup, not proof that every vector-based method must fail.
 
 In 2024, Microsoft Research introduced a novel architecture specifically named **GraphRAG** [[1]](#ref-1) designed to solve this global summarization problem. Rather than just using the graph for traversal at query time, Microsoft's approach uses the graph to precompute hierarchical summaries of the entire dataset.
 
@@ -208,7 +193,7 @@ In 2024, Microsoft Research introduced a novel architecture specifically named *
 3.  **Pregenerated Summarization:** Before the user ever asks a question, the LLM generates a comprehensive summary $S_i$ for every single community in the graph.
 4.  **Map-Reduce Querying:** When the global query arrives, the system does not search the raw text. Instead, it prompts the LLM to generate a partial answer using each community summary independently (Map). Finally, it rolls up all partial answers into a single, cohesive global response (Reduce).
 
-By structuring the knowledge hierarchically, GraphRAG escapes the limitations of the context window and provides answers that accurately reflect the entirety of a million-token dataset.
+Hierarchical summaries are one way to broaden coverage. Evaluate extraction errors, omitted minority themes, summary loss and propagation of changed permissions.
 
 ---
 
@@ -223,13 +208,13 @@ However, even a well-designed graph pipeline can still fail operationally. Edges
 ## Quizzes
 
 <details>
-<summary>Quiz 1: Why does standard Vector RAG consistently fail at "Global Sensemaking" questions (e.g., "What are the main themes of the dataset?")?</summary>
-*Vector RAG relies on semantic similarity to pull a small subset of top-k chunks. A global question doesn't match any specific chunk's embedding strongly enough to pull all relevant themes across the document. Even if it did, the context window would be flooded with disjointed text fragments rather than a cohesive summary.*
+<summary>Quiz 1: Why can a few top-k passages be insufficient for global summarization?</summary>
+*Highly relevant passages may not represent the distribution of themes. Community summaries can broaden coverage but require separate omission and distortion checks.*
 </details>
 
 <details>
-<summary>Quiz 2: In the context of modern LLM-based GraphRAG, how has the concept of "Ontology" evolved compared to traditional Semantic Web architectures (RDF/OWL)?</summary>
-*Traditional Semantic Web required rigid, human-curated schemas (RDF/OWL) that were brittle and hard to scale. Modern GraphRAG uses LLMs to dynamically extract entities and relationships directly from unstructured text, often adhering to a flexible, lightweight schema (Property Graphs) rather than strict triple-stores.*
+<summary>Quiz 2: Does LLM extraction replace schema design and validation?</summary>
+*No. Types, entity identity, relation semantics, provenance, validity and permissions still need governance. Structurally valid output can be factually wrong.*
 </details>
 
 <details>
@@ -243,8 +228,8 @@ However, even a well-designed graph pipeline can still fail operationally. Edges
 </details>
 
 <details>
-<summary>Quiz 5: During graph extraction, the system may encounter contextual ambiguity where the same entity is written differently (e.g., "Musk", "Elon", "CEO of Tesla"). Formalize the mathematical logic used to resolve and collapse these duplicate nodes.</summary>
-*Entity resolution in property graphs uses a two-stage approach. First, candidate duplicates are identified via cosine similarity of node property embeddings: $S_{cosine}(n_a, n_b) = \frac{E(n_a)^T E(n_b)}{||E(n_a)||_2 ||E(n_b)||_2} \ge \theta_{threshold}$. Second, confirmed pairs are collapsed by merging their edge adjacency allocations: $W_{collapsed}(i, j) = W(a, j) + W(b, j)$. This prevents isolated ambiguity from bifurcating traversal paths during multi-hop RWR steps.*
+<summary>Quiz 5: Why is embedding similarity insufficient for entity merging?</summary>
+*Similar names or descriptions can refer to different entities. Check identifiers, types, time and source passages, and preserve merge lineage. Define duplicate-edge and weight semantics before renormalizing transition probabilities.*
 </details>
 
 ---

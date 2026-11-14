@@ -43,6 +43,8 @@ The estimator must be documented exactly. The original construction motivates a 
 
 An educational decomposition is:
 
+> **Educational objective sketch.** KTO uses a bounded sigmoid loss, not negative log-sigmoid: adding a logarithm changes saturation and gradients. The positive class weights `lambda_desirable` and `lambda_undesirable`, label mask, KL estimator and distributed reduction must be configured. The undefined inputs below stand for completion-masked log probabilities; this is not an executable trainer.
+
 ```python
 # completion_logp uses the same prompt/completion mask, EOS, padding,
 # truncation, and sum/mean convention for policy and reference.
@@ -53,8 +55,8 @@ log_ratio = policy_completion_logp - reference_completion_logp
 kl_reference_point = estimate_nonnegative_kl_reference(unmatched_batch).detach()
 value = log_ratio - kl_reference_point
 
-loss_desirable = -torch.nn.functional.logsigmoid(beta * value)
-loss_undesirable = -torch.nn.functional.logsigmoid(-beta * value)
+loss_desirable = lambda_desirable * (1 - torch.sigmoid(beta * value))
+loss_undesirable = lambda_undesirable * (1 - torch.sigmoid(-beta * value))
 ```
 
 This is a semantic sketch, not a drop-in trainer. A real implementation must state sampling and reduction across ranks.

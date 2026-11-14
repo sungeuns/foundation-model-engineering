@@ -40,7 +40,11 @@ This creates a powerful feedback loop:
 ![Closed-Loop Neural Network Code Generation and Execution System](../../assets/images/chapter-20/neural_programs_loop.png)
 *Source: AI-generated illustration*
 
-This approach shifts the burden of precise computation from the neural network to a deterministic execution environment, drastically increasing the accuracy and capabilities of the system.
+External execution makes arithmetic and state transitions testable, but a wrong program deterministically produces a wrong result. Validate specifications, edge cases and independent tests; enforce sandboxing, least privilege and time/cost limits. Passing tests does not prove correctness on untested inputs.
+
+### A coding-agent workflow
+
+Read the relevant files, tests, documentation and issue; plan the change; produce a patch; run unit, type and integration checks; inspect failures; and iterate within a budget. The model acts as a controller that proposes programs and interprets execution results. Search tools, test runners, type checkers and sandboxes provide distinct capabilities; the model does not replace a CPU.
 
 ## Simulating Execution: The Neural Interpreter
 
@@ -51,6 +55,8 @@ Consider a model trained to predict the output of a Python script. To do this ac
 ### PyTorch Example: A Simple Neural State Machine
 
 While full program synthesis is beyond a simple example, we can demonstrate how a neural network can be trained to act as a simple state machine or program executor. Here, we implement a simple Recurrent Neural Network (RNN) that learns to simulate a counter that increments or decrements based on input instructions, demonstrating state retention and execution logic.
+
+> **Educational toy training.** This repeatedly fits 32 synthetic sequences of length 10. Lower training error does not establish algorithm learning or generalization to longer sequences. Distributed training, checkpointing and an evaluation pipeline are omitted.
 
 ```python
 import torch
@@ -65,12 +71,12 @@ class NeuralCounter(nn.Module):
         self.rnn = nn.RNN(input_size, hidden_size, batch_first=True)
         # Linear layer to map hidden state to output value
         self.fc = nn.Linear(hidden_size, output_size)
-        
+
     def forward(self, x, initial_state=None):
         # x shape: (batch_size, sequence_length, input_size)
         if initial_state is None:
-            initial_state = torch.zeros(1, x.size(0), self.hidden_size).to(x.device)
-            
+            initial_state = x.new_zeros(1, x.size(0), self.hidden_size)
+
         out, hidden = self.rnn(x, initial_state)
         # Map output of all time steps
         out = self.fc(out)
@@ -114,33 +120,33 @@ for epoch in range(100):
     loss = criterion(outputs, targets)
     loss.backward()
     optimizer.step()
-    
+
     if (epoch + 1) % 20 == 0:
         print(f'Epoch [{epoch+1}/100], Loss: {loss.item():.4f}')
 
-print("Training complete. The model has learned to simulate a simple program (counter).")
+print("Training ended. Evaluate independent sequences and longer lengths.")
 ```
 
 In this example, the RNN hidden state acts as the "memory" or "register" holding the current count, and the network learns to update this state based on the input instructions.
 
-## The Future: Neuro-Symbolic AI and Self-Evolving Systems
+## Experiment and release boundaries
 
-The ultimate realization of Neural Networks as Programs lies in **Neuro-Symbolic AI**, which combines the robust learning capabilities of deep neural networks with the rigorous logic of symbolic AI.
+Inputs are increment/decrement instructions; the objective is MSE against the cumulative count at each position. The example uses CPU FP32, hidden width 16, Adam at 0.01, a fixed batch of 32 and 100 updates. Evaluate MSE and exact count agreement on unseen sequences from a separate seed and on longer lengths; abort on nonfinite loss or divergence. Deduplicate before assigning train/evaluation sequences and record generation rules and seeds.
 
-Future systems may not just generate code for specific tasks but create entire new algorithms and data structures to optimize their own performance. This leads to the concept of **Self-Evolving Systems**, where the AI continuously rewrites its own "software" to adapt to new challenges, effectively becoming a self-programming entity.
+For recovery, save model/optimizer/RNG states, step and data-generation configuration. Budget gradients, optimizer state and sequence activations in addition to checkpoint weights. A deployed execution tool needs correctness, permission, latency and cost regression gates plus a last-known-good version.
 
----
+Neuro-symbolic systems combine learning with explicit procedures. Treat generated algorithms or self-modifications as hypotheses and candidate patches requiring independent verification and controlled release.
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: What is the primary advantage of Execution-Guided Synthesis over pure neural generation for complex reasoning?</summary>
-*The primary advantage is precision and reliability. By offloading deterministic computation to an external interpreter, the system avoids the hallucination and calculation errors inherent in neural network weights, ensuring exact results for logical and mathematical tasks.*
+<summary>Quiz 1: Does an external interpreter guarantee the generated program is correct?</summary>
+*No. Incorrect specifications or buggy code yield wrong results even when executed exactly. Use independent tests, edge cases, sandboxing, permissions and resource limits.*
 </details>
 
 <details>
-<summary>Quiz 2: How do Neural Turing Machines (NTMs) differ from standard Recurrent Neural Networks (RNNs)?</summary>
-*While RNNs maintain state in a fixed-size hidden vector, NTMs decouple the controller (the neural net) from an external, addressable memory bank. This allows NTMs to read and write to specific locations, enabling them to learn algorithms that scale to longer sequences than seen during training.*
+<summary>Quiz 2: How does NTM external memory differ from an RNN state?</summary>
+*It separates the controller from addressable memory, enabling location-selective reads and writes. This can support longer-sequence behavior but does not guarantee extrapolation; test held-out lengths.*
 </details>
 
 <details>

@@ -26,79 +26,56 @@ GraphRAG는 일반적인 벡터 RAG보다 운영 비용과 복잡성이 높기 �
 
 ---
 
-## 2. LLM 시대의 온톨로지 (Ontology in the Era of LLMs)
+## 2. 온톨로지와 추출 스키마
 
-**온톨로지 (Ontology)** 는 지식 그래프의 공식적인 청사진입니다. 특정 도메인 내에 존재할 수 있는 엔티티(노드)의 범주와 관계(엣지)를 정의합니다.
+온톨로지는 엔터티의 유형, 관계와 의미 제약을 정의합니다. RDF/OWL과 property graph는 서로 다른 표현 선택이며, LLM을 사용한다고 스키마 설계나 관리가 사라지지는 않습니다.
 
-역사적으로 시맨틱 웹(Semantic Web)을 위한 온톨로지 구축(RDF나 OWL과 같은 프레임워크 사용)은 인간이 직접 큐레이션해야 하는 고통스러운 과정이었습니다. 엄격한 스키마(Schema)와 경직된 트리플 스토어(Subject-Predicate-Object 구조)가 요구되었습니다. 이러한 취약성 때문에 전통적인 지식 그래프는 확장하기가 매우 어려웠습니다.
+LLM은 텍스트에서 관계 후보를 제안할 수 있습니다. 각 후보에는 원본 문서·구절, 추출기 버전, 유효 시간, 접근 권한을 연결해야 합니다. 형식 검사를 통과한 관계도 사실과 다를 수 있습니다. 엔터티 병합은 이름이나 임베딩 유사도만으로 확정하지 말고 식별자, 시간, 유형, 원문 근거를 검증하며 되돌릴 수 있게 기록합니다.
 
-파운데이션 모델 시대에 접어들면서, 패러다임은 **LLM 기반 프로퍼티 그래프 (LLM-extracted Property Graphs)** 로 전환되었습니다. 더 이상 스키마를 정의하기 위해 대규모의 인력이 필요하지 않습니다. 대신 가벼운 JSON 스키마를 사용하고, LLM에 프롬프트를 주어 원시 텍스트에서 동적으로 온톨로지를 추출하도록 합니다.
-
-*   **노드 (Entities):** `Person`, `Organization`, `Technology`, `Location`.
-*   **엣지 (Relationships):** `FOUNDED_BY`, `ACQUIRED`, `USES_FRAMEWORK`.
-*   **속성 (Properties):** 노드나 엣지에 부착된 메타데이터 (예: `acquisition_date: "2024-01-15"`).
-
-LLM이 문서를 처리할 때, LLM은 범용 파서(Universal parser) 역할을 하여 구조화된 그래프 데이터를 출력합니다. 이는 비구조화된 텍스트를 질의 가능한 수학적 구조로 변환하는 핵심 과정입니다.
-
----
 
 ## 3. 실용적 구현: 엔티티 및 관계 추출 (Extracting Entities and Relationships)
 
 비구조화된 텍스트에서 지식 그래프를 구축하기 위해, 우리는 LLM에 엔티티와 그들의 관계를 식별하도록 프롬프트를 주고, 이를 구조화된 형식(예: JSON)으로 반환하도록 합니다.
 
-다음은 OpenAI의 구조화된 출력(Structured Outputs)을 사용하여 그래프 데이터를 추출하는 Python 예시입니다.
+아래 Python 예제는 미리 작성한 추출 결과의 구조를 검사합니다.
+
+> **교육용 오프라인 예제.** 추출 결과의 구조만 검사합니다. 실제 추출, 사실 검증, 권한·유효 시간 검사와 영속 저장은 구현하지 않습니다.
 
 ```python
-from typing import List
-from pydantic import BaseModel, Field
-from openai import OpenAI
+# Authored extraction output: this example does not call an LLM.
+def validate_graph(graph):
+    nodes = graph["entities"]
+    ids = [node["id"] for node in nodes]
+    if len(ids) != len(set(ids)):
+        raise ValueError("duplicate entity IDs")
+    allowed_relations = {"ACQUIRED_BY", "HAS_CEO"}
+    for edge in graph["relationships"]:
+        if edge["source"] not in ids or edge["target"] not in ids:
+            raise ValueError("edge references an unknown entity")
+        if edge["type"] not in allowed_relations or not edge["source_span"]:
+            raise ValueError("unsupported relation or missing evidence")
+    return graph  # Structural validation, not verification of factual truth.
 
-client = OpenAI()
-
-class Entity(BaseModel):
-    id: str = Field(description="엔티티의 고유 식별자, 보통 이름.")
-    type: str = Field(description="엔티티의 범주 (예: Person, Company, Tech)")
-    description: str = Field(description="엔티티의 짧은 설명이나 역할.")
-
-class Relationship(BaseModel):
-    source: str = Field(description="소스 엔티티의 ID.")
-    target: str = Field(description="타겟 엔티티의 ID.")
-    type: str = Field(description="관계의 유형 (예: FOUNDED_BY, ACQUIRED_BY)")
-
-class KnowledgeGraph(BaseModel):
-    entities: List[Entity]
-    relationships: List[Relationship]
-
-def extract_graph(text: str) -> KnowledgeGraph:
-    response = client.beta.chat.completions.parse(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": "Extract a knowledge graph from the text."},
-            {"role": "user", "content": text}
-        ],
-        response_format=KnowledgeGraph,
-    )
-    return response.choices[0].message.parsed
-
-text = "Elon Musk founded SpaceX in 2002. Later, SpaceX launched the Falcon 1."
-graph = extract_graph(text)
-print(graph.model_dump_json(indent=2))
+graph = validate_graph({
+    "entities": [{"id": "Orion"}, {"id": "Northstar"}, {"id": "Mina"}],
+    "relationships": [
+        {"source": "Orion", "target": "Northstar", "type": "ACQUIRED_BY",
+         "source_span": "Fictional memo A: Northstar acquired Orion."},
+        {"source": "Northstar", "target": "Mina", "type": "HAS_CEO",
+         "source_span": "Fictional memo B: Mina is Northstar's CEO."},
+    ],
+})
+print(len(graph["relationships"]))  # 2
 ```
 
 ---
 
 
-## 4. 다중 홉 탐색 문제 (The Multi-Hop Traversal Problem)
+## 4. 다중 홉 탐색
 
-사용자가 다중 홉 질문을 던질 때, 오케스트레이터(14.3장에서 논의됨)는 올바른 컨텍스트를 검색하기 위해 그래프를 탐색해야 합니다.
+가상 문서에서 Orion은 Northstar에 인수되었고 Mina가 Northstar의 CEO라고 합시다. 검색한 엔터티에서 `Orion → Northstar → Mina` 관계를 따라가면 답의 근거 후보를 얻습니다. 그래도 유효 날짜와 원문 근거를 확인해야 하며 생성기가 잘못 답할 수 있습니다.
 
-만약 쿼리가 *"GitHub를 인수한 회사의 CEO는 누구인가?"* 라면 다음과 같은 과정을 거칩니다:
-1.  **벡터 검색 (Vector Search):** 쿼리를 임베딩하여 `[GitHub]` 노드를 찾습니다.
-2.  **그래프 탐색 (Graph Traversal):** 엣지를 따라 이동합니다: `[GitHub] --(ACQUIRED_BY)--> [Microsoft] --(HAS_CEO)--> [Satya Nadella]`.
-3.  LLM은 이 정확한 하위 그래프(Subgraph)를 제공받아 올바르게 답변합니다.
-
-아래의 시각화 도구를 통해 벡터 RAG가 어떻게 연결 고리를 놓치는지, 반면 GraphRAG가 어떻게 관계형 엣지를 성공적으로 탐색하는지 확인해 보십시오.
-
+아래 예제는 서로 다른 검색 경로를 비교합니다. 벡터 검색도 적절한 문서를 찾을 수 있고, 그래프도 누락되거나 잘못된 간선 때문에 실패할 수 있습니다.
 
 <GraphVisualizer client:load lang="ko" />
 
@@ -108,9 +85,11 @@ print(graph.model_dump_json(indent=2))
 
 시작 분포 $\mathbf{p}_0$ (벡터 검색을 통해 찾은 초기 노드들)가 주어지면, 알고리즘은 그래프의 엣지를 탐색하는 무작위 보행자(Random walker)를 시뮬레이션합니다. 보행자가 무관한 영역으로 너무 멀리 표류하는 것을 방지하기 위해, 시작점으로 다시 "순간 이동(Teleporting)"할 확률 $c$ 를 갖습니다.
 
-$$ \mathbf{p}_{t+1} = (1 - c) \mathbf{W} \mathbf{p}_t + c \mathbf{p}_0 $$
+$$ \mathbf{p}_{t+1}=(1-c)(\mathbf W\mathbf p_t+\mathbf p_0\mathbf d^T\mathbf p_t)+c\mathbf p_0. $$
 
-여기서 $\mathbf{W}$ 는 열 정규화된(Column-normalized) 인접 행렬입니다. 아래는 이 검색 메커니즘을 구현한 현실적인 PyTorch 코드입니다.
+여기서 $\mathbf W$ 는 나가는 간선이 있는 열을 정규화하고 dangling 열은 0으로 둔 인접 행렬입니다. $d_j$ 는 노드 $j$ 가 dangling이면 1, 아니면 0입니다. $\mathbf d^T\mathbf p_t$ 는 그 노드들에 놓인 확률 질량이며 초기 분포 $\mathbf p_0$ 로 재분배됩니다. 아래는 이 규칙의 교육용 구현입니다.
+
+> **교육용 밀집 CPU 예제.** 나가는 간선이 없는 노드의 질량은 초기 분포로 재분배합니다. 노드 수 $V$ 에 대해 저장과 단계당 연산은 $O(V^2)$ 입니다. 실제 그래프에는 희소 연산, 장치 처리, 접근 권한, 수렴 검사와 출처가 필요합니다. 점수는 근접도이지 진실성이 아닙니다.
 
 ```python
 import torch
@@ -127,19 +106,22 @@ class GraphRetriever:
             edges: (2, num_edges) 형태의 텐서. edges[0]은 소스, edges[1]은 타겟.
             restart_prob: 초기 검색 노드로 다시 순간 이동할 확률 (c).
         """
+        if num_nodes < 1 or not 0 < restart_prob <= 1:
+            raise ValueError("Require nodes > 0 and restart probability in (0, 1]")
         self.num_nodes = num_nodes
         self.restart_prob = restart_prob
-        
+
         # 인접 행렬 초기화
         self.adj_matrix = torch.zeros(num_nodes, num_nodes)
-        
+
         # p_{t+1} = W * p_t 인 열 추계적(Column-stochastic) 행렬을 위해,
         # 열은 소스 노드를, 행은 타겟 노드를 나타냅니다.
         self.adj_matrix[edges[1], edges[0]] = 1.0
-        
+
         # 인접 행렬 정규화 (열 추계적)
         out_degree = self.adj_matrix.sum(dim=0, keepdim=True)
-        out_degree[out_degree == 0] = 1.0 # 싱크 노드(Sink nodes)에서 0으로 나누는 것 방지
+        self.dangling = (out_degree.squeeze(0) == 0)
+        out_degree = out_degree.clamp_min(1.0)
         self.trans_matrix = self.adj_matrix / out_degree
 
     def retrieve_subgraph(self, initial_nodes: torch.Tensor, num_steps: int = 15) -> torch.Tensor:
@@ -151,33 +133,39 @@ class GraphRetriever:
             그래프 내 모든 노드에 대한 관련성 점수 (Relevance scores).
         """
         # 초기 분포 정규화
+        if initial_nodes.shape != (self.num_nodes, 1):
+            raise ValueError("Expected initial_nodes shape [num_nodes, 1]")
+        if not torch.isfinite(initial_nodes).all() or (initial_nodes < 0).any() or initial_nodes.sum() <= 0:
+            raise ValueError("Initial distribution must have finite nonnegative positive mass")
         p_0 = initial_nodes / initial_nodes.sum()
         p_t = p_0.clone()
-        
+
         # 정상 분포(Stationary distribution)를 계산하기 위한 거듭제곱 연산(Power iteration)
         for _ in range(num_steps):
-            p_t = (1 - self.restart_prob) * torch.matmul(self.trans_matrix, p_t) + self.restart_prob * p_0
-            
+            dangling_mass = p_t[self.dangling].sum()
+            walk = self.trans_matrix @ p_t + dangling_mass * p_0
+            p_t = (1 - self.restart_prob) * walk + self.restart_prob * p_0
+
         return p_t
 
 # --- 실행 예시 ---
 if __name__ == "__main__":
     # 5개의 노드를 가진 작은 온톨로지 그래프 시뮬레이션
-    # 예: 0: 사용자 쿼리, 1: GitHub, 2: Microsoft, 3: Satya Nadella, 4: OpenAI
+    # 예: 0: 사용자 쿼리, 1: Orion, 2: Northstar, 3: Mina, 4: OpenAI
     edges = torch.tensor([
         [1, 2, 2], # 소스 노드
         [2, 3, 4]  # 타겟 노드
     ])
-    
+
     retriever = GraphRetriever(num_nodes=5, edges=edges, restart_prob=0.2)
-    
-    # 노드 1(GitHub)의 순위가 높게 나온 벡터 검색 시뮬레이션
+
+    # 노드 1(Orion)의 순위가 높게 나온 벡터 검색 시뮬레이션
     initial_dist = torch.zeros(5, 1)
-    initial_dist[1, 0] = 1.0 
-    
+    initial_dist[1, 0] = 1.0
+
     # 다중 홉 하위 그래프 컨텍스트 검색
     relevance_scores = retriever.retrieve_subgraph(initial_dist, num_steps=20)
-    
+
     # LLM 컨텍스트 윈도우에 주입할 상위 k개의 노드 선택
     top_k = torch.topk(relevance_scores.squeeze(), k=3)
     print(f"상위 검색된 노드 인덱스: {top_k.indices.tolist()}")
@@ -188,25 +176,25 @@ if __name__ == "__main__":
 
 ---
 
-## 5. 마이크로소프트의 GraphRAG: 전역적 의미 파악 (Global Sensemaking)
+## 5. Microsoft의 GraphRAG: 전역적 의미 파악 (Global Sensemaking)
 
 엣지를 탐색하는 것이 다중 홉 질문(로컬 검색)을 해결해 주지만, RAG에서 가장 어려운 문제인 **전역적 의미 파악 (Global Sensemaking)** 을 해결해 주지는 못합니다.
 
-만약 사용자가 *"이 전체 데이터셋의 주요 주제는 무엇인가?"* 라고 묻는다면 벡터 검색은 완전히 실패합니다. "주제(theme)"라는 단어와 의미론적으로 일치하는 상위 10개의 청크만 검색할 뿐, 코퍼스의 99%를 놓치게 됩니다.
+전역적인 주제 질문은 소수의 top-k 문서만으로 대표성을 확보하기 어렵습니다. 이것은 단순 검색 설정의 한계이며, 모든 벡터 기반 방법이 반드시 실패한다는 뜻은 아닙니다.
 
-2024년, 마이크로소프트 리서치(Microsoft Research)는 이러한 전역적 요약 문제를 해결하기 위해 특별히 설계된 **GraphRAG** [[1]](#ref-1) 라는 새로운 아키텍처를 발표했습니다. 마이크로소프트의 접근 방식은 질의 시점에 단순히 그래프를 탐색하는 데 그치지 않고, 그래프를 사용하여 전체 데이터셋의 계층적 요약을 사전 계산(Precompute)합니다.
+2024년, Microsoft 리서치(Microsoft Research)는 이러한 전역적 요약 문제를 해결하기 위해 특별히 설계된 **GraphRAG** [[1]](#ref-1) 라는 새로운 아키텍처를 발표했습니다. Microsoft의 접근 방식은 질의 시점에 단순히 그래프를 탐색하는 데 그치지 않고, 그래프를 사용하여 전체 데이터셋의 계층적 요약을 사전 계산(Precompute)합니다.
 
 ![graphrag_architecture](../../../assets/images/chapter-14/graphrag_architecture.png)
 *Source: Edge, D., et al. (2024). "From Local to Global: A Graph RAG Approach to Query-Focused Summarization." [[1]](#ref-1)*
 
-### 마이크로소프트 GraphRAG의 4단계
+### Microsoft GraphRAG의 4단계
 
 1.  **추출 (Extraction):** LLM이 모든 소스 문서를 처리하여 엔티티와 관계를 추출하고 거대한 비구조화 지식 그래프 $G = (V, E)$ 를 형성합니다.
 2.  **커뮤니티 탐지 (Community Detection):** 시스템은 **Leiden 알고리즘** [[2]](#ref-2) 을 적용하여 그래프를 계층적이고 잘 연결된 클러스터(커뮤니티)로 분할합니다. 자주 상호작용하는 엔티티들(예: 책의 특정 서브플롯에 등장하는 모든 캐릭터와 장소)은 하나의 커뮤니티 $C_i$ 로 그룹화됩니다.
 3.  **사전 생성 요약 (Pregenerated Summarization):** 사용자가 질문을 던지기도 전에, LLM은 그래프 내의 모든 단일 커뮤니티에 대해 포괄적인 요약 $S_i$ 를 생성합니다.
 4.  **맵리듀스 질의 (Map-Reduce Querying):** 전역 쿼리가 도착하면 시스템은 원시 텍스트를 검색하지 않습니다. 대신 LLM에 각 커뮤니티 요약을 독립적으로 사용하여 부분적인 답변을 생성하도록 프롬프트를 줍니다(Map). 마지막으로 모든 부분 답변을 단일하고 응집력 있는 전역 응답으로 병합합니다(Reduce).
 
-지식을 계층적으로 구조화함으로써, **GraphRAG** 는 컨텍스트 윈도우의 한계를 벗어나 수백만 토큰 데이터셋의 전체를 정확하게 반영하는 답변을 제공합니다.
+계층 요약은 넓은 범위를 다루는 한 방법입니다. 추출 오류, 소수 주제의 누락, 요약 손실과 변경된 권한의 전파를 평가해야 합니다.
 
 ---
 
@@ -221,17 +209,17 @@ if __name__ == "__main__":
 ## Quizzes
 
 <details>
-<summary>Quiz 1: 표준적인 벡터 RAG가 "데이터셋의 주요 주제는 무엇인가?"와 같은 '전역적 의미 파악(Global Sensemaking)' 질문에서 지속적으로 실패하는 이유는 무엇입니까?</summary>
-*벡터 RAG는 의미론적 유사성에 의존하여 상위 k개의 청크라는 작은 부분집합만 가져옵니다. 전역적인 질문은 문서 전체에 걸쳐 있는 모든 관련 주제를 끌어올 만큼 특정 청크의 임베딩과 강하게 일치하지 않습니다. 설령 일치하더라도, 컨텍스트 윈도우는 응집력 있는 요약이 아닌 파편화된 텍스트 조각들로 채워지게 됩니다.*
+<summary>Quiz 1: 소수의 top-k 문서가 전역 요약에 부족할 수 있는 이유는 무엇인가요?</summary>
+*관련성이 높은 일부 문서가 전체 주제 분포를 대표하지 않을 수 있습니다. 군집 요약은 범위를 넓힐 수 있지만 누락과 왜곡을 별도로 평가해야 합니다.*
 </details>
 
 <details>
-<summary>Quiz 2: 현대의 LLM 기반 GraphRAG 컨텍스트에서, "온톨로지(Ontology)"의 개념은 전통적인 시맨틱 웹 아키텍처(RDF/OWL)와 비교하여 어떻게 진화했습니까?</summary>
-*전통적인 시맨틱 웹은 엄격하고 확장이 어려운 인간 큐레이션 스키마(RDF/OWL)를 요구했습니다. 반면 현대의 GraphRAG는 LLM을 사용하여 비구조화된 텍스트에서 엔티티와 관계를 동적으로 추출하며, 종종 엄격한 트리플 스토어보다는 유연하고 가벼운 스키마(프로퍼티 그래프)를 준수합니다.*
+<summary>Quiz 2: LLM 추출이 스키마와 검증을 대체하나요?</summary>
+*아닙니다. 형식, 엔터티 식별, 관계 의미, 출처, 유효 시간과 권한을 관리해야 합니다. 형식이 맞아도 내용은 틀릴 수 있습니다.*
 </details>
 
 <details>
-<summary>Quiz 3: 마이크로소프트의 GraphRAG 아키텍처에서 Leiden 알고리즘의 구체적인 수학적 목적은 무엇입니까?</summary>
+<summary>Quiz 3: Microsoft의 GraphRAG 아키텍처에서 Leiden 알고리즘의 구체적인 수학적 목적은 무엇입니까?</summary>
 *Leiden 알고리즘은 그래프 커뮤니티 탐지(Community detection)에 사용됩니다. 거대하고 비구조화된 엔티티 지식 그래프를 계층적이고 잘 연결된 클러스터(커뮤니티)로 분할합니다. 이를 통해 시스템은 질의 시간 전에 밀접하게 관련된 엔티티들에 대한 모듈화된 요약을 생성할 수 있습니다.*
 </details>
 
@@ -241,8 +229,8 @@ if __name__ == "__main__":
 </details>
 
 <details>
-<summary>Quiz 5: 그래프 추출 과정에서 동일한 엔티티가 다르게 작성된 문맥적 모호성(예: "Musk", "Elon", "Tesla의 CEO")을 맞닥뜨릴 수 있습니다. 이러한 중복 노드를 해결하고 병합(Collapse)하는 명시적 수학적 논리를 정식화하십시오.</summary>
-*프로퍼티 그래프에서의 엔티티 해소(Entity Resolution)는 대개 2단계 접근 방식을 사용합니다. 첫째, 노드 속성 임베딩의 코사인 유사도를 계산하여 중복 후보를 식별합니다: $S_{cosine}(n_a, n_b) = \frac{E(n_a)^T E(n_b)}{||E(n_a)||_2 ||E(n_b)||_2} \ge \theta_{threshold}$. 둘째, 확인된 노드 쌍들의 인접 그래프 가중치를 통합하여 노드를 병합합니다: $W_{collapsed}(i, j) = W(a, j) + W(b, j)$. 이 과정을 통해 다중 홉 RWR 알고리즘 수행 시 중복 노드로 인해 탐색 경로가 불필요하게 분기(Bifurcate)되는 파편화된 모호성을 예방합니다.*
+<summary>Quiz 5: 임베딩 유사도만으로 엔터티를 병합하면 어떤 문제가 생기나요?</summary>
+*비슷한 이름이나 설명이 같은 대상을 뜻하지는 않습니다. 식별자·유형·시간·원문을 확인하고 병합 이력을 보존해야 합니다. 병합 후에는 중복 간선과 가중치 의미를 정한 다음 전이 확률을 다시 정규화합니다.*
 </details>
 
 ---

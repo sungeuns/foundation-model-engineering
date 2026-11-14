@@ -61,12 +61,14 @@ import torch.nn.functional as F
 class CLIPLoss(nn.Module):
     def __init__(self, init_temperature=0.07):
         super().__init__()
-        self.temperature = nn.Parameter(torch.tensor(init_temperature))
-        
+        if init_temperature <= 0:
+            raise ValueError("Temperature must be positive")
+        self.logit_scale = nn.Parameter(torch.tensor(1.0 / init_temperature).log())
+
     def forward(self, image_embeddings, text_embeddings):
         """
         Compute symmetric contrastive loss.
-        
+
         Args:
             image_embeddings: Tensor of shape (batch_size, embed_dim)
             text_embeddings: Tensor of shape (batch_size, embed_dim)
@@ -74,19 +76,19 @@ class CLIPLoss(nn.Module):
         # Normalize embeddings to unit length
         image_embeddings = F.normalize(image_embeddings, p=2, dim=-1)
         text_embeddings = F.normalize(text_embeddings, p=2, dim=-1)
-        
+
         batch_size = image_embeddings.size(0)
-        
+
         # Compute cosine similarity matrix
-        logits = torch.matmul(image_embeddings, text_embeddings.t()) / self.temperature
-        
+        logits = torch.matmul(image_embeddings, text_embeddings.t()) * self.logit_scale.exp()
+
         # Target is the identity matrix (correct pairs are on the diagonal)
         labels = torch.arange(batch_size, device=image_embeddings.device)
-        
+
         # Symmetric cross-entropy loss
         loss_i = F.cross_entropy(logits, labels)
         loss_t = F.cross_entropy(logits.t(), labels)
-        
+
         return (loss_i + loss_t) / 2
 
 # Example Usage
@@ -177,18 +179,18 @@ Simple projection-layer models work best when the input pattern is straightforwa
 ## Quizzes
 
 <details>
-<summary>Quiz 1: Why does CLIP use a symmetric loss ($\mathcal{L}_{i \to t}$ and $\mathcal{L}_{t \to i}$) instead of just one direction?</summary>
-*Using only one direction (e.g., matching text to images) would create an asymmetric space. For example, multiple different texts could map close to the same image, but that image might not map close to those texts. Symmetric loss ensures that the representation space is aligned from both perspectives, leading to better generalization in both image-to-text (captioning/retrieval) and text-to-image (generation/retrieval) tasks.*
+<summary>Quiz 1: Why use two CLIP loss directions when cosine similarity is symmetric?</summary>
+*A pair’s cosine is symmetric, but row-wise image-to-text and column-wise text-to-image softmax denominators differ. The two losses supervise retrieval classification from both directions; they do not by themselves guarantee generation ability or generalization.*
 </details>
 
 <details>
-<summary>Quiz 2: What is the main advantage of Flamingo's Perceiver Resampler over simply concatenating all visual features to the text input?</summary>
-*Concatenating all visual features (which can be hundreds or thousands of tokens for high-resolution images or videos) would drastically increase the sequence length. Since Transformer self-attention complexity is $O(N^2)$, this would make training and inference extremely expensive. The Perceiver Resampler reduces the visual features to a small, fixed number of tokens (e.g., 64), bounding the compute cost regardless of input resolution or video length.*
+<summary>Quiz 2: Does a fixed resampler output make all visual computation constant?</summary>
+*No. It bounds tokens passed to the LLM, but the vision encoder and resampler cross-attention over input features can still grow with image resolution and frame count.*
 </details>
 
 <details>
-<summary>Quiz 3: Why is the tanh gating initialized to zero in Flamingo's Gated Cross-Attention?</summary>
-*Initializing the gating parameter $\alpha$ to zero ensures that $\tanh(\alpha) = 0$. This means that at the start of training, the visual information is completely ignored, and the model behaves exactly like the pre-trained LLM. This prevents "catastrophic forgetting" and ensures stable training by slowly introducing visual information as the model learns.*
+<summary>Quiz 3: Does zero-initializing the visual gate guarantee no forgetting?</summary>
+*No. Since $\tanh(0)=0$, the new branch initially contributes zero, preserving the existing path at initialization. Gates and other trainable modules subsequently change, so language retention and training stability still need evaluation.*
 </details>
 
 ---

@@ -22,12 +22,12 @@ export default function RnnMemoryVisualizer({ lang = 'en' }: RnnMemoryVisualizer
   const labels = {
     en: {
       title: "Sentence: \"The cat sat on the mat.\"",
-      subtitle: "Hidden State Memory Breakdown:",
+      subtitle: "Illustrative retention strength:",
       step: "Step"
     },
     ko: {
       title: "문장: \"The cat sat on the mat.\"",
-      subtitle: "은닉 상태 기억 분해:",
+      subtitle: "설명용 기억 강도:",
       step: "단계"
     }
   };
@@ -38,6 +38,7 @@ export default function RnnMemoryVisualizer({ lang = 'en' }: RnnMemoryVisualizer
     <div className="glass-container" style={{ padding: '20px', marginTop: '2rem', marginBottom: '2rem' }}>
       <div style={{ textAlign: 'center', fontWeight: 'bold', marginBottom: '20px', color: '#1e293b' }}>
         {t.title}
+        <p style={{fontSize: "0.85rem", fontWeight: 400}}>{lang === "ko" ? "설명용 기억 강도이며 은닉 상태에서 측정한 비율이 아닙니다. RNN이 항상 단조롭게 잊는 것은 아닙니다." : "Authored retention strengths, not measured percentages of a hidden state. RNNs need not forget monotonically."}</p>
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
@@ -63,13 +64,13 @@ export default function RnnMemoryVisualizer({ lang = 'en' }: RnnMemoryVisualizer
 
       <div style={{ marginTop: '30px', textAlign: 'center' }}>
         <div style={{ fontSize: '0.9rem', color: '#7f8c8d', marginBottom: '10px' }}>{t.subtitle}</div>
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', flexWrap: 'wrap', alignItems: 'flex-end', height: '120px' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '15px', alignItems: 'flex-end', minHeight: '120px' }}>
           {words.map((w, idx) => {
             if (idx > step) return null;
             const weight = memoryData[step][idx];
             return (
               <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.8rem', color: '#7f8c8d' }}>{(weight * 100).toFixed(0)}%</span>
+                <span style={{ fontSize: '0.8rem', color: '#7f8c8d' }}>{weight.toFixed(2)}</span>
                 <div
                   style={{
                     width: '30px',

@@ -33,9 +33,9 @@ import { GradientVisualizer } from '../../../components/chapter-2/GradientVisual
 RNN은 역전파의 확장인 **시간에 따른 역전파 (BPTT, Backpropagation Through Time)** 를 사용하여 학습됩니다. 네트워크는 시간 단계에 따라 펼쳐지고, 기울기는 출력에서부터 시작하여 처음으로 거슬러 올라가며 계산됩니다.
 
 은닉 상태 가중치 행렬 $\mathbf{W}_{hh}$에 대한 업데이트를 고려해 보겠습니다. 기울기는 시간 단계에 따른 행렬 곱셈의 체인을 포함합니다:
-$$\frac{\partial \mathbf{h}_t}{\partial \mathbf{h}_0} = \prod_{k=1}^t \mathbf{W}_{hh}^T \text{diag}(\sigma'(\mathbf{W}_{hh}\mathbf{h}_{k-1} + \mathbf{W}_{xh}\mathbf{x}_k + \mathbf{b}_h))$$
-
-만약 $\mathbf{W}_{hh}$의 고유값(eigenvalues)이 1보다 작으면, 이를 반복적으로 곱함으로써 기울기가 기하급수적으로 감소합니다 (**기울기 소실**). 반대로 1보다 크면 기울기가 기하급수적으로 증가합니다 (**기울기 폭주**).
+열벡터 상태에 대해 $z_k=W_{hh}h_{k-1}+W_{xh}x_k+b_h$, 순방향 야코비안 $J_k=\operatorname{diag}(\sigma'(z_k))W_{hh}$를 정의합니다. 순서를 명시한 곱은
+$$\frac{\partial h_t}{\partial h_0}=J_tJ_{t-1}\cdots J_1$$
+입니다. 역전파는 이 곱의 전치를 출력 기울기에 적용합니다. $\|J_t\cdots J_1\|_2\le\prod_k\|J_k\|_2$이므로 모든 인자의 노름이 1보다 작은 상수로 제한되면 수축합니다. 그러나 상한이 증가한다고 실제 기울기가 증가하는 것은 아닙니다. 활성화 포화, 방향, 비정규 행렬의 성질도 영향을 줍니다. 가중치의 스펙트럼 반지름만으로 안정성의 필요충분조건을 판정할 수 없습니다 [[3]](#ref-3).
 
 ### 결과
 - **기울기 소실:** 초기 시간 단계의 신호가 가중치를 업데이트하기에 너무 약해져서 네트워크가 장기 종속성을 학습할 수 없습니다.
@@ -111,13 +111,12 @@ LSTM은 세 가지 "게이트"를 사용하여 셀 상태를 제어합니다:
 <em style={{ marginTop: '10px', color: '#7f8c8d' }}>Source: [colah's blog](https://colah.github.io/posts/2015-08-Understanding-LSTMs/)</em>
 </div>
 
-#### 수학적 해석: 기울기 소실을 막는 원리
+#### 수학적 해석: 직접 경로가 기울기를 돕는 원리
 기존 RNN에서는 기울기가 다음과 같이 가중치 행렬의 거듭제곱 형태로 전달되었습니다:
-$$\frac{\partial \mathbf{h}_t}{\partial \mathbf{h}_{t-1}} = \mathbf{W}_{hh}^T \text{diag}(\sigma'(...))$$
+$$\frac{\partial \mathbf{h}_t}{\partial \mathbf{h}_{t-1}} = \operatorname{diag}(\sigma'(z_t))\mathbf{W}_{hh}$$
 
 반면 LSTM에서 셀 상태의 역전파는 다음과 같습니다:
-$$\frac{\partial \mathbf{c}_t}{\partial \mathbf{c}_{t-1}} = \mathbf{f}_t$$
-여기서 $\mathbf{f}_t$는 <strong>망각 게이트(Forget Gate)</strong>의 출력값(0~1 사이)입니다. 만약 네트워크가 해당 정보를 기억해야 한다고 학습하여 $\mathbf{f}_t \approx 1$이 된다면, 기울기는 감쇠 없이 그대로 과거로 전달됩니다. 즉, 활성화 함수의 미분값이나 가중치 행렬이 곱해지지 않아 기울기 소실이 발생하지 않습니다.
+게이트 출력을 고정하면 셀 상태의 직접 경로 야코비안은 $\operatorname{diag}(f_t)$입니다. 망각 게이트의 값은 0과 1 사이이며 1에 가까우면 이 경로의 기울기를 유지합니다. 이것이 전체 미분은 아닙니다. 게이트가 이전 은닉 상태에 의존하므로 다른 경로도 있습니다. LSTM은 기울기 소실을 완화하지만 모든 시퀀스의 안정성을 보장하지 않습니다.
 
 #### 비유로 이해하기
 LSTM은 **일기장**과 같습니다.
@@ -161,8 +160,8 @@ LSTM은 **일기장**과 같습니다.
 ## Quizzes
 
 <details>
-<summary>Quiz 1: 왜 연쇄 법칙(chain rule)이 피드포워드 네트워크보다 RNN에서 기울기 소실을 더 심하게 유발합니까?</summary>
-*RNN에서는 모든 시간 단계에서 동일한 가중치 행렬 $\mathbf{W}_{hh}$가 반복적으로 곱해집니다. 피드포워드 네트워크에서는 레이어마다 다른 가중치 행렬을 가지므로 동일한 값의 반복 곱셈 효과가 덜 뚜렷합니다 (하지만 매우 깊은 피드포워드 네트워크에서도 기울기 소실은 발생하며, 이는 ResNet의 개발로 이어졌습니다).*
+<summary>Quiz 1: 순환 신경망과 깊은 순방향 신경망 모두에서 먼 경로의 기울기가 약해질 수 있는 이유는?</summary>
+*두 구조 모두 여러 야코비안을 곱합니다. RNN은 시간에 따라 파라미터를 재사용하지만 같은 행렬의 반복이 기울기 소실의 필수조건은 아닙니다. 깊이, 활성화, 특이벡터 방향이 중요합니다.*
 </details>
 
 <details>
@@ -186,8 +185,8 @@ LSTM은 **일기장**과 같습니다.
 </details>
 
 <details>
-<summary>Quiz 6: 기울기 폭발(Exploding Gradients)을 방지하기 위해 재귀 가중치 행렬 $\mathbf{W}_{hh}$의 스펙트럼 반지름(Spectral Radius) $\rho(\mathbf{W}_{hh})$이 만족해야 하는 필요조건을 기술하고 수학적으로 정당화하시오.</summary>
-*기울기 폭발을 방지하기 위한 필요조건은 재귀 가중치 행렬의 스펙트럼 반지름이 $\rho(\mathbf{W}_{hh}) \le 1$을 만족해야 하는 것입니다. 스펙트럼 반지름은 행렬 고유값(Eigenvalue)들의 최대 절대값으로 정의됩니다: $\rho(\mathbf{W}_{hh}) = \max_i \{|\lambda_i|\}$。 BPTT 과정에서 기울기는 야코비안 행렬의 연속된 곱으로 표현됩니다: $\frac{\partial \mathbf{h}_t}{\partial \mathbf{h}_k} = \prod_{j=k+1}^t \text{diag}(\sigma'(\mathbf{z}_j)) \mathbf{W}_{hh}^T$. tanh와 같은 활성화 함수의 경우 미분값은 $|\sigma'(z)| \le 1$을 만족합니다. 따라서 곱의 노름(Norm)은 $\|\prod_{j=k+1}^t \frac{\partial \mathbf{h}_j}{\partial \mathbf{h}_{j-1}}\| \le \|\mathbf{W}_{hh}\|^{t-k}$로 상한선이 정해집니다. 만약 스펙트럼 반지름 $\rho(\mathbf{W}_{hh}) > 1$이면, 시퀀스 길이가 무한대로 갈 때 $\|\mathbf{W}_{hh}\|^{t-k}$ 항이 기하급수적으로 증가하여 기울기 폭발을 유발합니다. 따라서 안정성을 위한 필요조건으로 $\rho(\mathbf{W}_{hh}) \le 1$이 요구됩니다.*
+<summary>Quiz 6: 순환 가중치의 스펙트럼 반지름이 1보다 크면 기울기 폭주가 증명되나요?</summary>
+*아닙니다. 활성화 미분이 실제 야코비안 곱을 수축시킬 수 있습니다. 매 단계 $\|J_k\|_2\le1$이면 확대되지 않는 충분조건이지만, 증가하는 상한은 폭주를 증명하는 하한이 아닙니다. 스펙트럼 반지름이 1 이하여도 비정규 행렬의 일시적 증폭은 가능할 수 있습니다.*
 </details>
 
 ---

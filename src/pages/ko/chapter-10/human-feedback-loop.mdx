@@ -18,7 +18,7 @@ Human feedback은 학습 데이터이기 전에 측정 시스템입니다. Produ
 
 Candidate set, 표시 순서, serving policy, model/artifact revision, decoding setting, 사용자가 본 latency/error, sampling 또는 **propensity** 확률을 기록합니다. 인과적인 product 결정을 할 때는 **무작위 A/B(randomized A/B)** 또는 interleaving experiment를 사용합니다. 더 자주 노출되거나 유리한 위치에 있던 답이 click을 더 받았다고 본질적으로 더 좋다고 결론 내리면 안 됩니다.
 
-<TrajectoryAdmissionVisualizer client:load />
+<TrajectoryAdmissionVisualizer client:load  lang="ko" />
 
 Admission score는 routing 도구이지 high-reward trajectory만 학습해도 된다는 허가가 아닙니다. 성공하거나 점수가 높은 출력만 선택하면 support가 좁아지고 **선택 편향(selection bias)** 이 생깁니다. 통제된 negative, counterfactual comparison, exploration data를 보존합니다.
 
@@ -44,17 +44,17 @@ Sampling probability를 기록하고 population metric을 추정할 때 stratifi
 
 ---
 
-## Leakage 없는 Badcase Loop
+## 누출 없는 실패 사례 개선 과정
 
-Production failure는 바로 training example이 아니라 먼저 재현 가능한 evaluation case가 되어야 합니다.
+장애 사례는 회귀 검사에 유용하지만, 학습 예제의 변형은 독립적인 일반화 시험이 아닙니다.
 
-1. prompt, context, tool state, expected behavior, artifact revision, failure taxonomy를 고정합니다.
-2. semantic cluster를 배정하고 private evaluation item을 만듭니다.
-3. evaluation-only로 남을 별도의 **형제 holdout(sibling holdout)** variant를 만듭니다.
-4. 그 뒤에만 remediated example 또는 다른 sibling을 versioned training candidate에 넣습니다.
-5. 원본, sibling holdout, capability-retention, safety suite를 다시 실행합니다.
+1. 프롬프트, 문맥, 도구 상태, 기대 동작, 아티팩트 리비전, 실패 유형을 고정합니다.
+2. 분할 전에 원본과 바꿔 쓴 문장, 관련 대화, 합성 형제 예제를 하나의 의미 군집에 묶습니다.
+3. 군집 전체를 평가용으로 격리하거나 학습 후보에 넣습니다. 후자를 택하면 원본·형제 회귀 검사를 학습에 노출된 검사로 표시합니다.
+4. 릴리스 평가는 별도의 손대지 않은 군집으로 유지합니다. 그 프롬프트, 채점 기준, 교사 모델이 만든 변형을 학습에 넣지 않습니다.
+5. 알려진 장애의 회귀 검사와 미노출 군집의 일반화 결과를 구분하고 기본 능력 보존·안전성도 함께 보고합니다.
 
-이 순서가 exact incident 암기로 “통과”하는 일을 막습니다. Untouched private release set을 유지하고 정답을 training system에 넣지 말고 접근 권한을 순환합니다.
+노출된 회귀 검사를 통과했다는 것은 알려진 문제를 고쳤다는 증거입니다. 일반화 주장은 별도로 보호한 평가가 뒷받침해야 합니다.
 
 ---
 
@@ -79,8 +79,8 @@ Release에는 fixed decoding과 uncertainty가 있는 paired comparison을 사�
 </details>
 
 <details>
-<summary>Quiz 3: Badcase 학습 전에 sibling holdout을 만드는 이유는 무엇인가요?</summary>
-*정확한 incident는 암기할 수 있습니다. Evaluation-only sibling은 하나의 기대 답을 재현한 것이 아니라 failure cluster에 일반화했는지 검사합니다.*
+<summary>Quiz 3: 장애 사례의 변형을 독립적인 홀드아웃으로 볼 수 없는 이유는 무엇인가요?</summary>
+*의미적으로 가까운 사례는 같은 군집으로 묶은 뒤 분할해야 합니다. 군집 전체를 평가용으로 격리하거나, 학습에 넣었다면 관련 회귀 검사를 노출된 검사로 표시합니다. 일반화는 별도의 미노출 군집으로 평가합니다.*
 </details>
 
 <details>

@@ -69,13 +69,12 @@ Prefill과 Decode를 섞는 것은 거대한 스케줄링 충돌을 일으킵니
 
 이를 해결하기 위해 최신 추론 엔진(vLLM, SGLang, TensorRT-LLM 등)은 **청크 단위 프리필 (Chunked Prefill)** 을 구현합니다 (이는 SARATHI [[2]](#ref-2) 와 같은 시스템에 의해 처음 대중화되었습니다).
 
-스케줄러는 거대한 프롬프트를 한 번에 처리하는 대신, 관리하기 쉬운 크기의 청크(예: 1,024 또는 2,048 토큰)로 분할합니다. 각 반복(iteration) 동안 스케줄러는 진행 중인 Decode 요청들과 함께 정확히 하나의 Prefill 청크를 "업어 타듯(piggybacks)" 스케줄링합니다.
+스케줄러는 거대한 프롬프트를 한 번에 처리하는 대신, 관리하기 쉬운 크기의 청크(예: 1,024 또는 2,048 토큰)로 분할합니다. 각 반복(iteration) 동안 스케줄러는 진행 중인 Decode 요청들과 함께 예산 안의 Prefill 청크를 "업어 타듯(piggybacks)" 스케줄링합니다.
 
 ![prefill_decode_packing](../../../assets/images/chapter-12/prefill_decode_packing.png)
 *출처: AI 생성 이미지*
 
-**이 방식이 훌륭한 이유:**
-Decode 단계는 메모리 중심(memory-bound)이므로 연산 유닛(Tensor Core)들이 HBM으로부터 데이터를 기다리며 유휴 상태(idle)로 방치됩니다. **Chunked Prefill** 은 연산 집약적인(compute-heavy) 작업을 작은 단위로 쪼개어, 놀고 있는 Tensor Core에 할당합니다. 이는 워크로드의 산술적 강도(arithmetic intensity)를 완벽하게 균형 맞추어, 진행 중인 Decode의 토큰 생성을 지연시키지 않으면서도 거의 100%에 가까운 GPU 활용도를 달성하게 합니다.
+Decode와 prefill을 함께 배치하면 연산 활용도를 높일 수 있지만, 둘은 메모리 대역폭과 커널 자원을 공유합니다. 청크가 크면 처리량이 좋아지는 대신 기존 요청의 토큰 간 지연이 늘 수 있습니다. 청크·토큰 예산·우선순위를 TTFT와 inter-token tail latency SLO에 맞게 조절해야 하며 100% 활용도나 무정지를 보장하지 않습니다.
 
 ---
 
@@ -100,10 +99,10 @@ class ContinuousBatchingScheduler:
         self.waiting_queue: List[InferenceRequest] = []
         self.running_batch: List[InferenceRequest] = []
         self.max_batch_size = max_batch_size
-        
+
     def add_request(self, request: InferenceRequest):
         self.waiting_queue.append(request)
-        
+
     def _evict_finished_requests(self):
         """생성이 완료된 요청들을 배치에서 제거합니다."""
         active = []
@@ -119,7 +118,7 @@ class ContinuousBatchingScheduler:
     def _pull_new_requests(self):
         """배치에 여유 공간이 있다면 대기열에서 새로운 요청을 가져옵니다."""
         available_slots = self.max_batch_size - len(self.running_batch)
-        
+
         while available_slots > 0 and self.waiting_queue:
             new_req = self.waiting_queue.pop(0)
             new_req.status = "prefill"
@@ -130,27 +129,27 @@ class ContinuousBatchingScheduler:
         """단일 반복(하나의 토큰 생성 단계)을 실행합니다."""
         # 1. 이전 단계에서 완료된 요청들을 정리합니다.
         self._evict_finished_requests()
-        
+
         # 2. 빈 슬롯을 새로운 요청으로 채웁니다.
         self._pull_new_requests()
-        
+
         if not self.running_batch:
             return # 엔진이 유휴(idle) 상태임
-            
+
         # 3. 단계별로 요청들을 분리합니다.
         prefill_reqs = [r for r in self.running_batch if r.status == "prefill"]
         decode_reqs = [r for r in self.running_batch if r.status == "decode"]
-        
+
         # 4. 순전파(Forward Pass) 실행
-        # 실제 엔진에서는 커스텀 CUDA 커널을 사용하여 청크 단위 프리필과 
+        # 실제 엔진에서는 커스텀 CUDA 커널을 사용하여 청크 단위 프리필과
         # 디코드를 단일 패스로 융합(fuse)합니다.
         mock_model_forward(prefill_reqs, decode_reqs)
-        
+
         # 5. 요청 상태 업데이트
         for req in self.running_batch:
             if req.status == "prefill":
                 # 한 번의 반복 후 프롬프트 처리가 완료되면 decode 상태로 전환합니다.
-                req.status = "decode" 
+                req.status = "decode"
             elif req.status == "decode":
                 req.generated_tokens += 1
 
@@ -173,13 +172,11 @@ while scheduler.waiting_queue or scheduler.running_batch:
 
 ---
 
-## 6. 요약 및 열린 질문 (Summary and Open Questions)
+## 6. 정리와 다음 단계
 
-**Continuous Batching** 은 LLM 추론 스케줄러를 단순한 FIFO(First-In-First-Out) 큐에서 복잡한 OS 형태의 작업 관리자로 탈바꿈시켰습니다. 반복(iteration) 수준에서 작동함으로써, 추론 엔진은 요청 길이의 편차와 관계없이 높은 GPU 활용도를 유지할 수 있습니다. 나아가 **Chunked Prefill** 과 같은 고급 기법은 엔지니어들이 연산 중심의 Prefill 단계와 메모리 중심의 Decode 단계 사이의 균형을 맞출 수 있게 하여, 지연 시간(TBT)을 희생하지 않으면서도 높은 처리량을 보장합니다.
+반복 단계마다 요청을 교체하면 서로 다른 생성 길이 때문에 생기는 유휴 슬롯을 줄일 수 있습니다. 청크 단위 prefill은 decode와의 간섭을 제한하는 수단이지만 지연 시간과 처리량 사이의 절충을 없애지는 않습니다. KV 용량, 토큰 예산, 요청 도착률과 커널 효율에 따라 사용률도 달라집니다.
 
-하지만 완벽한 스케줄링과 메모리 관리(PagedAttention)를 갖추었음에도 불구하고, 우리는 Decode 단계에서 GPU의 메모리 대역폭이라는 근본적인 한계에 부딪히게 됩니다. 한 번에 하나의 토큰을 생성하려면 매 단계마다 HBM에서 SRAM으로 모델의 전체 가중치(weights)를 불러와야만 합니다. 이 자기회귀적 병목 현상을 깨고 한 번의 순전파로 *여러 개* 의 토큰을 생성할 방법은 없을까요? 우리는 다음 섹션인 **추측 해독 (Speculative Decoding)** 에서 이 질문에 대한 해답을 탐구할 것입니다.
-
----
+작은 decode 배치에서는 활성 가중치와 KV 읽기가 병목일 수 있습니다. 큰 배치, 긴 문맥, MoE에서는 병목과 메모리 트래픽이 달라집니다. 다음 절에서는 한 번의 검증으로 여러 후보 토큰을 처리하는 투기적 디코딩의 이득과 비용을 살펴봅니다.
 
 ## Quizzes
 
@@ -189,13 +186,13 @@ while scheduler.waiting_queue or scheduler.running_batch:
 </details>
 
 <details>
-<summary>Quiz 2: Prefill 단계와 Decode 단계 간 하드웨어 활용의 가장 큰 차이점은 무엇인가?</summary>
-*Prefill 단계는 전체 프롬프트를 동시에 처리하는 행렬-행렬 곱셈(GEMM)을 수행하므로 고도로 연산 중심(Compute-Bound)입니다. 반면 Decode 단계는 한 번에 하나의 토큰을 생성하는 행렬-벡터 곱셈(GEMV)을 수행하며, KV Cache와 모델 가중치를 끊임없이 읽어와야 하므로 심각한 메모리 대역폭 중심(Memory-Bandwidth-Bound)입니다.*
+<summary>Quiz 2: Prefill과 decode의 병목은 언제 달라지나요?</summary>
+*Prefill은 여러 토큰을 병렬 처리해 연산 집약적일 수 있고, 작은 배치의 decode는 메모리 대역폭에 제한되기 쉽습니다. 하지만 배치·문맥 길이·구조·커널에 따라 바뀌므로 항상 GEMM 대 GEMV로 단정할 수는 없습니다.*
 </details>
 
 <details>
-<summary>Quiz 3: Chunked Prefill은 Continuous Batching에서 발생하는 지연 시간(TBT) 스파이크 문제를 어떻게 해결하는가?</summary>
-*거대한 Prefill 요청이 배치에 들어오면 GPU 연산 자원을 독점하여 진행 중인 Decode 요청들의 토큰 생성을 멈추게 만듭니다. Chunked Prefill은 이 거대한 프롬프트를 작은 블록으로 쪼개어 Decode 반복 연산에 업어 타듯(piggyback) 스케줄링함으로써, Decode를 지연시키지 않으면서 연산과 메모리 작업의 균형을 맞춥니다.*
+<summary>Quiz 3: 청크 단위 prefill은 decode 지연을 어떻게 다루나요?</summary>
+*큰 프롬프트의 작업을 제한된 청크로 나누어 decode 반복 사이에 배치합니다. 간섭을 줄일 수 있지만 청크 크기와 스케줄링 정책이 prefill 완료 시간과 토큰 간 지연을 절충하므로 지연 급증이 사라진다는 보장은 없습니다.*
 </details>
 
 <details>
@@ -204,13 +201,13 @@ while scheduler.waiting_queue or scheduler.running_batch:
 </details>
 
 <details>
-<summary>Quiz 5: 정적 배칭(Static Batching)과 동적/연속 배칭(Continuous Batching)의 스케줄러 큐 상태 전이를 수학적으로 공식화하시오. 반복 $t$ 에서의 활성 요청 집합을 $B_t$, 대기 큐를 $Q_t$, 요청 $r$ 이 `<EOS>` 를 방출하는 반복 시점을 $E(r)$ 이라 정의한다.</summary>
-*정적 배칭에서 상태 전이는 블록(block) 단위로 이루어집니다. $B_t$ 내에 $t < E(r)$ 인 요청 $r$ 이 하나라도 존재한다면 $B_{t+1} = B_t$ 입니다. 새로운 요청은 배치가 완전히 비었을 때만 가져올 수 있습니다: $B_t = \emptyset$ 일 때만 $B_{t+1} = \text{pop}(Q_t, \text{max\_batch})$ 입니다. 반면 연속 배칭에서는 상태 전이가 반복(iteration) 수준에서 발생합니다: $B_{t+1} = \{r \in B_t \mid t < E(r)\} \cup \text{pop}(Q_t, \text{max\_batch} - |\{r \in B_t \mid t < E(r)\}|)$ 입니다. 이는 모든 반복 $t$ 마다 활성 요청 수 $|B_t|$ 를 $\text{max\_batch}$ 로 최대화하여 호송대 효과를 완전히 방지합니다.*
+<summary>Quiz 5: 모든 요청이 끝난 static batch와 continuous batch의 전이를 어떻게 구분하나요?</summary>
+*생존 요청을 $C_t=\{r \in B_t : t<E(r)\}$ 로 정의합니다. Static batching은 $C_t$ 가 비어 있지 않으면 기존 배치를 유지하고, 비면 대기열에서 다음 배치를 받습니다. Continuous batching은 $C_t$ 를 유지한 뒤 대기열에서 여유 슬롯만큼 요청을 추가합니다. 대기 요청이 부족하면 배치가 찰 수 없고 실제 승인은 토큰·KV 예산도 만족해야 합니다.*
 </details>
 
 ---
 
 ## References
 
-1. <a id="ref-1"></a>Yu, G.-I., Jeong, J. S., Kim, G.-W., Kim, S., & Chun, B.-G. (2022). "Orca: A Distributed Serving System for Transformer-Based Generative Models". *16th USENIX Symposium on Operating Systems Design and Implementation (OSDI 22)*. [arXiv:2203.10842](https://arxiv.org/abs/2203.10842)
+1. <a id="ref-1"></a>Yu, G.-I., Jeong, J. S., Kim, G.-W., Kim, S., & Chun, B.-G. (2022). "Orca: A Distributed Serving System for Transformer-Based Generative Models". *16th USENIX Symposium on Operating Systems Design and Implementation (OSDI 22)*. [OSDI 2022](https://www.usenix.org/conference/osdi22/presentation/yu)
 2. <a id="ref-2"></a>Agrawal, A., Panwar, A., Mohan, J., Kwatra, N., Gulavani, B. S., & Ramjee, R. (2023). *SARATHI: Efficient LLM Inference by Piggybacking Decodes with Chunked Prefills*. *arXiv preprint arXiv:2308.16369*. [arXiv:2308.16369](https://arxiv.org/abs/2308.16369)

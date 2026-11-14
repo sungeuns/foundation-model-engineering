@@ -78,10 +78,8 @@ The concrete mathematical manifestation of the Bitter Lesson is the **Scaling La
 3.  **Compute ($C$):** Total floating-point operations (FLOPs) used for training.
 
 In practice, scaling-law papers often fit more detailed empirical curves, but a simple illustrative form is:
-$$L(N, D, C) \propto \left( \frac{1}{N^\alpha} + \frac{1}{D^\beta} + \frac{1}{C^\gamma} \right)$$
-Where $L$ is the loss, and $\alpha, \beta, \gamma$ are scaling exponents.
-
-This means if you want better performance, you don't necessarily need a better algorithm; you just need to scale $N, D,$ and $C$.
+$$L(N,D)=L_\infty+\frac{A}{N^\alpha}+\frac{B}{D^\beta},\qquad C\approx6ND.$$
+Here $L$ is held-out token loss, $L_\infty$ an irreducible fitted term, $A,B$ positive fitted coefficients, and $\alpha,\beta$ exponents. The compute approximation applies to dense Transformer training under stated accounting assumptions. $N,D,C$ are therefore not three independent knobs. This empirical shape does not guarantee downstream reasoning, safety, or a particular architecture. Chapter 8 develops fit uncertainty, inference economics and deviations from the approximation.
 
 ---
 
@@ -114,7 +112,7 @@ D_np = D_range.numpy()
 
 # Plotting the result
 plt.figure(figsize=(10, 6))
-CS = plt.contourf(N_np, D_np, Loss_np, levels=20, cmap='viridis')
+CS = plt.contourf(N_np, D_np, Loss_np.T, levels=20, cmap='viridis')
 plt.xscale('log')
 plt.yscale('log')
 plt.xlabel('Model Size (N)')
@@ -130,9 +128,9 @@ print("This illustrative fitted curve models lower loss as compute increases.")
 
 ## Example: The Power of Scale
 
-Adjust the "Compute" available to the AI. See how the model transitions from learning simple patterns to complex reasoning, demonstrating the Bitter Lesson in action.
+Change a synthetic compute budget and its model/data allocation. Observe the tradeoff in the stated curve without inferring capabilities from FLOPs.
 
-<ScaleVisualizer client:load />
+<ScaleVisualizer client:load lang="en" />
 
 ---
 

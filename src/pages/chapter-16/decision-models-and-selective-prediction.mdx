@@ -91,6 +91,12 @@ Ship the checkpoint/API revision, state schema, questions/options, calibration t
 
 A decision is evidence for an action. **Authorization remains an independent execution-time check**: “the user seems to want a refund” does not authorize issuing money. Connect this boundary to Section 16.6's recovery controls, and use generation when the task actually needs an explanation or new content.
 
+## Actor, judge and teacher are different evaluation roles
+
+**As of 2026-11-15 — emerging research.** A study of decision models separates acting from judging and teaching. A weak actor can still supply useful training signals when shown a completed trajectory and asked about each action's contribution. The experiments use ALFWorld and WebShop episodes of at most 30 actions. Hindsight judgments must not be presented as evidence for online action filtering, where future observations are unavailable; closed-model adaptation details remain undisclosed. [[10]](#ref-10)
+
+Evaluate actor success, judge calibration and downstream student improvement independently. A good teacher score is evidence about a training signal, not permission for autonomous execution.
+
 ## Quizzes
 
 <details>
@@ -129,3 +135,4 @@ A decision is evidence for an action. **Authorization remains an independent exe
 7. <a id="ref-7"></a>inclusionAI. *LemonDecider model card*, revision `9a2f41d590a4ea0ed88af1938865695f9d6d8330`, verified 2026-10-25. [Card](https://huggingface.co/inclusionAI/LemonDecider).
 8. <a id="ref-8"></a>Sun, Y., et al. (2026). *Type-Safe Is Not Error-Free: Typed Decision Models Follow the Option Name, Not the Definition Bound to It*. October 8 revision; preprint. [arXiv:2609.26758v3](https://arxiv.org/abs/2609.26758v3).
 9. <a id="ref-9"></a>Li, K., et al. (2026). *Beyond Calibration: Do a Typed-Decision Model's Probabilities Obey the Probability Axioms?* September 27 preprint. [arXiv:2609.33209v1](https://arxiv.org/abs/2609.33209v1).
+10. <a id="ref-10"></a>Research preprint (2026). [Actor, Judge, or Teacher? Understanding Decision Models in Long-Horizon Agents](https://arxiv.org/html/2611.17167v1). Version pinned; accessed 2026-11-15.

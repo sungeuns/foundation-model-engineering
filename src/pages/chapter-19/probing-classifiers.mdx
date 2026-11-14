@@ -49,10 +49,13 @@ import torch.nn as nn
 class LinearProbe(nn.Module):
     def __init__(self, width: int, classes: int):
         super().__init__()
+        self.register_buffer("mean", torch.zeros(1, width))
+        self.register_buffer("scale", torch.ones(1, width))
         self.readout = nn.Linear(width, classes)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.readout(x)
+        x = x.detach().to(device=self.mean.device, dtype=torch.float32)
+        return self.readout((x - self.mean) / self.scale)
 
 
 def fit_linear_probe(
@@ -65,32 +68,39 @@ def fit_linear_probe(
     learning_rate: float = 3e-3,
     weight_decay: float = 1e-2,
 ) -> tuple[LinearProbe, float]:
-    if train_x.ndim != 2 or test_x.shape[1] != train_x.shape[1]:
+    if train_x.ndim != 2 or test_x.ndim != 2 or train_x.shape[1] != test_x.shape[1]:
         raise ValueError("expected [examples, hidden_width] with matching widths")
+    if len(train_x) < 2 or len(test_x) == 0 or steps < 1:
+        raise ValueError("nonempty splits, >=2 training examples and positive steps required")
+    train_x = train_x.detach().float()
+    test_x = test_x.detach().to(device=train_x.device, dtype=torch.float32)
+    for features, labels in [(train_x, train_y), (test_x, test_y)]:
+        if labels.shape != (len(features),) or labels.dtype != torch.long:
+            raise ValueError("one int64 class ID per example required")
+        if not torch.isfinite(features).all() or (labels < 0).any():
+            raise ValueError("finite features and nonnegative labels required")
     classes = int(train_y.max().item()) + 1
-    if classes < 2:
-        raise ValueError("training split must contain at least two classes")
-
-    # Fit preprocessing on train only; keep it with the probe artifact.
-    mean = train_x.mean(dim=0, keepdim=True)
-    scale = train_x.std(dim=0, keepdim=True).clamp_min(1e-6)
-    x_train = (train_x - mean) / scale
-    x_test = (test_x - mean) / scale
-
+    if train_y.unique().numel() != classes or classes < 2 or test_y.max() >= classes:
+        raise ValueError("training classes must be contiguous and cover test labels")
+    train_y = train_y.to(train_x.device)
+    test_y = test_y.to(train_x.device)
     torch.manual_seed(0)
     probe = LinearProbe(train_x.shape[1], classes).to(train_x.device)
+    # Save training-only preprocessing in state_dict together with the readout.
+    probe.mean.copy_(train_x.mean(dim=0, keepdim=True))
+    probe.scale.copy_(train_x.std(dim=0, keepdim=True, correction=0).clamp_min(1e-6))
     optimizer = torch.optim.AdamW(
         probe.parameters(), lr=learning_rate, weight_decay=weight_decay
     )
     for _ in range(steps):
         optimizer.zero_grad(set_to_none=True)
-        loss = nn.functional.cross_entropy(probe(x_train), train_y)
+        loss = nn.functional.cross_entropy(probe(train_x), train_y)
         loss.backward()
         optimizer.step()
 
     probe.eval()
     with torch.no_grad():
-        accuracy = (probe(x_test).argmax(dim=-1) == test_y).float().mean().item()
+        accuracy = (probe(test_x).argmax(dim=-1) == test_y).float().mean().item()
     return probe, accuracy
 ~~~
 

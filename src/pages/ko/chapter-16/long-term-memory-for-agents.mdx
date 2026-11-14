@@ -142,7 +142,7 @@ FEB-30은 알려진 사실 변화 궤적에서 문서를 생성하고, 매번 �
 
 아래 시각화는 consolidation의 감각을 보여 줍니다. 모든 임시 관찰을 같은 장기 저장소에 넣는 것이 아니라, 정보의 성격에 따라 적절한 위치로 보내야 메모리 품질이 올라갑니다.
 
-<MemorySubstrateVisualizer client:load />
+<MemorySubstrateVisualizer client:load lang="ko" />
 
 ---
 
@@ -161,6 +161,12 @@ FEB-30은 알려진 사실 변화 궤적에서 문서를 생성하고, 매번 �
 핵심은 메커니즘입니다. 요약·사실 저장소가 나중 질문에 필요한 관계나 의존 경로를 버릴 수 있습니다. 학습된 writer나 그래프를 추가하기 전에 reader·코퍼스 시간 경계·근거 예산·채점기를 맞춰 원본 검색과 비교하세요. 근거 포괄률·활용률·답 정확도·수집/저장 비용·검색 지연·갱신/삭제 정확성을 따로 측정합니다. 원본 보존도 동의·보존 정책 안에서만 가능하며 모든 것을 영구 보관하라는 뜻은 아닙니다.
 
 검색 기준선이 강해도 접근 통제·시간적 유효성·출처·삭제 계보가 필요합니다. 범위가 정해진 쓰기·읽기 판단은 [16.7절의 판단 계약](/chapter-16/decision-models-and-selective-prediction)과 연결하고 압축 자체보다 후속 효과를 검증하세요.
+
+## WikiTrace: 교훈의 근거를 함께 보관하기
+
+**2026-11-15 기준 — 초기 연구.** WikiTrace는 재사용할 교훈을 실행 요약 및 원본 궤적과 연결합니다. 지침이 부족하거나 관측과 충돌하면 에이전트가 근거를 다시 살펴볼 수 있습니다. 링크는 출처를 보존할 뿐 정확성을 입증하지 않습니다. 평가 시스템은 처음에 모든 교훈을 제공하므로 대규모 기억 검색은 미해결이며, 추론 텍스트에 기반한 진단도 인과적 설명은 아닙니다. [[8]](#ref-8)
+
+기억마다 적용 조건·결과·출처 ID를 보관하고 성공 회복과 회귀를 함께 측정하세요. 요약과 원본 실행에도 접근 통제와 삭제 이력을 연결해야 합니다.
 
 ## Quizzes
 
@@ -202,3 +208,4 @@ FEB-30은 알려진 사실 변화 궤적에서 문서를 생성하고, 매번 �
 
 6. <a id="ref-6"></a>Toma, S.-A., et al. (2026). *Beyond Downstream QA: Rethinking How We Evaluate Agent Memory*. Preprint. [Source](https://arxiv.org/abs/2610.22209).
 7. <a id="ref-7"></a>Bao, Z., et al. (2026-10-22). *Is Complex Agentic Memory Always Needed? Naive RAG Is Stronger Than We Thought.* Preprint. [arXiv:2610.30755v1](https://arxiv.org/abs/2610.30755v1).
+8. <a id="ref-8"></a>Research preprint (2026). [Don’t Just Trust Your Memory: Evidence-Linked Memory Reduces Memory-Induced Degradation in LLM Agents](https://arxiv.org/html/2611.14320v1). Version pinned; accessed 2026-11-15.

@@ -82,47 +82,47 @@ class MultiHeadAttention(nn.Module):
     def __init__(self, d_model, num_heads):
         super(MultiHeadAttention, self).__init__()
         assert d_model % num_heads == 0
-        
+
         self.d_model = d_model
         self.num_heads = num_heads
         self.d_k = d_model // num_heads
-        
+
         # Linear projections for Q, K, V
         self.w_q = nn.Linear(d_model, d_model)
         self.w_k = nn.Linear(d_model, d_model)
         self.w_v = nn.Linear(d_model, d_model)
-        
+
         # Output projection
         self.w_o = nn.Linear(d_model, d_model)
-        
+
     def forward(self, q, k, v, mask=None):
         batch_size = q.size(0)
-        
+
         # 1. Linear projections
         Q = self.w_q(q)
         K = self.w_k(k)
         V = self.w_v(v)
-        
+
         # 2. Split into heads
         # Shape change: (batch, seq_len, d_model) -> (batch, seq_len, num_heads, d_k) -> (batch, num_heads, seq_len, d_k)
         Q = Q.view(batch_size, -1, self.num_heads, self.d_k).transpose(1, 2)
         K = K.view(batch_size, -1, self.num_heads, self.d_k).transpose(1, 2)
         V = V.view(batch_size, -1, self.num_heads, self.d_k).transpose(1, 2)
-        
+
         # 3. Apply Scaled Dot-Product Attention
         scores = torch.matmul(Q, K.transpose(-2, -1)) / (self.d_k ** 0.5)
         if mask is not None:
             scores = scores.masked_fill(mask == 0, -1e9)
         weights = F.softmax(scores, dim=-1)
         attention_output = torch.matmul(weights, V)
-        
+
         # 4. Concatenate heads
         # Shape change: (batch, num_heads, seq_len, d_k) -> (batch, seq_len, num_heads, d_k) -> (batch, seq_len, d_model)
         concat_output = attention_output.transpose(1, 2).contiguous().view(batch_size, -1, self.d_model)
-        
+
         # 5. Output projection
         output = self.w_o(concat_output)
-        
+
         return output, weights
 
 # Example usage
@@ -139,7 +139,7 @@ print("Attention Weights Shape:", weights.shape)
 
 Visualize how two different heads might attend to the sentence "The bank was full of money."
 *   **Head 1** might learn to associate "bank" with "money" (financial context).
-*   **Head 2** might learn to associate "bank" with "river" (if the context were different, but here it's money).
+*   **Head 2** illustrates a different distribution emphasizing nearby syntactic links. These are authored patterns, not verified head functions.
 
 Select a head to see its simulated attention pattern for the word **"bank"**.
 

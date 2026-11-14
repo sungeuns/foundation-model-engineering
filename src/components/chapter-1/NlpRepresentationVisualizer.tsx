@@ -125,13 +125,13 @@ export const NlpRepresentationVisualizer = ({ lang = 'en' }: Props) => {
     <div className="viz-container glassmorphism">
       <h3 className="viz-title">{labels.title}</h3>
       <p className="viz-description">{labels.desc}</p>
-      
+
       <div className="viz-controls centered">
         <label style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>{labels.select}</label>
         <div className="viz-btn-group">
           {Object.keys(sentences).map((key) => (
-            <button 
-              key={key} 
+            <button
+              key={key}
               onClick={() => setSelected(key)}
               className={`viz-btn ${selected === key ? 'active' : ''}`}
             >
@@ -148,8 +148,8 @@ export const NlpRepresentationVisualizer = ({ lang = 'en' }: Props) => {
           <div className="viz-box-content">
             <div className="viz-sub-label">{labels.counts}</div>
             <div style={{ fontSize: '0.9rem', textAlign: 'left' }}>
-              <div>{labels.pos_words} {current.fe_analysis.pos.join(', ') || 'None'}</div>
-              <div>{labels.neg_words} {current.fe_analysis.neg.join(', ') || 'None'}</div>
+              <div>{labels.pos_words} {current.fe_analysis.pos.join(', ') || (lang === 'ko' ? '없음' : 'None')}</div>
+              <div>{labels.neg_words} {current.fe_analysis.neg.join(', ') || (lang === 'ko' ? '없음' : 'None')}</div>
             </div>
             <div className="viz-sub-label">{labels.rule}</div>
             <div className="viz-score-display">
@@ -173,10 +173,10 @@ export const NlpRepresentationVisualizer = ({ lang = 'en' }: Props) => {
               <div className="viz-region-neg" style={{ position: 'absolute', top: 0, left: 0, width: '50%', height: '100%', background: 'rgba(231, 76, 60, 0.1)', borderRadius: '0.5rem 0 0 0.5rem' }}>
                 <span style={{ position: 'absolute', top: 10, left: 10, fontSize: '0.8rem', color: '#c0392b', fontWeight: 'bold' }}>{labels.neg_region}</span>
               </div>
-              <div 
-                className="viz-dot" 
-                style={{ 
-                  left: `${current.rl_pos[0]}%`, 
+              <div
+                className="viz-dot"
+                style={{
+                  left: `${current.rl_pos[0]}%`,
                   top: `${100 - current.rl_pos[1]}%`, // Invert for standard cartesian
                   backgroundColor: '#8e44ad',
                   boxShadow: '0 0 10px #8e44ad',

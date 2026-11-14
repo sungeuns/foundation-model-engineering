@@ -70,6 +70,8 @@ CoT 추론은 때때로 궤도를 벗어날 수 있습니다. 신뢰성을 높�
 
 CoT는 프롬프팅 기술이지만, 추론 단계에 따라 연산량이 어떻게 확장되는지 이해하기 위해 "단계별" 토큰 생성 및 검증 프로세스를 시뮬레이션할 수 있습니다.
 
+> **학습하지 않은 토큰 생성 예시입니다.** 무작위 가중치가 추론이나 검증을 구현하지는 않습니다. 배치 우선 형식의 인과적 재계산만 보이며 위치 인코딩, 토크나이저, EOS 종료, 패딩 마스크, KV 캐시, 학습 목적 함수는 생략했습니다. 한 단계는 추론 한 단계가 아니라 토큰 하나입니다.
+
 ```python
 import torch
 import torch.nn as nn
@@ -80,35 +82,38 @@ class SimpleReasoningModel(nn.Module):
         super().__init__()
         self.embedding = nn.Embedding(vocab_size, embed_dim)
         self.transformer = nn.TransformerEncoder(
-            nn.TransformerEncoderLayer(d_model=embed_dim, nhead=4),
+            nn.TransformerEncoderLayer(d_model=embed_dim, nhead=4, batch_first=True),
             num_layers=2
         )
         self.output_layer = nn.Linear(embed_dim, vocab_size)
-        
+
     def forward(self, x):
         x = self.embedding(x)
-        x = self.transformer(x)
+        causal_mask = torch.triu(torch.ones(x.size(1), x.size(1), device=x.device, dtype=torch.bool), diagonal=1)
+        x = self.transformer(x, mask=causal_mask)
         return self.output_layer(x)
 
+@torch.inference_mode()
 def generate_with_cot(model, prompt_tokens, max_steps=5):
     """
     중간 추론 단계를 포함하는 시퀀스 생성을 시뮬레이션합니다.
     """
+    model.eval()
     current_tokens = prompt_tokens
-    
+
     print(f"초기 프롬프트: {current_tokens.tolist()}")
-    
+
     for step in range(max_steps):
         # 다음 토큰 예측 (추론의 한 단계를 시뮬레이션)
         logits = model(current_tokens)
         next_token_logits = logits[:, -1, :]
         next_token = torch.argmax(next_token_logits, dim=-1, keepdim=True)
-        
+
         # 시퀀스에 추가
         current_tokens = torch.cat([current_tokens, next_token], dim=1)
-        
+
         print(f"단계 {step + 1} 추론 토큰: {next_token.item()}")
-        
+
     return current_tokens
 
 # 예제 사용법
@@ -125,8 +130,8 @@ print(f"CoT가 포함된 최종 시퀀스: {final_sequence.tolist()}")
 ## Quizzes
 
 <details>
-<summary>Quiz 1: 생각의 사슬 프롬프팅이 표준 프롬프팅에 비해 복잡한 추론 작업에서 성능을 향상시키는 이유는 무엇인가요?</summary>
-*표준 프롬프팅은 모델이 단일 패스로 입력을 출력에 직접 매핑하도록 강제하므로 복잡한 문제에서 어렵습니다. CoT는 모델이 중간 단계를 생성하여 문제를 분해하고 추론 프로세스에 더 많은 연산량(토큰)을 할당할 수 있도록 하여 정확도를 높입니다.*
+<summary>Quiz 1: 직접 답변과 CoT는 추론 연산에서 어떻게 다른가요?</summary>
+*직접 답변도 토큰마다 자기회귀 순전파를 수행합니다. CoT는 중간 토큰을 더 생성해 후속 예측이 참고할 문맥과 연산을 늘립니다. 일부 과제에서 도움이 되지만 정확성이나 추론의 충실성을 보장하지 않으며 비용과 오류 전파도 늘 수 있습니다.*
 </details>
 
 <details>
@@ -141,7 +146,7 @@ print(f"CoT가 포함된 최종 시퀀스: {final_sequence.tolist()}")
 
 <details>
 <summary>Quiz 4: CoT 생성 과정 중 추론 모델의 KV 캐시 메모리 사용량을 계산하시오. 시퀀스 길이가 $L$ 토큰으로 확장되고, 은닉 차원(hidden dimension) $d$, 어텐션 헤드 수 $n_h$, 키-값 헤드 수 $n_{kv}$ (Grouped Query Attention), 레이어 수 $l$, 데이터 정밀도는 FP16이라고 가정한다. 명시적인 공식을 제공하고 $L = 8192$, $d = 4096$, $n_h = 32$, $n_{kv} = 8$, $l = 32$인 경우의 용량을 도출하시오.</summary>
-*KV 캐시 메모리 사용량은 다음과 같이 계산됩니다: $\text{Memory}_{\text{KV}} = 2 \times l \times L \times n_{kv} \times d_k \times 2 \text{ 바이트}$ (여기서 $d_k = d / n_h$는 헤드당 차원). 이 예시에서는 $d_k = 4096 / 32 = 128$입니다. 값을 대입하면: $\text{Memory}_{\text{KV}} = 2 \times 32 \times 8192 \times 8 \times 128 \times 2 \text{ 바이트} = 2^{30} \text{ 바이트} = 1 \text{ GB}$가 됩니다. 이 명시적인 용량 도출을 통해, 시퀀스 길이 $L$을 크게 확장시키는 CoT 생성이 메모리 공간(footprint)의 선형적 증가를 초래하며 효과적인 메모리 관리가 없을 경우 OOM(Out-Of-Memory) 문제를 일으킬 수 있음을 알 수 있습니다.*
+*KV 캐시 메모리 사용량은 다음과 같이 계산됩니다: $\text{Memory}_{\text{KV}} = 2 \times l \times L \times n_{kv} \times d_k \times 2 \text{ 바이트}$ (여기서 $d_k = d / n_h$는 헤드당 차원). 이 예시에서는 $d_k = 4096 / 32 = 128$입니다. 값을 대입하면: $\text{Memory}_{\text{KV}} = 2 \times 32 \times 8192 \times 8 \times 128 \times 2 \text{ 바이트} = 2^{30} \text{ 바이트} = 1 \text{ GiB}$가 됩니다. 이 명시적인 용량 도출을 통해, 시퀀스 길이 $L$을 크게 확장시키는 CoT 생성이 메모리 공간(footprint)의 선형적 증가를 초래하며 효과적인 메모리 관리가 없을 경우 OOM(Out-Of-Memory) 문제를 일으킬 수 있음을 알 수 있습니다.*
 </details>
 
 ---

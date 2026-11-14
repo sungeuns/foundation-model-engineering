@@ -14,7 +14,7 @@ Long-context modeling keeps running into the same wall: standard attention is el
 
 ## 1. The Core Idea
 
-Standard attention materializes pairwise interactions across the sequence:
+Dense softmax attention computes pairwise interactions. Fused kernels can avoid storing the complete score matrix while preserving the computation:
 
 $$
 \text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d}}\right)V
@@ -29,6 +29,12 @@ $$
 The practical appeal is straightforward. If the model can summarize the history into a compact running state, the sequence can be processed with memory growth that is much gentler than full quadratic attention.
 
 ---
+
+Normalized causal kernel attention keeps both a prefix state and a normalization vector.
+
+$$ S_t=\sum_{i=1}^t \phi(k_i)v_i^T,\quad z_t=\sum_{i=1}^t \phi(k_i),\quad y_t^T=\frac{\phi(q_t)^T S_t}{\phi(q_t)^T z_t+\epsilon}. $$
+
+Here $q_i,k_i,v_i$ are query/key/value vectors, $\phi$ is a nonnegative feature map of width $m$, $S_t\in\mathbb R^{m\times d_v}$, $z_t\in\mathbb R^m$, and $\epsilon>0$ stabilizes the denominator. The unnormalized matrix product alone is not the whole operation. [[1]](#ref-1)
 
 ## 2. Why the Idea Is Attractive
 
@@ -73,6 +79,14 @@ A cautious summary of the current situation is this:
 That does **not** mean the field has settled on one universal recipe. It means many teams are exploring ways to reserve expensive full attention for the parts of the network where exact interactions matter most.
 
 ---
+
+### Additive memory versus the delta rule
+
+A simple gated write decays state and adds new information. The delta rule instead makes a **state-dependent correction**, subtracting the prediction already stored along the current key. [[2]](#ref-2)
+
+$$ S_t=(I-\beta_t k_tk_t^T)S_{t-1}+\beta_t k_tv_t^T. $$
+
+Here $S_t\in\mathbb R^{d_k\times d_v}$, $k_t\in\mathbb R^{d_k}$, $v_t\in\mathbb R^{d_v}$, and $\beta_t$ sets write strength. With unit-norm keys, $k_tk_t^T$ projects onto the key direction. This matrix correction is not generally scalar decay $\gamma_t S_{t-1}$. Gated DeltaNet also adds forgetting; check its normalization and gate ordering in the actual implementation. [[4]](#ref-4)
 
 ## 5. Educational PyTorch Example
 
@@ -154,6 +168,12 @@ An efficient layer still needs an exact state contract. Prefix reuse must restor
 
 **As of 2026-10-25**, Ling 3.1 Flash's public card specifies 63 KDA layers and nine gated-MLA layers, a 7:1 hybrid pattern [[5]](#ref-5). That is a concrete disclosed stack, not evidence that every “linear” model uses the same recurrence. Keep recurrent state and attention KV accounting separate; test exact recall, prefix reuse, branching and rollback against the actual runtime. Its hosted 1019 profile is not established as identical to the public weight revision. See Section 17.6 for the source-bound comparison.
 
+## Muir: finite-state capacity depends on read and write dynamics
+
+**As of 2026-11-15 — emerging research.** Muir studies channel-wise gated delta memory. It allocates low-rank gate capacity by sensitivity, adjusts readout across memory timescales, and introduces a boundary-pivoted chunkwise kernel. Its static and dynamic readout variants trade single-lag retention against multi-lag adaptability. Results on TPU-oriented kernels and tested recall tasks do not establish hardware-independent superiority. [[6]](#ref-6)
+
+A useful evaluation separates isolated-needle retrieval, multiple dependent facts and continuous-text modeling. Compare quality at fixed parameter/compute budgets, numerical conditioning, and actual device throughput; sequence-linear complexity alone does not settle those questions.
+
 ## Quizzes
 
 <details>
@@ -185,3 +205,4 @@ An efficient layer still needs an exact state contract. Prefix reuse must restor
 3. <a id="ref-3"></a>Dao, T., & Gu, A. (2024). *Transformers are SSMs: Generalized Models and Efficient Algorithms Through Structured State Space Duality.* [arXiv:2405.21060](https://arxiv.org/abs/2405.21060).
 4. <a id="ref-4"></a>Yang, S., Kautz, J., & Hatamizadeh, A. (2024). Gated Delta Networks: Improving Mamba2 with Delta Rule. [Source](https://arxiv.org/abs/2412.06464).
 5. <a id="ref-5"></a>inclusionAI. *Ling-3.1-flash model card*, revision `93e96ab91e800998388563295340a4238ff3e962`, verified 2026-10-25. [Card](https://huggingface.co/inclusionAI/Ling-3.1-flash).
+6. <a id="ref-6"></a>Research preprint (2026). [Muir: Linear Attention with Sensitivity-Allocated Gating and Matched-Filter Readout](https://arxiv.org/html/2611.08376v1). Version pinned; accessed 2026-11-15.

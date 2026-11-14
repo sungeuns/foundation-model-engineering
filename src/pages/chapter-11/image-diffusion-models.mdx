@@ -28,11 +28,11 @@ This is exactly how Diffusion Models work. They start with a canvas of pure rand
 Diffusion models are continuous-time generative models motivated by non-equilibrium thermodynamics. They learn to generate data by reversing a process that gradually destroys data with noise.
 
 ### The Forward Process (Gaussian Diffusion)
-In the forward process, we take a clean image $x_0 \sim q(x)$ and gradually add Gaussian noise to it over a series of time steps $T$. 
+In the forward process, we take a clean image $x_0 \sim q(x)$ and gradually add Gaussian noise to it over a series of time steps $T$.
 This process is defined as a Markov chain:
 $$ q(x_{1:T} | x_0) = \prod_{t=1}^T q(x_t | x_{t-1}) $$
 $$ q(x_t | x_{t-1}) = \mathcal{N}(x_t; \sqrt{1 - \beta_t} x_{t-1}, \beta_t \mathbf{I}) $$
-Where $\beta_t$ is a variance schedule. 
+Where $\beta_t$ is a variance schedule.
 
 A crucial property of this formulation is that it allows us to sample $x_t$ at any arbitrary time step $t$ directly from $x_0$ without iterating through the intermediate steps, using the reparameterization trick:
 $$ x_t = \sqrt{\bar{\alpha}_t} x_0 + \sqrt{1 - \bar{\alpha}_t} \epsilon $$
@@ -84,42 +84,24 @@ For years, Generative Adversarial Networks (GANs) were the state-of-the-art for 
 
 ---
 
-## 5. Famous Open-Source Models and Comparison
+## 5. Public weights and license terms are separate
 
-While Stable Diffusion catalyzed the field, several other powerful open-source models have emerged.
+**As of 2026-11-15.** These two historically important variants illustrate access terms, not a current quality ranking. Sharing a model-family name does not imply identical permissions.
 
-| Model | Architecture | Open Source? | Key Feature / Innovation |
-| :--- | :--- | :--- | :--- |
-| **Stable Diffusion v1.5/2.1** | U-Net + CLIP | Yes | Popularized latent diffusion; massive community ecosystem. |
-| **SDXL (Stable Diffusion XL)** | Larger U-Net + Refiner | Yes | Better anatomy, photorealism, and native high-res generation. |
-| **Flux.1** | Diffusion Transformer (DiT) | Yes (Dev/Schnell) | State-of-the-art prompt adherence and text rendering. |
-| **PixArt-$\alpha$** | DiT + T5 | Yes | Highly efficient training; excellent text-to-image alignment. |
-| **Kandinsky** | UnCLIP-like | Yes | Excellent multilingual support and image-to-image capabilities. |
+| Artifact | Release state and terms | What to check |
+|---|---|---|
+| FLUX.1-dev | Released weights with access conditions; non-commercial development license [[4]](#ref-4) | Separate commercial-use terms |
+| FLUX.1-schnell | Released weights; Apache 2.0 [[5]](#ref-5) | Exact deployment artifact and distribution path |
 
----
+## 6. U-Net and Transformer are design choices to evaluate
 
-## 6. Case Study: The Rise and Evolution of Stable Diffusion
-
-The story of Stable Diffusion is one of the most fascinating chapters in the history of generative AI. It highlights how open-source accessibility can rapidly accelerate technology while also showing the reality of architectural limitations.
-
-### The Boom: Democratization and the Community
-In 2022, OpenAI's DALL-E 2 wowed the world, but it was kept behind a closed API. Shortly after, Stable Diffusion was released with **open weights**. Anyone with a decent consumer GPU could download and run it.
-
-This triggered a Cambrian explosion:
-*   **Ecosystem Growth**: Developers built WebUIs (like Automatic1111 and ComfyUI) that turned SD into a professional tool.
-*   **Micro-tuning (LoRAs)**: The community invented ways to fine-tune SD on specific styles or characters using just a few images.
-*   **ControlNet**: Researchers developed ControlNet, allowing users to guide generation with sketches, poses, or depth maps.
-
-### The Pivot: Scaling Walls and Corporate Shifts
-However, by 2024, the landscape began to shift. The original Stable Diffusion models were based on the **U-Net** architecture. As users demanded higher resolutions and better text rendering, U-Net began to hit a wall.
-
-The researchers who left Stability AI formed a new company, **Black Forest Labs**, and released **Flux.1**. Flux abandoned the U-Net in favor of a **Diffusion Transformer (DiT)**, treating image patches as tokens, which scales much better and achieved a massive leap in prompt adherence and text rendering.
-
----
+Latent diffusion moves repeated high-resolution pixel computation into a compressed latent space. Transformer denoisers apply attention to tokenized latent representations. [[2]](#ref-2) [[3]](#ref-3) Architecture names alone do not prove better prompt adherence, text rendering or anatomy. Match data, training budget, resolution, sampler and step count, and include VAE reconstruction loss and inference cost.
 
 ## 7. Code: Simple Noise Prediction Step
 
 To understand the formulas above, here is a simple PyTorch simulation of a single step in a Denoising Diffusion Probabilistic Model (DDPM).
+
+> **Educational shape and reverse-mean example.** The CNN is untrained and ignores timestep conditioning, so it cannot denoise meaningfully. The mean uses cumulative $\bar\alpha_t=\prod_{s=0}^{t}(1-\beta_s)$, while this example selects the fixed-large variance $\beta_t$. Production samplers must pin the training parameterization, variance schedule and precision.
 
 ```python
 import torch
@@ -136,24 +118,19 @@ class SimpleDenoisingModel(nn.Module):
             nn.ReLU(),
             nn.Conv2d(64, img_channels, 3, padding=1)
         )
-        
+
     def forward(self, x, t):
         # In a real model, 't' (time step) is embedded and injected into the network
         return self.net(x)
 
-def ddpm_step(x_t, predicted_noise, t, beta_t):
-    """
-    A simplified single step of the reverse DDPM process.
-    """
-    alpha_t = 1 - beta_t
-    # Formula to estimate x_{t-1} from x_t and predicted noise
-    x_prev = (1 / torch.sqrt(alpha_t)) * (x_t - (beta_t / torch.sqrt(1 - alpha_t)) * predicted_noise)
-    
-    # Add noise in reverse step (except for the last step)
+def ddpm_step(x_t, predicted_noise, t, beta_schedule):
+    # Zero-based t; fixed-large variance beta_t, with no final-step noise.
+    betas = beta_schedule.to(device=x_t.device, dtype=x_t.dtype)
+    alpha_t = 1 - betas[t]
+    alpha_bar_t = torch.cumprod(1 - betas, dim=0)[t]
+    x_prev = (x_t - betas[t] / torch.sqrt(1 - alpha_bar_t) * predicted_noise) / torch.sqrt(alpha_t)
     if t > 0:
-        noise = torch.randn_like(x_t)
-        x_prev += torch.sqrt(beta_t) * noise
-        
+        x_prev = x_prev + torch.sqrt(betas[t]) * torch.randn_like(x_t)
     return x_prev
 
 # Simulation
@@ -164,7 +141,7 @@ beta_schedule = torch.linspace(0.0001, 0.02, 1000)
 # One step of denoising
 t = 999
 pred_noise = model(img, t)
-denoised_img = ddpm_step(img, pred_noise, t, beta_schedule[t])
+denoised_img = ddpm_step(img, pred_noise, t, beta_schedule)
 print(f"Denoised image shape: {denoised_img.shape}")
 ```
 
@@ -189,8 +166,8 @@ As we will explore in **Chapter 20.6 (Diffusion-based LLMs)**, researchers are a
 </details>
 
 <details>
-<summary>Quiz 3: What architecture transition enables models like Flux to scale better than traditional Stable Diffusion?</summary>
-*Transitioning from a U-Net architecture to a Diffusion Transformer (DiT) architecture, which scales better with compute and parameters.*
+<summary>Quiz 3: Does a Transformer denoiser alone establish better quality than a U-Net?</summary>
+*No. Match data, training budget, resolution, sampling and quality-evaluation conditions; architecture is one part of the evaluated system.*
 </details>
 
 ---
@@ -200,3 +177,6 @@ As we will explore in **Chapter 20.6 (Diffusion-based LLMs)**, researchers are a
 1. <a id="ref-1"></a>Ho, J., Jain, A., & Abbeel, P. (2020). *Denoising diffusion probabilistic models*. [arXiv:2006.11239](https://arxiv.org/abs/2006.11239).
 2. <a id="ref-2"></a>Rombach, R., et al. (2022). *High-resolution image synthesis with latent diffusion models*. [arXiv:2112.10752](https://arxiv.org/abs/2112.10752).
 3. <a id="ref-3"></a>Peebles, W., & Xie, S. (2023). *Scalable diffusion models with transformers*. [arXiv:2212.09748](https://arxiv.org/abs/2212.09748).
+
+4. <a id="ref-4"></a>Black Forest Labs. [FLUX.1-dev model card and license](https://huggingface.co/black-forest-labs/FLUX.1-dev). Accessed 2026-11-15.
+5. <a id="ref-5"></a>Black Forest Labs. [FLUX.1-schnell model card and license](https://huggingface.co/black-forest-labs/FLUX.1-schnell). Accessed 2026-11-15.

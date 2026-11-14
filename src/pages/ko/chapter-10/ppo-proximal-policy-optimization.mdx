@@ -47,7 +47,7 @@ RM은 자체적으로 고정한 tokenizer/template과 보정한 domain을 사용
 Value prediction $V_t$와 temporal-difference residual
 
 $$
-\delta_t = r_t + \gamma V_{t+1} - V_t,
+\delta_t = r_t + \gamma(1-d_t)V_{t+1} - V_t,
 $$
 
 **Generalized Advantage Estimation (GAE)** 은
@@ -67,7 +67,7 @@ $$
 
 여기서 $r_t(\theta)=\exp(\log\pi_\theta-\log\pi_{\text{old}})$는 probability ratio이며 위 reward와 다른 기호입니다.
 
-<PPOClippingVisualizer client:load />
+<PPOClippingVisualizer client:load  lang="ko" />
 
 ---
 
@@ -127,6 +127,8 @@ Nonfinite가 반복되거나 value가 발산하거나, KL/entropy/length가 범�
 Decoupled rollout, 대안 trust region, replay, Outer-PPO나 HP3O 같은 hybrid-policy 방법이 연구되고 있습니다. 이는 **신흥(emerging)** 설계점이며 canonical loop를 이해하는 일을 대신하지 않습니다. Model, RM, rollout budget, data, evaluation이 같은 조건에서 비교하고 maturity와 구현 공개 여부를 명시합니다.
 
 ---
+
+여기서 $d_t=1$ 은 실제 에피소드 종료(EOS 등)입니다. 관리 목적의 길이 제한이나 시간 초과를 자동으로 같은 종료로 취급하면 안 됩니다. 상태가 계속되는 문제라면 truncation에서 bootstrap 정책을 명시해야 합니다.
 
 ## Quizzes
 

@@ -8,19 +8,19 @@ import DDPBucketingTimeline from '../../components/chapter-7/DDPBucketingTimelin
 
 # 7.1 Data Parallelism (DP/DDP)
 
-In Chapter 6, we established the physical infrastructure—tens of thousands of GPUs connected via optical switches—and the data pipelines necessary to feed a trillion-parameter model. We successfully mitigated statistical degradation like Model Collapse and engineered our datasets. 
+In Chapter 6, we established the physical infrastructure—tens of thousands of GPUs connected via optical switches—and the data pipelines necessary to feed a trillion-parameter model. We successfully mitigated statistical degradation like Model Collapse and engineered our datasets.
 
-Now, we face the physics of computation. 
+Now, we face the physics of computation.
 
-Training a modern Foundation Model on a single GPU is mathematically impossible within a human lifetime. Even if a model could fit into the VRAM of a single 80GB H100, processing 15 trillion tokens would take decades. To compress time, we must distribute the workload across thousands of accelerators. 
+Training time depends on model size, token count, hardware and utilization. Distribution can improve throughput while adding communication and synchronization costs; model size alone does not make single-GPU training mathematically impossible.
 
-The most fundamental distribution strategy is **Data Parallelism**. In this paradigm, the model architecture remains intact and is fully replicated across every GPU in the cluster. Instead of slicing the model, we slice the dataset. 
+The most fundamental distribution strategy is **Data Parallelism**. In this paradigm, the model architecture remains intact and is fully replicated across every GPU in the cluster. Instead of slicing the model, we slice the dataset.
 
 ---
 
 ## 1. The Naive Approach: `DataParallel` (DP)
 
-Historically, engineers first attempted to parallelize training using a single-process, multi-thread paradigm, implemented in PyTorch as `torch.nn.DataParallel` (DP). 
+Historically, engineers first attempted to parallelize training using a single-process, multi-thread paradigm, implemented in PyTorch as `torch.nn.DataParallel` (DP).
 
 The logic is straightforward:
 1. **Replicate:** Copy the model to every GPU on a single node (e.g., an 8-GPU server).
@@ -31,7 +31,7 @@ The logic is straightforward:
 ![dp_vs_ddp_topology](../../assets/images/chapter-7/dp_vs_ddp_topology.png)
 *Source: AI-generated illustration*
 
-### Why DP is Deprecated
+### Why DDP is preferred
 `DataParallel` is inherently flawed for modern AI infrastructure:
 * **The Python GIL:** Because it operates as a single Python process managing multiple threads, the Global Interpreter Lock (GIL) heavily restricts execution speed.
 * **GPU 0 Bottleneck:** The master GPU acts as a severe communication bottleneck. While GPUs 1-7 sit idle, GPU 0 is overwhelmed with aggregating gradients and updating weights. This leads to extreme VRAM imbalance and low compute utilization (often sub-50% MFU).
@@ -43,14 +43,14 @@ To train Foundation Models, we must eliminate the master node entirely.
 
 ## 2. The Standard: Distributed Data Parallel (DDP)
 
-To resolve the bottlenecks of DP, the industry shifted to **Distributed Data Parallel (DDP)** (`torch.nn.parallel.DistributedDataParallel`). 
+To resolve the bottlenecks of DP, the industry shifted to **Distributed Data Parallel (DDP)** (`torch.nn.parallel.DistributedDataParallel`).
 
-DDP operates on a multi-process architecture. If you have 1,024 GPUs, you spawn 1,024 independent Python processes. Each process has its own optimizer, its own memory space, and its own identical replica of the model. 
+DDP operates on a multi-process architecture. If you have 1,024 GPUs, you spawn 1,024 independent Python processes. Each process has its own optimizer, its own memory space, and its own identical replica of the model.
 
-Because each process is independent, there is no GIL contention. The only time the processes need to interact is during the backward pass to ensure that every replica updates its weights identically. To do this without a central master node, DDP utilizes a decentralized communication primitive from High-Performance Computing (HPC): the **Ring All-Reduce**.
+DDP synchronizes gradients during backward, with parameter synchronization at initialization and possible buffer broadcasts according to configuration. The backend and topology determine whether collectives use ring, tree or hierarchical algorithms. The following ring analysis is one cost model. [[2]](#ref-2)
 
 ### The Mathematics of Ring All-Reduce
-Introduced to Deep Learning by Baidu Research in 2017 [[1]](#ref-1), Ring All-Reduce allows $N$ nodes to average their gradients without overwhelming any single node. 
+Introduced to Deep Learning by Baidu Research in 2017 [[1]](#ref-1), Ring All-Reduce allows $N$ nodes to average their gradients without overwhelming any single node.
 
 Let $M$ be the total size of the model's gradients (e.g., 4GB for a 1B parameter model). In a naive Parameter Server, the master node must receive $M \times (N-1)$ bytes of data, which scales linearly with the cluster size, inevitably crashing the network bandwidth.
 
@@ -61,18 +61,22 @@ In Ring All-Reduce, the GPUs are logically arranged in a circle. The algorithm o
 The total data transmitted by *any single node* is:
 $$ \text{Volume} = 2 \times \frac{N - 1}{N} \times M $$
 
-As $N \to \infty$, the data transmitted approaches $2M$. **The communication overhead is independent of the number of GPUs in the cluster.** This mathematical property is what allows companies to scale training to 100,000 GPUs without the network collapsing.
+Bytes approach $2M$ as $N$ grows, but latency is not independent of rank count. With startup cost $\alpha$ per phase step and effective bandwidth $B$,
+
+$$ T_{ring}\approx 2(N-1)\alpha + \frac{2(N-1)M}{NB}. $$
+
+Topology, congestion and stragglers add costs; large-scale efficiency still requires measurement.
 
 ---
 
 ## 3. Engineering the Overlap: Gradient Bucketing
 
-Even with Ring All-Reduce, waiting for the entire backward pass to finish before transmitting gigabytes of gradients across the network leaves the GPUs idle (stalled on I/O). 
+Even with Ring All-Reduce, waiting for the entire backward pass to finish before transmitting gigabytes of gradients across the network leaves the GPUs idle (stalled on I/O).
 
-Modern DDP implementations solve this through **Gradient Bucketing**. 
+Modern DDP implementations solve this through **Gradient Bucketing**.
 During the backward pass, gradients are computed from the final layers (e.g., Layer 100) back to the first layer (Layer 1). We do not need to wait for Layer 1's gradients to be computed to start transmitting Layer 100's gradients.
 
-DDP groups gradients into "buckets" (defaulting to 25MB in PyTorch). As soon as a bucket is filled with computed gradients, DDP asynchronously fires a non-blocking `all_reduce` network call via the NCCL (NVIDIA Collective Communication Library) backend. 
+DDP groups gradients into "buckets" (defaulting to 25MB in PyTorch). As soon as a bucket is filled with computed gradients, DDP asynchronously fires a non-blocking `all_reduce` network call via the NCCL (NVIDIA Collective Communication Library) backend.
 
 ### Interactive: Compute and Communication Overlap
 Use the interactive timeline below to visualize how DDP overlaps the backward pass computation with network communication. Notice how bucketing prevents the GPU from stalling, hiding the network latency behind raw compute.
@@ -85,7 +89,7 @@ Use the interactive timeline below to visualize how DDP overlaps the backward pa
 
 ## 4. PyTorch Implementation
 
-Below is a production-grade implementation of DDP. Unlike toy examples, this script uses `torchrun` (the standard for multi-node execution), sets up the NCCL process group, configures the `DistributedSampler` (to ensure no two GPUs see the same data), and applies the DDP wrapper.
+> **Educational distributed-training skeleton.** Assumes NCCL and one process per GPU; actual GPU execution has not been verified. Inputs are fixed-seed synthetic token IDs and the objective is tokenwise classification, not language modeling. All ranks must construct the same global dataset. Default `DistributedSampler` padding can duplicate indices when the dataset size is not divisible by the rank count. Checkpointing, restart, evaluation, variable-length masking and communication recovery are omitted.
 
 ```python
 import os
@@ -110,62 +114,63 @@ def cleanup():
 
 # Dummy Dataset for illustration
 class DummyCorpus(Dataset):
-    def __init__(self, size=10000, seq_len=512, vocab_size=32000):
-        self.data = torch.randint(0, vocab_size, (size, seq_len))
-        self.labels = torch.randint(0, vocab_size, (size, seq_len))
-        
+    def __init__(self, size=1024, seq_len=32, vocab_size=256):
+        generator = torch.Generator().manual_seed(42)
+        self.data = torch.randint(0, vocab_size, (size, seq_len), generator=generator)
+        self.labels = torch.randint(0, vocab_size, (size, seq_len), generator=generator)
+
     def __len__(self):
         return len(self.data)
-        
+
     def __getitem__(self, idx):
         return self.data[idx], self.labels[idx]
 
 def train():
     local_rank = setup()
-    
+
     # 2. Instantiate Model and move to local GPU
     # In reality, this would be a Transformer architecture
     model = nn.Sequential(
-        nn.Embedding(32000, 1024),
-        nn.Linear(1024, 4096),
+        nn.Embedding(256, 64),
+        nn.Linear(64, 128),
         nn.GELU(),
-        nn.Linear(4096, 32000)
+        nn.Linear(128, 256)
     ).to(local_rank)
-    
+
     # 3. Wrap model in DDP
     # gradient_as_bucket_view=True optimizes memory by avoiding extra copies
     model = DDP(model, device_ids=[local_rank], gradient_as_bucket_view=True)
-    
+
     # 4. Setup Distributed Sampler
     dataset = DummyCorpus()
     # The sampler ensures each process gets a mutually exclusive slice of the dataset
     sampler = DistributedSampler(dataset, shuffle=True)
-    dataloader = DataLoader(dataset, batch_size=16, sampler=sampler, num_workers=4)
-    
+    dataloader = DataLoader(dataset, batch_size=8, sampler=sampler, num_workers=4)
+
     optimizer = optim.AdamW(model.parameters(), lr=1e-4)
     criterion = nn.CrossEntropyLoss()
-    
+
     # 5. Training Loop
     epochs = 3
     for epoch in range(epochs):
         # CRITICAL: Set the epoch on the sampler to ensure different shuffles per epoch
         sampler.set_epoch(epoch)
-        
+
         for step, (inputs, targets) in enumerate(dataloader):
             inputs, targets = inputs.to(local_rank), targets.to(local_rank)
-            
+
             optimizer.zero_grad()
-            
+
             # Forward pass
             outputs = model(inputs)
-            loss = criterion(outputs.view(-1, 32000), targets.view(-1))
-            
+            loss = criterion(outputs.view(-1, 256), targets.view(-1))
+
             # Backward pass triggers the asynchronous All-Reduce buckets
             loss.backward()
-            
+
             # Optimizer steps only after all gradients are fully synchronized
             optimizer.step()
-            
+
             if local_rank == 0 and step % 10 == 0:
                 print(f"Epoch {epoch} | Step {step} | Loss {loss.item():.4f}")
 
@@ -177,33 +182,38 @@ if __name__ == "__main__":
     train()
 ```
 
-### The Synchronization Barrier
-In the code above, `optimizer.step()` acts as an implicit synchronization point. Because the weights must be identical across all GPUs before the next forward pass begins, the optimizer cannot step until the final Ring All-Reduce bucket has finished transferring. If one GPU is slower than the others (a "straggler" node, perhaps due to a thermal throttling issue), the entire cluster will halt and wait for it. This highlights the importance of homogeneous hardware in DDP clusters.
+In ordinary DDP, the required gradient synchronization completes with backward, so each local optimizer updates from the synchronized gradients. `optimizer.step()` is not itself a distributed barrier. A slow rank can delay peers at collectives; accumulation with `no_sync()` requires synchronization on the final backward.
 
 ---
 
 ## Summary
 
-Data Parallelism is the entry point to distributed training. By utilizing `DistributedDataParallel` and the Ring All-Reduce algorithm, we decouple network communication overhead from the cluster size, allowing us to scale throughput linearly by adding more GPUs. Furthermore, through gradient bucketing, we hide the latency of network transfers behind the raw computation of the backward pass.
+DDP retains model replicas and overlaps data-parallel computation with gradient communication. Benefits depend on the compute-to-communication ratio and stragglers. Bucketing can reduce exposed communication; it guarantees neither linear scaling nor complete latency hiding.
 
-However, a glaring limitation remains. **DDP requires the entire model, its gradients, and the optimizer states to fit into the VRAM of a single GPU.** 
+However, a glaring limitation remains. **DDP requires the entire model, its gradients, and the optimizer states to fit into the VRAM of a single GPU.**
 
-If you have an 80GB A100 GPU, you can realistically only train a model up to ~2 billion parameters using standard DDP (due to the memory required for Adam optimizer states and activations). What happens when we want to train a 70-billion or 1-trillion parameter model? 
+One illustrative mixed-precision Adam budget uses 2 bytes for BF16 weights, 2 for BF16 gradients, 4 for FP32 master weights and 8 for two FP32 moments: 16 bytes per parameter. Implementations with FP32 gradients differ. Add sequence- and batch-dependent activations, temporary buffers, collectives, checkpoint and evaluation overhead; there is no universal parameter cutoff for an 80GB device.
 
 We must move beyond standard Data Parallelism and begin slicing the memory footprint itself. In **7.2 ZeRO (Zero Redundancy Optimizer)**, we will explore how to shatter the model state across the cluster, breaking the single-GPU memory barrier forever.
 
 ---
 
+## Before adapting this skeleton to training
+
+Pin the input manifest, tokenizer and model/config hashes; compare averaged gradients against a single-device reference on the same data. Batch 8, AdamW learning rate $10^{-4}$ and three epochs above are synthetic demonstration settings. A real run must specify effective global token batch, precision, accumulation and loss masks.
+
+Record token-normalized train/validation loss and domain slices, nonfinite/overflow counts, gradient/activation norms, throughput/MFU, data wait, collective time and stragglers, and reconstructable batch IDs. Abort coherently across ranks on nonfinite loss or collective failure and restore the last validated checkpoint. Save model, optimizer, scheduler and precision state, step/tokens, RNG, sampler, exact data cursor and hashes. Release only after continuation-equivalence checks, isolated offline quality/safety/performance evaluation and rehearsal of switching back to the last known-good bundle.
+
 ## Quizzes
 
 <details>
-<summary>Quiz 1: Why does PyTorch officially deprecate `DataParallel` (DP) in favor of `DistributedDataParallel` (DDP) even when training on a single machine with multiple GPUs?</summary>
-*DP uses a single-process, multi-thread architecture, which is heavily bottlenecked by the Python Global Interpreter Lock (GIL). Furthermore, DP relies on a Parameter Server topology where GPU 0 acts as a master node, gathering all gradients and scattering updated weights. This causes severe VRAM imbalance and network congestion on GPU 0. DDP uses multi-processing (bypassing the GIL) and a decentralized Ring All-Reduce topology, ensuring balanced memory and compute utilization.*
+<summary>Quiz 1: Why is DDP generally preferred on multiple GPUs?</summary>
+*Per-process execution and overlapping gradient communication can reduce Python contention and replication/gather overhead relative to single-process DP. A recommendation is not formal deprecation; actual performance must be measured.*
 </details>
 
 <details>
-<summary>Quiz 2: In a cluster of 1,000 GPUs, how much more gradient data must a single node transmit during a Ring All-Reduce compared to a cluster of 10 GPUs?</summary>
-*Practically none. The total data transmitted by any single node in Ring All-Reduce is $2 \times \frac{N-1}{N} \times M$. For $N=10$, it is $1.8M$. For $N=1000$, it is $1.998M$. The communication volume asymptotically approaches $2M$ and is effectively independent of the cluster size, which is why it scales so well.*
+<summary>Quiz 2: How do ring bytes and latency differ at 10 and 1,000 ranks?</summary>
+*Transmitted bytes rise from $1.8M$ to $1.998M$, about 11%. Startup cost rises from $18\alpha$ to $1998\alpha$, so similar byte counts do not imply similar latency.*
 </details>
 
 <details>

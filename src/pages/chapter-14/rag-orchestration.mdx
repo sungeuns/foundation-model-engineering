@@ -25,8 +25,11 @@ Not all queries are created equal:
 
 The most flexible way to route queries is using a small, fast LLM as a router. We provide the LLM with a list of available tools/sources and ask it to output a JSON deciding where to go.
 
+> **Educational API sketch; no live model call is smoke-tested.** Set `ROUTER_MODEL` to a verified JSON-capable endpoint. JSON syntax does not authorize database access: validate the enum, handle refusal/timeout/malformed output, and enforce permissions outside the model. The result shown is illustrative.
+
 ```python
 import json
+import os
 from openai import OpenAI
 
 client = OpenAI()
@@ -38,19 +41,22 @@ def route_query(query: str) -> dict:
     1. 'parametric': For general knowledge questions the model already knows.
     2. 'vector_db': For technical documentation, manuals, and guides.
     3. 'sql_db': For structured user data like balances, order history.
-    
+
     Query: "{query}"
-    
+
     Output JSON in this format: {{"source": "source_name", "reason": "why"}}
     """
-    
+
     response = client.chat.completions.create(
-        model="gpt-4o-mini", # Use a fast model for routing
-        messages=[{{"role": "user", "content": prompt}}],
-        response_format={{"type": "json_object"}}
+        model=os.environ["ROUTER_MODEL"], # Use a fast model for routing
+        messages=[{"role": "user", "content": prompt}],
+        response_format={"type": "json_object"}
     )
-    
-    return json.loads(response.choices[0].message.content)
+
+    result = json.loads(response.choices[0].message.content)
+    if not isinstance(result, dict) or result.get("source") not in {"parametric", "vector_db", "sql_db"}:
+        raise ValueError("Invalid routing decision")
+    return result
 
 # Example Usage
 print(route_query("How do I reset my password in the portal?"))
@@ -97,7 +103,7 @@ In other words, orchestration is what turns retrieval outputs into a usable prom
 
 ## 3. Agentic RAG: Beyond Linear Pipelines
 
-Traditional RAG is a linear pipeline: `Retrieve -> Augment -> Generate`. 
+Traditional RAG is a linear pipeline: `Retrieve -> Augment -> Generate`.
 **Agentic RAG** introduces a loop where the LLM can decide to retrieve more information if the first attempt was insufficient.
 
 ### The ReAct Framework (Reasoning + Acting)

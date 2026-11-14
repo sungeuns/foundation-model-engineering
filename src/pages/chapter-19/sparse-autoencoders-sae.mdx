@@ -6,7 +6,7 @@ lang: en
 
 # 19.4 Sparse Autoencoders (SAE)
 
-In the previous section, we used Probing Classifiers to detect specific concepts hidden in an LLM's residual stream. However, probing is fundamentally a supervised, hypothesis-driven task: we can only find what we explicitly look for. If we want to discover the *complete* set of concepts a model has learned—without relying on human-provided labels—we need an unsupervised approach.
+The supervised probes in the previous section tested predefined concepts. Probing is not exclusively supervised: CCS, for example, finds activation directions using logical consistency without labels [[3]](#ref-3). SAEs instead learn a dictionary through reconstruction and sparsity; neither approach guarantees recovery of every concept.
 
 **Sparse Autoencoders (SAEs)** learn sparse dictionaries from model activations. The GPT-4 and Claude 3 Sonnet studies below are dated research examples, not complete inventories of a model's concepts or proof that every learned feature is human-interpretable.
 
@@ -16,7 +16,7 @@ In the previous section, we used Probing Classifiers to detect specific concepts
 
 If we want to understand what a neural network is "thinking," the intuitive first step is to look at individual neurons. If a specific neuron fires every time the model processes the word "dog," we might label it the "dog neuron."
 
-Unfortunately, this simple mapping fails in large language models. LLMs possess a finite number of dimensions in their residual stream (e.g., $d = 4096$), but they must represent millions of distinct concepts to understand human language. To solve this bottleneck, neural networks employ **Superposition**.
+Some neurons respond to several input properties. The **superposition hypothesis** explains how a model with sparse active features can store more features than dimensions in overlapping directions. This is not a complete account of every neuron or concept; its fit to an actual representation requires testing.
 
 The Superposition Hypothesis suggests that models pack multiple unrelated concepts into the same representation space by utilizing almost-orthogonal vectors. Because high-dimensional spaces contain exponentially more almost-orthogonal directions than strictly orthogonal ones, the model can represent vastly more features than it has dimensions.
 
@@ -24,7 +24,7 @@ The side effect of superposition is that individual neurons become **polysemanti
 
 import PolysemanticVisualizer from '../../components/chapter-19/PolysemanticVisualizer.tsx';
 
-<PolysemanticVisualizer client:load />
+<PolysemanticVisualizer client:load lang="en" />
 
 ---
 
@@ -32,7 +32,7 @@ import PolysemanticVisualizer from '../../components/chapter-19/PolysemanticVisu
 
 To untangle these polysemantic neurons, researchers treat the problem as **Dictionary Learning**. The goal is to find a set of sparse, overcomplete features (the dictionary) that linearly combine to form the model's dense activation vectors.
 
-A Sparse Autoencoder achieves this by projecting the $d$-dimensional activation vector $x$ into a much larger $D$-dimensional feature space $f$ (where $D \gg d$, often 16x to 64x larger), and then reconstructing the original vector $\hat{x}$. 
+A Sparse Autoencoder achieves this by projecting the $d$-dimensional activation vector $x$ into a much larger $D$-dimensional feature space $f$ (where $D \gg d$, often 16x to 64x larger), and then reconstructing the original vector $\hat{x}$.
 
 ![sae_architecture](../../assets/images/chapter-19/sae_architecture.png)
 *Source: AI-generated illustration*
@@ -46,27 +46,29 @@ To encourage sparse feature decompositions, we force the network to use only a t
 
 $$ \mathcal{L} = ||x - \hat{x}||_2^2 + \lambda ||f||_1 $$
 
+This objective needs a decoder-scale constraint, such as unit-norm feature columns. Otherwise shrinking features while enlarging the decoder preserves reconstruction and artificially reduces the L1 penalty. Here $W_{enc}$ and $W_{dec}$ are encoder and decoder weights, $b$ denotes biases, and $\lambda$ weights the sparsity penalty.
+
 Sparse dictionary learning can reveal interpretable directions, but reconstruction error, feature splitting, polysemantic latents, and dependence on training data remain.
 
 ---
 
 ## 3. The Dead Latent Problem
 
-Training SAEs introduces severe engineering challenges. The most notorious is the **Dead Latent** (or Dead Neuron) problem. 
+Training SAEs introduces severe engineering challenges. The most notorious is the **Dead Latent** (or Dead Neuron) problem.
 
 Because the feature space $D$ is massive and the sparsity penalty ($\lambda$) aggressively pushes activations to zero, many features in the SAE stop activating early in training. Once a feature stops activating, it receives zero gradient from the ReLU function, leaving it without a direct reconstruction gradient on those inputs. Measure inactivity over a declared sample window; recovery methods can alter this state.
 
-State-of-the-art training pipelines employ several techniques to revive these dead latents:
+SAE training pipelines employ several techniques to revive these dead latents:
 1. **Ghost Gradients**: Artificially routing gradients to dead neurons during the backward pass to give them a "nudge" toward useful directions.
 2. **Re-initialization**: Periodically identifying dead neurons and resetting their encoder weights to match the dense activation vectors ($x$) that currently have the highest reconstruction error.
 
 ---
 
-## 4. Engineering the State-of-the-Art: Top-K SAEs
+## 4. Engineering Top-K SAEs
 
 While the $L_1$ penalty enforces sparsity, it introduces a critical flaw: **Shrinkage**. The $L_1$ penalty constantly pulls all activations toward zero, meaning the SAE systematically underestimates the true magnitude of the features, degrading the reconstruction quality of $\hat{x}$.
 
-In 2024, OpenAI researchers demonstrated a breakthrough by scaling a 16-million latent SAE on GPT-4 activations [[2]](#ref-2). To solve the shrinkage problem, they completely removed the $L_1$ penalty and replaced it with an explicit **Top-K activation function**.
+In 2024, OpenAI researchers reported scaling a 16-million latent SAE on GPT-4 activations [[2]](#ref-2). To solve the shrinkage problem, they completely removed the $L_1$ penalty and replaced it with an explicit **Top-K activation function**.
 
 Instead of relying on a loss penalty to push values to zero, a Top-K SAE simply computes the dense activations, strictly selects the $K$ highest values, and forcefully zeros out the rest. This directly controls the $L_0$ sparsity without distorting the activation magnitudes.
 
@@ -90,15 +92,15 @@ class TopKSAE(nn.Module):
         self.d_model = d_model
         self.d_sae = d_sae
         self.k = k
-        
+
         # Initialize encoder and decoder weights
         # Decoder weights are typically unit-normalized in practice
         self.W_enc = nn.Parameter(torch.randn(d_model, d_sae) / (d_model ** 0.5))
         self.b_enc = nn.Parameter(torch.zeros(d_sae))
-        
+
         self.W_dec = nn.Parameter(torch.randn(d_sae, d_model) / (d_sae ** 0.5))
         self.b_dec = nn.Parameter(torch.zeros(d_model))
-        
+
         # Pre-encoder bias to center the activations
         self.b_pre = nn.Parameter(torch.zeros(d_model))
 
@@ -106,14 +108,14 @@ class TopKSAE(nn.Module):
         # Center the input and project to high-dimensional feature space
         pre_acts = (x - self.b_pre) @ self.W_enc + self.b_enc
         acts = F.relu(pre_acts)
-        
+
         # Explicit Top-K routing: keep only the top K activations, zero out the rest
         topk_vals, topk_indices = torch.topk(acts, self.k, dim=-1)
-        
+
         # Reconstruct the sparse tensor
         sparse_acts = torch.zeros_like(acts)
         sparse_acts.scatter_(-1, topk_indices, topk_vals)
-        
+
         return sparse_acts
 
     def decode(self, sparse_acts: torch.Tensor) -> torch.Tensor:
@@ -126,7 +128,7 @@ class TopKSAE(nn.Module):
         return x_reconstructed, sparse_acts
 
 # Example instantiation for a 4096-dim LLM residual stream
-# Expanded to 131,072 features (32x expansion), keeping exactly 32 active
+# Expanded to 131,072 features (32x expansion), keeping at most 32 nonzero
 # sae = TopKSAE(d_model=4096, d_sae=131072, k=32)
 ```
 
@@ -136,12 +138,12 @@ class TopKSAE(nn.Module):
 
 Anthropic applied SAEs to their production model, Claude 3 Sonnet, successfully extracting millions of highly abstract features [[1]](#ref-1). Their findings fundamentally shifted how we view LLM representations.
 
-They discovered that SAE features are **concept-centric**, not token-centric. For instance, a single feature representing the "Golden Gate Bridge" activates whether the model reads the English text "Golden Gate Bridge", the Japanese translation "ゴールデンゲートブリッジ", or even processes an image of the bridge.
+Anthropic reported features responding across languages and across text and images, including a Golden Gate Bridge example. This supports shared representations on tested inputs, not complete concept separation or universal understanding [[1]](#ref-1).
 
 ![golden_gate_claude](../../assets/images/chapter-19/golden_gate_claude.png)
 *Source: AI-generated illustration*
 
-More importantly, SAEs allow for **causal steering**. In a famous experiment, Anthropic researchers artificially clamped the activation of the Golden Gate Bridge feature to a high value during the model's forward pass. The result was "Golden Gate Claude"—a model that became obsessively fixated on the bridge. When asked "How do I spend a day in London?", the model suggested taking a flight to San Francisco to see the Golden Gate Bridge. 
+More importantly, SAEs allow for **causal steering**. In a famous experiment, Anthropic researchers artificially clamped the activation of the Golden Gate Bridge feature to a high value during the model's forward pass. The result was "Golden Gate Claude"—a model that became obsessively fixated on the bridge. When asked "How do I spend a day in London?", the model suggested taking a flight to San Francisco to see the Golden Gate Bridge.
 
 Beyond tourist attractions, researchers identified features for sycophancy, bias, scam emails, and dangerous capabilities (like generating bioweapons). Steering or suppressing a feature can change behavior, but it does not guarantee selective removal of harmful behavior or preservation of general capabilities. Validate collateral effects, distribution shift, and adversarial bypass.
 
@@ -149,11 +151,11 @@ Beyond tourist attractions, researchers identified features for sycophancy, bias
 
 ## 6. Auto-Interp and Codebook Saturation
 
-When an SAE extracts 16 million features, human evaluation becomes impossible. To scale interpretability, researchers use **Automated Interpretability (Auto-Interp)**. 
+When an SAE extracts 16 million features, human evaluation becomes impossible. To scale interpretability, researchers use **Automated Interpretability (Auto-Interp)**.
 
 In Auto-Interp, a separate, powerful LLM (like GPT-4) acts as a judge. The judge is fed dozens of text snippets that maximally activate a specific SAE feature and prompted to determine what they have in common. The judge generates a label (e.g., "Legal terminology related to breach of contract"). To verify the label's accuracy, the judge is then asked to predict how strongly the feature will activate on *unseen* text snippets.
 
-One more speculative direction borrows ideas from qualitative analysis, especially **codebook reduction** and **saturation**, to ask whether an auto-interp workflow has stopped surfacing genuinely new categories [[3]](#ref-3). This is better understood as an auditing heuristic for feature dictionaries than as proof that an SAE has exhausted every meaningful concept in the model.
+A lack of new labels does not establish dictionary completeness. Audit held-out inputs, low-activation and counterexamples, feature splitting/merging and the predictive quality of explanations.
 
 ---
 
@@ -165,17 +167,21 @@ Validate a proposed mechanism with controlled activation interventions, matched 
 
 
 
-## 7. Engineering Decisions for SAE Use
+## 7. Engineering decisions for SAE use
 
-Choose the analysis method to match the question. A production agent failure may first need better task evaluation, tool-policy controls, and tracing. A small-model mechanism question may be cheaper to investigate with activation patching, probes, or a logit lens than with a million-feature dictionary.
+Use SAEs when the question concerns candidate features, repeated behavior or activation interventions. These are hypotheses to test, not guaranteed safety controls. For unsupported RAG answers, claim verification may be more direct; for coding failures, execution tests and agent traces may be cheaper. Small mechanism studies can begin with probes, patching or a logit lens.
 
-Evaluate reconstruction and **behavioral fidelity**, sparsity, dead-latent frequency over a declared window, held-out interpretability, and the breadth of causal effects. A low reconstruction MSE alone does not show that the surrogate preserves the computations you want to explain. Circuit tracing asks how features influence other features and output logits, while its methods paper documents the limits of that approximation [[4]](#ref-4).
+Record the base checkpoint, tokenizer, activation layer/site, data manifest and quarantined evaluation splits. Choose dictionary size, sparsity target, learning rate and decoder normalization before training. Budget encoder/decoder parameters, gradients, optimizer state, activation buffers and sampling overhead separately; the dense example below does not represent a memory-efficient training system.
+
+Monitor reconstruction error **and behavioral fidelity**, nonfinite values, gradient norms, throughput, dead-latent rate over a declared window, sparsity by domain and held-out interpretability. Abort on nonfinite losses or unacceptable behavioral degradation. Save SAE/optimizer/scheduler/RNG states, data cursor and base-model/config hashes; evaluate interventions against matched controls and held-out tasks before release, retaining a last-known-good artifact.
+
+A feature label alone is not a mechanism. Circuit tracing asks which features affect other features and output logits, while its methods paper documents the approximation's limits [[4]](#ref-4).
 
 ## 8. Summary and Open Questions
 
-Sparse Autoencoders provide a useful but incomplete view of activations. Sparse dictionaries can reveal interpretable structure; they do not guarantee clean single-meaning features or complete explanations. The shift from $L_1$ regularization to Top-K architectures has allowed these techniques to scale to frontier models like GPT-4 and Claude 3, enabling precise behavioral steering and safety interventions.
+SAEs provide a useful but incomplete view of activations. The GPT-4 study used Top-K SAEs, while the Claude 3 Sonnet study used an L1-based SAE. These are distinct recipes. Feature interventions can affect observed behavior without guaranteeing selective safety control or preservation of general capabilities.
 
-However, extracting features is only half the battle. If an LLM is a machine that "thinks," features are merely the nouns and verbs of its thoughts. The next frontier in mechanistic interpretability is understanding how these features wire together to perform complex logic. How does the "If-Then" feature interact with the "Python Code" feature to generate a working script? 
+However, extracting features is only half the battle. If an LLM is a machine that "thinks," features are merely the nouns and verbs of its thoughts. The next frontier in mechanistic interpretability is understanding how these features wire together to perform complex logic. How does the "If-Then" feature interact with the "Python Code" feature to generate a working script?
 
 To answer this, we must map the **Circuits** of the LLM.
 
@@ -183,13 +189,13 @@ To answer this, we must map the **Circuits** of the LLM.
 ## Quizzes
 
 <details>
-<summary>Quiz 1: Why do neural networks utilize superposition, leading to polysemantic neurons?</summary>
-*LLMs have a fixed, finite number of dimensions in their residual stream, but must represent millions of distinct linguistic and factual concepts. Superposition allows the model to pack multiple unrelated concepts into the same space using almost-orthogonal vectors, making individual neurons polysemantic (firing for multiple concepts).*
+<summary>Quiz 1: What does superposition explain, and what does it not establish?</summary>
+*Sparse features can share overlapping directions, allowing more features than dimensions. This does not identify every neuron’s function or recover every concept.*
 </details>
 
 <details>
-<summary>Quiz 2: What is the fundamental trade-off when tuning the $\lambda$ parameter for the $L_1$ penalty in a standard SAE?</summary>
-*Increasing $\lambda$ improves the sparsity (and thus interpretability) of the features, but it worsens the reconstruction error (MSE) of the original activations. Furthermore, a high $L_1$ penalty causes "shrinkage," artificially pulling all feature magnitudes toward zero.*
+<summary>Quiz 2: Does a larger L1 weight guarantee better interpretability?</summary>
+*No. It changes the sparsity–reconstruction tradeoff and can cause shrinkage, but interpretability and behavioral fidelity require separate tests. Decoder-scale constraints are also necessary.*
 </details>
 
 <details>
@@ -213,6 +219,6 @@ To answer this, we must map the **Circuits** of the LLM.
 
 1. <a id="ref-1"></a>Templeton, A., et al. (2024). *Scaling Monosemanticity: Extracting Interpretable Features from Claude 3 Sonnet*. Transformer Circuits Thread. [Link](https://transformer-circuits.pub/2024/scaling-monosemanticity/index.html).
 2. <a id="ref-2"></a>Gao, L., et al. (2024). *Scaling and evaluating sparse autoencoders*. [arXiv:2406.04093](https://arxiv.org/abs/2406.04093).
-3. <a id="ref-3"></a>De Paoli, S., & Mathis, W. S. (2025). *Codebook Reduction and Saturation: Novel observations on Inductive Thematic Saturation for Large Language Models and initial coding in Thematic Analysis.* [arXiv:2503.04859](https://arxiv.org/abs/2503.04859).
+3. <a id="ref-3"></a>Burns, C., et al. (2023). *Discovering Latent Knowledge in Language Models Without Supervision.* [Paper](https://arxiv.org/abs/2212.03827).
 4. <a id="ref-4"></a>Ameisen, E., et al. (2025). *Circuit Tracing: Revealing Computational Graphs in Language Models.* [Source](https://transformer-circuits.pub/2025/attribution-graphs/methods.html).
 5. <a id="ref-5"></a>Anthropic. (2025). On the Biology of a Large Language Model. [Source](https://transformer-circuits.pub/2025/attribution-graphs/biology.html).

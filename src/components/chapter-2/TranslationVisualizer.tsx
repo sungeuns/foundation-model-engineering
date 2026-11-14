@@ -8,7 +8,7 @@ interface TranslationVisualizerProps {
 export const TranslationVisualizer = ({ lang = 'en' }: TranslationVisualizerProps) => {
   const enWords = ["The", "cat", "sat", "on", "the", "mat"];
   const frWords = ["Le", "chat", "était", "assis", "sur", "le", "tapis"];
-  
+
   const alignData = [
       [0.8, 0.05, 0.05, 0.02, 0.05, 0.03], // Le -> The
       [0.05, 0.85, 0.02, 0.03, 0.02, 0.03], // chat -> cat
@@ -26,14 +26,14 @@ export const TranslationVisualizer = ({ lang = 'en' }: TranslationVisualizerProp
   const labels = {
     en: {
       title: "Attention Alignment Visualizer",
-      subtitle: "Click on a French word (Target) to see which English words (Source) the model focused on.",
+      subtitle: "Select a French target word to inspect authored alignment weights, not measurements from a model.",
       source: "English (Source):",
       target: "French (Target):",
       weight: "Attention Weight on English Words:"
     },
     ko: {
       title: "어텐션 정렬 시각화",
-      subtitle: "프랑스어 단어(대상)를 클릭하여 모델이 어떤 영어 단어(원본)에 집중했는지 확인하세요.",
+      subtitle: "프랑스어 대상 단어를 선택해 설명용 정렬 가중치를 확인하세요. 모델에서 측정한 값이 아닙니다.",
       source: "영어 (원본):",
       target: "프랑스어 (대상):",
       weight: "영어 단어에 대한 어텐션 가중치:"
@@ -48,7 +48,7 @@ export const TranslationVisualizer = ({ lang = 'en' }: TranslationVisualizerProp
         <h3 style={{ color: '#1e293b', marginBottom: '5px' }}>{t.title}</h3>
         <p style={{ color: '#64748b', fontSize: '0.9rem' }}>{t.subtitle}</p>
       </div>
-      
+
       <div style={{ marginBottom: '15px' }}>
         <div style={{ fontWeight: 'bold', color: '#475569', marginBottom: '5px' }}>{t.source}</div>
         <div style={{ padding: '10px', background: 'rgba(255,255,255,0.5)', borderRadius: '5px' }}>The cat sat on the mat.</div>

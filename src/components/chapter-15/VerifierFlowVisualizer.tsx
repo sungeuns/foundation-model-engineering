@@ -1,100 +1,14 @@
-import React, { useState } from 'react';
-import './visualizers.css';
-
-const VerifierFlowVisualizer = () => {
-  const [activeTab, setActiveTab] = useState('orm');
-
-  const mathProblem = "Solve: 3x + 7 = 22";
-  const candidateSolution = [
-    { step: 1, text: "3x + 7 = 22", isCorrect: true },
-    { step: 2, text: "3x = 22 + 7", isCorrect: false, note: "Sign error" },
-    { step: 3, text: "3x = 29", isCorrect: false },
-    { step: 4, text: "x = 29/3", isCorrect: false }
-  ];
-
-  return (
-    <div className="verifier-visualizer-container">
-      <div className="verifier-header">
-        <h3>Interactive: Verifier Paradigms</h3>
-        <p>Observe how different Reward Models evaluate the same flawed reasoning path.</p>
-      </div>
-      
-      <div className="verifier-tabs">
-        <button className={activeTab === 'orm' ? 'active' : ''} onClick={() => setActiveTab('orm')}>ORM (Outcome)</button>
-        <button className={activeTab === 'prm' ? 'active' : ''} onClick={() => setActiveTab('prm')}>PRM (Process)</button>
-        <button className={activeTab === 'genrm' ? 'active' : ''} onClick={() => setActiveTab('genrm')}>GenRM (Generative)</button>
-      </div>
-
-      <div className="verifier-content">
-        <div className="problem-panel">
-          <h4>Problem</h4>
-          <div className="code-font">{mathProblem}</div>
-          
-          <h4 style={{ marginTop: '1rem' }}>Candidate Solution</h4>
-          <div className="solution-steps">
-            {candidateSolution.map((s, idx) => (
-              <div key={idx} className="step-row">
-                <span className="step-num">Step {s.step}:</span>
-                <span className="step-text code-font">{s.text}</span>
-                {activeTab === 'prm' && (
-                  <span className={`prm-badge ${s.isCorrect ? 'positive' : 'negative'}`}>
-                    {s.isCorrect ? '✓ Valid' : '✗ Invalid'}
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="evaluation-panel">
-          <h4>Evaluation Logic</h4>
-          {activeTab === 'orm' && (
-            <div className="eval-box orm-box">
-              <p><strong>Mechanism:</strong> Scalar Regression on Final Token</p>
-              <div className="eval-process">
-                <p>Reading final step: <code className="code-font">x = 29/3</code></p>
-                <p>Comparing to Target: <code className="code-font">x = 5</code></p>
-                <div className="result final-score-bad">
-                  Score: 0.01 (Incorrect)
-                </div>
-                <p className="insight"><strong>Flaw:</strong> The model gets a 0, but has no idea that Step 2 was the actual mistake. The credit assignment is too sparse.</p>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'prm' && (
-            <div className="eval-box prm-box">
-              <p><strong>Mechanism:</strong> Token-level Classification at Step Boundaries</p>
-              <div className="eval-process">
-                <p>Evaluating Step 1... <span className="score-good">Score: 0.98</span></p>
-                <p>Evaluating Step 2... <span className="score-bad">Score: 0.05</span></p>
-                <div className="result final-action">
-                  Action: Prune Branch at Step 2
-                </div>
-                <p className="insight"><strong>Flaw:</strong> Excellent for search, but requires massive human labeling. The model outputs scalars, not explanations.</p>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'genrm' && (
-            <div className="eval-box genrm-box">
-              <p><strong>Mechanism:</strong> Next-Token Prediction (Rationale -&gt; Verdict)</p>
-              <div className="eval-process">
-                <p><strong>Generated Rationale:</strong></p>
-                <div className="rationale-text">
-                  "Let's check the steps. Step 1 is the premise. In Step 2, the candidate moves +7 to the right side. When moving across the equals sign, the sign should flip to -7. The candidate wrote 22 + 7 instead of 22 - 7. This is an arithmetic error. Therefore, the solution is incorrect."
-                </div>
-                <div className="result final-verdict">
-                  Final Token: <strong>No</strong> (P = 0.99)
-                </div>
-                <p className="insight"><strong>Advantage:</strong> The model uses its KV cache to compute the logic before deciding. We can also sample 16 rationales and take a majority vote!</p>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default VerifierFlowVisualizer;
+import React,{useState} from 'react';
+import '../teaching-demo.css';
+export default function VerifierFlowVisualizer({lang='en'}:{lang?:string}){
+ const ko=lang==='ko',t=(a:string,b:string)=>ko?b:a;
+ const [mode,setMode]=useState('orm'),[fixed,setFixed]=useState(false);
+ const lines=fixed?['3x + 7 = 22','3x = 22 − 7','3x = 15','x = 5']:['3x + 7 = 22','3x = 22 + 7','3x = 29','x = 29/3'];
+ return <section className="teaching-demo"><h3>{t('What is supervised?','무엇을 감독하나요?')}</h3>
+ <p>{t('Compare outcome, step and generated-critique signals on the same authored solution.','같은 풀이 예시에서 결과·단계·생성 비평 신호를 비교합니다.')}</p>
+ <div className="demo-controls">{['orm','prm','genrm'].map(m=><button key={m} aria-pressed={mode===m} onClick={()=>setMode(m)}>{m.toUpperCase()}</button>)}</div>
+ <label><input type="checkbox" checked={fixed} onChange={e=>setFixed(e.target.checked)}/>{t('Repair the sign in step 2','2단계의 부호 수정')}</label>
+ <ol>{lines.map((line,i)=><li key={i}><code>{line}</code>{mode==='prm'&&<span> — {i===1&&!fixed?t('first invalid transition','첫 잘못된 변환'):i>1&&!fixed?t('algebra follows the erroneous premise','잘못된 전제에서의 대수 변환'):t('valid in this example','이 예시에서는 타당')}</span>}</li>)}</ol>
+ <div className="demo-output" aria-live="polite">{mode==='orm'?t(`Outcome label: ${fixed?'correct':'incorrect'}. An ORM may read the whole trace; its supervision is the outcome, not necessarily a binary output or final-token-only input.`,`결과 라벨: ${fixed?'정답':'오답'}. ORM은 전체 풀이를 읽을 수도 있습니다. 결과 감독이 핵심이며 출력이 반드시 이진이거나 입력이 마지막 토큰뿐인 것은 아닙니다.`):mode==='prm'?t('Step supervision can locate an error. A step after a wrong premise may be locally valid: define the labeling rubric. Real PRMs can still misjudge.','단계 감독은 오류 위치를 찾는 데 도움을 줍니다. 잘못된 전제 뒤의 단계도 국소적으로 타당할 수 있으므로 라벨 기준을 정해야 합니다. 실제 PRM도 오판할 수 있습니다.'):t(fixed?'Authored critique: subtracting 7 gives 15, then division gives x=5. A generated critique needs independent validation.':'Authored critique: step 2 should subtract 7. A convincing explanation is not a correctness certificate.',fixed?'작성한 비평: 7을 빼면 15, 3으로 나누면 x=5입니다. 생성 비평에도 독립 검증이 필요합니다.':'작성한 비평: 2단계에서는 7을 빼야 합니다. 설득력 있는 설명이 정확성 증명은 아닙니다.')}</div>
+ <small>{t('Authored labels, not measured reward scores or live model outputs.','라벨은 교육용으로 작성했으며 측정한 보상 점수나 실시간 모델 출력이 아닙니다.')}</small></section>;
+}

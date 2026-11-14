@@ -100,7 +100,7 @@ Optical context compression은 마지막 범주에 속합니다. 스캔 문서, 
 | GLM-5.2 | MIT 라이선스 가중치와 설정 공개 | 753B MoE, 78개 레이어, 앞쪽 3개 dense layer, 256 routed + 1 shared expert, 토큰당 routed expert 8개, 1M position, DeepSeek Sparse Attention, IndexShare, MTP layer 1개 [[8]](#ref-8) [[9]](#ref-9) | 전체 pre-training corpus 구성과 filtering recipe |
 | Kimi K3 | 출시/open-weight; weights, technical report, MoonEP, FlashKDA, AgentEnv 공개 [[14]](#ref-14) | 2.8T parameter, native multimodality, 1M context, Kimi Delta Attention, Attention Residuals, Stable LatentMoE, 16-of-896 expert routing [[11]](#ref-11) [[14]](#ref-14) | 정확한 pre-training data mixture와 전체 filtering recipe는 미공개 |
 | Qwen3.7 | agent 중심 Qwen 세대로 공개 | 1M-context 제품 설정과 long-horizon agent 사례 [[12]](#ref-12) | 이 정보는 Qwen3.8 내부 구조의 증거가 아님 |
-| Qwen3.8-Max | Qwen3.8-2.4T-A95B로 출시/open-weight [[15]](#ref-15) | 공개 weights와 configuration으로 2.4T total parameter, 95B active parameter, native 262,144 위치와 문서화된 문맥 확장 확인 [[13]](#ref-13) [[15]](#ref-15) | 정확한 corpus mixture와 전체 data-filtering 및 post-training recipe는 미공개 |
+| Qwen3.8-2.4T-A95B (downloadable checkpoint) | Qwen3.8-2.4T-A95B로 출시/open-weight [[15]](#ref-15) | 공개 weights와 configuration으로 2.4T total parameter, 95B active parameter, native 262,144 위치와 문서화된 문맥 확장 확인 [[13]](#ref-13) [[15]](#ref-15) | 정확한 corpus mixture와 전체 data-filtering 및 post-training recipe는 미공개 |
 
 여기서 “오픈”은 미래의 약속이나 API endpoint, parameter count 발표를 뜻하지 않습니다. 재현 가능한 엔지니어링 관점에서 open-weight 공개는 실제 weight file과 실행 가능한 설정이 올라온 시점부터입니다.
 
@@ -239,9 +239,9 @@ class SimpleLatentAttention(nn.Module):
 
 ---
 
-## 10월 18일 업데이트: 아티팩트·아키텍처·상태를 구분한다
+## 11월 15일 업데이트: 아티팩트·아키텍처·상태를 구분한다
 
-**2026-10-18 기준.** 위의 9월·10월 13일 표는 당시의 기록입니다. 아래 1차 자료는 공개 상태를 갱신하고 서로 다른 설계를 추가합니다. 과거의 발표일을 소급해 바꾸는 것은 아닙니다.
+**as of 2026-11-15.** 위의 9월·10월 13일 표는 당시의 기록입니다. 아래 1차 자료는 공개 상태를 갱신하고 서로 다른 설계를 추가합니다. 과거의 발표일을 소급해 바꾸는 것은 아닙니다.
 
 | 모델·이정표 | 현재 공개 상태 | 공개한 내용 | 그것만으로 입증되지 않는 것 |
 |---|---|---|---|
@@ -251,12 +251,26 @@ class SimpleLatentAttention(nn.Module):
 | Nemotron 3.5 Super VL, 10월 15일 | 가중치 공개·OpenMDW-1.1 | 카드의 전체 120B·활성 12B, Mamba-2·MoE·attention 교차 구조와 비전 인코더 [[26]](#ref-26) | Attention KV만으로 전체 서빙 상태를 설명할 수 있다는 주장 |
 | Nemotron 3.5 Bolt 74B-A9B, 10월 15일 | 가중치 공개·OpenMDW-1.1 | 카드의 전체 74B·활성 9B, hybrid LatentMoE·IQ2 QAT [[27]](#ref-27) | 모든 문맥·배치의 24GB 실행 메모리 보장 |
 | Step 5 Preview, 10월 가중치 공개 | 가중치 공개·StepFun Model License 1.0 | 카드의 전체 600B·활성 27B MoE [[28]](#ref-28) | Preview라서 가중치가 없거나 MIT 라이선스라는 추정 |
-| DeepSeek V4.1 Flash 1017, 10월 17일 | 가중치 공개·MIT·API 별칭 갱신 | 리비전과 프로토콜 인식 인코딩 안내 [[29]](#ref-29) | 새 독립 지수나 새로 공개한 backbone 설계 |
+| DeepSeek V4.1 Flash 1017, 10월 17일 | 가중치 공개·MIT·API 별칭 갱신 | 리비전과 프로토콜 인식 인코딩 안내 [[29]](#ref-29) | 새 백본 또는 9월 프로필과의 동등성. 17.6절은 1017/max 평가를 별도 기록 |
 | Hy-Memory-30B-A3B, 10월 15일 | 가중치 공개·Apache 2.0 | 외부 메모리 전문 쓰기 모델과 프로토콜 통합 [[30]](#ref-30) | 범용 에이전트 품질·모델 내부의 영구 메모리 |
 
 실무에서 구분해야 할 것은 **아키텍처 → 수치 아티팩트 → 런타임 → 배포 시스템** 입니다. 패킹은 논리적 파라미터 수를 바꾸지 않고 텐서 원소 수를 바꿀 수 있습니다. 하이브리드 모델은 attention 캐시에 순환 상태를 더하고, 전문 메모리 쓰기 모델은 외부 저장 상태를 갱신합니다. 파라미터 수나 문맥 길이 하나로는 어느 쪽도 올바르게 평가할 수 없습니다.
 
 도입 시 모델·수치 형식, 토크나이저 또는 인코딩 도구, 템플릿, 시각 전처리, 커널, 상태 layout, 도구 스키마를 고정합니다. 실제로 공개한 세부사항을 확인하고, 호스팅 점수를 다른 아티팩트에 옮기지 말고 로컬 능력·메모리·지연·복구를 시험합니다. 17.6절은 날짜별 공개·평가 프로필을, 12.5·13.5·16.5절은 상태·압축·메모리 계약을 다룹니다.
+
+### 11월의 아티팩트 추가
+
+**as of 2026-11-15.** 아래 내용은 앞선 가중치 공개 예정 상태를 갱신합니다. 확인한 revision 날짜를 최초 출시일로 간주하지 않습니다.
+
+| 아티팩트 / 시점 | 공개된 정보 | 해석의 경계 |
+|---|---|---|
+| Mistral Large 4, 10월 29일 가중치 공개 | 멀티모달 MoE, 전체 1T/활성 52B [[31]](#ref-31) | 자체 ecosystem 라이선스이며 Model-as-a-Service 사업자는 별도 계약 필요 |
+| Kimi K3.1 Pro, 확인한 11월 5일 revision | 전체 2.8T/활성 104B, KDA·gated sparse attention과 QAT 형식 [[32]](#ref-32) | Hosted Highspeed는 별도 프로필. 전체 학습 혼합은 미공개 |
+| Inkling 2 Small, 11월 12일 가중치 공개 | Apache-2.0, 전체 594B/활성 17B, 텍스트·이미지 입력, 혼합 수치 형식·draft head [[33]](#ref-33) | 패킹 저장량은 논리적 매개변수 수나 처리량 보장이 아님 |
+| Qwen3.8 Flash Next, 확인한 11월 7일 revision | 주 모델 125B/활성 6B, 별도 n-gram embedding 51B·MTP 4B, native context 262,144 [[34]](#ref-34) | 매개변수 범주를 합치거나 hosted Flash와 동일시하지 않음 |
+| GLM-5.3 Flash, 확인한 10월 15일 revision | MIT, 별도 학습한 멀티모달 기반 모델, 전체 320B/활성 18B [[35]](#ref-35) | 텍스트 전용 GLM-5.3의 설명을 그대로 적용하지 않음 |
+
+GPT-6.1 Terra와 Claude Fable/Mythos 5.2는 새로운 hosted 선택지를 제공하지만 매개변수 수와 상세 학습 레시피는 미공개입니다. 17.6절에서 접근 방식·가격·평가 프로필을 다운로드 가능한 아티팩트와 구분합니다.
 
 ## Quizzes
 
@@ -322,3 +336,13 @@ class SimpleLatentAttention(nn.Module):
 29. <a id="ref-29"></a>DeepSeek. (2026-10-17). *DeepSeek V4.1 Flash 1017 model card*. [Source](https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017).
 
 30. <a id="ref-30"></a>Tencent. (2026). *Hy-Memory-30B-A3B model card*. [Source](https://huggingface.co/tencent/Hy-Memory-30B-A3B).
+
+31. <a id="ref-31"></a>Mistral Large 4. Model card, verified 2026-11-15. [Source](https://huggingface.co/mistralai/Mistral-Large-4-1T-A52B).
+
+32. <a id="ref-32"></a>Kimi K3.1 Pro. Model card, verified 2026-11-15. [Source](https://huggingface.co/moonshotai/Kimi-K3.1-Pro).
+
+33. <a id="ref-33"></a>Inkling 2 Small. Model card, verified 2026-11-15. [Source](https://huggingface.co/thinkingmachines/Inkling-2-Small).
+
+34. <a id="ref-34"></a>Qwen3.8 Flash Next. Model card, verified 2026-11-15. [Source](https://huggingface.co/Qwen/Qwen3.8-Flash-Next).
+
+35. <a id="ref-35"></a>GLM-5.3 Flash. Model card, verified 2026-11-15. [Source](https://huggingface.co/zai-org/GLM-5.3-Flash).

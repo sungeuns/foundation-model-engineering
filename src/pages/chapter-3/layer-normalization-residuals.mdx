@@ -138,6 +138,12 @@ See how Layer Normalization transforms a vector with wild values into a normaliz
 
 ---
 
+## SimpleHC: residual access is a systems choice
+
+**As of 2026-11-15 — emerging research.** SimpleHC removes residual mixing while retaining learned read/write gates. Several sublayers share a group-entry state; batched reads, deferred writes and scalar corrections reduce repeated memory access. The paper reports comparable quality to mHC in its tested 15B/30B MoE settings. This is not evidence of universal frontier-scale stability. [[6]](#ref-6)
+
+For an implementation study, compare matched data and compute, gradient norms, wall-clock throughput and state traffic. A cheaper residual path matters only if its numerical and quality behavior survives the target training setup.
+
 ## Quizzes
 
 <details>
@@ -173,3 +179,4 @@ See how Layer Normalization transforms a vector with wild values into a normaliz
 3. <a id="ref-3"></a>Xiong, R., et al. (2020). *On Layer Normalization in the Transformer Architecture*. [arXiv:2002.04745](https://arxiv.org/abs/2002.04745).
 4. <a id="ref-4"></a>Moonshot AI. (2026). Attention Residuals. [Source](https://arxiv.org/abs/2603.15031).
 5. <a id="ref-5"></a>Su, J. (2026). Low-Rank Attention Residuals, September 22 revision. [Source](https://arxiv.org/abs/2607.09694).
+6. <a id="ref-6"></a>Research preprint (2026). [On the Design of Hyper-Connections: Simplification, Stability, and Scalability](https://arxiv.org/html/2611.05984v1). Version pinned; accessed 2026-11-15.

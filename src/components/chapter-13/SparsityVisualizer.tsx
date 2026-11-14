@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import './visualizers.css';
 
-const SparsityVisualizer: React.FC = () => {
+const SparsityVisualizer = ({lang="en"}:{lang?:"en"|"ko"}) => {
+  const ko = lang === "ko";
   const [method, setMethod] = useState<'none' | 'magnitude' | 'wanda' | 'semi-structured'>('none');
-  
+
   // 4x8 Weight Matrix
   const initialWeights = [
     [ 0.1, -0.9,  0.2,  0.4, -0.1,  0.8, -0.3,  0.5],
@@ -21,7 +22,7 @@ const SparsityVisualizer: React.FC = () => {
 
   useEffect(() => {
     const newMask = Array(4).fill(null).map(() => Array(8).fill(false));
-    
+
     if (method === 'none') {
       setPrunedMask(newMask);
       return;
@@ -29,26 +30,13 @@ const SparsityVisualizer: React.FC = () => {
 
     if (method === 'magnitude') {
       // Prune lowest 50% globally based on absolute weight
-      const allWeights = initialWeights.flat().map(Math.abs);
-      const threshold = [...allWeights].sort((a, b) => a - b)[Math.floor(allWeights.length / 2)];
-      
-      for (let r = 0; r < 4; r++) {
-        for (let c = 0; c < 8; c++) {
-          if (Math.abs(initialWeights[r][c]) < threshold) {
-            newMask[r][c] = true;
-          }
-        }
-      }
+      const ranked = initialWeights.flat().map((w, i) => ({i, score: Math.abs(w)})).sort((a,b)=>a.score-b.score || a.i-b.i);
+      for (const {i} of ranked.slice(0,16)) newMask[Math.floor(i/8)][i%8]=true;
     } else if (method === 'wanda') {
       // Prune lowest 50% per row based on |W| * ||X||
       for (let r = 0; r < 4; r++) {
-        const scores = initialWeights[r].map((w, c) => Math.abs(w) * activationNorms[c]);
-        const threshold = [...scores].sort((a, b) => a - b)[Math.floor(scores.length / 2)];
-        for (let c = 0; c < 8; c++) {
-          if (scores[c] < threshold) {
-            newMask[r][c] = true;
-          }
-        }
+        const ranked = initialWeights[r].map((w,c)=>({c,score:Math.abs(w)*activationNorms[c]})).sort((a,b)=>a.score-b.score || a.c-b.c);
+        for (const {c} of ranked.slice(0,4)) newMask[r][c]=true;
       }
     } else if (method === 'semi-structured') {
       // 2:4 sparsity based on Wanda scores
@@ -67,22 +55,22 @@ const SparsityVisualizer: React.FC = () => {
         }
       }
     }
-    
+
     setPrunedMask(newMask);
   }, [method]);
 
   return (
     <div className="sparsity-visualizer">
       <div className="controls">
-        <button className={method === 'none' ? 'active' : ''} onClick={() => setMethod('none')}>Original (Dense)</button>
-        <button className={method === 'magnitude' ? 'active' : ''} onClick={() => setMethod('magnitude')}>Magnitude (50%)</button>
-        <button className={method === 'wanda' ? 'active' : ''} onClick={() => setMethod('wanda')}>Wanda (50%)</button>
-        <button className={method === 'semi-structured' ? 'active' : ''} onClick={() => setMethod('semi-structured')}>2:4 Sparsity (Wanda)</button>
+        <button className={method === 'none' ? 'active' : ''} aria-pressed={method === 'none'} onClick={() => setMethod('none')}>{ko ? "원본 (밀집)" : "Original (dense)"}</button>
+        <button className={method === 'magnitude' ? 'active' : ''} aria-pressed={method === 'magnitude'} onClick={() => setMethod('magnitude')}>{ko ? "크기 기준 (50%)" : "Magnitude (50%)"}</button>
+        <button className={method === 'wanda' ? 'active' : ''} aria-pressed={method === 'wanda'} onClick={() => setMethod('wanda')}>Wanda (50%)</button>
+        <button className={method === 'semi-structured' ? 'active' : ''} aria-pressed={method === 'semi-structured'} onClick={() => setMethod('semi-structured')}>{ko ? "2:4 희소성 (Wanda)" : "2:4 sparsity (Wanda)"}</button>
       </div>
 
       <div className="visualization-container">
         <div className="activations-panel">
-          <h4>Activation Norms (||X||)</h4>
+          <h4>{ko ? "입력 활성화 norm (||X||)" : "Activation norms (||X||)"}</h4>
           <div className="activations-row">
             {activationNorms.map((norm, idx) => (
               <div key={`act-${idx}`} className={`activation-cell ${norm > 10 ? 'outlier' : ''}`}>
@@ -93,13 +81,13 @@ const SparsityVisualizer: React.FC = () => {
         </div>
 
         <div className="weights-panel">
-          <h4>Weight Matrix (W)</h4>
+          <h4>{ko ? "가중치 행렬 (W)" : "Weight matrix (W)"}</h4>
           <div className="matrix">
             {initialWeights.map((row, rIdx) => (
               <div key={`row-${rIdx}`} className="matrix-row">
                 {row.map((val, cIdx) => (
-                  <div 
-                    key={`cell-${rIdx}-${cIdx}`} 
+                  <div
+                    key={`cell-${rIdx}-${cIdx}`}
                     className={`matrix-cell ${prunedMask[rIdx][cIdx] ? 'pruned' : ''} ${activationNorms[cIdx] > 10 && !prunedMask[rIdx][cIdx] ? 'protected' : ''}`}
                   >
                     {prunedMask[rIdx][cIdx] ? '0.0' : val.toFixed(1)}
@@ -112,10 +100,8 @@ const SparsityVisualizer: React.FC = () => {
       </div>
 
       <div className="explanation-panel">
-        {method === 'none' && <p><strong>Dense Matrix:</strong> Original weights. The top two activation channels (50.0, 40.0) represent massive outliers.</p>}
-        {method === 'magnitude' && <p><strong>Magnitude Pruning:</strong> Zeros out the half with the smallest absolute weight values. Risks destroying core weights (e.g., -0.9 in the first row) that dictate the output when combined with massive activation outliers.</p>}
-        {method === 'wanda' && <p><strong>Wanda (Row-wise Unstructured Sparsity):</strong> Scores based on the product of weight magnitude and activation norm. Weights in channels with outliers (red borders) are protected, preserving core logic pathways.</p>}
-        {method === 'semi-structured' && <p><strong>2:4 Semi-structured Sparsity:</strong> Uses Wanda scores but divides weights into blocks of 4, zeroing exactly 2. This satisfies the hardware requirements of NVIDIA Sparse Tensor Cores.</p>}
+        <p>{ko ? "설명용 행렬에 선택 규칙을 실제 적용합니다. 같은 점수는 인덱스 순으로 처리해 정확히 절반을 제거합니다. 0으로 만드는 것만으로 커널 가속을 얻지는 않습니다." : "Selection rules are computed on an authored matrix. Ties are resolved by index to prune exactly half. Zeroing entries alone does not accelerate a dense kernel."}</p>
+        <p>{method === 'magnitude' ? (ko ? "예: 두 번째 행의 0.1(활성화 norm 40)은 크기 기준으로 제거되지만 Wanda는 유지합니다. -0.9 같은 큰 값은 크기 기준에서도 유지됩니다." : "Example: row 2’s 0.1 in the channel with activation norm 40 is removed by magnitude pruning but retained by Wanda. A large value such as -0.9 is retained even by magnitude pruning.") : method === 'semi-structured' ? (ko ? "각 4개 블록에서 Wanda 점수 하위 2개를 제거합니다. 실제 가속에는 지원하는 패킹·커널·모양이 필요합니다." : "Remove the two lowest Wanda scores in each block of four. Acceleration needs compatible packing, kernels and shapes.") : (ko ? "Wanda 점수는 |W|와 입력 채널 norm의 곱입니다. 이 점수는 중요도의 근사이며 품질 보장이 아닙니다." : "Wanda scores multiply |W| by the input-channel norm. This is a sensitivity proxy, not a quality guarantee.")}</p>
       </div>
     </div>
   );

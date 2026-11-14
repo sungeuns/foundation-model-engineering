@@ -14,22 +14,22 @@ export default function ComplexityVisualizer({ lang = 'en' }: ComplexityVisualiz
   const labels = {
     en: {
       label: "Sequence Length (n):",
-      attn: "Self-Attention Ops (n²)",
-      rnn: `RNN Ops (n × d) *assumed d=${d}`
+      attn: "Attention-core growth term / d: n²",
+      rnn: `RNN growth term / d: n × d; d=${d}`
     },
     ko: {
       label: "시퀀스 길이 (n):",
-      attn: "Self-Attention 연산 수 (n²)",
-      rnn: `RNN 연산 수 (n × d) *d=${d} 가정`
+      attn: "어텐션 핵심 성장 항 / d: n²",
+      rnn: `RNN 성장 항 / d: n × d; d=${d} 가정`
     }
   };
 
   const t = labels[lang] || labels.en;
 
   return (
-    <div style={{ 
-      padding: '20px', 
-      marginTop: '2rem', 
+    <div style={{
+      padding: '20px',
+      marginTop: '2rem',
       marginBottom: '2rem',
       background: 'rgba(255, 255, 255, 0.7)',
       backdropFilter: 'blur(10px)',
@@ -41,6 +41,7 @@ export default function ComplexityVisualizer({ lang = 'en' }: ComplexityVisualiz
       <div style={{ textAlign: 'center' }}>
         <label style={{ fontWeight: 'bold', marginRight: '10px', color: '#1e293b' }}>{t.label}</label>
         <input
+          aria-label={t.label}
           type="range"
           min="100"
           max="5000"

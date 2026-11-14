@@ -8,7 +8,7 @@ import PipelineMemoryVisualizer from '../../components/chapter-7/PipelineMemoryV
 
 # 7.3 Model & Pipeline Parallelism
 
-In the previous section, we explored how ZeRO solves the Memory Wall by dynamically partitioning model states across a cluster. However, ZeRO has a fundamental limitation: **it operates at the layer level.** During a forward or backward pass, ZeRO must reconstruct the *entire* weight matrix of a specific layer on a single GPU. 
+In the previous section, we explored how ZeRO solves the Memory Wall by dynamically partitioning model states across a cluster. However, ZeRO has a fundamental limitation: **it operates at the layer level.** During a forward or backward pass, ZeRO must reconstruct the *entire* weight matrix of a specific layer on a single GPU.
 
 As Foundation Models scale beyond 100 billion parameters, the mathematical operations themselves become too colossal. For a sufficiently large model or an extremely long context window, the activations and weights of a *single layer* will exceed the 80GB VRAM limit of an H100 GPU. When a single matrix multiplication cannot fit into memory, Data Parallelism (even with ZeRO) fails. We must physically shard the model itself.
 
@@ -28,7 +28,7 @@ To mitigate this, Google introduced **GPipe** [[1]](#ref-1). GPipe divides a lar
 ### 1F1B (One-Forward-One-Backward)
 While GPipe solves the utilization problem, it creates a severe memory problem. GPipe executes *all* forward micro-batches before executing *any* backward micro-batches. This means GPU 0 must store the activations for every single micro-batch in memory until the backward pass eventually arrives.
 
-Modern frameworks (like Megatron-LM) replace GPipe with the **1F1B (One-Forward-One-Backward)** schedule. In 1F1B, as soon as the last GPU finishes a forward pass for a micro-batch, it immediately executes the backward pass. This backward pass propagates up the pipeline, interleaving with forward passes. 
+Modern frameworks (like Megatron-LM) replace GPipe with the **1F1B (One-Forward-One-Backward)** schedule. In 1F1B, as soon as the last GPU finishes a forward pass for a micro-batch, it immediately executes the backward pass. This backward pass propagates up the pipeline, interleaving with forward passes.
 
 By running backward passes early, 1F1B frees the activation memory immediately. While the pipeline bubble size remains mathematically identical to GPipe, the **peak memory footprint is drastically reduced**, bounded only by the number of pipeline stages rather than the number of micro-batches.
 
@@ -42,7 +42,7 @@ Use the visualizer below to compare the GPipe and 1F1B schedules. Pay close atte
 
 ## 2. Tensor Parallelism (TP)
 
-While Pipeline Parallelism splits the model *between* layers, **Tensor Parallelism (TP)** splits the mathematical operations *inside* a single layer. 
+While Pipeline Parallelism splits the model *between* layers, **Tensor Parallelism (TP)** splits the mathematical operations *inside* a single layer.
 
 Spearheaded by NVIDIA's **Megatron-LM** [[2]](#ref-2), TP is the engine that makes training massive models possible. It physically slices the weight matrices of the Multi-Head Attention (MHA) and Multi-Layer Perceptron (MLP) blocks across multiple GPUs.
 
@@ -54,7 +54,7 @@ Spearheaded by NVIDIA's **Megatron-LM** [[2]](#ref-2), TP is the engine that mak
 A standard Transformer MLP consists of two linear transformations: $Y = \text{GeLU}(XA)$ and $Z = YB$. Megatron-LM uses a brilliant combination of **Column Parallelism** and **Row Parallelism** to distribute this computation while minimizing communication.
 
 1. **Column Parallelism on $A$:** The first weight matrix $A$ is split vertically into $A_1$ and $A_2$. GPU 0 computes $Y_1 = XA_1$ and GPU 1 computes $Y_2 = XA_2$. Because the non-linear GeLU activation is element-wise, it can be applied independently on each GPU. *Zero communication is required so far.*
-2. **Row Parallelism on $B$:** The second weight matrix $B$ is split horizontally into $B_1$ and $B_2$. GPU 0 computes $Z_1 = Y_1 B_1$ and GPU 1 computes $Z_2 = Y_2 B_2$. 
+2. **Row Parallelism on $B$:** The second weight matrix $B$ is split horizontally into $B_1$ and $B_2$. GPU 0 computes $Z_1 = Y_1 B_1$ and GPU 1 computes $Z_2 = Y_2 B_2$.
 3. **Synchronization:** The final output requires summing the partial results: $Z = Z_1 + Z_2$. This is achieved via a single **All-Reduce** operation.
 
 ### TP Process Groups and Autograd
@@ -82,7 +82,7 @@ Long-context systems also use **context parallelism** or sequence-dimension atte
 
 ## 4. 3D Parallelism & Automated Sharding
 
-To train a state-of-the-art model like Llama 3 or GPT-4, engineers do not choose between these techniques; they combine them into **3D Parallelism**.
+**3D parallelism** combines data, tensor and pipeline parallelism. The configuration below is an educational design example, not a statement about GPT-4’s undisclosed training topology.
 
 ![3d_parallelism_topology](../../assets/images/chapter-7/3d_parallelism_topology.png)
 *Source: AI-generated illustration.*
@@ -109,8 +109,8 @@ Manually mapping a neural network to a 3D hardware topology is an agonizing engi
 </details>
 
 <details>
-<summary>Quiz 3: Why is Tensor Parallelism (TP) typically restricted to GPUs within the same physical server, while Pipeline Parallelism (PP) is often deployed across different servers?</summary>
-*TP requires a blocking All-Reduce synchronization inside every single Transformer block (multiple times per layer). This high-frequency communication requires the massive bandwidth and low latency of intra-node connections like NVLink. PP only communicates boundary activations between layers, which happens less frequently and requires far less bandwidth, making it suitable for inter-node connections like InfiniBand.*
+<summary>Quiz 3: Why place a TP group on fast links, and is intra-node placement mandatory?</summary>
+*Frequent layer-level collectives make TP sensitive to bandwidth and latency. Intra-node placement is common, not mandatory; decide using measurements that include topology and communication overlap.*
 </details>
 
 <details>
@@ -119,8 +119,8 @@ Manually mapping a neural network to a 3D hardware topology is an agonizing engi
 </details>
 
 <details>
-<summary>Quiz 5: In Pipeline Parallelism with GPipe or 1F1B, let $P$ be the number of pipeline stages and $M$ be the number of micro-batches. Formulate the equation for the pipeline bubble size as a fraction of the total ideal compute time.</summary>
-*The pipeline bubble consists of $P-1$ micro-batches in both the forward and backward pass. Therefore, the total unutilized stages equal $2(P-1)$. The total ideal computational workload spans $2M$ steps. The bubble fraction $F_{\text{bubble}}$ is expressed as: $F_{\text{bubble}} = \frac{P-1}{M + P - 1}$. As $M$ increases relative to $P$, the bubble fraction approaches zero, maximizing cluster utilization.*
+<summary>Quiz 5: How do the two common bubble ratios differ in an idealized pipeline?</summary>
+*With $P$ stages, $M$ microbatches, equal forward/backward slots and no communication, idle time as a fraction of elapsed time is $(P-1)/(M+P-1)$. Overhead relative to ideal useful compute time is $(P-1)/M$. The denominators answer different questions.*
 </details>
 
 ---

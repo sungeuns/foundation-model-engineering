@@ -16,7 +16,7 @@ import LinearAttentionVisualizer from '../../../components/chapter-20/LinearAtte
 
 ## 1. 핵심 아이디어
 
-표준 어텐션은 시퀀스 전체의 토큰 쌍 상호작용을 물질화합니다.
+밀집 softmax 어텐션은 토큰 쌍의 상호작용을 계산합니다. 융합 커널은 같은 계산을 수행하면서 전체 점수 행렬의 저장을 피할 수 있습니다.
 
 $$
 \text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d}}\right)V
@@ -31,6 +31,12 @@ $$
 실용적인 매력은 분명합니다. 과거를 compact한 running state로 요약할 수 있다면, 전체 시퀀스를 처리하는 동안 메모리 증가를 full quadratic attention보다 훨씬 완만하게 만들 수 있습니다.
 
 ---
+
+인과적이고 정규화된 kernel attention에서는 시점 $t$ 까지의 누적 상태와 정규화 벡터를 함께 유지합니다.
+
+$$ S_t=\sum_{i=1}^t \phi(k_i)v_i^T,\quad z_t=\sum_{i=1}^t \phi(k_i),\quad y_t^T=\frac{\phi(q_t)^T S_t}{\phi(q_t)^T z_t+\epsilon}. $$
+
+여기서 $q_i,k_i,v_i$ 는 query·key·value, $\phi$ 는 폭 $m$ 의 비음수 특징 맵, $S_t\in\mathbb R^{m\times d_v}$, $z_t\in\mathbb R^m$, $\epsilon>0$ 은 수치 안정화 항입니다. 위 비정규화 곱만으로는 이 연산 전체를 나타내지 않습니다. [[1]](#ref-1)
 
 ## 2. 왜 이 아이디어가 계속 매력적인가
 
@@ -74,17 +80,13 @@ $$
 
 하지만 이것이 곧 하나의 보편적인 recipe로 정착됐다는 뜻은 아닙니다. 어느 위치에 비싼 full attention을 남기고, 어디에 더 효율적인 메커니즘을 둘지에 대해 여러 팀이 계속 탐색 중이라는 뜻에 가깝습니다.
 
-### Linear Attention, SSM, Retention의 공통 언어
+### 덧셈 메모리와 delta rule의 차이
 
-최근 논문들을 읽다 보면 Linear Attention, SSM, retention, delta rule이 서로 다른 이름으로 비슷한 구조를 설명하는 경우가 많습니다. 핵심은 모두 다음 형태의 state update로 볼 수 있다는 점입니다.
+단순한 gate-plus-write는 상태를 감쇠한 뒤 새 정보를 더합니다. Delta rule은 현재 key 방향에 이미 저장된 예측을 빼는 **상태 의존적 교정** 을 수행합니다. [[2]](#ref-2)
 
-$$
-S_t = \gamma_t S_{t-1} + u_t v_t^T
-$$
+$$ S_t=(I-\beta_t k_tk_t^T)S_{t-1}+\beta_t k_tv_t^T. $$
 
-여기서 $S_t$ 는 과거 정보를 담은 compact state, $\gamma_t$ 는 잊기/유지 gate, $u_t v_t^T$ 는 새로 쓰는 정보입니다. 차이는 이 state를 어떤 feature map으로 만들고, 어떤 gate를 쓰고, 어떤 커널로 GPU에서 실행하느냐에 있습니다. 이 관점을 가지면 Mamba-2의 SSD가 왜 SSM과 Linear Attention을 연결하는지 더 자연스럽게 이해됩니다.
-
----
+여기서 $S_t\in\mathbb R^{d_k\times d_v}$, $k_t\in\mathbb R^{d_k}$, $v_t\in\mathbb R^{d_v}$ 이고 $\beta_t$ 는 쓰기 강도입니다. 단위 norm key를 쓰면 $k_tk_t^T$ 는 그 key 방향의 투영입니다. 일반적인 이 행렬 교정을 스칼라 감쇠 $\gamma_t S_{t-1}$ 와 혼동하면 안 됩니다. Gated DeltaNet은 망각도 결합하며 구현의 정규화·게이트 순서를 확인해야 합니다. [[4]](#ref-4)
 
 ## 5. 교육용 PyTorch 예제
 
@@ -145,7 +147,7 @@ class GatedLinearAttention(nn.Module):
 
 아래 시각화는 이 논쟁을 직관적으로 이해하는 데 도움이 됩니다. 시퀀스 길이가 커질수록 메모리 사용량이 어떻게 증가하는지를 보면, 왜 이런 아키텍처적 시도가 반복해서 등장하는지 훨씬 명확해집니다.
 
-<LinearAttentionVisualizer client:load />
+<LinearAttentionVisualizer client:load lang="ko" />
 
 ---
 
@@ -165,6 +167,12 @@ Linear Attention은 표준 어텐션을 이미 대체한 승자라기보다, 긴
 ### 10월 배포 사례: 계층마다 다른 상태
 
 **2026-10-25 기준**, Ling 3.1 Flash 공개 카드는 KDA 63계층·gated-MLA 9계층의 7:1 하이브리드를 명시합니다 [[5]](#ref-5). 공개된 구체적 스택이며 모든 “선형” 모델이 같은 순환식을 쓴다는 근거는 아닙니다. 순환 상태와 어텐션 KV를 따로 계산하고 실제 런타임에서 정확한 회상·접두사 재사용·분기·롤백을 시험하세요. 호스팅 1019 프로필과 공개 가중치 리비전의 동등성은 확인되지 않았습니다. 출처 범위 안의 비교는 17.6절을 보세요.
+
+## Muir: 고정 상태의 용량과 읽기·쓰기 동역학
+
+**2026-11-15 기준 — 초기 연구.** Muir는 채널별 게이트를 가진 delta 메모리를 분석합니다. 민감도에 따라 저랭크 게이트 용량을 배분하고 시간 척도별 읽기를 조절하며, 경계를 기준으로 계산하는 청크 커널을 제안합니다. 정적 읽기와 동적 읽기는 단일 지연의 기억 유지와 여러 지연에 대한 적응 사이에서 절충합니다. TPU 중심 커널과 제한된 회상 과제의 결과를 모든 하드웨어의 우위로 일반화할 수는 없습니다. [[6]](#ref-6)
+
+단일 사실 검색, 서로 의존하는 여러 사실, 연속 텍스트 모델링을 나누어 평가하세요. 동일 파라미터·연산 예산의 품질, 수치 조건과 실제 처리량은 선형 복잡도만으로 결정되지 않습니다.
 
 ## Quizzes
 
@@ -197,3 +205,4 @@ Linear Attention은 표준 어텐션을 이미 대체한 승자라기보다, 긴
 3. <a id="ref-3"></a>Dao, T., & Gu, A. (2024). *Transformers are SSMs: Generalized Models and Efficient Algorithms Through Structured State Space Duality.* [arXiv:2405.21060](https://arxiv.org/abs/2405.21060).
 4. <a id="ref-4"></a>Yang, S., Kautz, J., & Hatamizadeh, A. (2024). Gated Delta Networks: Improving Mamba2 with Delta Rule. [Source](https://arxiv.org/abs/2412.06464).
 5. <a id="ref-5"></a>inclusionAI. *Ling-3.1-flash model card*, revision `93e96ab91e800998388563295340a4238ff3e962`, verified 2026-10-25. [Card](https://huggingface.co/inclusionAI/Ling-3.1-flash).
+6. <a id="ref-6"></a>Research preprint (2026). [Muir: Linear Attention with Sensitivity-Allocated Gating and Matched-Filter Readout](https://arxiv.org/html/2611.08376v1). Version pinned; accessed 2026-11-15.

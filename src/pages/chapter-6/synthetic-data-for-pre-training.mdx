@@ -14,7 +14,7 @@ While the previous section outlined the physical infrastructure required to comp
 
 If high-quality data becomes a binding constraint, one response is to use existing models to generate or transform training examples. Synthetic data is one ingredient—not a consensus replacement for human data—and its value depends on provenance, coverage, verification, and mixture design.
 
-However, this recursion is fraught with mathematical peril. 
+However, this recursion is fraught with mathematical peril.
 
 ---
 
@@ -45,7 +45,7 @@ To prevent Model Collapse, engineers cannot simply prompt a model to "write 10 b
 
 ## 2. Quality over Quantity: The "Textbooks" Paradigm
 
-The first major breakthrough in synthetic pre-training data came from Microsoft Research's *Textbooks Are All You Need* (2023) [[2]](#ref-2). 
+The first major breakthrough in synthetic pre-training data came from Microsoft Research's *Textbooks Are All You Need* (2023) [[2]](#ref-2).
 
 Microsoft's **Phi-1** study trained a 1.3B-parameter code model on about 6B tokens of filtered “textbook-quality” web data plus about 1B tokens of GPT-3.5-generated textbooks and exercises [[2]](#ref-2). Synthetic material complemented filtered real data; it did not replace the entire corpus.
 
@@ -109,7 +109,7 @@ def rejection_sampling_pipeline(
         ).to(device)
         input_ids = prompt_ids.repeat(num_candidates, 1)
         attention_mask = torch.ones_like(input_ids)
-        
+
         # High temperature to encourage diversity in the synthetic candidates
         outputs = generator.generate(
             input_ids=input_ids,
@@ -119,7 +119,7 @@ def rejection_sampling_pipeline(
             do_sample=True,
             pad_token_id=gen_tokenizer.eos_token_id
         )
-        
+
         # Slice by token position, never by prompt character length.
         response_ids = outputs[:, prompt_ids.shape[1]:]
         responses = gen_tokenizer.batch_decode(response_ids, skip_special_tokens=True)
@@ -134,12 +134,18 @@ def rejection_sampling_pipeline(
             for response in responses
         ]
         reward_inputs = reward_tokenizer(
-            eval_texts, return_tensors="pt", padding=True, truncation=True
+            eval_texts, return_tensors="pt", padding=True, truncation=False,
+            add_special_tokens=False
         ).to(reward_device)
-        
+
+        # Do not silently truncate the response being judged. This example's
+        # explicit 2048-token cap must be validated against the reward checkpoint.
+        if reward_inputs["input_ids"].shape[1] > 2048:
+            continue  # record a length-rejection reason in a real manifest
+
         # Assuming a scalar reward output from a sequence classification head
         rewards = reward_model(**reward_inputs).logits.squeeze(-1)
-        
+
         # 3. Select the best candidate
         best_idx = torch.argmax(rewards).item()
         best_reward = rewards[best_idx].item()
@@ -184,7 +190,7 @@ Each checkpoint should contain completed shard IDs, input cursor, RNG state, acc
 
 In Chapter 6, we have traversed the engineering stack required to pre-train a Foundation Model. We moved from byte-level tokenization (6.2), through training stability (6.3), to the physical cluster (6.4). Finally, this section treated synthetic data as a provenance- and evaluation-sensitive engineering input. Rejection sampling and outcome verifiers can improve precision, but they do not remove coverage, contamination, recursive-training, or evaluator-gaming risks.
 
-With the data curated, the network stabilized, and the physical infrastructure humming, we are ready to execute `loss.backward()`. But how do we physically fit a 1-trillion parameter model onto GPUs that only have 80GB of memory? 
+With the data curated, the network stabilized, and the physical infrastructure humming, we are ready to execute `loss.backward()`. But how do we physically fit a 1-trillion parameter model onto GPUs that only have 80GB of memory?
 
 In **Chapter 7: Training Optimization & Systems**, we will dive into the software engineering of distributed training, exploring 3D Parallelism, ZeRO optimization, and Flash Attention.
 

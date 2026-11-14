@@ -36,9 +36,9 @@ In RNNs, multiplying the same weight matrix over and over causes these exact eff
 RNNs are trained using an extension of backpropagation called **Backpropagation Through Time (BPTT)**. The network is unrolled across time steps, and gradients are calculated from the output back to the beginning.
 
 Consider the update for the hidden state weight matrix $\mathbf{W}_{hh}$. The gradient involves a chain of matrix multiplications across time steps:
-$$\frac{\partial \mathbf{h}_t}{\partial \mathbf{h}_0} = \prod_{k=1}^t \mathbf{W}_{hh}^T \text{diag}(\sigma'(\mathbf{W}_{hh}\mathbf{h}_{k-1} + \mathbf{W}_{xh}\mathbf{x}_k + \mathbf{b}_h))$$
-
-If the eigenvalues of $\mathbf{W}_{hh}$ are smaller than 1, multiplying them repeatedly causes the gradient to shrink exponentially (**Vanishing Gradient**). If they are larger than 1, the gradient grows exponentially (**Exploding Gradient**).
+For column-vector states, define $z_k=W_{hh}h_{k-1}+W_{xh}x_k+b_h$ and the forward Jacobian $J_k=\operatorname{diag}(\sigma'(z_k))W_{hh}$. The ordered product is
+$$\frac{\partial h_t}{\partial h_0}=J_tJ_{t-1}\cdots J_1.$$
+Backpropagation applies its transpose to the output gradient. The bound $\|J_t\cdots J_1\|_2\le\prod_k\|J_k\|_2$ explains contraction when every factor is bounded below one. A growing upper bound does not prove actual growth: activation saturation, directions and non-normal matrices matter. The weight matrix's spectral radius alone is not a necessary-and-sufficient stability test [[3]](#ref-3).
 
 ### Consequences
 - **Vanishing Gradients:** The network cannot learn long-term dependencies because the signal from early time steps becomes too weak to update the weights.
@@ -116,13 +116,12 @@ LSTMs control the cell state using three "gates":
 <em style={{ marginTop: '10px', color: '#7f8c8d' }}>Source: [colah's blog](https://colah.github.io/posts/2015-08-Understanding-LSTMs/)</em>
 </div>
 
-#### Mathematical Interpretation: How It Stops Vanishing Gradients
+#### Mathematical Interpretation: How the Direct Path Helps
 In a standard RNN, the gradient flow involves repeated multiplication of the weight matrix:
-$$\frac{\partial \mathbf{h}_t}{\partial \mathbf{h}_{t-1}} = \mathbf{W}_{hh}^T \text{diag}(\sigma'(...))$$
+$$\frac{\partial \mathbf{h}_t}{\partial \mathbf{h}_{t-1}} = \operatorname{diag}(\sigma'(z_t))\mathbf{W}_{hh}$$
 
 In contrast, the gradient flow through the cell state in an LSTM is:
-$$\frac{\partial \mathbf{c}_t}{\partial \mathbf{c}_{t-1}} = \mathbf{f}_t$$
-Here, $\mathbf{f}_t$ is the output of the **Forget Gate** (a value between 0 and 1). If the network learns that the information is important and sets $\mathbf{f}_t \approx 1$, the gradient flows back through time *without* being multiplied by weight matrices or activation derivatives. This effectively prevents the gradient from vanishing.
+Holding gate outputs fixed, the direct cell-state path has Jacobian $\operatorname{diag}(f_t)$, where each forget-gate value lies between zero and one. Values near one preserve this path's gradient. This is not the total derivative: gates depend on earlier hidden states and add other paths. LSTMs mitigate vanishing gradients but do not guarantee stable gradients for every sequence.
 
 #### The Metaphor: The Diary
 Think of an LSTM as a **diary**:
@@ -166,8 +165,8 @@ Proposed by Cho et al. in 2014, the GRU is a streamlined version of the LSTM.
 ## Quizzes
 
 <details>
-<summary>Quiz 1: Why does the chain rule lead to vanishing gradients in RNNs but not as severely in feed-forward networks?</summary>
-*In RNNs, the same weight matrix $\mathbf{W}_{hh}$ is multiplied repeatedly at every time step. In a feed-forward network, different layers have different weight matrices, so the effect of repeated multiplication of the same value is less pronounced, though vanishing gradients still occur in very deep feed-forward networks (which led to ResNets).*
+<summary>Quiz 1: Why can both recurrent and deep feed-forward networks lose long-range gradient signals?</summary>
+*Both multiply many Jacobians. RNNs reuse parameters over time, but repeated use of the same matrix is not required for vanishing gradients; depth, activations and singular directions matter.*
 </details>
 
 <details>
@@ -191,8 +190,8 @@ Proposed by Cho et al. in 2014, the GRU is a streamlined version of the LSTM.
 </details>
 
 <details>
-<summary>Quiz 6: Formulate the necessary condition for the recurrent weight matrix $\mathbf{W}_{hh}$ in terms of its spectral radius $\rho(\mathbf{W}_{hh})$ to prevent exploding gradients, and explain its mathematical justification.</summary>
-*To prevent exploding gradients, a necessary condition is that the spectral radius of the recurrent weight matrix must satisfy $\rho(\mathbf{W}_{hh}) \le 1$. The spectral radius is defined as $\rho(\mathbf{W}_{hh}) = \max_i \{|\lambda_i|\}$, where $\lambda_i$ are the eigenvalues of $\mathbf{W}_{hh}$. During Backpropagation Through Time (BPTT), the gradient involves repeated multiplication of the Jacobian $\frac{\partial \mathbf{h}_t}{\partial \mathbf{h}_k} = \prod_{j=k+1}^t \text{diag}(\sigma'(\mathbf{z}_j)) \mathbf{W}_{hh}^T$. For activation functions like tanh, the derivative satisfies $|\sigma'(z)| \le 1$. The norm of the product is bounded by $\|\prod_{j=k+1}^t \frac{\partial \mathbf{h}_j}{\partial \mathbf{h}_{j-1}}\| \le \|\mathbf{W}_{hh}\|^{t-k}$. If the spectral radius $\rho(\mathbf{W}_{hh}) > 1$, the term $\|\mathbf{W}_{hh}\|^{t-k}$ will grow exponentially as $t-k \rightarrow \infty$, causing exploding gradients. Therefore, $\rho(\mathbf{W}_{hh}) \le 1$ is a necessary condition for stability.*
+<summary>Quiz 6: Does a recurrent weight spectral radius greater than one prove exploding gradients?</summary>
+*No. Activation derivatives can contract the actual ordered Jacobian product. A sufficient non-expansion bound is $\|J_k\|_2\le1$ at every step; an upper bound that grows is not a lower bound proving explosion. Even a spectral radius at most one does not rule out transient amplification in a non-normal matrix.*
 </details>
 
 ---

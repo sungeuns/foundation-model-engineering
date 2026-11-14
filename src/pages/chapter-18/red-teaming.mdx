@@ -8,7 +8,7 @@ import AutomatedRedTeamingVisualizer from '../../components/chapter-18/Automated
 
 # 18.1 Red Teaming
 
-In the previous chapter, we explored how data contamination can artificially inflate a model's performance on evaluation benchmarks, leading to false positives in reasoning capabilities. But what happens when a model performs *exactly* as intended on standard tests, yet harbors latent behaviors that violate safety boundaries? 
+In the previous chapter, we explored how data contamination can artificially inflate a model's performance on evaluation benchmarks, leading to false positives in reasoning capabilities. But what happens when a model performs *exactly* as intended on standard tests, yet harbors latent behaviors that violate safety boundaries?
 
 In traditional software engineering, security teams hunt for buffer overflows, misconfigured ports, or unvalidated SQL inputs. In Foundation Model engineering, the "port" is the context window, and the "payload" is natural language. The practice of systematically probing these models to uncover vulnerabilities, bypass safety filters, and elicit unintended behaviors is known as **AI Red Teaming**.
 
@@ -18,21 +18,38 @@ Red teaming has evolved rapidly from humans manually typing clever prompts to fu
 
 ## The Threat Landscape: From ATT&CK to ATLAS
 
-Historically, cybersecurity red teaming has been governed by frameworks like **MITRE ATT&CK** (with recent versions like v18.1 emphasizing cloud and virtualization environments). ATT&CK operates on an "assume breach" mentality, mapping out the Tactics, Techniques, and Procedures (TTPs) adversaries use to move laterally across infrastructure. 
+Historically, cybersecurity red teaming has been governed by frameworks like **MITRE ATT&CK** (with recent versions like v18.1 emphasizing cloud and virtualization environments). ATT&CK operates on an "assume breach" mentality, mapping out the Tactics, Techniques, and Procedures (TTPs) adversaries use to move laterally across infrastructure.
 
-However, traditional frameworks fail to account for vulnerabilities inherent to the neural network itself. An attacker does not need to compromise the host server to extract sensitive data from an LLM; they only need to manipulate the mathematical weights via the input prompt.
+A prompt attack can redirect model or tool behavior without compromising the host. In ordinary inference, inputs change activations and output distributions, not the stored weights. Private data, system instructions and tool permissions are distinct attack surfaces that need separate tests.
 
-To address this, the industry adopted **MITRE ATLAS** (Adversarial Threat Landscape for Artificial-Intelligence Systems) [[1]](#ref-1). As of its late 2025 and early 2026 updates, ATLAS serves as the definitive taxonomy for AI-specific TTPs. 
+To address this, the industry adopted **MITRE ATLAS** (Adversarial Threat Landscape for Artificial-Intelligence Systems) [[1]](#ref-1). As of its late 2025 and early 2026 updates, ATLAS serves as the definitive taxonomy for AI-specific TTPs.
 
 ### Key MITRE ATLAS Tactics
+
+Taxonomy checked **as of 2026-11-15**, against the ATLAS 2026.07 data [[1]](#ref-1).
 While traditional red teaming focuses on gaining root access, AI red teaming focuses on manipulating model behavior. Key tactics include:
-- **ML Attack Staging (AML.TA0004)**: Crafting adversarial inputs (e.g., Prompt Injection, Jailbreaking) designed to bypass safety guardrails.
-- **Exfiltration (AML.TA0009)**: Extracting the model's training data, proprietary system prompts, or embedded API keys through inference probing.
-- **Impact (AML.TA0014)**: Disrupting the AI system, such as executing Denial of Wallet (DoW) attacks by forcing the model into infinite generative loops, or abusing Agentic AI systems to execute unauthorized commands in external environments.
+- **ML Attack Staging (AML.TA0001)**: Crafting adversarial inputs (e.g., Prompt Injection, Jailbreaking) designed to bypass safety guardrails.
+- **Exfiltration (AML.TA0010)**: Extracting the model's training data, proprietary system prompts, or embedded API keys through inference probing.
+- **Impact (AML.TA0011)**: Disrupting the AI system, such as executing Denial of Wallet (DoW) attacks by forcing the model into infinite generative loops, or abusing Agentic AI systems to execute unauthorized commands in external environments.
 
 ![mitre_atlas_matrix](../../assets/images/chapter-18/mitre_atlas_matrix.png)
 
 ---
+
+### Product attack surfaces
+
+| Surface | Test question |
+| :--- | :--- |
+| System policy | Do role boundaries survive untrusted instructions? |
+| Retrieved documents | Is retrieved text treated as evidence rather than authority? |
+| Tools | Are payment, email, database and execution permissions enforced outside the model? |
+| Long context | Does policy adherence change with position and length? |
+| Persistent memory | Can untrusted saved text influence a future session? |
+| Output channels | Are generated links, HTML and files handled safely? |
+
+### Incidents as evaluation prompts
+
+Microsoft's Tay incident illustrates coordinated public-input abuse [[5]](#ref-5). Reporting on employees entering Samsung information into an external assistant illustrates workflow disclosure [[6]](#ref-6); the Chevrolet dealer chatbot illustrates unauthorized promises [[7]](#ref-7). The Air Canada tribunal decision concerns incorrect policy advice and company responsibility [[8]](#ref-8). These are different failure classes, not evidence of one universal jailbreak mechanism. Turn each into a scoped regression test with moderation, data-handling, authorization or policy-grounding checks as appropriate.
 
 ## The Mechanics of Automated Red Teaming (ART)
 
@@ -50,7 +67,7 @@ Because text tokens are discrete, we cannot perform standard gradient descent. I
 
 1. **Forward Pass**: Pass the prompt through the model to get the logits.
 2. **Gradient Extraction**: Compute the Cross-Entropy Loss against the target affirmative response. Backpropagate to find the gradient of the loss with respect to the one-hot token embeddings of the suffix.
-3. **Candidate Selection**: A negative gradient for a specific token in the vocabulary indicates that replacing the current token with this new token will decrease the loss (making the target response more likely).
+3. **Candidate Selection**: Rank token replacements using a first-order gradient approximation. A lower predicted loss does not guarantee improvement after a discrete replacement; evaluate candidates explicitly.
 4. **Greedy Search**: Select the top-$k$ token replacements, evaluate them in a forward pass, and greedily update the suffix.
 
 Below is a PyTorch implementation demonstrating the core gradient extraction step of the GCG algorithm.
@@ -61,52 +78,52 @@ import torch.nn.functional as F
 from transformers import PreTrainedModel
 
 def compute_token_gradients(
-    model: PreTrainedModel, 
-    input_ids: torch.Tensor, 
-    target_slice: slice, 
+    model: PreTrainedModel,
+    input_ids: torch.Tensor,
+    target_slice: slice,
     loss_fn: torch.nn.Module
 ) -> torch.Tensor:
     """
-    Computes the gradient of the loss with respect to the one-hot embeddings 
+    Computes the gradient of the loss with respect to the one-hot embeddings
     of the input tokens, used in the Greedy Coordinate Gradient (GCG) attack.
-    
+
     Args:
         model: The target LLM (white-box access required).
         input_ids: Tensor of shape (1, seq_len) containing token IDs.
-        target_slice: The slice object indicating which tokens in input_ids 
+        target_slice: The slice object indicating which tokens in input_ids
                       correspond to the target response (e.g., "Sure, here is...").
         loss_fn: The loss function (typically CrossEntropyLoss).
-        
+
     Returns:
         gradients of shape (seq_len, vocab_size).
     """
     # 1. Access the continuous embedding matrix
     embed_layer = model.get_input_embeddings()
     vocab_size = embed_layer.weight.shape[0]
-    
+
     # 2. Convert discrete input_ids to one-hot vectors to allow gradient tracking
     # Shape: (1, seq_len, vocab_size)
     one_hot = F.one_hot(input_ids, num_classes=vocab_size).to(embed_layer.weight.dtype)
     one_hot.requires_grad_()
-    
+
     # 3. Project one-hot vectors into the continuous embedding space
     # (1, seq_len, vocab_size) @ (vocab_size, hidden_dim) -> (1, seq_len, hidden_dim)
     embeddings = torch.matmul(one_hot, embed_layer.weight)
-    
+
     # 4. Forward pass using the continuous embeddings
     outputs = model(inputs_embeds=embeddings)
     logits = outputs.logits # Shape: (1, seq_len, vocab_size)
-    
+
     # 5. Compute loss exclusively over the target response tokens
     # Shift logits by 1 to align with next-token prediction
     shift_logits = logits[0, target_slice.start - 1 : target_slice.stop - 1, :]
     shift_labels = input_ids[0, target_slice]
-    
+
     loss = loss_fn(shift_logits, shift_labels)
-    
+
     # 6. Backward pass to compute gradients w.r.t the one-hot matrix
     loss.backward()
-    
+
     # The resulting gradients indicate the direction of steepest ascent for the loss.
     # To minimize loss, we look for the most negative gradient values.
     return one_hot.grad[0]
@@ -122,7 +139,7 @@ def get_top_k_replacements(gradients: torch.Tensor, k: int = 256) -> torch.Tenso
 
 ### Black-Box Optimization: LLM-Assisted Red Teaming
 
-In most real-world scenarios, red teams only have API access to the target model (Black-Box). To attack these systems, engineers use **Attacker LLMs** to dynamically generate and refine adversarial prompts. 
+In most real-world scenarios, red teams only have API access to the target model (Black-Box). To attack these systems, engineers use **Attacker LLMs** to dynamically generate and refine adversarial prompts.
 
 A leading framework in this space is **PAIR (Prompt Automatic Iterative Refinement)** [[3]](#ref-3). PAIR instantiates two models:
 1. **The Attacker**: An LLM tasked with generating a prompt to elicit a specific harmful behavior from the Target.
@@ -133,9 +150,9 @@ This creates an automated feedback loop. If the Target refuses, the Critic expla
 
 #### Interactive PAIR Simulation
 
-Use the interactive visualizer below to step through a simulated PAIR attack loop. Observe how the Attacker LLM adjusts its strategy based on the Critic's feedback to eventually bypass the Target's alignment guardrails.
+The authored interaction below illustrates iterative policy tests and a judge false positive. It does not demonstrate a successful jailbreak of a real model.
 
-<AutomatedRedTeamingVisualizer client:load />
+<AutomatedRedTeamingVisualizer client:load lang="en" />
 
 ---
 
@@ -156,20 +173,20 @@ The Attacker learns a high-level policy (e.g., "Build trust -> Introduce hypothe
 
 ## The Refusal Gap
 
-As red teaming techniques become more aggressive, model developers respond by aggressively scaling safety guardrails. This arms race has sharpened attention on a new safety-evaluation metric: the **Refusal Gap** [[4]](#ref-4).
+In Chen et al., the refusal gap is disagreement between an internal hidden-state refusal probe and an external safety evaluator [[4]](#ref-4). Neither is assumed to be ground truth: validate the probe and audit evaluator errors separately.
 
-When a model is subjected to intense adversarial training to defend against automated red teaming (e.g., Robust Refusal Dynamic Defense, or R2D2), it often becomes overly cautious. It begins refusing benign, safe requests that structurally resemble adversarial prompts—a phenomenon known as *over-refusal*. 
+Over-refusal of benign requests is a separate measure. Report attack success on harmful requests alongside benign refusal rates, and do not hide severe tool or disclosure failures in an aggregate average.
 
-The Refusal Gap measures the inconsistency between a model's safety evaluator judgments and its actual refusal behavior. A highly capable model must not only withstand a GCG attack but also accurately distinguish between a malicious prompt and a legitimate user query formatted in a complex way.
+## Enterprise red-team workflow
 
----
+Define authorized scope and tool permissions; build a product risk taxonomy; collect incident and threat-model seeds; generate controlled variants; label severity; retain failures as quarantined regression cases; and retest after mitigation. Version the full model, prompt, retrieval and tool configuration. Track attack success and benign refusal separately, with denominators, budgets, domain slices and judge calibration. Finding new failures and preventing recurrence matter more than reducing one benchmark number.
 
 ## Summary & Open Questions
 
 Red teaming has transitioned from an ad-hoc, manual exercise into a rigorous algorithmic discipline. We explored how frameworks like MITRE ATLAS provide a structured taxonomy for AI vulnerabilities, moving beyond traditional infrastructure attacks. We examined the mechanics of Automated Red Teaming, examining both White-Box gradient approximations (GCG) and Black-Box iterative refinement (PAIR). Finally, we looked at the frontier of multi-turn RL attacks and the resulting challenge of the Refusal Gap.
 
 As we automate the generation of adversarial attacks, we must consider the following open questions:
-- If we use a highly capable LLM as an Attacker to red team a weaker Target LLM, how do we red team the Attacker itself? 
+- If we use a highly capable LLM as an Attacker to red team a weaker Target LLM, how do we red team the Attacker itself?
 - Can we design a mathematical defense against optimization-based attacks (like GCG) that does not result in catastrophic over-refusal of benign prompts?
 
 These questions highlight the need for robust defense mechanisms at the system and prompt level, which we will explore in detail in **Chapter 18.2: Jailbreaking & Defense**.
@@ -197,15 +214,20 @@ These questions highlight the need for robust defense mechanisms at the system a
 </details>
 
 <details>
-<summary>Quiz 5: What is the "Refusal Gap," and why is it a negative consequence of overly aggressive adversarial training?</summary>
-*The Refusal Gap is the discrepancy between a model's actual safety boundaries and its refusal behavior. Aggressive adversarial training can cause "over-refusal," where the model becomes overly cautious and refuses completely benign, safe requests simply because they share structural similarities with known attacks (e.g., refusing to write a fictional story about a hacker).*
+<summary>Quiz 5: Are refusal gap and benign over-refusal the same metric?</summary>
+*No. The cited paper’s refusal gap measures disagreement between an internal refusal probe and an external safety evaluator. Benign refusal is measured separately, and both evaluators can err.*
 </details>
 
 ---
 
 ## References
 
-1. <a id="ref-1"></a>MITRE ATLAS (2025). *Adversarial Threat Landscape for Artificial-Intelligence Systems*. MITRE Corporation.
+1. <a id="ref-1"></a>MITRE ATLAS. *Adversarial Threat Landscape for Artificial-Intelligence Systems*, 2026.07 data. [Versioned taxonomy](https://github.com/mitre-atlas/atlas-data/tree/v2026.07).
 2. <a id="ref-2"></a>Zou, A., et al. (2023). *Universal and Transferable Adversarial Attacks on Aligned Language Models*. [arXiv:2307.15043](https://arxiv.org/abs/2307.15043).
 3. <a id="ref-3"></a>Chao, P., et al. (2023). *Jailbreaking Black Box Large Language Models in Twenty Queries*. [arXiv:2310.08419](https://arxiv.org/abs/2310.08419).
 4. <a id="ref-4"></a>Chen, Y., Du, X., Zou, X., Zhao, C., Deng, H., Li, H., & Kuang, X. (2025). *Refusal-Aware Red Teaming: Exposing Inconsistency in Safety Evaluations.* [ACL Anthology](https://aclanthology.org/2025.emnlp-main.49/).
+
+5. <a id="ref-5"></a>Microsoft. (2016). *Learning from Tay's introduction.* [Official Microsoft Blog](https://blogs.microsoft.com/blog/2016/03/25/learning-tays-introduction/).
+6. <a id="ref-6"></a>Moore, M. (2023). *Samsung bans ChatGPT use after employee leak.* [TechRadar](https://www.techradar.com/news/samsung-bans-chatgpt-use-after-employee-leak).
+7. <a id="ref-7"></a>Carter, L. (2023). *Chevrolet Dealer's AI Chatbot Goes Rogue Thanks To Pranksters.* [Jalopnik](https://www.jalopnik.com/chevrolet-dealer-ai-help-chatbot-goes-rogue-pranksters-1851112556/).
+8. <a id="ref-8"></a>Civil Resolution Tribunal. (2024). *Moffatt v. Air Canada, 2024 BCCRT 149.* [CanLII](https://www.canlii.org/en/bc/bccrt/doc/2024/2024bccrt149/2024bccrt149.html); [decision PDF mirror](https://www.thesedonaconference.org/sites/default/files/meeting_paper/Moffet%20v%20AirCanada.pdf).

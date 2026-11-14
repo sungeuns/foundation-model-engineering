@@ -142,7 +142,7 @@ For learning-based writers, inherit the complete RLVR contracts in 15.5 and addi
 
 The visualizer below shows the intuition behind consolidation: temporary observations do not all belong in the same long-term store, and memory quality depends heavily on how the system routes information.
 
-<MemorySubstrateVisualizer client:load />
+<MemorySubstrateVisualizer client:load lang="en" />
 
 ---
 
@@ -161,6 +161,12 @@ In the next section, we move from memory to reliability: how do we recover when 
 The mechanism matters: summaries and fact stores can discard relations or dependency paths needed by a later question. Before adding a learned writer or graph, compare with raw-history retrieval under the same reader, corpus cutoff, evidence budget, and grader. Measure evidence coverage, utilization, answer accuracy, ingestion/storage cost, retrieval latency, and update/delete correctness separately. Preserving raw evidence is conditional on consent and retention policy; it is not permission to keep everything forever.
 
 A retrieval baseline can be strong while still needing access control, temporal validity, provenance, and deletion lineage. Route bounded write/read judgments through [Section 16.7's decision contract](/chapter-16/decision-models-and-selective-prediction), then validate their downstream effect rather than rewarding compression alone.
+
+## WikiTrace: keep the evidence behind a lesson
+
+**As of 2026-11-15 — emerging research.** WikiTrace links reusable lessons to run summaries and unchanged trajectories. An agent can inspect those sources when guidance is insufficient or conflicts with observations. A link preserves provenance; it does not prove the lesson correct. The evaluated system initially supplies all lessons, leaving large-memory retrieval unresolved, and its reasoning-based diagnostic labels are not causal explanations. [[8]](#ref-8)
+
+The engineering implication is to store applicability, outcome and source identity beside each memory. Measure regressions as well as recovered successes; retain access controls and deletion lineage through summaries and source runs.
 
 ## Quizzes
 
@@ -202,3 +208,4 @@ A retrieval baseline can be strong while still needing access control, temporal 
 
 6. <a id="ref-6"></a>Toma, S.-A., et al. (2026). *Beyond Downstream QA: Rethinking How We Evaluate Agent Memory*. Preprint. [Source](https://arxiv.org/abs/2610.22209).
 7. <a id="ref-7"></a>Bao, Z., et al. (2026-10-22). *Is Complex Agentic Memory Always Needed? Naive RAG Is Stronger Than We Thought.* Preprint. [arXiv:2610.30755v1](https://arxiv.org/abs/2610.30755v1).
+8. <a id="ref-8"></a>Research preprint (2026). [Don’t Just Trust Your Memory: Evidence-Linked Memory Reduces Memory-Induced Degradation in LLM Agents](https://arxiv.org/html/2611.14320v1). Version pinned; accessed 2026-11-15.

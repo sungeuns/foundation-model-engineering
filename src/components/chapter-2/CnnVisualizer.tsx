@@ -10,7 +10,7 @@ export default function CnnVisualizer({ lang = 'en' }: CnnVisualizerProps) {
 
   const text = "This movie was not good at all".split(" ");
   // Simulated scores for a filter looking for negative sentiment (e.g., "not good")
-  const scores = [0.1, 0.2, 0.3, 0.9, 0.4, 0.2]; // 6 positions for window size 3
+  const scores = [0.1, 0.2, 0.3, 0.9, 0.4]; // 5 positions for window size 3
 
   const maxVal = Math.max(...scores);
 
@@ -35,14 +35,16 @@ export default function CnnVisualizer({ lang = 'en' }: CnnVisualizerProps) {
     <div className="glass-container" style={{ padding: '20px', marginTop: '2rem', marginBottom: '2rem' }}>
       <div style={{ textAlign: 'center', fontWeight: 'bold', marginBottom: '20px', color: '#1e293b' }}>
         {t.title}
+        <p style={{fontSize: "0.85rem"}}>{lang === "ko" ? "패딩 없이 7개 토큰에 폭 3 필터를 적용하면 5개 위치가 됩니다. 점수는 설명용으로 작성했습니다." : "Seven tokens and a width-3 filter give five valid positions without padding. Scores are authored illustrations."}</p>
       </div>
 
       <div style={{ textAlign: 'center', marginBottom: '20px' }}>
         <label style={{ color: '#475569', marginRight: '10px' }}>{t.slider}</label>
         <input
+          aria-label={t.slider}
           type="range"
           min="0"
-          max="5"
+          max={scores.length - 1}
           step="1"
           value={pos}
           onChange={(e) => setPos(parseInt(e.target.value))}
@@ -50,7 +52,7 @@ export default function CnnVisualizer({ lang = 'en' }: CnnVisualizerProps) {
         />
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'center', gap: '5px', marginTop: '20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', gap: '5px', flexWrap: 'wrap', marginTop: '20px' }}>
         {text.map((word, idx) => {
           const isActive = idx >= pos && idx < pos + 3;
           return (

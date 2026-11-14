@@ -64,13 +64,13 @@ This allows the network to capture local patterns (n-grams), such as "not good" 
 
 - **TextCNN (Kim, 2014) [[1]](#ref-1):** A simple but effective architecture that uses multiple filter sizes to capture different n-gram lengths, followed by max-pooling. It showed excellent performance on text classification tasks.
 
-**Interesting Fact:** When Yoon Kim's TextCNN paper was published, it surprised many researchers. At the time, the dominant view was that "text is a sequence, so we must use RNNs." However, CNNs were able to capture key word combinations (n-grams) brilliantly, just like they capture local features in images, and most importantly, they were much faster than RNNs.
-
 ---
 
 ## PyTorch TextCNN
 
 Here is a simplified version of the famous TextCNN architecture (Kim, 2014) [[1]](#ref-1) in PyTorch, using 1D convolutions for text classification.
+
+ByteNet used dilated convolutions to expand receptive fields for character-level language modeling and translation while preserving sequence resolution [[3]](#ref-3). WaveNet demonstrated related causal convolution ideas for raw audio generation [[4]](#ref-4).
 
 ```python
 import torch
@@ -81,34 +81,34 @@ class TextCNN(nn.Module):
     def __init__(self, vocab_size, embed_dim, num_classes):
         super(TextCNN, self).__init__()
         self.embedding = nn.Embedding(vocab_size, embed_dim)
-        
+
         # 3 different filter sizes: 3, 4, and 5 words
         self.conv1 = nn.Conv1d(in_channels=embed_dim, out_channels=100, kernel_size=3)
         self.conv2 = nn.Conv1d(in_channels=embed_dim, out_channels=100, kernel_size=4)
         self.conv3 = nn.Conv1d(in_channels=embed_dim, out_channels=100, kernel_size=5)
-        
+
         self.fc = nn.Linear(300, num_classes)
-        
+
     def forward(self, x):
         # x shape: (batch_size, seq_len)
         embedded = self.embedding(x) # (batch, seq_len, embed_dim)
-        
+
         # Conv1d expects (batch, channels, seq_len)
         embedded = embedded.transpose(1, 2)
-        
+
         # Apply convolutions and ReLU
         x1 = F.relu(self.conv1(embedded))
         x2 = F.relu(self.conv2(embedded))
         x3 = F.relu(self.conv3(embedded))
-        
+
         # Max-over-time pooling
         x1 = F.max_pool1d(x1, x1.shape[2]).squeeze(2)
         x2 = F.max_pool1d(x2, x2.shape[2]).squeeze(2)
         x3 = F.max_pool1d(x3, x3.shape[2]).squeeze(2)
-        
+
         # Concatenate pool results
         combined = torch.cat((x1, x2, x3), dim=1)
-        
+
         # Fully connected layer
         logits = self.fc(combined)
         return logits
@@ -135,22 +135,17 @@ Visualize how a filter of size 3 slides over a sentence and produces a feature m
 
 ---
 
-## Looking Ahead: The Need for Global Context
+## From local receptive fields to global attention
 
-We have seen that CNNs offer speed through parallelization, but they struggle with long-range dependencies compared to RNNs.
-- Is it possible to achieve both full parallelization and global context?
-- Can we model relationships between all words in a sentence directly, without sequential processing or local windows?
-- How does the concept of "Self-Attention" eliminate the need for recurrence and convolution?
+For depth $L$, kernel width $k$, stride one and no dilation, the receptive field spans $1+L(k-1)$ positions. Dilation expands it faster. Convolution preserves order within windows; TextCNN’s max-over-time pooling discards the location of the strongest response. Dense self-attention directly connects positions allowed by its mask according to their content, with quadratic sequence-length cost for the dense attention core. This is an architectural tradeoff, not proof that attention always wins.
 
-These questions lead us to **Chapter 3: Transformers**, where we will explore the architecture that revolutionized AI by relying *entirely* on attention.
-
----
+The next chapter examines Transformers, which use content-based connections between positions instead of recurrence and local windows.
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: What is the main advantage of CNNs over RNNs in NLP?</summary>
-*The main advantage is parallelization. CNNs can process all parts of a sequence simultaneously using convolutions, making them much faster to train on GPUs than RNNs, which must process steps sequentially.*
+<summary>Quiz 1: How does CNN parallelism differ from an RNN?</summary>
+*Positions within a convolution layer can be computed in parallel, whereas a conventional RNN has time-step state dependencies. Actual speed depends on depth, shapes, kernels and hardware.*
 </details>
 
 <details>
@@ -159,8 +154,8 @@ These questions lead us to **Chapter 3: Transformers**, where we will explore th
 </details>
 
 <details>
-<summary>Quiz 3: Why are Transformers preferred over CNNs for large language models today?</summary>
-*Transformers use self-attention, which allows every position to attend to all other positions in a single operation, regardless of distance. This captures long-range dependencies much more effectively than stacking many convolutional layers, while still being highly parallelizable.*
+<summary>Quiz 3: How does self-attention connect distant positions?</summary>
+*It directly forms content-dependent connections between mask-permitted positions. A causal mask excludes future tokens. Its cost/expressivity tradeoff differs from widening a convolutional receptive field.*
 </details>
 
 <details>
@@ -184,3 +179,5 @@ These questions lead us to **Chapter 3: Transformers**, where we will explore th
 
 1. <a id="ref-1"></a>Kim, Y. (2014). *Convolutional neural networks for sentence classification*. [arXiv:1408.5882](https://arxiv.org/abs/1408.5882).
 2. <a id="ref-2"></a>**Recommended Video**: [3Blue1Brown: But what is a convolution?](https://www.youtube.com/watch?v=IaSGqQa5O-M) A fantastic visual explanation of the mathematical concept of convolution.
+3. <a id="ref-3"></a>Kalchbrenner, N., et al. (2016). *Neural Machine Translation in Linear Time.* [Paper](https://arxiv.org/abs/1610.10099).
+4. <a id="ref-4"></a>van den Oord, A., et al. (2016). *WaveNet: A Generative Model for Raw Audio.* [Paper](https://arxiv.org/abs/1609.03499).

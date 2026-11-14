@@ -102,14 +102,14 @@ const breadcrumbData = {
 };
 
 // Navigation logic
-const allPages = chapters.flatMap(ch => 
+const allPages = chapters.flatMap(ch =>
   ch.subs.map(sub => ({
     title: sub.title[lang],
     path: getLocalePath(sub.path, lang)
   }))
 );
 
-const currentIndex = allPages.findIndex(page => 
+const currentIndex = allPages.findIndex(page =>
   currentPath === normalizePathname(page.path)
 );
 
@@ -165,12 +165,17 @@ if (currentIndex !== -1) {
 
   </head>
   <body>
-    <button class="menu-toggle" id="menuToggle">Menu</button>
-    
-    <nav class="sidebar" id="sidebar">
+    <a class="skip-link" href="#main-content">{isKo ? '본문으로 바로가기' : 'Skip to content'}</a>
+    <button class="menu-toggle" id="menuToggle" type="button" aria-controls="sidebar" aria-expanded="false">{isKo ? '목차' : 'Contents'}</button>
+    <button class="sidebar-backdrop" id="sidebarBackdrop" type="button" tabindex="-1" aria-label={isKo ? '목차 닫기' : 'Close contents'} hidden></button>
+
+    <nav class="sidebar" id="sidebar" aria-label={isKo ? '책 목차' : 'Book contents'}>
       <h1><a href={toHref(homePath)} style="text-decoration: none; color: inherit;">{isKo ? '목차' : 'Table of Contents'}</a></h1>
+      <label class="chapter-search-label" for="chapterSearch">{isKo ? '주제 찾기' : 'Find a topic'}</label>
+      <input id="chapterSearch" type="search" placeholder={isKo ? '예: KV cache, 평가, 12.1' : 'e.g. KV cache, evaluation, 12.1'} autocomplete="off" />
+      <p id="searchEmpty" class="search-empty" role="status" hidden>{isKo ? '일치하는 주제가 없습니다. 다른 검색어를 입력하세요.' : 'No matching topics. Try another search.'}</p>
       {chapters.map(ch => (
-        <div>
+        <div class="chapter-group">
           <h2>{ch.title[lang]}</h2>
           <ul>
             {ch.subs.map(sub => (
@@ -178,9 +183,11 @@ if (currentIndex !== -1) {
                 {(() => {
                   const pagePath = getLocalePath(sub.path, lang);
                   return (
-                <a 
-                  href={toHref(pagePath)} 
+                <a
+                  href={toHref(pagePath)}
                   class={isActive(pagePath) ? 'active' : ''}
+                  aria-current={isActive(pagePath) ? 'page' : undefined}
+                  data-search={`${ch.title.en} ${ch.title.ko} ${sub.title.en} ${sub.title.ko} ${searchDescriptions[sub.path]?.[lang] || ''}`}
                 >
                   {sub.title[lang]}
                 </a>
@@ -192,13 +199,13 @@ if (currentIndex !== -1) {
         </div>
       ))}
     </nav>
-    
+
     <div class="content-wrapper">
       <div class="container">
         <header>
-          <h1><a href={toHref(homePath)} style="text-decoration: none; color: inherit;">{siteTitle}</a></h1>
+          <p class="book-title"><a href={toHref(homePath)} style="text-decoration: none; color: inherit;">{siteTitle}</a></p>
           <div class="header-actions">
-            <a class="github-link" href={githubUrl} target="_blank" rel="noopener noreferrer" aria-label="Open GitHub repository">
+            <a class="github-link" href={githubUrl} target="_blank" rel="noopener noreferrer" aria-label={isKo ? 'GitHub 저장소 열기' : 'Open GitHub repository'}>
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M12 2C6.48 2 2 6.58 2 12.26c0 4.53 2.87 8.37 6.84 9.73.5.1.68-.22.68-.49 0-.24-.01-.88-.01-1.73-2.78.62-3.37-1.37-3.37-1.37-.45-1.19-1.11-1.51-1.11-1.51-.91-.64.07-.63.07-.63 1 .07 1.53 1.06 1.53 1.06.9 1.57 2.36 1.12 2.94.85.09-.67.35-1.12.63-1.38-2.22-.26-4.56-1.14-4.56-5.07 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.31.1-2.71 0 0 .84-.28 2.75 1.05A9.34 9.34 0 0 1 12 6.97c.85 0 1.7.12 2.5.35 1.9-1.33 2.74-1.05 2.74-1.05.55 1.4.2 2.45.1 2.71.64.72 1.03 1.63 1.03 2.75 0 3.94-2.34 4.8-4.57 5.06.36.32.68.94.68 1.9 0 1.37-.01 2.47-.01 2.81 0 .27.18.59.69.49A10.15 10.15 0 0 0 22 12.26C22 6.58 17.52 2 12 2Z"></path>
               </svg>
@@ -220,7 +227,13 @@ if (currentIndex !== -1) {
             </ol>
           </nav>
         )}
-        <main>
+        {!isHomePage && (
+          <details class="page-outline" id="pageOutline" hidden>
+            <summary>{isKo ? '이 페이지의 내용' : 'On this page'}</summary>
+            <nav aria-label={isKo ? '페이지 내 목차' : 'On this page'}><ol id="pageOutlineList"></ol></nav>
+          </details>
+        )}
+        <main id="main-content" tabindex="-1">
           <slot />
         </main>
         <div class="navigation-links">
@@ -244,18 +257,75 @@ if (currentIndex !== -1) {
         </footer>
       </div>
     </div>
-    
+
     <script>
       const toggle = document.getElementById('menuToggle');
       const sidebar = document.getElementById('sidebar');
+      const backdrop = document.getElementById('sidebarBackdrop');
       const localeDropdown = document.getElementById('localeDropdown');
       const localeButton = document.getElementById('localeButton');
-      
-      if (toggle && sidebar) {
-        toggle.addEventListener('click', () => {
-          sidebar.classList.toggle('open');
+
+      const isKo = document.documentElement.lang === 'ko';
+      const mobile = window.matchMedia('(max-width: 900px)');
+      const setMenu = (open: boolean, restoreFocus = false) => {
+        if (!sidebar || !toggle || !backdrop) return;
+        sidebar.classList.toggle('open', open);
+        sidebar.inert = mobile.matches && !open;
+        toggle.setAttribute('aria-expanded', String(open));
+        backdrop.hidden = !open || !mobile.matches;
+        document.body.classList.toggle('menu-open', open && mobile.matches);
+        if (open && mobile.matches) document.getElementById('chapterSearch')?.focus();
+        if (restoreFocus) toggle.focus();
+      };
+      setMenu(false);
+      toggle?.addEventListener('click', () => setMenu(!sidebar?.classList.contains('open'), sidebar?.classList.contains('open')));
+      backdrop?.addEventListener('click', () => setMenu(false, true));
+      mobile.addEventListener('change', () => setMenu(false));
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && sidebar?.classList.contains('open')) setMenu(false, true);
+        if (event.key === 'Tab' && mobile.matches && sidebar?.classList.contains('open')) {
+          const focusable = [toggle, ...sidebar.querySelectorAll<HTMLElement>('a[href], input')].filter((el): el is HTMLElement => !!el && el.getClientRects().length > 0);
+          const first = focusable[0], last = focusable[focusable.length - 1];
+          if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+          else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+        }
+      });
+
+      const search = document.getElementById('chapterSearch') as HTMLInputElement | null;
+      search?.addEventListener('input', () => {
+        const terms = search.value.normalize('NFKC').toLocaleLowerCase().trim().split(/\s+/);
+        let count = 0;
+        sidebar?.querySelectorAll<HTMLElement>('.chapter-group').forEach(group => {
+          let visible = 0;
+          group.querySelectorAll<HTMLAnchorElement>('li a').forEach(link => {
+            const matches = terms.every(term => (link.dataset.search || '').normalize('NFKC').toLocaleLowerCase().includes(term));
+            (link.parentElement as HTMLElement).hidden = !matches;
+            if (matches) visible++;
+          });
+          group.hidden = visible === 0;
+          count += visible;
         });
-      }
+        const empty = document.getElementById('searchEmpty');
+        if (empty) empty.hidden = count !== 0;
+      });
+
+      const outline = document.getElementById('pageOutline');
+      const outlineList = document.getElementById('pageOutlineList');
+      document.querySelectorAll<HTMLElement>('main h2[id]').forEach(heading => {
+        const item = document.createElement('li');
+        const link = document.createElement('a');
+        link.href = `#${encodeURIComponent(heading.id)}`;
+        link.textContent = heading.textContent;
+        item.append(link);
+        outlineList?.append(item);
+      });
+      if (outline && outlineList?.children.length) outline.hidden = false;
+
+      // Scroll regions keep wide equations and tables usable without shrinking type.
+      document.querySelectorAll<HTMLElement>('main > table, main .katex-display, main pre').forEach(element => {
+        element.tabIndex = 0;
+        element.setAttribute('aria-label', element.tagName === 'TABLE' ? (isKo ? '표: 가로로 스크롤할 수 있습니다' : 'Table: scroll horizontally') : element.tagName === 'PRE' ? (isKo ? '코드 예제' : 'Code example') : (isKo ? '수식' : 'Equation'));
+      });
 
       if (localeDropdown && localeButton) {
         localeButton.addEventListener('click', () => {
@@ -270,7 +340,7 @@ if (currentIndex !== -1) {
           }
         });
 
-        localeButton.addEventListener('keydown', (event) => {
+        localeDropdown.addEventListener('keydown', (event) => {
           if (event.key === 'Escape') {
             localeDropdown.classList.remove('open');
             localeButton.setAttribute('aria-expanded', 'false');
@@ -282,7 +352,8 @@ if (currentIndex !== -1) {
       // Scroll active link into view
       const activeLink = document.querySelector('.sidebar a.active');
       if (activeLink) {
-        activeLink.scrollIntoView({ block: 'center' });
+        const nav = document.getElementById('sidebar');
+        if (nav && activeLink instanceof HTMLElement) nav.scrollTop = Math.max(0, activeLink.offsetTop - nav.clientHeight / 2);
       }
     </script>
 <style>
@@ -294,7 +365,7 @@ if (currentIndex !== -1) {
     border-top: 1px solid var(--border-color);
     gap: 1rem;
   }
-  
+
   .nav-link {
     display: flex;
     flex-direction: column;
@@ -309,39 +380,39 @@ if (currentIndex !== -1) {
     background-color: white;
     box-shadow: 0 1px 3px rgba(0,0,0,0.05);
   }
-  
+
   .nav-link:hover {
     border-color: var(--accent-color);
     background-color: #f8fafc;
     box-shadow: 0 4px 6px rgba(0,0,0,0.05);
   }
-  
+
   .nav-link.next {
     text-align: right;
     align-items: flex-end;
   }
-  
+
   .nav-label {
     font-size: 0.85rem;
     color: var(--secondary-color);
     margin-bottom: 0.25rem;
     font-weight: 500;
   }
-  
+
   .nav-title {
     font-size: 1rem;
     font-weight: 700;
     color: #1e293b;
   }
-  
+
   .nav-link:hover .nav-title {
     color: var(--accent-color);
   }
-  
+
   .nav-spacer {
     flex: 1;
   }
-  
+
   .site-footer {
     text-align: center;
     margin-top: 3rem;
@@ -349,21 +420,21 @@ if (currentIndex !== -1) {
     border-top: 1px solid var(--border-color);
     color: var(--secondary-color);
   }
-  
+
   .site-footer p {
     margin-bottom: 0.25rem;
     font-size: 1rem;
   }
-  
+
   .site-footer a {
     color: var(--accent-color);
     text-decoration: none;
   }
-  
+
   .site-footer a:hover {
     text-decoration: underline;
   }
-  
+
   .site-footer small {
     display: block;
     font-size: 0.85rem;

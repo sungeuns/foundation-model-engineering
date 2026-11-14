@@ -22,10 +22,10 @@ RNN은 토큰을 하나씩 순차적으로 처리합니다. 모델은 각 단계
 #### 2. CNN (Convolutional Neural Networks): 지역적 순서
 CNN은 텍스트의 지역적 윈도우(예: n-gram)에 필터를 적용합니다. 단어를 3개 또는 5개씩 묶어서 봄으로써 모델은 **지역적인 순서** 와 근접성을 포착합니다. 어떤 단어가 인접해 있는지 알 수 있습니다.
 
-#### 3. 트랜스포머 (Self-Attention): 순열 불변성
+#### 3. 트랜스포머 (Self-Attention): 순열 등변성
 이와 대조적으로, 셀프 어텐션은 시퀀스의 모든 토큰을 **동시에 병렬로** 처리합니다.
 $$Attention(Q, K, V) = softmax\left(\frac{QK^T}{\sqrt{d_k}}\right)V$$
-이 공식에는 인덱스나 위치에 대한 개념이 없다는 점에 주목하세요. 입력 문장의 단어 순서를 섞으면 출력 벡터도 똑같이 섞일 뿐, 값 자체는 동일합니다. 모델은 입력을 시퀀스가 아닌 **단어들의 집합** (또는 bag of words)으로 처리합니다.
+이 설명은 위치 의존 입력이 없는 비마스킹 self-attention에 해당합니다. 인과 마스크는 별도로 위치 정보를 부여합니다. 입력 문장의 단어 순서를 섞으면 출력 벡터도 똑같이 섞일 뿐, 값 자체는 동일합니다. 모델은 입력을 시퀀스가 아닌 **단어들의 집합** (또는 bag of words)으로 처리합니다.
 
 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', margin: '20px 0' }}>
 <div style={{ maxWidth: '800px', width: '100%' }}>
@@ -170,13 +170,13 @@ $d$차원 벡터의 경우, 차원을 $d/2$개의 쌍으로 묶고 각 쌍에 �
 
 어텐션 스코어 계산에서 마법이 일어납니다. 위치 $m$의 쿼리를 $q_m$, 위치 $n$의 키를 $k_n$이라고 해봅시다:
 $$(RoPE(q_m, m))^T (RoPE(k_n, n)) = q_m^T R_m^T R_n k_n = q_m^T R_{n-m} k_n$$
-$R_m^T R_n = R_{n-m}$이기 때문에, 내적 결과는 오직 상대적 거리 $n-m$에만 의존합니다.
+$R_m^T R_n = R_{n-m}$ 이므로 위치의 기여는 상대 변위 $n-m$ 으로 표현됩니다. 내적은 내용 벡터 $q_m,k_n$ 에도 의존합니다.
 
 ### 왜 RoPE가 현대 LLM을 지배하는가 (인사이트)
 
-1.  **완벽한 상대적 위치 인식**: 모델이 상대적 거리를 추출하도록 *학습*해야 하는 절대적 인코딩과 달리, RoPE는 어텐션 스코어가 상대적 거리의 함수임을 수학적으로 보장합니다.
-2.  **거리에 따른 감쇠**: 서로 다른 주파수를 사용함으로써, 거리가 멀어질수록 토큰 간의 상관관계가 자연스럽게 감쇠합니다. 이는 가까운 단어가 대개 더 중요하다는 인간 언어의 직관과 일치합니다.
-3.  **길이 외삽 (Length Extrapolation)**: RoPE는 학습 중에 본 것보다 긴 시퀀스를 절대적 인코딩보다 훨씬 더 잘 처리합니다. **RoPE Scaling**(예: Linear Scaling 또는 NTK-aware scaling)과 같은 기술을 사용하면, 주파수를 단순히 스케일링함으로써 4K 컨텍스트로 학습된 모델을 128K 이상으로 확장할 수 있습니다.
+1. **상대 위치 성분:** 위치 의존성은 $n-m$ 으로 표현되지만 점수는 query와 key 내용에도 의존합니다.
+2. **단조 감쇠 아님:** 회전과 주파수가 있다고 모든 query–key 점수가 거리와 함께 단조 감소하는 것은 아닙니다.
+3. **검증이 필요한 외삽:** 주파수 조정은 학습·평가 조건을 바꿉니다. 길이별 검색, 위치 민감도, 추론 품질과 서빙 메모리를 확인해야 하며 4K 모델의 128K 품질을 자동 보장하지 않습니다.
 
 ---
 
@@ -192,19 +192,19 @@ import math
 class PositionalEncoding(nn.Module):
     def __init__(self, d_model, max_len=5000):
         super(PositionalEncoding, self).__init__()
-        
+
         # (max_len, d_model) 크기의 행렬 생성
         pe = torch.zeros(max_len, d_model)
         position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
         div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
-        
+
         # 사인 및 코사인 값 채우기
         pe[:, 0::2] = torch.sin(position * div_term)
         pe[:, 1::2] = torch.cos(position * div_term)
-        
+
         # 배치 차원 추가 (1, max_len, d_model)
         pe = pe.unsqueeze(0)
-        
+
         # 버퍼로 등록 (옵티마이저에 의해 업데이트되지 않음)
         self.register_buffer('pe', pe)
 
@@ -265,8 +265,8 @@ print("인코딩된 형태:", x_encoded.shape)
 </details>
 
 <details>
-<summary>Quiz 6: 위치 $m$에서의 2차원 서브스페이스에 대한 RoPE 회전 행렬을 수학적으로 공식화하고, 위치 $m$의 쿼리와 위치 $n$의 키의 내적이 상대적 거리 $m-n$에만 엄격하게 의존함을 증명하시오.</summary>
-*2차원 벡터 $x = [x_1, x_2]^T$에 대해, 위치 $m$에서의 RoPE 행렬은 $\mathbf{R}_m = \begin{bmatrix} \cos(m\theta) & -\sin(m\theta) \\ \sin(m\theta) & \cos(m\theta) \end{bmatrix}$입니다. 쿼리와 키의 2차원 표현을 각각 $\mathbf{q}$와 $\mathbf{k}$라고 합시다. RoPE로 인코딩된 벡터들의 내적은 $\langle \mathbf{R}_m \mathbf{q}, \mathbf{R}_n \mathbf{k} \rangle = (\mathbf{R}_m \mathbf{q})^T (\mathbf{R}_n \mathbf{k}) = \mathbf{q}^T \mathbf{R}_m^T \mathbf{R}_n \mathbf{k}$입니다. $\mathbf{R}_m$은 각도 $m\theta$만큼의 회전을 나타내는 직교 행렬이므로, 전치 행렬은 역행렬인 $-m\theta$ 회전 행렬과 같습니다. 따라서 $\mathbf{R}_m^T \mathbf{R}_n$은 결합된 각도 $n\theta - m\theta = (n-m)\theta$ 만큼의 회전인 $\mathbf{R}_{n-m}$을 나타냅니다. 결과적으로 $\langle \mathbf{R}_m \mathbf{q}, \mathbf{R}_n \mathbf{k} \rangle = \mathbf{q}^T \mathbf{R}_{n-m} \mathbf{k}$가 되며, 이는 상대적 거리 $n-m$에만 명시적으로 의존하여 상대적 위치 정보를 완벽하게 보존함을 보여줍니다.*
+<summary>Quiz 6: RoPE가 상대 위치로 표현하는 것은 무엇인가요?</summary>
+*$R_m$ 을 $m\theta$ 회전이라 하면 $(R_mq)^T(R_nk)=q^TR_{n-m}k$ 입니다. 위치의 기여가 상대 변위로 표현되며, 내용 벡터 $q,k$ 의 의존성이 사라지는 것은 아닙니다. 거리별 단조 감소나 학습 길이 밖의 품질은 이 등식에서 도출되지 않습니다.*
 </details>
 
 ---

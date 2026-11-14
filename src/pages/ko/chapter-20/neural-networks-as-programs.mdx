@@ -42,7 +42,7 @@ Neural Networks as Programs 개념은 이러한 관점을 두 가지 주요 방�
 ![Closed-Loop Neural Network Code Generation and Execution System](../../../assets/images/chapter-20/neural_programs_loop.png)
 *출처: AI 생성 이미지*
 
-이러한 접근 방식은 정밀한 계산의 부담을 신경망에서 결정론적인 실행 환경으로 이전하여, 시스템의 정확성과 기능을 대폭 향상시킵니다.
+외부 실행은 산술·상태 전이를 검사할 수 있게 하지만 잘못 생성한 프로그램도 결정론적으로 잘못된 답을 냅니다. 명세, 경계 사례와 독립 테스트로 검증하고, 샌드박스·최소 권한·시간 및 비용 제한을 적용해야 합니다. 테스트 통과도 검사하지 않은 입력의 정확성을 증명하지는 않습니다.
 
 ### Agentic coding에서의 실무 패턴
 
@@ -67,6 +67,8 @@ Python 스크립트의 출력을 예측하도록 훈련된 모델을 생각해 �
 
 완전한 프로그램 합성은 간단한 예제의 범위를 벗어나지만, 신경망이 단순한 상태 머신이나 프로그램 실행자처럼 작동하도록 훈련될 수 있음을 보여줄 수 있습니다. 여기서는 입력 지침에 따라 카운트를 증가시키거나 감소시키는 카운터를 시뮬레이션하도록 학습하는 간단한 순환 신경망(RNN)을 구현하여, 상태 유지 및 실행 논리를 보여줍니다.
 
+> **교육용 장난감 학습.** 길이 10인 합성 시퀀스 32개를 반복 학습합니다. 학습 오차 감소는 알고리즘 습득이나 더 긴 길이로의 일반화를 입증하지 않습니다. 분산 학습·체크포인트·평가 파이프라인은 구현하지 않습니다.
+
 ```python
 import torch
 import torch.nn as nn
@@ -80,12 +82,12 @@ class NeuralCounter(nn.Module):
         self.rnn = nn.RNN(input_size, hidden_size, batch_first=True)
         # 은닉 상태를 출력 값으로 매핑하는 선형 레이어
         self.fc = nn.Linear(hidden_size, output_size)
-        
+
     def forward(self, x, initial_state=None):
         # x shape: (batch_size, sequence_length, input_size)
         if initial_state is None:
-            initial_state = torch.zeros(1, x.size(0), self.hidden_size).to(x.device)
-            
+            initial_state = x.new_zeros(1, x.size(0), self.hidden_size)
+
         out, hidden = self.rnn(x, initial_state)
         # 모든 타임스텝의 출력 매핑
         out = self.fc(out)
@@ -128,37 +130,33 @@ for epoch in range(100):
     loss = criterion(outputs, targets)
     loss.backward()
     optimizer.step()
-    
+
     if (epoch + 1) % 20 == 0:
         print(f'Epoch [{epoch+1}/100], Loss: {loss.item():.4f}')
 
-print("훈련 완료. 모델이 단순한 프로그램(카운터)을 시뮬레이션하는 법을 배웠습니다.")
+print("학습 종료. 독립 시퀀스와 더 긴 길이에서 평가해야 합니다.")
 ```
 
 이 예제에서 RNN의 은닉 상태는 현재 카운트를 보유하는 "메모리" 또는 "레지스터" 역할을 하며, 네트워크는 입력 지침에 따라 이 상태를 업데이트하는 방법을 학습합니다.
 
-## 미래: 뉴로-심볼릭 AI (Neuro-Symbolic AI) 및 자가 진화 시스템
+## 실험과 배포의 경계
 
-Neural Networks as Programs의 궁극적인 실현은 딥러닝 신경망의 강력한 학습 능력과 심볼릭 AI의 엄격한 논리를 결합하는 **뉴로-심볼릭 AI (Neuro-Symbolic AI)** 에 있습니다.
+입력은 증가·감소 명령이며 목표는 각 시점의 누적 합에 대한 MSE입니다. 예제는 CPU FP32, 은닉 차원 16, Adam 학습률 0.01, 고정 배치 32개와 100회 업데이트를 사용합니다. 별도 seed의 미관측 시퀀스와 더 긴 길이에서 MSE·정확한 카운트 일치율을 측정하고, 비정상 손실이나 발산 시 중단해야 합니다. 학습·평가 시퀀스를 중복 제거 후 분리하고 생성 규칙·seed를 기록합니다.
 
-미래의 시스템은 특정 작업을 위한 코드를 생성하는 것에 그치지 않고, 자신의 성능을 최적화하기 위해 완전히 새로운 알고리즘과 데이터 구조를 생성할 수 있습니다. 이는 AI가 새로운 도전에 적응하기 위해 자신의 "소프트웨어"를 지속적으로 다시 작성하여 사실상 자가 프로그래밍 엔티티가 되는 **자가 진화 시스템 (Self-Evolving Systems)** 의 개념으로 이어집니다.
+실험을 재개하려면 모델·옵티마이저·RNG 상태, 단계와 데이터 생성 설정을 저장합니다. 체크포인트 크기만으로 총 메모리를 추정하지 말고 그래디언트·옵티마이저·시퀀스 활성화도 계산합니다. 실행 도구를 배포할 때는 정확성·권한·지연·비용 회귀 기준을 통과한 버전만 사용하고 이전 정상 버전으로 되돌릴 수 있어야 합니다.
 
-## 다음 절로의 연결: 왜 Multi-Token Prediction이 중요해지는가
-
-프로그램을 생성하려면 한 토큰 다음만 보는 것보다 더 긴 구조를 미리 잡는 능력이 중요합니다. 함수의 시그니처를 쓰는 순간, 몇 줄 뒤의 return 타입과 예외 처리를 어느 정도 계획해야 합니다. 수학 풀이도 마찬가지입니다. 다음 절의 Multi-Token Prediction은 이런 장기 구조를 학습 목표에 직접 넣으려는 시도입니다.
-
----
+신경 기호 시스템은 학습과 명시적 절차를 결합하는 연구 방향입니다. 자동 생성한 알고리즘이나 자체 수정은 가설·패치 후보로 취급하며, 독립 검증과 통제된 릴리스 없이는 신뢰할 수 없습니다.
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: 복잡한 추론을 위해 순수한 신경망 생성 대신 실행 가이드 생성(Execution-Guided Synthesis)을 사용할 때의 주된 장점은 무엇인가요?</summary>
-*주된 장점은 정밀도와 신뢰성입니다. 결정론적인 계산을 외부 인터프리터로 이관함으로써, 시스템은 신경망 가중치 고유의 환각(Hallucination) 및 계산 오류를 방지하고 논리적 및 수학적 작업에 대한 정확한 결과를 보장합니다.*
+<summary>Quiz 1: 외부 인터프리터는 생성한 프로그램의 정확성을 보장하나요?</summary>
+*아닙니다. 명세가 틀리거나 코드에 버그가 있으면 정확히 실행해도 답이 틀립니다. 독립 테스트·경계 사례·샌드박스·권한과 자원 제한이 필요합니다.*
 </details>
 
 <details>
-<summary>Quiz 2: Neural Turing Machines (NTM)은 표준 순환 신경망(RNN)과 어떻게 다릅니까?</summary>
-*RNN은 고정된 크기의 은닉 벡터에 상태를 유지하는 반면, NTM은 컨트롤러(신경망)를 주소 지정이 가능한 외부 메모리 뱅크와 분리합니다. 이를 통해 NTM은 특정 위치를 읽고 쓸 수 있어, 훈련 중에 본 것보다 더 긴 시퀀스로 확장되는 알고리즘을 학습할 수 있습니다.*
+<summary>Quiz 2: NTM의 외부 메모리는 RNN 상태와 어떻게 다른가요?</summary>
+*제어기와 주소 지정 가능한 메모리를 분리해 위치를 선택하여 읽고 쓸 수 있습니다. 더 긴 입력에 대한 일반화는 가능성을 제공할 뿐 자동 보장하지 않으므로 길이 밖 평가가 필요합니다.*
 </details>
 
 <details>

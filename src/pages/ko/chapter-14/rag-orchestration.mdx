@@ -25,8 +25,11 @@ lang: ko
 
 쿼리를 라우팅하는 가장 유연한 방법은 작고 빠른 LLM을 라우터로 사용하는 것입니다. LLM에게 사용 가능한 도구/소스 목록을 제공하고 어디로 가야 할지 결정하는 JSON을 출력하도록 요청합니다.
 
+> **교육용 API 개요이며 실제 모델 호출은 검증하지 않았습니다.** `ROUTER_MODEL`을 JSON 출력을 지원하는 확인된 엔드포인트로 설정합니다. JSON 형식이 데이터베이스 접근 권한을 부여하지는 않습니다. 허용된 경로를 검증하고 거절·시간 초과·잘못된 출력을 처리하며 모델 밖에서 권한을 검사해야 합니다. 출력은 예시입니다.
+
 ```python
 import json
+import os
 from openai import OpenAI
 
 client = OpenAI()
@@ -38,19 +41,22 @@ def route_query(query: str) -> dict:
     1. 'parametric': For general knowledge questions the model already knows.
     2. 'vector_db': For technical documentation, manuals, and guides.
     3. 'sql_db': For structured user data like balances, order history.
-    
+
     Query: "{query}"
-    
+
     Output JSON in this format: {{"source": "source_name", "reason": "why"}}
     """
-    
+
     response = client.chat.completions.create(
-        model="gpt-4o-mini", # 라우팅을 위해 빠른 모델 사용
-        messages=[{{"role": "user", "content": prompt}}],
-        response_format={{"type": "json_object"}}
+        model=os.environ["ROUTER_MODEL"], # 라우팅을 위해 빠른 모델 사용
+        messages=[{"role": "user", "content": prompt}],
+        response_format={"type": "json_object"}
     )
-    
-    return json.loads(response.choices[0].message.content)
+
+    result = json.loads(response.choices[0].message.content)
+    if not isinstance(result, dict) or result.get("source") not in {"parametric", "vector_db", "sql_db"}:
+        raise ValueError("Invalid routing decision")
+    return result
 
 # 실행 예시
 print(route_query("포털에서 비밀번호를 어떻게 재설정하나요?"))

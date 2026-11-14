@@ -45,13 +45,13 @@ test('reviewed pages do not contain duplicate numbered H2 sections', async () =>
   assert.equal(new Set(numbers).size, numbers.length);
 });
 
-test('commercial benchmark is explicitly a historical snapshot', async () => {
+test('commercial benchmark is an explicitly dated, reverified snapshot', async () => {
   const [en, ko] = await Promise.all([
     read('src/pages/chapter-17/commercial-model-benchmarks.mdx'),
     read('src/pages/ko/chapter-17/commercial-model-benchmarks.mdx'),
   ]);
-  assert.match(en, /historical snapshot/i);
-  assert.match(ko, /과거 스냅샷/);
-  assert.match(en, /must be reverified/i);
-  assert.match(ko, /다시 검증/);
+  assert.match(en, /static snapshot/i);
+  assert.match(ko, /스냅샷/);
+  assert.match(en, /reverify/i);
+  assert.match(ko, /재검증|다시 검증|다시 확인/);
 });

@@ -1,142 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React,{useState} from 'react';
 import './visualizers.css';
-
-export default function KDVisualizer() {
-  const [epoch, setEpoch] = useState(0);
-  const [isTraining, setIsTraining] = useState(false);
-  const [mode, setMode] = useState('feature'); // 'logit' or 'feature'
-
-  // 교사 모델의 완벽한 군집 (Teacher clusters)
-  const teacherPoints = [
-    { x: 80, y: 80, color: '#94a3b8' },
-    { x: 220, y: 80, color: '#94a3b8' },
-    { x: 150, y: 220, color: '#94a3b8' }
-  ];
-
-  // 학생 모델의 초기 무작위 위치
-  const initialStudentPoints = Array.from({ length: 30 }).map((_, i) => {
-    const targetCluster = i % 3;
-    return {
-      id: i,
-      startX: Math.random() * 260 + 20,
-      startY: Math.random() * 260 + 20,
-      targetX: teacherPoints[targetCluster].x + (Math.random() * 40 - 20),
-      targetY: teacherPoints[targetCluster].y + (Math.random() * 40 - 20),
-      cluster: targetCluster
-    };
-  });
-
-  const [studentPoints, setStudentPoints] = useState(initialStudentPoints);
-
-  useEffect(() => {
-    let interval;
-    if (isTraining && epoch < 100) {
-      interval = setInterval(() => {
-        setEpoch((prev) => prev + 2);
-      }, 50);
-    } else if (epoch >= 100) {
-      setIsTraining(false);
-    }
-    return () => clearInterval(interval);
-  }, [isTraining, epoch]);
-
-  const handleStart = () => {
-    setEpoch(0);
-    setIsTraining(true);
-  };
-
-  const handleReset = () => {
-    setEpoch(0);
-    setIsTraining(false);
-  };
-
-  // 진행률에 따른 보간(Interpolation) 함수
-  const getInterpolatedPosition = (point) => {
-    const progress = epoch / 100;
-    
-    if (mode === 'logit') {
-      // Logit-Only: 정답 경계 방향으로만 이동, 군집화는 실패
-      const moveX = point.startX + (point.targetX > 150 ? 30 * progress : -30 * progress);
-      const moveY = point.startY + (point.targetY > 150 ? 30 * progress : -30 * progress);
-      return { x: moveX, y: moveY };
-    } else {
-      // Feature-Based: 교사의 기하학적 위치로 완벽히 흡수됨
-      // Ease-out cubic
-      const easeProgress = 1 - Math.pow(1 - progress, 3);
-      const moveX = point.startX + (point.targetX - point.startX) * easeProgress;
-      const moveY = point.startY + (point.targetY - point.startY) * easeProgress;
-      return { x: moveX, y: moveY };
-    }
-  };
-
-  return (
-    <div className="kd-visualizer-container">
-      <div className="kd-controls">
-        <button className={mode === 'logit' ? 'active' : ''} onClick={() => { setMode('logit'); handleReset(); }}>
-          Logit-Only KD
-        </button>
-        <button className={mode === 'feature' ? 'active' : ''} onClick={() => { setMode('feature'); handleReset(); }}>
-          Feature-Based KD
-        </button>
-        <button className="train-btn" onClick={handleStart} disabled={isTraining}>
-          Start Distillation
-        </button>
-        <button className="reset-btn" onClick={handleReset}>
-          Reset
-        </button>
-      </div>
-
-      <div className="kd-status">
-        <span>Epoch: {epoch}</span>
-        <div className="progress-bar">
-          <div className="progress-fill" style={{ width: `${epoch}%` }}></div>
-        </div>
-      </div>
-
-      <div className="kd-canvas-wrapper">
-        <svg width="300" height="300" className="kd-canvas">
-          {/* Background Grid */}
-          <g className="grid">
-            {Array.from({ length: 10 }).map((_, i) => (
-              <line key={`h${i}`} x1="0" y1={i * 30} x2="300" y2={i * 30} stroke="#e2e8f0" />
-            ))}
-            {Array.from({ length: 10 }).map((_, i) => (
-              <line key={`v${i}`} x1={i * 30} y1="0" x2={i * 30} y2="300" stroke="#e2e8f0" />
-            ))}
-          </g>
-
-          {/* Teacher Points */}
-          {teacherPoints.map((tp, idx) => (
-            <circle key={`teacher-${idx}`} cx={tp.x} cy={tp.y} r="25" fill={tp.color} opacity="0.3" />
-          ))}
-          {teacherPoints.map((tp, idx) => (
-            <circle key={`teacher-core-${idx}`} cx={tp.x} cy={tp.y} r="6" fill="#475569" />
-          ))}
-
-          {/* Student Points */}
-          {studentPoints.map((sp) => {
-            const pos = getInterpolatedPosition(sp);
-            const colors = ['#ef4444', '#3b82f6', '#10b981']; // Red, Blue, Green based on target class
-            return (
-              <g key={`student-${sp.id}`} transform={`translate(${pos.x}, ${pos.y})`}>
-                <line x1="-4" y1="-4" x2="4" y2="4" stroke={colors[sp.cluster]} strokeWidth="2" />
-                <line x1="-4" y1="4" x2="4" y2="-4" stroke={colors[sp.cluster]} strokeWidth="2" />
-              </g>
-            );
-          })}
-        </svg>
-      </div>
-      
-      <div className="kd-legend">
-        <div className="legend-item">
-          <div className="legend-color" style={{ backgroundColor: '#94a3b8', borderRadius: '50%' }}></div>
-          <span>Teacher Latent Space</span>
-        </div>
-        <div className="legend-item">
-          <div className="legend-color" style={{ backgroundColor: '#3b82f6', clipPath: 'polygon(20% 0%, 0% 20%, 30% 50%, 0% 80%, 20% 100%, 50% 70%, 80% 100%, 100% 80%, 70% 50%, 100% 20%, 80% 0%, 50% 30%)' }}></div>
-          <span>Student Hidden States</span>
-        </div>
-      </div>
-    </div>
-  );
+const teacher=[[80,80],[220,80],[150,220]];
+const points=Array.from({length:30},(_,i)=>({id:i,x:25+(i*73%250),y:25+(i*97%250),tx:teacher[i%3][0]+(i*17%35)-17,ty:teacher[i%3][1]+(i*23%35)-17,cluster:i%3}));
+export default function KDVisualizer({lang='en'}:{lang?:'en'|'ko'}) {
+ const ko=lang==='ko';const [amount,setAmount]=useState(0);const [align,setAlign]=useState(true);
+ return <div className="kd-visualizer-container"><h4>{ko?'표현 정렬의 기하학적 제약':'The geometric constraint of feature alignment'}</h4>
+  <p>{ko?'고정 좌표를 선형 보간하는 그림이며 모델을 학습하지 않습니다. 출력 분포만 맞추는 목적은 특정 은닉 좌표를 요구하지 않습니다. 특징 손실은 추가적인 좌표 제약을 주지만 일반화 개선을 보장하지 않습니다.':'This interpolates fixed coordinates; no model is trained. Matching output distributions does not require a particular hidden coordinate system. Feature loss adds a geometric constraint without guaranteeing better generalization.'}</p>
+  <label><input type="checkbox" checked={align} onChange={e=>setAlign(e.target.checked)}/>{ko?'교사 좌표 방향으로 보간':'Interpolate toward teacher coordinates'}</label>
+  <label style={{display:'block'}}>{ko?'보간 비율 (학습 epoch 아님)':'Interpolation fraction (not training epochs)'}: {amount}% <input type="range" min="0" max="100" value={amount} onChange={e=>setAmount(Number(e.target.value))} disabled={!align}/></label>
+  <div className="kd-canvas-wrapper"><svg viewBox="0 0 300 300" style={{width:'100%',maxWidth:300}} role="img" aria-label={ko?'회색 교사 기준점과 색상별 학생 좌표':'Gray teacher reference points and colored student coordinates'}><title>{ko?'설명용 특징 좌표':'Illustrative feature coordinates'}</title>
+   {teacher.map(([x,y],i)=><circle key={i} cx={x} cy={y} r="20" fill="#94a3b8" opacity=".5"/>)}
+   {points.map(p=><circle key={p.id} cx={p.x+(p.tx-p.x)*(align?amount/100:0)} cy={p.y+(p.ty-p.y)*(align?amount/100:0)} r="4" fill={['#ef4444','#3b82f6','#10b981'][p.cluster]}/>)}
+  </svg></div><p>{ko?'회색: 교사 기준점 · 색 점: 학생 표현. 교사는 정답의 보장이 아니며, 차원이 다르면 학습 가능한 투영과 정렬 위치 선택이 필요합니다.':'Gray: teacher reference points. Colored: student representations. The teacher is not guaranteed correct; different dimensions require a learned projection and a choice of aligned positions.'}</p>
+ </div>;
 }

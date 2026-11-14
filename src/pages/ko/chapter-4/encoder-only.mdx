@@ -136,25 +136,11 @@ ELMo 연구진이 논문 제목을 맞추기 위해 절묘하게 끼워 맞춘 �
 
 Decoder-only 모델이 생성형 AI의 대세가 되었음에도 불구하고, BERT 계열의 Encoder-only 모델은 여전히 실무에서 널리 쓰이며 중요한 역할을 하고 있습니다. 그 이유는 다음과 같습니다.
 
-### 1. Bidirectional Context is Superior for Understanding (이해를 위한 양방향 문맥의 우월성)
-텍스트를 '생성'하는 것이 아니라 '이해'하는 것이 목표일 때, 미래의 토큰을 보지 못하게 막는 Causal Attention은 오히려 독이 될 수 있습니다.
-*   **문맥의 온전한 파악**: "사과"라는 단어가 먹는 과일인지, 용서를 구하는 사과(Apology)인지는 뒤에 오는 문맥을 봐야만 정확히 알 수 있습니다. Encoder-only 모델은 모든 토큰이 서로를 참조할 수 있으므로, 이러한 동음이의어나 복잡한 문맥을 파악하는 데 훨씬 유리합니다.
-*   **분류 및 개체명 인식(NER)**: 텍스트의 감성을 분석하거나, 문서에서 핵심 정보를 추출하는 과업에서는 전체 텍스트를 한 번에 조망하는 양방향 어텐션이 더 높은 정확도를 보입니다.
+양방향 어텐션은 각 위치가 양쪽 문맥을 볼 수 있게 하므로 분류·개체명 인식·임베딩에 유용한 설계입니다. 하지만 아키텍처만으로 정확도나 지연 시간의 우위를 보장하지는 않습니다. 목표 데이터와 출력 계약에서 학습된 모델들을 비교해야 합니다.
 
-### 2. Extreme Efficiency in Feature Extraction (특징 추출 및 임베딩의 압도적 효율성)
-최근 각광받는 **RAG (Retrieval-Augmented Generation)** 시스템에서는 문서를 벡터로 변환하는 '임베딩(Embedding)' 과정이 필수적입니다.
-*   Encoder-only 모델은 텍스트를 고차원 벡터로 압축하여 표현하는 데 최적화되어 있습니다.
-*   Decoder-only 모델로 임베딩을 추출하려면 미래 토큰을 보지 못하는 제약 때문에 비효율적인 프롬프팅이나 특수한 풀링(Pooling) 기법을 써야 합니다. 반면 Encoder-only 모델은 문장 전체의 의미를 담은 `[CLS]` 토큰 등을 통해 훨씬 빠르고 정확한 임베딩을 제공합니다.
+Decoder-only 모델도 생성 없이 한 번의 순전파와 풀링으로 임베딩을 만들 수 있고 마지막 위치는 앞쪽 문맥을 볼 수 있습니다. 반대로 원시 `[CLS]` 벡터가 좋은 검색 임베딩을 보장하지는 않습니다. 임베딩 학습 목표와 풀링, 길이·언어별 검색 품질을 검증하세요.
 
-### 3. Cost-Effective Deployment (비용 효율적인 배포)
-Decoder-only 모델은 수십억(Billion) 단위의 파라미터를 갖는 경우가 많아 서빙 비용이 매우 높습니다.
-*   반면 BERT나 RoBERTa 같은 Encoder-only 모델은 대개 수억(Million) 단위의 파라미터로도 훌륭한 이해 성능을 냅니다.
-*   분류, 검색, 매칭 등 생성이 필요 없는 작업에서는 굳이 거대한 디코더 모델을 쓸 필요 없이, 훨씬 작고 빠른 인코더 모델을 사용하여 인프라 비용을 수십 분의 일로 절감할 수 있습니다.
-
-### 4. ModernBERT: The Renaissance of Encoders (모던BERT의 등장과 부활)
-ModernBERT의 등장은 Encoder-only 모델도 LLM의 발전 혜택을 받을 수 있음을 보여주었습니다. 긴 컨텍스트 지원과 Flash Attention 적용으로, 이제 대규모 문서 검색 및 분석 작업에서 디코더 모델을 능가하는 속도와 효율성을 보여주고 있습니다.
-
-
+작은 encoder가 요구 품질을 만족하면 생성형 모델보다 저렴할 수 있습니다. 절감 폭은 모델 크기·배치·길이·커널에 달려 있습니다. ModernBERT의 긴 문맥 및 효율적인 어텐션도 실제 워크로드에서 평가할 선택지이며 모든 decoder를 능가한다는 보장은 아닙니다.
 
 ## PyTorch Implementation: MLM Head
 
@@ -171,7 +157,7 @@ class MLMHead(nn.Module):
         self.dense = nn.Linear(hidden_size, hidden_size)
         self.layer_norm = nn.LayerNorm(hidden_size)
         self.decoder = nn.Linear(hidden_size, vocab_size, bias=False)
-        
+
         # Link bias to decoder
         self.bias = nn.Parameter(torch.zeros(vocab_size))
         self.decoder.bias = self.bias
@@ -181,7 +167,7 @@ class MLMHead(nn.Module):
         x = self.dense(hidden_states)
         x = F.gelu(x)
         x = self.layer_norm(x)
-        
+
         # Project to vocab size
         # logits shape: (batch_size, seq_len, vocab_size)
         logits = self.decoder(x)

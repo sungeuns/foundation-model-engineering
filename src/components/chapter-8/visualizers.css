@@ -39,7 +39,7 @@
 .grokking-svg {
   width: 100%;
   height: 100%;
-  transform: scaleY(-1); /* Flips SVG to make 0 at bottom */
+
 }
 
 .grokking-y-axis {

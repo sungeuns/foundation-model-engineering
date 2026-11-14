@@ -47,7 +47,7 @@ export default function PeVisualizer({ lang = 'en' }: PeVisualizerProps) {
               width: '100%',
               height: '10px'
             }}
-            title={`pos: ${pos}, dim: ${i}, val: ${val.toFixed(2)}`}
+            title={lang === "ko" ? `위치: ${pos}, 차원: ${i}, 값: ${val.toFixed(2)}` : `position: ${pos}, dimension: ${i}, value: ${val.toFixed(2)}`}
           />
         );
       }
@@ -56,9 +56,9 @@ export default function PeVisualizer({ lang = 'en' }: PeVisualizerProps) {
   };
 
   return (
-    <div style={{ 
-      padding: '20px', 
-      marginTop: '2rem', 
+    <div style={{
+      padding: '20px',
+      marginTop: '2rem',
       marginBottom: '2rem',
       background: 'rgba(255, 255, 255, 0.7)',
       backdropFilter: 'blur(10px)',

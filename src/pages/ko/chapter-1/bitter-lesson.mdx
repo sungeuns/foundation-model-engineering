@@ -78,10 +78,8 @@ The Bitter Lesson의 구체적인 수학적 발현이 바로 **Scaling Law (스�
 3.  **Compute ($C$):** 학습에 사용된 총 부동 소수점 연산량 (FLOPs).
 
 실제 스케일링 법칙 논문들은 보통 더 정교한 경험적 곡선을 맞추지만, 여기서는 간단한 설명용 형태로 다음과 같이 볼 수 있습니다:
-$$L(N, D, C) \propto \left( \frac{1}{N^\alpha} + \frac{1}{D^\beta} + \frac{1}{C^\gamma} \right)$$
-여기서 $L$은 손실(loss)이며, $\alpha, \beta, \gamma$는 스케일링 지수입니다.
-
-이것이 의미하는 바는, 더 나은 성능을 원한다면 반드시 더 나은 알고리즘이 필요한 것이 아니라, 단지 $N, D, C$를 확장하기만 하면 된다는 것입니다.
+$$L(N,D)=L_\infty+\frac{A}{N^\alpha}+\frac{B}{D^\beta},\qquad C\approx6ND.$$
+여기서 $L$은 검증 토큰 손실, $L_\infty$는 적합한 비감소 항, $A,B$는 양의 적합 계수, $\alpha,\beta$는 지수입니다. 연산량 근사는 회계 가정을 명시한 밀집 Transformer 학습에 해당합니다. 따라서 $N,D,C$는 독립적인 세 조절 변수가 아닙니다. 이 경험적 형태가 추론 능력, 안전성, 특정 아키텍처를 보장하지는 않습니다. 8장에서 적합 불확실성, 추론 비용, 근사의 한계를 다룹니다.
 
 ---
 
@@ -114,7 +112,7 @@ D_np = D_range.numpy()
 
 # 결과 플로팅
 plt.figure(figsize=(10, 6))
-CS = plt.contourf(N_np, D_np, Loss_np, levels=20, cmap='viridis')
+CS = plt.contourf(N_np, D_np, Loss_np.T, levels=20, cmap='viridis')
 plt.xscale('log')
 plt.yscale('log')
 plt.xlabel('Model Size (N)')
@@ -130,7 +128,7 @@ print("이 설명용 곡선은 연산량 증가에 따른 모델링된 손실 �
 
 ## Example: The Power of Scale
 
-AI에 사용 가능한 "컴퓨팅 자원"을 조정해 보세요. 모델이 단순한 패턴 학습에서 복잡한 추론으로 어떻게 전환되는지 확인하여 The Bitter Lesson이 실제로 작동하는 모습을 확인해 보세요.
+가상의 연산 예산과 모델·데이터 배분을 바꾸며 명시된 곡선의 손실을 비교합니다. FLOPs만으로 특정 능력을 추론하지 않습니다.
 
 <ScaleVisualizer client:load lang="ko" />
 

@@ -185,6 +185,12 @@ Inference optimization is not complete when kernels are fast. It is complete whe
 
 ---
 
+## Evolving Infra: adapt compute without losing cache ownership
+
+**As of 2026-11-15 — emerging research.** Evolving Infra combines engines that switch prefill/decode roles in place with a shared host-memory KV pool. Its planner models cached and uncached work separately; a branch-aware directory helps routing and eviction. Reported gains depend on the studied hardware, workload and baselines, not a universal speedup. [[6]](#ref-6)
+
+For production evaluation, count KV transfers, cache reuse, switching delay and tail latency during workload shifts. Shared availability is not free access: host/device transfers still cost time. Cache identity and authorization must include model version, tokens and tenant scope.
+
 ## Quizzes
 
 <details>
@@ -211,8 +217,9 @@ Inference optimization is not complete when kernels are fast. It is complete whe
 
 ## References
 
-1. <a id="ref-1"></a>Yu, G.-I., Jeong, J. S., Kim, G.-W., Kim, S., & Chun, B.-G. (2022). *Orca: A Distributed Serving System for Transformer-Based Generative Models.* [arXiv:2203.10842](https://arxiv.org/abs/2203.10842).
+1. <a id="ref-1"></a>Yu, G.-I., Jeong, J. S., Kim, G.-W., Kim, S., & Chun, B.-G. (2022). *Orca: A Distributed Serving System for Transformer-Based Generative Models.* [OSDI 2022](https://www.usenix.org/conference/osdi22/presentation/yu).
 2. <a id="ref-2"></a>Kwon, W., et al. (2023). *Efficient Memory Management for Large Language Model Serving with PagedAttention.* [arXiv:2309.06180](https://arxiv.org/abs/2309.06180).
 3. <a id="ref-3"></a>Agrawal, A., et al. (2023). *SARATHI: Efficient LLM Inference by Piggybacking Decodes with Chunked Prefills.* [arXiv:2308.16369](https://arxiv.org/abs/2308.16369).
 4. <a id="ref-4"></a>Patel, P., Choukse, E., Zhang, C., Shah, A., Goiri, I., Maleki, S., & Bianchini, R. (2024). *Splitwise: Efficient Generative LLM Inference Using Phase Splitting.* [arXiv:2311.18677](https://arxiv.org/abs/2311.18677).
 5. <a id="ref-5"></a>Zhong, Y., Liu, S., Chen, J., Hu, J., Zhu, Y., Liu, X., Jin, X., & Zhang, H. (2024). *DistServe: Disaggregating Prefill and Decoding for Goodput-optimized Large Language Model Serving.* [arXiv:2401.09670](https://arxiv.org/abs/2401.09670).
+6. <a id="ref-6"></a>Research preprint (2026). [Evolving Infra: Agent-Adaptive LLM Serving at Scale](https://arxiv.org/html/2611.12304v1). Version pinned; accessed 2026-11-15.

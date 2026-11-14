@@ -61,12 +61,14 @@ import torch.nn.functional as F
 class CLIPLoss(nn.Module):
     def __init__(self, init_temperature=0.07):
         super().__init__()
-        self.temperature = nn.Parameter(torch.tensor(init_temperature))
-        
+        if init_temperature <= 0:
+            raise ValueError("Temperature must be positive")
+        self.logit_scale = nn.Parameter(torch.tensor(1.0 / init_temperature).log())
+
     def forward(self, image_embeddings, text_embeddings):
         """
         대칭적 대조 학습 손실을 계산합니다.
-        
+
         Args:
             image_embeddings: (batch_size, embed_dim) 형태의 텐서
             text_embeddings: (batch_size, embed_dim) 형태의 텐서
@@ -74,19 +76,19 @@ class CLIPLoss(nn.Module):
         # 임베딩을 단위 길이로 정규화
         image_embeddings = F.normalize(image_embeddings, p=2, dim=-1)
         text_embeddings = F.normalize(text_embeddings, p=2, dim=-1)
-        
+
         batch_size = image_embeddings.size(0)
-        
+
         # 코사인 유사도 행렬 계산
-        logits = torch.matmul(image_embeddings, text_embeddings.t()) / self.temperature
-        
+        logits = torch.matmul(image_embeddings, text_embeddings.t()) * self.logit_scale.exp()
+
         # 타겟은 단위 행렬 (올바른 쌍은 대각선에 있음)
         labels = torch.arange(batch_size, device=image_embeddings.device)
-        
+
         # 대칭적 크로스 엔트로피 손실
         loss_i = F.cross_entropy(logits, labels)
         loss_t = F.cross_entropy(logits.t(), labels)
-        
+
         return (loss_i + loss_t) / 2
 
 # 예제 사용법
@@ -177,18 +179,18 @@ LLM에 대한 입력 시퀀스 = $[X_v, X_{text}]$
 ## Quizzes
 
 <details>
-<summary>Quiz 1: CLIP이 한 방향이 아닌 대칭적 손실($\mathcal{L}_{i \to t}$ 및 $\mathcal{L}_{t \to i}$)을 사용하는 이유는 무엇인가요?</summary>
-*한 방향(예: 텍스트를 이미지에 매칭)만 사용하면 비대칭 공간이 생성됩니다. 예를 들어, 여러 다른 텍스트가 동일한 이미지에 가깝게 매핑될 수 있지만, 그 이미지는 해당 텍스트들에 가깝게 매핑되지 않을 수 있습니다. 대칭적 손실은 두 관점 모두에서 표현 공간이 정렬되도록 보장하여 이미지-텍스트(캡셔닝/검색) 및 텍스트-이미지(생성/검색) 작업 모두에서 더 나은 일반화로 이어집니다.*
+<summary>Quiz 1: 대칭적인 cosine 유사도에도 CLIP의 두 방향 손실이 필요한 이유는 무엇인가요?</summary>
+*같은 쌍의 cosine은 방향을 바꾸어도 같지만, 이미지별 텍스트 후보와 텍스트별 이미지 후보의 softmax 정규화 분모는 다릅니다. 두 손실은 행과 열 양쪽의 검색 분류를 감독합니다. 이것만으로 생성 능력이나 일반화가 보장되지는 않습니다.*
 </details>
 
 <details>
-<summary>Quiz 2: 모든 시각적 특징을 텍스트 입력에 단순히 연결하는 것에 비해 Flamingo의 Perceiver Resampler가 갖는 주요 이점은 무엇인가요?</summary>
-*모든 시각적 특징(고해상도 이미지나 비디오의 경우 수백 또는 수천 개의 토큰이 될 수 있음)을 연결하면 시퀀스 길이가 급격히 증가합니다. Transformer 셀프 어텐션 복잡도는 $O(N^2)$ 이므로 훈련과 추론이 극도로 비싸집니다. Perceiver Resampler는 시각적 특징을 고정된 작은 수의 토큰(예: 64개)으로 줄여 입력 해상도나 비디오 길이에 관계없이 연산 비용을 제한합니다.*
+<summary>Quiz 2: Resampler의 출력 토큰 수를 고정하면 모든 시각 연산 비용이 고정되나요?</summary>
+*아닙니다. LLM에 넘기는 토큰 수를 제한하지만 비전 인코더와 입력 특징을 읽는 resampler cross-attention 비용은 해상도·프레임 수에 따라 늘어날 수 있습니다.*
 </details>
 
 <details>
-<summary>Quiz 3: Flamingo의 Gated Cross-Attention에서 tanh 게이팅이 0으로 초기화되는 이유는 무엇인가요?</summary>
-*게이팅 파라미터 $\alpha$ 를 0으로 초기화하면 $\tanh(\alpha) = 0$ 이 됩니다. 이는 훈련 시작 시 시각 정보가 완전히 무시되고 모델이 사전 훈련된 LLM과 똑같이 동작함을 의미합니다. 이는 "치명적 망각(Catastrophic Forgetting)"을 방지하고, 모델이 학습함에 따라 시각 정보를 천천히 도입하여 안정적인 학습을 보장합니다.*
+<summary>Quiz 3: 0으로 초기화한 시각 게이트가 망각 방지를 보장하나요?</summary>
+*아닙니다. $\tanh(0)=0$ 이면 시작 시 새 분기의 기여가 0이어서 기존 경로를 보존합니다. 이후 게이트와 다른 학습 가능한 모듈이 바뀌므로 언어 능력 유지와 학습 안정성을 별도로 평가해야 합니다.*
 </details>
 
 ---

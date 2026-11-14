@@ -36,7 +36,7 @@ $$ \mathcal{L}_{KD} = T^2 \cdot \mathcal{D}_{KL}\left( \text{Softmax}\left(\frac
 이 방법들이 “작은 모델도 곧바로 큰 모델처럼 생각하게 만든다”는 뜻은 아닙니다. 다만, 출력만 맞추는 방식보다 더 유용한 행동을 옮겨오는 데 도움이 되는 경우가 많습니다.
 
 ![kd_evolution](../../../assets/images/chapter-13/kd_evolution.png)
-*출처: AI 생성 이미지. 로짓 매칭에서 단계별 추론(CoT) 증류 및 특징 정렬로 진화한 지식 증류의 패러다임 변화를 보여주는 개념도.* 
+*출처: AI 생성 이미지. 로짓 매칭에서 단계별 추론(CoT) 증류 및 특징 정렬로 진화한 지식 증류의 패러다임 변화를 보여주는 개념도.*
 
 ---
 
@@ -53,7 +53,7 @@ $$ \mathcal{L}_{KD} = T^2 \cdot \mathcal{D}_{KL}\left( \text{Softmax}\left(\frac
 
 ## 3. On-Policy 증류: 학생의 실수로부터 배우기
 
-고정된 오프라인 데이터셋(Off-policy)에 의존하는 증류 방식은 텍스트 생성 시 **노출 편향 (Exposure Bias)** 이라는 치명적인 문제를 겪습니다. 학습 중에는 교사 모델이 생성한 완벽한 텍스트 궤적만 보지만, 실제 추론 시 학생 모델이 단 하나의 토큰이라도 실수로 다르게 생성하면, 이후의 궤적은 학습 데이터에 존재하지 않는 미지의 영역(Out-of-Distribution)이 되어 출력 품질이 붕괴됩니다.
+고정된 교사 궤적과 학생이 생성하는 궤적 사이에는 분포 차이가 생길 수 있습니다. 교사 출력도 오류를 포함하며, 학생이 한 토큰을 다르게 쓴다고 반드시 실패하는 것은 아닙니다. 중요한 것은 실제 학생 상태에서의 오류를 평가하고 학습 분포가 이를 다루도록 설계하는 것입니다.
 
 이에 대한 대응이 **On-Policy Distillation** 입니다. 일반화된 지식 증류(GKD) 같은 방법은 교사가 만든 이상적인 경로만 보여주는 대신, 학생이 실제로 생성한 시퀀스를 교사가 다시 채점하게 만듭니다 [[4]](#ref-4). 즉, 학생이 자주 빠지는 나쁜 상태에서 다음 토큰을 어떻게 골라야 하는지까지 배우게 하는 방식입니다.
 
@@ -71,9 +71,11 @@ $$ \mathcal{L}_{KD} = T^2 \cdot \mathcal{D}_{KL}\left( \text{Softmax}\left(\frac
 
 ---
 
-## 5. 엔지니어링: 특징 기반 지식 증류 구현
+### PyTorch 구현: 특징 기반 지식 증류
 
 아래의 PyTorch 코드는 구조적 비동질성(Heterogeneity)을 극복하기 위해 표준 태스크 손실, 로짓 기반 KL 발산, 그리고 투영 레이어를 활용한 특징 정렬(Feature Alignment) 손실을 하나로 결합한 최신 지식 증류 파이프라인을 보여줍니다.
+
+> **교육용 loss 예제.** 같은 토크나이저·어휘 순서·채팅 템플릿을 사용하는 정렬된 교사/학생 출력을 가정합니다. 실제 교사는 고정된 체크포인트로 `eval()` 및 `inference_mode()`에서 실행해야 합니다. 아래 합성 마스크는 실제 템플릿의 assistant span 마스크로 대체하세요. BOS/EOS 중복을 피하고 EOS 포함 정책·절단·패딩을 일치시키며, 패킹 시 샘플 간 attention을 차단해야 합니다. 전체 모델 학습, 다른 토크나이저의 분포 매핑, 전역 토큰 수를 사용하는 분산 loss 정규화는 구현하지 않습니다.
 
 ```python
 import torch
@@ -81,102 +83,80 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class ModernKDLoss(nn.Module):
-    def __init__(self, student_dim: int, teacher_dim: int, temp: float = 2.0, alpha: float = 0.5, beta: float = 0.1):
-        """
-        Args:
-            student_dim: 학생 모델의 은닉 상태 차원
-            teacher_dim: 교사 모델의 은닉 상태 차원
-            temp: 로짓 평활화를 위한 온도 파라미터
-            alpha: 로짓 증류(KL Divergence) 손실의 가중치
-            beta: 특징 정렬(Feature Alignment) 손실의 가중치
-        """
+    def __init__(self, student_dim, teacher_dim, temp=2.0, alpha=0.5, beta=0.1):
         super().__init__()
-        self.temp = temp
-        self.alpha = alpha
-        self.beta = beta
-        
-        # 학생 모델의 은닉 상태를 교사 모델의 차원으로 변환하는 선형 투영 레이어
+        if temp <= 0 or not 0 <= alpha <= 1 or beta < 0:
+            raise ValueError("invalid loss settings")
+        self.temp, self.alpha, self.beta = temp, alpha, beta
         self.feature_projector = nn.Linear(student_dim, teacher_dim, bias=False)
-        
-        self.kl_loss = nn.KLDivLoss(reduction="batchmean")
-        self.mse_loss = nn.MSELoss()
 
-    def forward(
-        self, 
-        student_logits: torch.Tensor, 
-        teacher_logits: torch.Tensor, 
-        student_hidden: torch.Tensor, 
-        teacher_hidden: torch.Tensor, 
-        labels: torch.Tensor
-    ) -> torch.Tensor:
-        # 1. 표준 태스크 손실 (Cross Entropy)
-        # 차원 평탄화: [batch * seq_len, vocab_size]
-        task_loss = F.cross_entropy(student_logits.view(-1, student_logits.size(-1)), labels.view(-1))
-        
-        # 2. 로짓 기반 KD 손실 (Forward KL Divergence)
-        # 온도를 적용한 후, 기울기 크기 복원을 위해 T^2 를 곱함
-        soft_student = F.log_softmax(student_logits / self.temp, dim=-1).view(-1, student_logits.size(-1))
-        soft_teacher = F.softmax(teacher_logits / self.temp, dim=-1).view(-1, teacher_logits.size(-1))
-        kd_loss = self.kl_loss(soft_student, soft_teacher) * (self.temp ** 2)
-        
-        # 3. 특징 정렬 손실 (Feature-based Alignment Loss)
-        # 학생의 특징을 교사의 차원으로 투영한 후 평균 제곱 오차(MSE) 계산
-        projected_student_hidden = self.feature_projector(student_hidden)
-        feature_loss = self.mse_loss(projected_student_hidden, teacher_hidden)
-        
-        # 전체 손실 결합
-        total_loss = (1.0 - self.alpha) * task_loss + \
-                     self.alpha * kd_loss + \
-                     self.beta * feature_loss
-                     
-        return total_loss
+    def forward(self, student_logits, teacher_logits, student_hidden,
+                teacher_hidden, labels, assistant_mask):
+        # Same tokenizer, vocabulary ordering and [B,S,V] positions required.
+        if student_logits.shape != teacher_logits.shape or student_logits.ndim != 3:
+            raise ValueError("teacher/student logit alignment mismatch")
+        if labels.shape != student_logits.shape[:2] or assistant_mask.shape != labels.shape:
+            raise ValueError("label/mask shape mismatch")
+        if labels.shape[1] < 2:
+            raise ValueError("at least one next-token target required")
+        # Position t predicts token t+1; padding uses -100, prompts use mask=False.
+        valid = assistant_mask[:, 1:].bool() & labels[:, 1:].ne(-100)
+        if not valid.any():
+            raise ValueError("no supervised assistant tokens")
+        s = student_logits[:, :-1].float()[valid]
+        t = teacher_logits[:, :-1].detach().float()[valid]
+        targets = labels[:, 1:][valid]
+        ce = F.cross_entropy(s, targets)
+        log_s = F.log_softmax(s / self.temp, dim=-1)
+        log_t = F.log_softmax(t / self.temp, dim=-1)
+        kd = F.kl_div(log_s, log_t, log_target=True, reduction="none").sum(-1).mean()
+        # Align the predictive hidden states at the same selected positions.
+        projected = self.feature_projector(student_hidden[:, :-1][valid])
+        target_hidden = teacher_hidden[:, :-1].detach()[valid].float()
+        feature = F.mse_loss(projected.float(), target_hidden)
+        return (1-self.alpha)*ce + self.alpha*self.temp**2*kd + self.beta*feature
 
-# 실행 예시
-batch_size, seq_len, vocab_size = 4, 128, 32000
-d_student, d_teacher = 1024, 4096
-
-# 텐서 시뮬레이션 (실제 학습 루프에서는 모델의 forward 패스 결과값)
-s_logits = torch.randn(batch_size, seq_len, vocab_size, requires_grad=True)
-t_logits = torch.randn(batch_size, seq_len, vocab_size) # 교사 모델은 동결(Frozen) 상태
-s_hidden = torch.randn(batch_size, seq_len, d_student, requires_grad=True)
-t_hidden = torch.randn(batch_size, seq_len, d_teacher)   
-targets = torch.randint(0, vocab_size, (batch_size, seq_len))
-
-# 손실 계산 및 역전파
-criterion = ModernKDLoss(student_dim=d_student, teacher_dim=d_teacher)
-loss = criterion(s_logits, t_logits, s_hidden, t_hidden, targets)
-print(f"계산된 총 지식 증류 손실: {loss.item():.4f}")
-loss.backward() # 옵티마이저 스텝 준비 완료
+# Small CPU smoke example. Teacher outputs are frozen and already aligned.
+torch.manual_seed(0)
+B, S, V, Ds, Dt = 2, 6, 32, 8, 12
+s_logits = torch.randn(B, S, V, requires_grad=True)
+t_logits = torch.randn(B, S, V)
+s_hidden = torch.randn(B, S, Ds, requires_grad=True)
+t_hidden = torch.randn(B, S, Dt)
+labels = torch.randint(V, (B, S))
+labels[1, -2:] = -100
+assistant_mask = torch.zeros(B, S, dtype=torch.bool)
+assistant_mask[:, 3:] = True  # template-derived in a real pipeline
+criterion = ModernKDLoss(Ds, Dt)
+loss = criterion(s_logits, t_logits, s_hidden, t_hidden, labels, assistant_mask)
+loss.backward()
+print("KD loss:", loss.item())
 ```
 
 ---
 
-## 6. 실전 증류 플레이북
+## 5. 실무 증류 설계의 질문
 
-실제 제품을 위한 distillation pipeline을 설계할 때 중요한 질문은 대개 철학적인 것이 아니라 운영적인 것입니다.
+실제 제품의 증류 파이프라인을 설계할 때는 다음 운영상의 질문이 중요합니다.
 
-1. **무슨 행동을 옮기고 싶은가?** 정확도, 지연 시간, 포맷 준수, tool use, safety 중 무엇이 핵심인지에 따라 필요한 teacher signal이 달라집니다.
-2. **정말 맞는 teacher인가?** 특화 작업에서는 파라미터 수보다 도메인 적합성이 더 중요할 수 있습니다.
-3. **어떤 failure mode를 볼 것인가?** clean benchmark에서는 좋아 보여도 길이 드리프트, calibration, refusal behavior에서 무너질 수 있습니다.
-4. **비용은 어디서 가장 많이 드는가?** rationale 생성이나 on-policy teacher scoring이 전체 증류 비용의 대부분을 차지하기도 합니다.
+1. **어떤 행동이 가장 중요한가요?** 정확도, 지연 시간, 형식 준수, 도구 사용, 안전성에 따라 적합한 교사 신호가 달라집니다.
+2. **적합한 교사인가요?** 전문 작업에서는 파라미터 수보다 도메인 적합성이 중요할 수 있습니다.
+3. **어떤 실패를 평가하나요?** 정제된 벤치마크 성적이 좋아도 응답 길이, 확률 보정, 거절 행동이 달라질 수 있습니다.
+4. **어디에 예산이 쓰이나요?** 추론 과정 생성이나 on-policy 채점을 위한 교사 추론이 전체 증류 비용의 큰 부분을 차지할 수 있습니다.
 
-그래서 production distillation은 보통 “teacher output으로 작은 모델 학습시키기”에서 끝나지 않습니다. dataset curation, teacher quality check, student-trajectory evaluation, release gate가 함께 붙는 경우가 많습니다.
+따라서 실무 증류에는 교사 출력으로 학생을 학습하는 것 외에도 데이터 선별, 교사 품질 검사, 학생 궤적 평가와 릴리스 기준이 필요합니다.
 
 ---
 
-## 7. 인터랙티브 컴포넌트: 잠재 공간 정렬 시뮬레이터
+## 6. 표현 정렬의 기하학적 제약
 
-Logit-Only KD와 Feature-Based KD가 학생 모델의 내부 표현에 어떤 차이를 만드는지 직관적으로 보려면 아래 시각화 도구를 살펴보세요.
-
-* **Logit-Only KD**: 최종 정답 분포는 어느 정도 맞추지만 내부 클러스터링은 여전히 불안정할 수 있습니다.
-* **Feature-Based KD**: 학생의 latent space가 교사의 기하학에 더 가까워지면서 일반화와 안정성이 좋아지는 경우가 많습니다.
-
+출력 일치는 은닉 공간의 특정 좌표를 요구하지 않습니다. 아래 그림은 특징 정렬이 추가하는 제약을 설명하며 두 학습 방법의 우열을 실험하지 않습니다.
 
 <KDVisualizer lang="ko" client:load />
 
 ---
 
-## 8. 요약 및 다음 단계
+## 7. 요약 및 다음 단계
 
 지식 증류는 단순한 로짓 매칭 기법에서, 큰 모델의 행동을 작은 모델로 옮기는 더 넓은 도구 상자로 발전했습니다. 지금 중요한 것은 “KD를 썼다”가 아니라, 어떤 teacher를 선택했고, 어떤 divergence를 썼고, 학생이 실제로 만드는 궤적까지 평가했는지입니다.
 
@@ -184,11 +164,23 @@ Logit-Only KD와 Feature-Based KD가 학생 모델의 내부 표현에 어떤 �
 
 ---
 
+## SteerDistill: 국소적으로 교정한 행동에서 배우기
+
+**2026-11-15 기준 — 초기 연구.** SteerDistill은 행동이 어긋난 지점 부근의 환경을 복원한 뒤, 교사의 지침으로 양자화 학생이 스스로 수정하도록 유도합니다. 국소 검증을 통과한 수정은 지침 없는 학생에 증류합니다. 교정 턴에는 순방향 KL, 다른 턴에는 원 정밀도 교사에 대한 역방향 KL을 씁니다. 실험 범위는 모델 3개와 에이전트 벤치마크 5개입니다. 성공한 교사 궤적·복원 가능한 상태·신뢰할 국소 검증이 필요하며, 국소 수정이 전체 성공을 보장하지는 않습니다. [[5]](#ref-5)
+
+검증기 오류와 최종 성공을 따로 측정하세요. 버전·마스크·환경 스냅샷을 보존하고 평가 과제와 변형은 격리해야 합니다.
+
+## 증류 실행 계약
+
+입력 manifest에 데이터 출처·권한·필터·중복 제거·평가 격리와 교사/학생·토크나이저·템플릿 hash를 기록합니다. 증류 대상은 assistant의 유효 다음 토큰이며 교사 checkpoint, 생성 설정·길이 정책, projection 레이어와 loss 가중치를 함께 고정합니다. 예제는 CPU FP32 텐서 계산이며 실제 예산에는 두 모델의 가중치, 학생 그래디언트·옵티마이저·활성화, 교사 추론 버퍼, 로짓 저장, collective·평가 비용이 추가됩니다.
+
+토큰 정규화 CE/KL과 도메인별 검증 지표, nonfinite/overflow·norm, 처리량·MFU·데이터 대기·collective와 batch ID를 관측합니다. 비유한 값, 마스크 불일치나 중요 슬라이스 악화 시 중단하세요. 체크포인트는 학생·projection·옵티마이저·스케줄러·정밀도 상태, step·토큰 수·RNG·sampler·데이터 cursor·hash를 포함해야 합니다. 격리된 도메인·기본 능력 유지·안전·형식/도구·지연·비용·오류율 평가를 짝지은 불확실성과 함께 통과하고 이전 정상 번들 복귀를 시험한 뒤에만 승격합니다.
+
 ## Quizzes
 
 <details>
 <summary>Quiz 1: 전통적인 로짓 기반 지식 증류에서 소프트맥스 함수에 적용되는 온도(Temperature, $T$) 파라미터의 수학적 역할은 무엇입니까?</summary>
-*일반적인 소프트맥스 함수는 정답 클래스에 확률이 극단적으로 쏠리는 매우 날카로운(Sharp) 분포를 만듭니다. 온도를 1보다 큰 값으로 설정하여 로짓을 나누면 확률 분포가 평평해지며(Smoothed), 이를 통해 정답이 아닌 오답 클래스들 간의 미세한 확률 차이(Dark Knowledge)가 증폭됩니다. 학생 모델은 이 부드러워진 분포를 학습함으로써 교사 모델의 일반화(Generalization) 패턴을 더 잘 흡수할 수 있습니다.* 
+*일반적인 소프트맥스 함수는 정답 클래스에 확률이 극단적으로 쏠리는 매우 날카로운(Sharp) 분포를 만듭니다. 온도를 1보다 큰 값으로 설정하여 로짓을 나누면 확률 분포가 평평해지며(Smoothed), 이를 통해 정답이 아닌 오답 클래스들 간의 미세한 확률 차이(Dark Knowledge)가 증폭됩니다. 학생 모델은 이 부드러워진 분포를 학습함으로써 교사 모델의 일반화(Generalization) 패턴을 더 잘 흡수할 수 있습니다.*
 </details>
 
 <details>
@@ -219,3 +211,4 @@ Logit-Only KD와 Feature-Based KD가 학생 모델의 내부 표현에 어떤 �
 2. <a id="ref-2"></a>Hsieh, C. Y., et al. (2023). *Distilling Step-by-Step! Outperforming Larger Language Models with Less Training Data and Smaller Model Sizes.* [arXiv:2305.02301](https://arxiv.org/abs/2305.02301).
 3. <a id="ref-3"></a>Gu, Y., Dong, L., Wei, F., & Huang, M. (2024). *MiniLLM: On-Policy Distillation of Large Language Models.* [arXiv:2306.08543](https://arxiv.org/abs/2306.08543).
 4. <a id="ref-4"></a>Agarwal, R., et al. (2024). *On-Policy Distillation of Language Models: Learning from Self-Generated Mistakes.* [arXiv:2306.13649](https://arxiv.org/abs/2306.13649).
+5. <a id="ref-5"></a>Research preprint (2026). [SteerDistill: Quantizing LLM Agents via Closed-Loop Teacher Steering](https://arxiv.org/html/2611.13410v1). Version pinned; accessed 2026-11-15.

@@ -41,7 +41,7 @@ vLLM 연구팀의 분석에 따르면, 표준 서빙 시스템에서는 단편�
 
 요청이 시작될 때, 엔진은 초기 프롬프트를 담을 수 있는 만큼의 물리적 블록만 할당합니다. 모델이 자기회귀적으로 새로운 토큰을 생성함에 따라, 시스템은 *필요할 때마다(on-demand)* 새로운 물리적 블록을 할당합니다.
 
-블록의 크기가 고정되어 있고 비연속적으로 저장될 수 있기 때문에, **외부 단편화는 완벽하게 제거됩니다**. 내부 단편화 역시 시퀀스의 *마지막* 블록에 남은 빈 공간(일반적으로 4% 미만의 낭비)으로 최소화됩니다.
+고정 크기 KV 블록 풀 안에서는 어느 빈 블록이든 재사용할 수 있어 외부 단편화를 피합니다. 이는 GPU의 모든 할당에 대한 보장이 아닙니다. 마지막 블록의 미사용 슬롯에 따른 내부 낭비율은 블록 크기와 요청 길이 분포에 따라 달라집니다.
 
 ### Interactive PagedAttention Simulation
 
@@ -65,15 +65,15 @@ class KVCacheMemoryPool:
     def __init__(self, num_blocks, block_size, num_heads, head_dim, dtype=torch.float16):
         self.num_blocks = num_blocks
         self.block_size = block_size
-        
+
         # 물리적 VRAM 풀: [num_blocks, 2 (K & V), num_heads, block_size, head_dim]
         self.physical_memory = torch.zeros(
-            (num_blocks, 2, num_heads, block_size, head_dim), 
-            dtype=dtype, 
+            (num_blocks, 2, num_heads, block_size, head_dim),
+            dtype=dtype,
             device='cuda'
         )
         # 사용 가능한 블록 인덱스의 스택
-        self.free_blocks = list(range(num_blocks)[::-1]) 
+        self.free_blocks = list(range(num_blocks)[::-1])
 
     def allocate_block(self):
         if not self.free_blocks:
@@ -94,37 +94,37 @@ def paged_attention_simulated(query, physical_pool, block_table, context_len):
     num_heads = query.size(1)
     head_dim = query.size(3)
     block_size = physical_pool.block_size
-    
+
     # 1. 비연속적인 물리적 블록들로부터 연속적인 K와 V 텐서를 재구성합니다.
-    # 참고: 실제 CUDA 커널에서는 이 명시적인 재구성 과정을 생략하고, 
+    # 참고: 실제 CUDA 커널에서는 이 명시적인 재구성 과정을 생략하고,
     # 메모리 대역폭을 절약하기 위해 블록 단위로 직접 내적(dot product)을 계산합니다.
     keys = []
     values = []
-    
+
     for block_idx in block_table:
         # 물리적 블록 가져오기: [num_heads, block_size, head_dim]
         k_block = physical_pool.physical_memory[block_idx, 0]
         v_block = physical_pool.physical_memory[block_idx, 1]
         keys.append(k_block)
         values.append(v_block)
-        
+
     # 시퀀스 차원을 따라 블록들을 이어 붙임(Concatenate)
     # 형태: [num_heads, total_allocated_len, head_dim]
     contiguous_k = torch.cat(keys, dim=1)
     contiguous_v = torch.cat(values, dim=1)
-    
+
     # 2. 마지막 블록에 포함된 패딩(빈 공간) 토큰들을 context_len을 사용해 잘라냅니다.
     contiguous_k = contiguous_k[:, :context_len, :]
     contiguous_v = contiguous_v[:, :context_len, :]
-    
+
     # 3. PyTorch 호환성을 위해 배치(Batch) 차원 추가
     contiguous_k = contiguous_k.unsqueeze(0)
     contiguous_v = contiguous_v.unsqueeze(0)
-    
+
     # 4. 표준 Scaled Dot-Product Attention 계산
     # 실제 시나리오에서는 여기에 FlashAttention을 적용할 수 있습니다.
     attn_output = F.scaled_dot_product_attention(query, contiguous_k, contiguous_v)
-    
+
     return attn_output
 ```
 
@@ -147,17 +147,12 @@ def paged_attention_simulated(query, physical_pool, block_table, context_len):
 
 ---
 
-## 5. Case Study: The LMSYS Chatbot Arena
+## 5. 사례를 읽는 방법: 실험 처리량과 배포 비용
 
-**PagedAttention** 의 현실 세계에서의 파급력은 그 탄생 배경에서 가장 잘 드러납니다. vLLM은 UC Berkeley의 연구원들에 의해 개발되었으며, 2023년 초 **LMSYS Chatbot Arena** 와 Vicuna 모델 출시의 엄청난 성공을 이끈 원동력이었습니다 [[1]](#ref-1).
+2023년 vLLM 발표는 ShareGPT의 입력·출력 길이를 사용한 LLaMA-7B/A10G 및 LLaMA-13B/A100 40GB 실험에서 HF 대비 최대 24배, TGI 대비 최대 3.5배 처리량을 보고했습니다. 이는 특정 실험 구성의 수치입니다. 별도로 LMSYS 배포에서는 사용 GPU 수가 50% 줄었다고 보고했습니다. 이를 전체 운영 비용 50% 절감이나 모든 요청의 TTFT 유지로 바꿔 읽으면 안 됩니다. [[2]](#ref-2)
 
-작은 학술 연구팀으로 운영되던 LMSYS는 대학에서 지원하는 제한된 수의 GPU만 사용할 수 있었습니다. Vicuna가 출시되었을 때 트래픽 급증은 상상을 초월했습니다. 표준 HuggingFace Transformers 백엔드를 사용하던 그들의 서버는 끊임없이 OOM(Out-Of-Memory) 에러를 내며 다운되었고, 서비스할 수 있는 사용자 수는 심각하게 제한되었습니다.
+실제 도입에서는 동일 모델·입출력 길이·동시성·정밀도·출력 수로 처리량과 TTFT, 토큰 간 지연, 실패율, 전체 비용을 함께 비교해야 합니다.
 
-엔진을 vLLM으로 교체함으로써, LMSYS는 HuggingFace Transformers 대비 **24배 높은 처리량(throughput)** 을 달성했으며, HuggingFace의 최적화된 TGI(Text Generation Inference)와 비교해서도 **3.5배 높은 처리량** 을 기록했습니다.
-
-메모리 낭비가 거의 0에 수렴하게 되자, vLLM은 단일 배치(batch)에 훨씬 더 많은 요청을 욱여넣을 수 있었습니다. 이러한 배치 크기의 극적인 증가는 개별 요청의 **지연 시간(latency, 첫 토큰까지의 시간)** 을 눈에 띄게 저하시키지 않으면서도 시스템 전체의 **처리량(초당 토큰 생성 수)** 을 비약적으로 향상시켰습니다. 결과적으로 **PagedAttention** 은 LMSYS가 5배 더 많은 트래픽을 처리하고 GPU 운영 비용을 50% 절감하여, 제한된 하드웨어로 수백만 명의 사용자를 감당할 수 있게 해주었습니다.
-
----
 
 ## 6. Summary and Open Questions
 
@@ -175,8 +170,8 @@ def paged_attention_simulated(query, physical_pool, block_table, context_len):
 </details>
 
 <details>
-<summary>Quiz 2: PagedAttention 구조에서 *내부 단편화(Internal Fragmentation)* 가 여전히 발생하는 유일한 상황은 언제인가?</summary>
-*내부 단편화는 오직 시퀀스의 가장 마지막 물리적 블록에서만 발생합니다. 논리적 블록의 크기가 16토큰인데 시퀀스가 마지막 블록에서 3개의 토큰만 사용하고 종료된다면, 해당 물리적 블록에 남은 13개의 토큰 슬롯은 낭비됩니다. 하지만 이 낭비는 엄격하게 제한적이며, 최대 컨텍스트 길이에 맞춰 메모리를 할당하던 기존 방식과 비교하면 무시할 수 있는 수준입니다.*
+<summary>Quiz 2: 블록 크기 B일 때 마지막 블록의 낭비는 얼마나 되나요?</summary>
+*시퀀스마다 B 미만의 빈 토큰 슬롯이 남을 수 있습니다. B=16이고 길이가 3이면 13개 슬롯이 비어 있으므로 비율은 클 수 있습니다. 전체 오버헤드는 길이 분포와 블록 크기에 달려 있습니다.*
 </details>
 
 <details>
@@ -185,13 +180,13 @@ def paged_attention_simulated(query, physical_pool, block_table, context_len):
 </details>
 
 <details>
-<summary>Quiz 4: PagedAttention을 사용하면 연속적인 KV Caching을 사용할 때와 비교하여 LLM의 수학적 출력이나 정확도(Accuracy)가 달라지는가?</summary>
-*아니요. PagedAttention은 순수한 알고리즘적 최적화입니다. 메모리가 저장되고 불려오는 '방식'만 바뀔 뿐, 실제 Self-Attention 계산(내적과 Softmax 연산)은 표준 연속적 어텐션과 수학적으로 완전히 동일하게 수행됩니다. 따라서 모델은 정확히 동일한 출력 로짓(logits)을 생성합니다.*
+<summary>Quiz 4: PagedAttention은 출력 로짓의 비트 단위 일치를 보장하나요?</summary>
+*저장 배치는 달라도 정확 산술에서 같은 어텐션을 계산합니다. 그러나 커널과 연산 순서가 달라지면 유한 정밀도 결과가 달라질 수 있습니다. 수치 허용 오차와 생성 품질을 검증해야 합니다.*
 </details>
 
 <details>
 <summary>Quiz 5: PagedAttention의 내부 단편화(Internal Fragmentation) 오버헤드를 수학적으로 공식화하시오. 블록 크기를 $B$ 토큰, 요청 $i$ 의 시퀀스 길이를 $S_i$, 토큰당 메모리 풋프린트를 $M$ 바이트라 정의한다. $N$ 개의 요청으로 구성된 배치에 대해 정확한 단편화 메모리 유도 공식을 도출하시오.</summary>
-*PagedAttention에서 메모리는 $B$ 토큰 크기의 고정된 물리적 블록 단위로 할당됩니다. 내부 단편화는 시퀀스의 마지막에 할당된 블록이 완전히 채워지지 않았을 때만 발생합니다. 요청 $i$ 에 대해 낭비되는 토큰 슬롯의 수는 $(B - (S_i \pmod B)) \pmod B$ 입니다. 따라서 요청 $i$ 에 대해 낭비되는 정확한 메모리 풋프린트는 $W_i = M \times ((B - (S_i \pmod B)) \pmod B)$ 바이트입니다. $N$ 개의 요청 배치에 대한 총 내부 단편화 오버헤드는 $W_{total} = \sum_{i=1}^N W_i$ 입니다. $S_i$ 가 균등 분포(uniformly distributed)를 따른다고 가정할 때, 요청당 평균 낭비 토큰 수는 $B/2$ 에 수렴합니다. 결과적으로 $N$ 개 요청에 대한 평균 총 오버헤드는 대략 $N \times M \times \frac{B}{2}$ 바이트가 됩니다.*
+*PagedAttention에서 메모리는 $B$ 토큰 크기의 고정된 물리적 블록 단위로 할당됩니다. 내부 단편화는 시퀀스의 마지막에 할당된 블록이 완전히 채워지지 않았을 때만 발생합니다. 요청 $i$ 에 대해 낭비되는 토큰 슬롯의 수는 $(B - (S_i \pmod B)) \pmod B$ 입니다. 따라서 요청 $i$ 에 대해 낭비되는 정확한 메모리 풋프린트는 $W_i = M \times ((B - (S_i \pmod B)) \pmod B)$ 바이트입니다. $N$ 개의 요청 배치에 대한 총 내부 단편화 오버헤드는 $W_{total} = \sum_{i=1}^N W_i$ 입니다. $S_i$ 가 균등 분포(uniformly distributed)를 따른다고 가정할 때, 요청당 평균 낭비 토큰 수는 $ (B-1)/2 $ 에 수렴합니다. 결과적으로 $N$ 개 요청에 대한 평균 총 오버헤드는 대략 $N \times M \times \frac{B-1}{2}$ 바이트가 됩니다.*
 </details>
 
 ---
@@ -199,3 +194,4 @@ def paged_attention_simulated(query, physical_pool, block_table, context_len):
 ## References
 
 1. <a id="ref-1"></a>Kwon, W., Li, Z., Zhuang, S., Sheng, Y., Zheng, L., Yu, C. H., ... & Stoica, I. (2023). "Efficient Memory Management for Large Language Model Serving with PagedAttention". *Proceedings of the 29th Symposium on Operating Systems Principles (SOSP)*. [arXiv:2309.06180](https://arxiv.org/abs/2309.06180)
+2. <a id="ref-2"></a>Kwon & Li (2023). [vLLM release and benchmark methodology](https://vllm.ai/blog/2023-06-20-vllm). Historical result; accessed 2026-11-15.

@@ -136,25 +136,11 @@ After the ELMo researchers made a clever backronym (Embeddings from Language Mod
 
 Despite the fact that Decoder-only models have become the mainstream for Generative AI, Encoder-only models of the BERT family are still widely used in practice and play a crucial role. The reasons are as follows:
 
-### 1. Bidirectional Context is Superior for Understanding
-When the goal is to 'understand' text rather than 'generate' it, Causal Attention (which prevents looking at future tokens) can actually be counterproductive.
-*   **Full Context Comprehension**: The meaning of a word can often only be accurately determined by looking at the context that follows it. Encoder-only models allow all tokens to reference each other, making them much more effective at understanding such homonyms or complex contexts.
-*   **Classification and Named Entity Recognition (NER)**: In tasks like analyzing the sentiment of a text or extracting key information from a document, bidirectional attention that looks at the entire text at once yields higher accuracy.
+Bidirectional attention lets each position use context on both sides, a useful design for classification, entity recognition and embeddings. Architecture alone guarantees neither higher accuracy nor lower latency. Compare trained models on the intended data and output contract.
 
-### 2. Extreme Efficiency in Feature Extraction
-In the recently highlighted **RAG (Retrieval-Augmented Generation)** systems, the process of converting documents into vectors, known as 'Embedding', is essential.
-*   Encoder-only models are optimized for compressing and representing text as high-dimensional vectors.
-*   Extracting embeddings with Decoder-only models requires inefficient prompting or special pooling techniques due to the restriction of not seeing future tokens. In contrast, Encoder-only models provide much faster and more accurate embeddings through tokens like `[CLS]` that contain the meaning of the entire sentence.
+Decoder-only embeddings can be extracted with one forward pass and pooling, without generation; the final position sees preceding context. Conversely, a raw `[CLS]` vector does not guarantee useful retrieval embeddings. Validate embedding objectives, pooling, and retrieval quality across lengths and languages.
 
-### 3. Cost-Effective Deployment
-Decoder-only models often have billions of parameters, leading to high serving costs.
-*   On the other hand, Encoder-only models like BERT or RoBERTa usually yield excellent understanding performance even with hundreds of millions of parameters.
-*   For tasks that do not require generation, such as classification, search, and matching, there is no need to use huge decoder models. Using much smaller and faster encoder models can reduce infrastructure costs by a factor of tens.
-
-### 4. ModernBERT: The Renaissance of Encoders
-The emergence of ModernBERT has shown that Encoder-only models can also benefit from the advancements in LLMs. With long context support and Flash Attention application, it is now showing speed and efficiency that surpasses decoder models in large-scale document search and analysis tasks.
-
-
+A small encoder can be cheaper if it meets the quality requirement. Savings depend on model size, batch, length and kernels. ModernBERT’s longer-context and efficient-attention features are options to evaluate on the actual workload, not guarantees of superiority over every decoder.
 
 ## PyTorch Implementation: MLM Head
 
@@ -171,7 +157,7 @@ class MLMHead(nn.Module):
         self.dense = nn.Linear(hidden_size, hidden_size)
         self.layer_norm = nn.LayerNorm(hidden_size)
         self.decoder = nn.Linear(hidden_size, vocab_size, bias=False)
-        
+
         # Link bias to decoder
         self.bias = nn.Parameter(torch.zeros(vocab_size))
         self.decoder.bias = self.bias
@@ -181,7 +167,7 @@ class MLMHead(nn.Module):
         x = self.dense(hidden_states)
         x = F.gelu(x)
         x = self.layer_norm(x)
-        
+
         # Project to vocab size
         # logits shape: (batch_size, seq_len, vocab_size)
         logits = self.decoder(x)

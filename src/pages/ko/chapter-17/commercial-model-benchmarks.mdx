@@ -1,185 +1,198 @@
 ---
 layout: ../../../layouts/BookLayout.astro
-title: 17.6 상용 모델 벤치마크
+title: 17.6 상용·오픈 웨이트 모델 벤치마크
 lang: ko
 ---
 
 import CommercialModelBenchmarkExplorer from '../../../components/chapter-17/CommercialModelBenchmarkExplorer.tsx';
 
-# 17.6 상용·오픈웨이트 모델 벤치마크
+# 17.6 상용·오픈 웨이트 모델 벤치마크
 
-모델 공개는 순위표 외에도 접근·라이선스·프롬프트 인코딩·가격·출력 예산·고정된 API 별칭의 실제 리비전을 바꿀 수 있습니다. 익숙한 이름을 바로 교체할 수 있는 모델로 취급하기 전에 이런 계약부터 평가해야 합니다.
+새 모델 출시는 순위표의 이름만 바꾸지 않습니다. 다운로드할 아티팩트, 라이선스, 프롬프트 인코딩, 추론 예산, 가격 구간, API 별칭이 가리키는 리비전도 달라질 수 있습니다. 이 조건을 먼저 확인한 뒤 전체 워크플로를 측정해야 합니다.
 
-**2026-10-25 기준입니다.** 실시간 순위가 아닌 날짜가 고정된 과거 스냅샷입니다. 공개 출처와 AA 프로필을 이번에 확인했으며 추후 출판·도입 전에는 **다시 검증** 해야 합니다. 날짜는 발표·접근 확대·가중치 공개·명시한 아티팩트 리비전 중 선택한 이정표이며 모두 최초 출시일을 뜻하지는 않습니다.
+**2026-11-15 기준.** 전체 출시 목록이 아닌 32개 프로필의 정적 스냅샷입니다. 날짜는 출시, 가중치 공개, 확인한 아티팩트 리비전 중 명시된 이정표이며 모두 최초 출시일인 것은 아닙니다. 공개 저장소가 생성된 날짜만으로 가중치 공개일을 확정할 수 없습니다. 이후 출판·배포 시 출처를 다시 확인하세요.
 
-## 1. 평가된 시스템 읽기
+## 1. 벤치마크 버전이 바뀌면 측정도 달라집니다
 
-지수는 평가 10개로 구성된 Artificial Analysis Intelligence Index **v4.3.2** 입니다 [[1]](#ref-1). 추론 강도·fallback·scaffold·도구·샘플링·문맥·채점기·리비전이 결과의 일부입니다. 서로 다른 프로필은 동일 계산량이나 가중치만 통제한 비교가 아닙니다. 지수는 백분율이 아니며 선언한 문맥 한도가 장문 추론 정확도도 아닙니다.
+Artificial Analysis의 현재 **Intelligence Index v5.0.1**은 지식 업무, 코딩, 과학, 일반 과업의 9개 평가를 포함합니다 [[1]](#ref-1). 이 장은 10월의 v4.3.2 값을 전부 새 기준으로 교체했습니다. 두 버전 사이의 점수 변화가 같은 가중치의 성능 향상이나 저하를 뜻하지는 않습니다. 이전 점수를 새 점수에서 빼서 성능 추세로 해석하면 안 됩니다.
 
-표는 선택한 26개 프로필이며 모든 출시의 목록은 아닙니다. AA가 추론 강도를 명시하지 않으면 미공개로 남깁니다. 새 체크포인트에 기반 모델의 점수를 옮기지 않고 가격 누락을 무료로 해석하지 않습니다. 품질·비용·지연·문맥·개방성·안전성의 파레토 경계에서 후보를 고르고 동일한 운영 제약의 비공개 평가로 검증해야 합니다.
+평가 대상에는 추론 강도, fallback, 실행 프레임워크, 도구 접근, 토큰·문맥 예산, 샘플링, 채점기가 포함됩니다. 동일 연산량 실험이 아닙니다. 지수는 정확도 백분율이 아니며 문맥 한도는 검색 정확도가 아닙니다. 빈 값은 **대응하는 리비전·평가 방식으로 확인하지 못한 값** 이고 0점이 아닙니다.
 
-## 2. 다시 확인한 공개·평가 기록
+## 2. 재확인한 공개·평가 기록
 
-| 모델 | 선택한 공개 이정표 | 2026-10-25 접근 상태 | AA 추론 설정 | 지수 | $/AA 과업 | 출처 |
+| 모델 | 공개·리비전 이정표 | 2026-11-15 기준 접근 상태 | AA 추론 설정 | 지수 | $/AA 과업 | 출처 |
 |---|---|---|---|---:|---:|---|
-| GPT-6.1 Sol | 2026-09-29 | API 공개 | max | 52 | 0.72 | [[2]](#ref-2) [[3]](#ref-3) |
-| GPT-6 Sol | 2026-09-22 | API 공개 | max | 48 | 1.04 | [[4]](#ref-4) [[5]](#ref-5) |
-| GPT-6 Luna | 2026-09-22 | API 공개 | max | 38 | 0.07 | [[6]](#ref-6) [[7]](#ref-7) |
-| GPT-6 Astra | 2026-09-03 | API 공개 | max | 53 | 3.26 | [[8]](#ref-8) [[9]](#ref-9) |
-| Claude Opus 5.5 | 2026-09-22 | API 공개 | max with fallback | 58 | 5.98 | [[10]](#ref-10) [[11]](#ref-11) |
-| Claude Sonnet 5.5 | 2026-09-28 | API 공개 | max with fallback | 56 | 5.46 | [[12]](#ref-12) [[14]](#ref-14) |
-| Claude Haiku 5.5 | 2026-10-07 | API 공개 | max | 43 | 0.21 | [[13]](#ref-13) [[15]](#ref-15) |
-| Gemini 4 Argon | 2026-10-13 | API 공개 | high | 53 | 1.99 | [[16]](#ref-16) [[17]](#ref-17) [[19]](#ref-19) |
-| DeepSeek V4.1 Flash (September profile) | 2026-09-10 | 가중치 공개 | max | 39 | 0.48 | [[20]](#ref-20) [[21]](#ref-21) |
-| GLM-5.3 | 2026-08-14 | 가중치 공개 | max | 45 | 2.01 | [[22]](#ref-22) [[23]](#ref-23) |
-| Mistral Large 4 | 2026-10-06 | API 프리뷰 | 프리뷰 설정 | 38 | 1.13 | [[24]](#ref-24) [[25]](#ref-25) |
-| Beam 1.0 | 2026-10-16 | 가중치 공개 | 추론·세부 강도 미공개 | 30 | 0.23 | [[26]](#ref-26) [[27]](#ref-27) [[28]](#ref-28) |
-| Muse Wonder | 2026-10-12 | API 공개 | max | 52 | 4.54 | [[29]](#ref-29) [[30]](#ref-30) |
-| Muse Wonder Full | 2026-10-12 | 구독 제품 공개 | max | 56 | 미공개 | [[29]](#ref-29) [[31]](#ref-31) |
-| Muse Spark Open | 2026-10-15 | 가중치 공개·다운로드 승인 필요 | xhigh | 39 | 0.84 | [[32]](#ref-32) [[33]](#ref-33) [[34]](#ref-34) |
-| Nemotron 3.5 Super VL | 2026-10-15 | 가중치 공개 | 추론·세부 강도 미공개 | 26 | 0.19 | [[35]](#ref-35) [[36]](#ref-36) |
-| Nemotron 3.5 Bolt 74B-A9B 24GB | 2026-10-15 | 가중치 공개 | 추론·세부 강도 미공개 | 21 | 미공개 | [[37]](#ref-37) [[38]](#ref-38) |
-| Step 5 Preview | 2026-10-15 | 가중치 공개 | 추론·세부 강도 미공개 | 44 | 1.03 | [[39]](#ref-39) [[40]](#ref-40) |
-| DeepSeek V4.1 Flash 1017 | 2026-10-17 | 가중치 공개·API 갱신 | max | 45 | 0.26 | [[41]](#ref-41) [[42]](#ref-42) [[43]](#ref-43) |
-| MiniMax M3.1 Flash | 2026-10-23 | 가중치·API 공개 | 추론·세부 강도 미공개 | 43 | 0.22 | [[44]](#ref-44) [[45]](#ref-45) [[46]](#ref-46) [[47]](#ref-47) |
-| Kimi K3.1 Pro | 2026-10-24 | API 공개·가중치 예정 | 추론·세부 강도 미공개 | 55 | 2.11 | [[48]](#ref-48) [[49]](#ref-49) |
-| Kimi K3.1 Pro Highspeed | 2026-10-24 | API 공개 | 미공개 | 미공개 | 미공개 | [[48]](#ref-48) |
-| Ling 3.1 Flash | 2026-10-20 | 가중치 공개 | 추론·세부 강도 미공개 | 41 | 1.01 | [[50]](#ref-50) [[51]](#ref-51) [[52]](#ref-52) |
-| Ling 3.0 Flash Sante | 2026-10-22 | 가중치 공개 | 추론·세부 강도 미공개 | 미공개 | 미공개 | [[53]](#ref-53) [[54]](#ref-54) |
-| Smaug Nemotron 3.5 NVFP4 | 2026-10-22 | 가중치 공개 | 미공개 | 미공개 | 미공개 | [[55]](#ref-55) [[56]](#ref-56) [[57]](#ref-57) |
-| Nemotron 3.5 Bolt E4B 4GB | 2026-10-23 | 가중치 공개 | 미공개 | 미공개 | 미공개 | [[58]](#ref-58) [[59]](#ref-59) [[60]](#ref-60) |
+| GPT-6.1 Sol | 2026-09-29 | API 공개 | max | 55 | 1.27 | [[2]](#ref-2) [[3]](#ref-3) |
+| GPT-6 Sol | 2026-09-22 | API 공개 | max | 44 | 2.47 | [[4]](#ref-4) [[5]](#ref-5) |
+| GPT-6 Luna | 2026-09-22 | API 공개 | max | 28 | 0.15 | [[6]](#ref-6) [[7]](#ref-7) |
+| GPT-6 Astra | 2026-09-03 | API 공개 | max | 57 | 6.24 | [[8]](#ref-8) [[9]](#ref-9) |
+| Claude Opus 5.5 | 2026-09-22 | API 공개 | max with fallback | 59 | 10.04 | [[10]](#ref-10) [[11]](#ref-11) |
+| Claude Sonnet 5.5 | 2026-09-28 | API 공개 | max with fallback | 55 | 10.02 | [[12]](#ref-12) [[13]](#ref-13) [[14]](#ref-14) |
+| Claude Haiku 5.5 | 2026-10-07 | API 공개 | max | 36 | 0.41 | [[13]](#ref-13) [[15]](#ref-15) |
+| Gemini 4 Argon | 2026-10-13 | API 공개 | high | 50 | 4.97 | [[16]](#ref-16) [[17]](#ref-17) [[18]](#ref-18) [[19]](#ref-19) |
+| DeepSeek V4.1 Flash (September profile) | 2026-09-10 | 가중치 공개 | max | 미공개 | 미공개 | [[20]](#ref-20) [[21]](#ref-21) |
+| GLM-5.3 | 2026-08-14 | 가중치 공개 | max | 32 | 5.01 | [[22]](#ref-22) [[23]](#ref-23) |
+| Mistral Large 4 | 2026-10-29 | 가중치 공개·API | high | 26 | 2.06 | [[24]](#ref-24) [[25]](#ref-25) [[26]](#ref-26) [[27]](#ref-27) |
+| Beam 1.0 | 2026-10-16 | 가중치 공개 | reasoning; effort not reported | 18 | 0.28 | [[28]](#ref-28) [[29]](#ref-29) [[30]](#ref-30) |
+| Muse Wonder | 2026-10-12 | API 공개 | max | 44 | 6.95 | [[31]](#ref-31) [[32]](#ref-32) |
+| Muse Wonder Full | 2026-10-12 | 구독 제품 공개 | max | 50 | 미공개 | [[31]](#ref-31) [[33]](#ref-33) |
+| Muse Spark Open | 2026-10-15 | 가중치 공개·다운로드 승인 필요 | xhigh | 25 | 2.02 | [[34]](#ref-34) [[35]](#ref-35) [[36]](#ref-36) |
+| Nemotron 3.5 Super VL | 2026-10-15 | 가중치 공개 | high | 14 | 0.56 | [[37]](#ref-37) [[38]](#ref-38) |
+| Nemotron 3.5 Bolt 74B-A9B 24GB | 2026-10-15 | 가중치 공개 | reasoning; effort not reported | 미공개 | 미공개 | [[39]](#ref-39) [[40]](#ref-40) |
+| Step 5 Preview | 2026-10-15 | 가중치 공개 | reasoning; effort not reported | 29 | 2.35 | [[41]](#ref-41) [[42]](#ref-42) |
+| DeepSeek V4.1 Flash 1017 | 2026-10-17 | 가중치 공개·API 갱신 | max | 33 | 0.60 | [[43]](#ref-43) [[44]](#ref-44) [[45]](#ref-45) |
+| MiniMax M3.1 Flash | 2026-10-23 | 가중치·API 공개 | max | 29 | 0.49 | [[46]](#ref-46) [[47]](#ref-47) [[48]](#ref-48) |
+| Kimi K3.1 Pro | 2026-11-05 | 가중치 공개·API | max | 46 | 3.68 | [[49]](#ref-49) [[50]](#ref-50) [[51]](#ref-51) [[52]](#ref-52) |
+| Kimi K3.1 Pro Highspeed | 2026-10-24 | API 공개 | not reported | 미공개 | 미공개 | [[51]](#ref-51) |
+| Ling 3.1 Flash | 2026-10-20 | 가중치 공개 | reasoning; effort not reported | 미공개 | 미공개 | [[53]](#ref-53) [[54]](#ref-54) |
+| Ling 3.0 Flash Sante | 2026-10-22 | 가중치 공개 | reasoning; effort not reported | 미공개 | 미공개 | [[55]](#ref-55) |
+| Smaug Nemotron 3.5 NVFP4 | 2026-10-22 | 가중치 공개 | not reported | 미공개 | 미공개 | [[56]](#ref-56) [[57]](#ref-57) |
+| Nemotron 3.5 Bolt E4B 4GB | 2026-10-23 | 가중치 공개 | not reported | 미공개 | 미공개 | [[58]](#ref-58) [[59]](#ref-59) |
+| GPT-6.1 Terra | 2026-10-26 | API 공개 | max | 51 | 0.96 | [[60]](#ref-60) [[61]](#ref-61) |
+| Claude Fable 5.2 | 2026-11-09 | API 공개 | max with fallback | 65 | 26.54 | [[62]](#ref-62) [[63]](#ref-63) [[64]](#ref-64) |
+| Claude Mythos 5.2 | 2026-11-09 | 검증 프로그램 제한 공개 | not reported | 미공개 | 미공개 | [[62]](#ref-62) |
+| Inkling 2 Small | 2026-11-12 | 가중치 공개 | reasoning; effort not reported | 31 | 1.18 | [[65]](#ref-65) [[66]](#ref-66) [[67]](#ref-67) [[68]](#ref-68) |
+| Qwen3.8 Flash Next | 2026-11-07 | 가중치 공개 | reasoning; effort not reported | 29 | 0.57 | [[69]](#ref-69) [[70]](#ref-70) [[71]](#ref-71) |
+| GLM-5.3 Flash | 2026-10-15 | 가중치 공개 | max | 28 | 0.58 | [[72]](#ref-72) [[73]](#ref-73) [[74]](#ref-74) |
 
-AA 과업 비용은 평가의 토큰 혼합·캐시·생성 동작에 대한 관측 비용이며 가격 보증이나 동일 계산량 실험이 아닙니다. Wonder Full에는 공개 API 과업 비용이 없습니다. 9월 DeepSeek·Beam·Wonder의 재확인 비용은 각각 \$0.48·\$0.23·\$4.54입니다 [[21]](#ref-21) [[28]](#ref-28) [[30]](#ref-30).
+과업 비용은 v5.0.1 평가의 토큰 구성과 캐시 동작을 반영한 관측값을 반올림한 것이며 청구 가격 보장이 아닙니다. 9월 DeepSeek과 Bolt 74B는 현재 지수를 확인하지 못했습니다. Ling의 현재 프로필은 1019 변형을 가리키지만 목록의 공개 체크포인트와 동등한지는 확인되지 않았습니다. Wonder Full에는 지수가 있지만 공개 API 과업 비용은 확인되지 않았습니다. 이런 누락을 그대로 표시합니다.
 
-## 3. 10월 19–25일 공개가 바꾸는 것
+## 3. 새 출시에서 읽어야 할 변화
 
-### API 제공과 가중치 공개는 다른 사건
+### 호스팅 접근과 가중치 공개는 별도 이정표입니다
 
-MiniMax M3.1 Flash는 10월 19일 호스팅 제품에서 출시됐고, 이제 공식 저장소에 실제 가중치 파일이 있습니다. 23일 리비전을 별도 기록했습니다. 카드는 MiniMax Community License 아래 전 계층 희소 어텐션·양자화 인지 학습·DSpark draft head를 설명합니다 [[44]](#ref-44) [[45]](#ref-45). 카드의 파라미터는 전체 약 428B·활성 23B입니다. Hub의 패킹된 텐서 수를 아키텍처 파라미터 수로 대체하면 안 됩니다. 표준 출시 가격은 백만 토큰당 입력 \$0.15·출력 \$0.60이며 캐시 적중은 별도입니다. Draft head를 보편적인 속도 배수로 해석하지 말고 서빙 레시피를 확인하세요.
+**Kimi K3.1 Pro**의 공개 가중치 파일을 이제 확인할 수 있습니다. 카드는 전체 2.8T·활성 104B, KDA/gated sparse attention 혼합, 양자화 인지 학습 형식을 명시합니다. 표의 날짜는 확인한 11월 5일 아티팩트 리비전입니다. 이전의 ‘가중치 공개 예정’ 판단은 바뀌지만 전체 학습 데이터 혼합이나 호스팅·로컬 동등성까지 확인된 것은 아닙니다. Highspeed에는 별도 검증하지 않은 사양을 복사하지 않았습니다 [[49]](#ref-49) [[50]](#ref-50) [[51]](#ref-51) [[52]](#ref-52).
 
-Kimi K3.1 Pro와 Highspeed는 호스팅 채널에서 사용할 수 있습니다. 10월 24일 기술 글은 Pro 전체 가중치를 **11월 4일까지** 공개한다고 약속합니다. Highspeed의 별도 가중치 아티팩트는 확인되지 않아 둘 다 공개 완료로 표시하지 않습니다 [[48]](#ref-48). “3T-class”는 제공사 표현이며 글에서 정확한 전체·활성 파라미터와 전체 학습 혼합은 미공개입니다. 호스팅 점수가 이 공백을 채우지 않습니다. Highspeed의 2~3배 속도 주장도 제공사 간 지연 그래프에 넣지 않습니다. 별도 확인되지 않은 문맥 한도·가격·지수는 미공개로 유지합니다.
+**Mistral Large 4**는 10월 프리뷰 이후 가중치가 공개됐습니다. 모델 카드와 현재 문서는 세분화된 멀티모달 MoE를 명시합니다. Mistral Ecosystem Open-Weight License는 Model-as-a-Service 사업에 별도 계약을 요구하므로 가중치 공개가 무제한 호스팅을 뜻하지 않습니다. 현재 AA high 평가는 이전 프리뷰 결과와 구분합니다 [[24]](#ref-24) [[25]](#ref-25) [[26]](#ref-26) [[27]](#ref-27).
 
-Mistral Large 4는 여전히 API 프리뷰와 10월 말 가중치 계획입니다 [[24]](#ref-24). 예정일이 가까워졌다는 사실은 공개 완료의 근거가 아닙니다. 반대로 Step 5 **Preview** 는 실제 가중치가 있습니다. 이름이 공개 상태를 정하지는 않습니다 [[39]](#ref-39).
+**Inkling 2 Small**도 호스팅 출시 이후 Apache 2.0 가중치를 공개했습니다. 카드는 전체 594B·활성 17B와 MXFP8/NVFP4 혼합 아티팩트를 명시합니다. vLLM 통합 문서는 내장 초안 헤드와 하드웨어별 최적화를 설명합니다. 활성 연산량과 패킹 용량만으로 전체 상주 가중치, KV 상태, 시각 처리, 임시 버퍼를 계산할 수 없습니다. 초안 헤드의 속도는 실제 배포 조건에서 측정해야 합니다 [[65]](#ref-65) [[66]](#ref-66) [[67]](#ref-67) [[68]](#ref-68).
 
-다시 확인한 Mistral 변경 기록도 Large 4를 Public Preview로 표시하고 가중치는 공개 예정이라고 명시합니다 [[61]](#ref-61).
+### 범용 설정과 제한 접근 설정은 별도로 평가합니다
 
-### 익숙한 이름 뒤의 리비전 고정
+**GPT-6.1 Terra**는 텍스트·이미지 입력과 텍스트 출력의 새로운 선택지입니다. 공식 문서는 1,050,000토큰 문맥, 128,000토큰 출력 한도, 추론 강도를 구분하며 도구 호출에 Responses가 필요하다고 명시합니다. 표준 단가는 100만 토큰당 입력 \$1·출력 \$5이고 캐시·장문·서비스 등급 조건은 별도입니다. 아키텍처, 파라미터 수, 학습 혼합은 미공개입니다 [[60]](#ref-60) [[61]](#ref-61).
 
-DeepSeek V4.1 Flash 1017에는 이제 자체 AA max 프로필이 있습니다. 지수 45·관측 과업 비용 \$0.26은 명시된 리비전의 독립 기록이며 9월 값을 빌린 것이 아닙니다 [[43]](#ref-43). 가변 API 별칭과 프로토콜 인지 인코딩에 대해서는 여전히 전환 검사가 필요합니다 [[42]](#ref-42).
+Anthropic은 **Claude Fable 5.2**와 **Mythos 5.2**의 기본 모델은 같고 안전장치·접근 조건이 다르다고 설명합니다. Mythos에는 검증 프로그램을 통한 접근이 필요합니다. 따라서 Fable의 측정값을 Mythos에 옮기지 않았습니다. Fable의 표준 입력/출력 단가 \$8/\$40은 고속 모드 \$16/\$80과 다르고, 과업 비용에는 추론 길이와 fallback도 영향을 줍니다. 제공사의 장기 과업 시연은 그 시스템의 사례이지 일반적인 신뢰성 보장이 아닙니다 [[62]](#ref-62) [[63]](#ref-63) [[64]](#ref-64).
 
-Ling 3.1 Flash의 MIT 공개 카드는 KDA/gated-MLA 하이브리드와 전체 560B·활성 25B MoE를 명시합니다 [[50]](#ref-50). 표의 10월 20일은 확인한 아티팩트 리비전이며 최초 호스팅 출시일이 아닙니다. AA에는 별도의 **1019 호스팅 프로필** 도 있지만 공개 체크포인트와의 관계가 검증되지 않았습니다. 따라서 명시적으로 맞춘 기존 프로필의 41·\$1.01을 유지합니다 [[51]](#ref-51). 비슷한 이름의 높은 점수만으로 리비전 동등성이 성립하지 않습니다.
+### 제품군 이름보다 파라미터 계산 범위를 확인합니다
 
-### 작은 메모리 목표는 특정 아티팩트의 조건
+**Qwen3.8 Flash Next** 카드는 본체 125B·활성 6B 외에 n-gram 임베딩 51B와 MTP 4B를 구분합니다. Gated DeltaNet, 블록 희소 QSA, 게이트가 있는 잔차 스트림을 결합합니다. 기본 문맥 262,144는 확장 설정 및 호스팅 Flash 서비스와 다릅니다. 표의 11월 7일은 확인한 리비전이며 새 출시일이라는 주장이 아닙니다 [[69]](#ref-69) [[70]](#ref-70) [[71]](#ref-71).
 
-NVIDIA가 10월 23일 공개한 Bolt E4B 4GB는 하이브리드 Mamba/MoE Bolt 74B와 달리 Gemma-4-E4B 기반입니다. 카드는 전체 8B·유효 4B, OpenMDW-1.1, 입력·출력 각각 최대 64K를 명시합니다 [[58]](#ref-58) [[59]](#ref-59). 두 한도를 더해 통합 문맥이라고 주장하거나 이름으로 아키텍처를 추정하면 안 됩니다. “4GB” 목표는 임의의 문맥·동시성·음성 파이프라인 메모리를 확보해 주지 않습니다.
+**GLM-5.3 Flash**는 GLM-5.3을 빠르게 서빙하는 설정이 아니라 별도로 학습한 멀티모달 기반 모델입니다. 카드는 전체 320B·활성 18B와 MIT 가중치를 명시합니다. 10월 15일 리비전은 아키텍처 비교를 보완하기 위해 넣었으며 11월 신작으로 소개하는 것이 아닙니다 [[72]](#ref-72) [[73]](#ref-73) [[74]](#ref-74). 표의 소형·도메인 특화 모델도 다른 제품군 구성원의 벤치마크나 구조를 그대로 물려받지 않습니다.
 
-Smaug Nemotron 3.5 NVFP4는 실제 가중치가 공개된 OpenMDW-1.1 미세 조정 모델입니다. Abacus는 실제 서빙 형식으로의 반올림을 반영하는 적응을 설명합니다 [[55]](#ref-55) [[56]](#ref-56). 이는 부동소수점 어댑터뿐 아니라 **병합한 양자화 아티팩트** 를 검사해야 할 이유입니다. 제공사 개선 주장과 기반 모델 결과는 이 리비전의 AA 점수가 아닙니다. 13.5절은 명목 가중치 비트 외의 상태·작업 공간을 다룹니다.
+## 4. 누락을 채우지 않고 장단점 탐색하기
 
-Ling 3.0 Flash Sante는 MIT 의료 연구 체크포인트이며 카드는 전체 124B·활성 5.1B와 도메인 평가를 제시합니다 [[53]](#ref-53). 임상 검증이나 범용 능력의 보편적인 개선 근거는 아닙니다. 의료 벤치마크로 AA 값을 만들지 말고 도메인 검토와 적절한 과업 기준선을 사용하세요.
+지표·축·제공사를 선택하면 두 축 값을 모두 확인한 모델만 표시됩니다. 선택 목록과 상세 정보도 필터를 따릅니다. 빈 그래프는 유효한 결과이며 가나다·알파벳 순 선택 목록은 순위가 아닙니다.
 
-## 4. 누락값을 채우지 않는 프로필 탐색
-
-지표·축·필터에 필요한 두 값이 모두 있는 항목만 표시합니다. 이름순 선택 목록은 보편적 순위가 아닙니다. 토큰 단가 점은 백만 토큰당 비캐시 표준 입력·출력 단가로 $(3p_{in}+p_{out})/4$ 를 계산한 예시입니다. 캐시 쓰기·적중, 도구, 모달리티, 장문 요금 구간, 출력 길이 차이는 제외합니다. 회사·축 조합이 비어도 누락값을 미공개로 유지합니다.
-
-문맥 지표는 제공사별 의미를 보존합니다. Bolt E4B는 입력 한도이며 Gemini 4 Argon 계약은 통합 창입니다. 프로모션 가격에는 만료일도 있습니다. Google의 Argon 도입 가격은 11월 30일까지입니다 [[17]](#ref-17) [[18]](#ref-18). 비교 조건이 다른 속도를 섞어 곡선을 만들지 않았습니다.
+토큰 가격 축은 100만 토큰당 캐시 없는 단가의 예시 혼합 $(3p_{in}+p_{out})/4$를 사용합니다. 캐시 쓰기·읽기, 도구, 모달리티 요금, 장문 구간, 출력 길이 차이는 제외합니다. AA 자체 혼합 단가나 관측 과업 비용과는 다릅니다. 현재 Google Argon 도입 가격은 11월 30일에 끝나므로 이후 비용을 계산할 때 다시 확인해야 합니다 [[16]](#ref-16) [[17]](#ref-17) [[18]](#ref-18) [[19]](#ref-19).
 
 <CommercialModelBenchmarkExplorer client:load locale="ko" />
 
-## 5. 파이프라인과 판단 경계 평가
+## 5. 후보 목록을 릴리스 결정으로 연결하기
 
-Jev·OpenAI Decisions·open d1·LemonDecider는 자유로운 답변 생성 대신 범위가 정해진 판단을 제공합니다. 선택지 확률·보정·선택 위험을 따로 평가해야 합니다. Decision Index는 생성 모델 AA 지수의 점이 아닙니다. [16.7절](/chapter-16/decision-models-and-selective-prediction)은 공개된 메커니즘·보류 정책·릴리스 게이트를 설명합니다.
+하나의 보편적 승자보다 품질·비용·지연·문맥·개방성·안전성의 파레토 관점으로 선택합니다. 도구, 권한, 실행 프레임워크, 추론 강도, 재시도, 입출력 한도, 채점기를 고정하고 같은 비공개 과업을 평가하세요. 짝지은 불확실성, 언어·도메인별 결과, 기본 능력 보존, 형식·도구 정확성, 안전성, 꼬리 지연, 오류율, 성공한 워크플로당 비용을 보고합니다. 평균이 개선돼도 핵심 집단이 실패하면 릴리스를 막아야 합니다.
 
-생성이든 판단이든 scaffold·도구 권한·추론 강도·입출력 예산·재시도·채점기를 고정하고 같은 비공개 과업에서 평가하세요. 언어·도메인, 기반 역량 유지, 형식·도구, 안전성, 지연 꼬리, 검토 용량, 성공한 워크플로당 비용, 오류율 슬라이스를 포함합니다. 로컬 양자화는 호스팅 프로필과 별개로 검사해야 합니다. 대응 표본 불확실성이나 정당화한 표본 수를 사용하고 평균이 좋아져도 핵심 슬라이스 실패는 릴리스를 막아야 합니다.
-
-가중치/API 리비전·토크나이저/인코딩·템플릿·보정과 판단 정책·런타임·도구 스키마·생성 설정·안전 정책 해시를 하나의 아티팩트 묶음에 둡니다. 제한된 권한으로 카나리하고 정상 경로를 남기며 캐시 상태·진행 중 효과까지 롤백을 연습하세요. 새 출시는 전체 시스템을 평가할 계기입니다.
+가중치/API 리비전, 토크나이저·템플릿, 양자화, 런타임, 생성 설정, 도구 스키마, 안전 정책을 하나의 불변 아티팩트 묶음으로 유지합니다. 호스팅과 로컬 버전은 따로 평가합니다. 제한된 권한으로 카나리 배포하고 정상 경로를 유지하며 캐시 상태와 대기 중인 외부 작업까지 롤백을 연습하세요. 형식이 정해진 결정 모델에는 별도 보정·선택적 위험 평가가 필요합니다. [16.7절](/ko/chapter-16/decision-models-and-selective-prediction)을 참고하세요.
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: Kimi K3.1 Pro를 아직 가중치 공개 완료로 표시하지 않는 이유는 무엇일까요?</summary>
-*제공사는 전체 가중치를 11월 4일까지 공개한다고 약속합니다. 호스팅 접근·평가 기록은 10월 25일 현재 가중치 공개의 근거가 아닙니다.*
+<summary>Quiz 1: 모델이 그대로인데 이번 갱신에서 지수가 낮아질 수 있는 이유는?</summary>
+*평가가 v4.3.2에서 v5.0.1로 바뀌었습니다. 과업과 집계 방식이 다른 측정이므로 점수 차이가 모델 퇴보의 통제된 추정치는 아닙니다.*
 </details>
 
 <details>
-<summary>Quiz 2: DeepSeek 1017에는 이제 지수가 있지만 Smaug에는 없는 이유는 무엇일까요?</summary>
-*1017 리비전에 대응하는 별도 AA 프로필이 생겼습니다. Smaug는 다른 미세 조정 모델이므로 기반 모델 지수를 물려받지 않습니다.*
+<summary>Quiz 2: Kimi와 Mistral의 가중치 공개 상태를 바꾼 증거는?</summary>
+*예정일이 아니라 실제 공개 가중치 아티팩트입니다. 라이선스, 리비전, 로컬 서빙 조건은 여전히 따로 확인해야 합니다.*
 </details>
 
 <details>
-<summary>Quiz 3: Bolt E4B에 Bolt 74B의 아키텍처를 대입하면 안 되는 이유는 무엇일까요?</summary>
-*E4B 카드는 Gemma 계열, 74B 카드는 별도의 하이브리드 구조를 명시합니다. 제품군 이름은 아키텍처 명세가 아닙니다.*
+<summary>Quiz 3: Mythos에 Fable의 점수를 복사하지 않는 이유는?</summary>
+*접근 조건, 안전장치, 평가한 서빙 설정이 시스템의 일부이기 때문입니다. 기본 가중치가 같아도 평가 시스템이 서로 대체 가능한 것은 아닙니다.*
 </details>
 
 <details>
-<summary>Quiz 4: Ling 1019의 높은 점수를 공개 Ling 체크포인트에 복사하지 않는 이유는 무엇일까요?</summary>
-*호스팅 프로필과 공개 가중치 리비전의 동등성이 입증되지 않았습니다. 비슷한 이름은 충분한 출처 근거가 아닙니다.*
+<summary>Quiz 4: 공개 Ling 체크포인트에 현재 지수를 넣지 않은 이유는?</summary>
+*현재 프로필은 1019 변형을 가리키며 동등성이 확인되지 않았습니다. 비슷한 이름의 점수로 리비전별 누락을 채울 수 없습니다.*
 </details>
 
 <details>
-<summary>Quiz 5: 판단 모델이 이 지수 그래프에 없는 이유는 무엇일까요?</summary>
-*타입 출력·보정·선택 위험은 호환되는 과업별 평가가 필요합니다. 다른 벤치마크 지수를 같은 양의 측정값처럼 합칠 수 없습니다.*
+<summary>Quiz 5: 토큰 단가가 싼데 완료 과업 비용은 비쌀 수 있는 이유는?</summary>
+*추론 길이, 재시도, 캐시, 도구 호출, 지연, 실패율도 영향을 줍니다. 토큰 단가만이 아니라 조건을 맞춘 전체 워크플로를 비교해야 합니다.*
 </details>
 
 ## References
 
-1. <a id="ref-1"></a>Artificial Analysis: Intelligence Index v4.3.2 methodology. 확인 2026-10-25. [Source](https://artificialanalysis.ai/methodology/intelligence-benchmarking).
-2. <a id="ref-2"></a>GPT-6.1 Sol: primary documentation. 확인 2026-10-25. [Source](https://developers.openai.com/api/docs/models/gpt-6.1-sol).
-3. <a id="ref-3"></a>GPT-6.1 Sol: evaluated system profile. 확인 2026-10-25. [Source](https://artificialanalysis.ai/models/gpt-6-1-sol).
-4. <a id="ref-4"></a>GPT-6 Sol: primary documentation. 확인 2026-10-25. [Source](https://developers.openai.com/api/docs/models/gpt-6-sol).
-5. <a id="ref-5"></a>GPT-6 Sol: evaluated system profile. 확인 2026-10-25. [Source](https://artificialanalysis.ai/models/gpt-6-sol).
-6. <a id="ref-6"></a>GPT-6 Luna: primary documentation. 확인 2026-10-25. [Source](https://developers.openai.com/api/docs/models/gpt-6-luna).
-7. <a id="ref-7"></a>GPT-6 Luna: evaluated system profile. 확인 2026-10-25. [Source](https://artificialanalysis.ai/models/gpt-6-luna).
-8. <a id="ref-8"></a>GPT-6 Astra: primary documentation. 확인 2026-10-25. [Source](https://developers.openai.com/api/docs/models/gpt-6-astra).
-9. <a id="ref-9"></a>GPT-6 Astra: evaluated system profile. 확인 2026-10-25. [Source](https://artificialanalysis.ai/models/gpt-6-astra).
-10. <a id="ref-10"></a>Claude Opus 5.5: primary documentation. 확인 2026-10-25. [Source](https://www.anthropic.com/claude-opus-5-5).
-11. <a id="ref-11"></a>Claude Opus 5.5: evaluated system profile. 확인 2026-10-25. [Source](https://artificialanalysis.ai/models/claude-opus-5-5).
-12. <a id="ref-12"></a>Claude Sonnet 5.5: primary documentation. 확인 2026-10-25. [Source](https://www.anthropic.com/claude-sonnet-5-5).
-13. <a id="ref-13"></a>Claude Sonnet 5.5: primary documentation. 확인 2026-10-25. [Source](https://www.anthropic.com/claude-haiku-5-5).
-14. <a id="ref-14"></a>Claude Sonnet 5.5: evaluated system profile. 확인 2026-10-25. [Source](https://artificialanalysis.ai/models/claude-sonnet-5-5).
-15. <a id="ref-15"></a>Claude Haiku 5.5: evaluated system profile. 확인 2026-10-25. [Source](https://artificialanalysis.ai/models/claude-haiku-5-5).
-16. <a id="ref-16"></a>Gemini 4 Argon: primary documentation. 확인 2026-10-25. [Source](https://blog.google/innovation-and-ai/models-and-research/gemini-models/introducing-gemini-4-argon/).
-17. <a id="ref-17"></a>Gemini 4 Argon: primary documentation. 확인 2026-10-25. [Source](https://ai.google.dev/gemini-api/docs/models/gemini-4-argon).
-18. <a id="ref-18"></a>Gemini 4 Argon: primary documentation. 확인 2026-10-25. [Source](https://ai.google.dev/gemini-api/docs/pricing).
-19. <a id="ref-19"></a>Gemini 4 Argon: evaluated system profile. 확인 2026-10-25. [Source](https://artificialanalysis.ai/models/gemini-4-argon).
-20. <a id="ref-20"></a>DeepSeek V4.1 Flash (September profile): primary documentation. 확인 2026-10-25. [Source](https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash).
-21. <a id="ref-21"></a>DeepSeek V4.1 Flash (September profile): evaluated system profile. 확인 2026-10-25. [Source](https://artificialanalysis.ai/models/deepseek-v4-1-flash).
-22. <a id="ref-22"></a>GLM-5.3: primary documentation. 확인 2026-10-25. [Source](https://huggingface.co/zai-org/GLM-5.3).
-23. <a id="ref-23"></a>GLM-5.3: evaluated system profile. 확인 2026-10-25. [Source](https://artificialanalysis.ai/models/glm-5-3).
-24. <a id="ref-24"></a>Mistral Large 4: primary documentation. 확인 2026-10-25. [Source](https://mistral.ai/news/mistral-large-4/).
-25. <a id="ref-25"></a>Mistral Large 4: evaluated system profile. 확인 2026-10-25. [Source](https://artificialanalysis.ai/models/mistral-large-4).
-26. <a id="ref-26"></a>Beam 1.0: primary documentation. 확인 2026-10-25. [Source](https://reflection.ai/blog/beam-is-available).
-27. <a id="ref-27"></a>Beam 1.0: primary documentation. 확인 2026-10-25. [Source](https://huggingface.co/reflection/Beam-1.0-501B-A23B).
-28. <a id="ref-28"></a>Beam 1.0: evaluated system profile. 확인 2026-10-25. [Source](https://artificialanalysis.ai/models/reflection-beam).
-29. <a id="ref-29"></a>Muse Wonder: primary documentation. 확인 2026-10-25. [Source](https://research.meta.ai/blog/muse-wonder).
-30. <a id="ref-30"></a>Muse Wonder: evaluated system profile. 확인 2026-10-25. [Source](https://artificialanalysis.ai/models/muse-wonder).
-31. <a id="ref-31"></a>Muse Wonder Full: evaluated system profile. 확인 2026-10-25. [Source](https://artificialanalysis.ai/models/muse-wonder-full).
-32. <a id="ref-32"></a>Muse Spark Open: primary documentation. 확인 2026-10-25. [Source](https://research.meta.ai/blog/muse-spark-open).
-33. <a id="ref-33"></a>Muse Spark Open: primary documentation. 확인 2026-10-25. [Source](https://huggingface.co/meta-models/Muse-Spark-Open-816B-A42B).
-34. <a id="ref-34"></a>Muse Spark Open: evaluated system profile. 확인 2026-10-25. [Source](https://artificialanalysis.ai/models/muse-spark-open).
-35. <a id="ref-35"></a>Nemotron 3.5 Super VL: primary documentation. 확인 2026-10-25. [Source](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-BF16).
-36. <a id="ref-36"></a>Nemotron 3.5 Super VL: evaluated system profile. 확인 2026-10-25. [Source](https://artificialanalysis.ai/models/nemotron-3-5-super-vl).
-37. <a id="ref-37"></a>Nemotron 3.5 Bolt 74B-A9B 24GB: primary documentation. 확인 2026-10-25. [Source](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Bolt-74B-A9B-24GB).
-38. <a id="ref-38"></a>Nemotron 3.5 Bolt 74B-A9B 24GB: evaluated system profile. 확인 2026-10-25. [Source](https://artificialanalysis.ai/models/nemotron-3-5-bolt-74b-a9b).
-39. <a id="ref-39"></a>Step 5 Preview: primary documentation. 확인 2026-10-25. [Source](https://huggingface.co/stepfun-ai/Step-5-Preview-BF16).
-40. <a id="ref-40"></a>Step 5 Preview: evaluated system profile. 확인 2026-10-25. [Source](https://artificialanalysis.ai/models/step-5).
-41. <a id="ref-41"></a>DeepSeek V4.1 Flash 1017: primary documentation. 확인 2026-10-25. [Source](https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017).
-42. <a id="ref-42"></a>DeepSeek V4.1 Flash 1017: primary documentation. 확인 2026-10-25. [Source](https://api-docs.deepseek.com/updates).
-43. <a id="ref-43"></a>DeepSeek V4.1 Flash 1017: evaluated system profile. 확인 2026-10-25. [Source](https://artificialanalysis.ai/models/deepseek-v4-1-flash-1017).
-44. <a id="ref-44"></a>MiniMax M3.1 Flash: primary documentation. 확인 2026-10-25. [Source](https://huggingface.co/MiniMaxAI/MiniMax-M3.1-Flash).
-45. <a id="ref-45"></a>MiniMax M3.1 Flash: primary documentation. 확인 2026-10-25. [Source](https://www.minimax.io/blog/minimax-m31f).
-46. <a id="ref-46"></a>MiniMax M3.1 Flash: evaluated system profile. 확인 2026-10-25. [Source](https://artificialanalysis.ai/models/minimax-m3-1-flash).
-47. <a id="ref-47"></a>MiniMax M3.1 Flash: public repository file metadata. 확인 2026-10-25. [Source](https://huggingface.co/api/models/MiniMaxAI/MiniMax-M3.1-Flash).
-48. <a id="ref-48"></a>Kimi K3.1 Pro: primary documentation. 확인 2026-10-25. [Source](https://www.kimi.ai/blog/kimi-k3-1-pro).
-49. <a id="ref-49"></a>Kimi K3.1 Pro: evaluated system profile. 확인 2026-10-25. [Source](https://artificialanalysis.ai/models/kimi-k3-1-pro).
-50. <a id="ref-50"></a>Ling 3.1 Flash: primary documentation. 확인 2026-10-25. [Source](https://huggingface.co/inclusionAI/Ling-3.1-flash).
-51. <a id="ref-51"></a>Ling 3.1 Flash: evaluated system profile. 확인 2026-10-25. [Source](https://artificialanalysis.ai/models/ling-3-1-flash).
-52. <a id="ref-52"></a>Ling 3.1 Flash: public repository file metadata. 확인 2026-10-25. [Source](https://huggingface.co/api/models/inclusionAI/Ling-3.1-flash).
-53. <a id="ref-53"></a>Ling 3.0 Flash Sante: primary documentation. 확인 2026-10-25. [Source](https://huggingface.co/inclusionAI/Ling-3.0-flash-Sante).
-54. <a id="ref-54"></a>Ling 3.0 Flash Sante: public repository file metadata. 확인 2026-10-25. [Source](https://huggingface.co/api/models/inclusionAI/Ling-3.0-flash-Sante).
-55. <a id="ref-55"></a>Smaug Nemotron 3.5 NVFP4: primary documentation. 확인 2026-10-25. [Source](https://huggingface.co/abacusai/Smaug-Nemotron-3.5-NVFP4).
-56. <a id="ref-56"></a>Smaug Nemotron 3.5 NVFP4: primary documentation. 확인 2026-10-25. [Source](https://blog.abacus.ai/blog/2026/10/22/smaug-nemotron-3-5-nvfp4-an-agentic-fine-tune-that-lives-in-4-bits/).
-57. <a id="ref-57"></a>Smaug Nemotron 3.5 NVFP4: public repository file metadata. 확인 2026-10-25. [Source](https://huggingface.co/api/models/abacusai/Smaug-Nemotron-3.5-NVFP4).
-58. <a id="ref-58"></a>Nemotron 3.5 Bolt E4B 4GB: primary documentation. 확인 2026-10-25. [Source](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Bolt-E4B-4GB).
-59. <a id="ref-59"></a>Nemotron 3.5 Bolt E4B 4GB: primary documentation. 확인 2026-10-25. [Source](https://research.nvidia.com/labs/nemotron/NVIDIA-Nemotron-3.5-Bolt-E4B-4GB/).
-60. <a id="ref-60"></a>Nemotron 3.5 Bolt E4B 4GB: public repository file metadata. 확인 2026-10-25. [Source](https://huggingface.co/api/models/nvidia/NVIDIA-Nemotron-3.5-Bolt-E4B-4GB).
-61. <a id="ref-61"></a>Mistral. *Current model changelog*. Verified 2026-10-25. [Documentation](https://docs.mistral.ai/resources/changelogs).
+1. <a id="ref-1"></a>Artificial Analysis. Intelligence Index v5.0.1 methodology. 확인일 2026-11-15. [Source](https://artificialanalysis.ai/methodology/intelligence-benchmarking).
+2. <a id="ref-2"></a>GPT-6.1 Sol: primary documentation / artifact evidence. 확인일 2026-11-15. [Source](https://developers.openai.com/api/docs/models/gpt-6.1-sol).
+3. <a id="ref-3"></a>GPT-6.1 Sol: evaluated system profile. 확인일 2026-11-15. [Source](https://artificialanalysis.ai/models/gpt-6-1-sol).
+4. <a id="ref-4"></a>GPT-6 Sol: primary documentation / artifact evidence. 확인일 2026-11-15. [Source](https://developers.openai.com/api/docs/models/gpt-6-sol).
+5. <a id="ref-5"></a>GPT-6 Sol: evaluated system profile. 확인일 2026-11-15. [Source](https://artificialanalysis.ai/models/gpt-6-sol).
+6. <a id="ref-6"></a>GPT-6 Luna: primary documentation / artifact evidence. 확인일 2026-11-15. [Source](https://developers.openai.com/api/docs/models/gpt-6-luna).
+7. <a id="ref-7"></a>GPT-6 Luna: evaluated system profile. 확인일 2026-11-15. [Source](https://artificialanalysis.ai/models/gpt-6-luna).
+8. <a id="ref-8"></a>GPT-6 Astra: primary documentation / artifact evidence. 확인일 2026-11-15. [Source](https://developers.openai.com/api/docs/models/gpt-6-astra).
+9. <a id="ref-9"></a>GPT-6 Astra: evaluated system profile. 확인일 2026-11-15. [Source](https://artificialanalysis.ai/models/gpt-6-astra).
+10. <a id="ref-10"></a>Claude Opus 5.5: primary documentation / artifact evidence. 확인일 2026-11-15. [Source](https://www.anthropic.com/claude-opus-5-5).
+11. <a id="ref-11"></a>Claude Opus 5.5: evaluated system profile. 확인일 2026-11-15. [Source](https://artificialanalysis.ai/models/claude-opus-5-5).
+12. <a id="ref-12"></a>Claude Sonnet 5.5: primary documentation / artifact evidence. 확인일 2026-11-15. [Source](https://www.anthropic.com/claude-sonnet-5-5).
+13. <a id="ref-13"></a>Claude Sonnet 5.5: primary documentation / artifact evidence. 확인일 2026-11-15. [Source](https://www.anthropic.com/claude-haiku-5-5).
+14. <a id="ref-14"></a>Claude Sonnet 5.5: evaluated system profile. 확인일 2026-11-15. [Source](https://artificialanalysis.ai/models/claude-sonnet-5-5).
+15. <a id="ref-15"></a>Claude Haiku 5.5: evaluated system profile. 확인일 2026-11-15. [Source](https://artificialanalysis.ai/models/claude-haiku-5-5).
+16. <a id="ref-16"></a>Gemini 4 Argon: primary documentation / artifact evidence. 확인일 2026-11-15. [Source](https://blog.google/innovation-and-ai/models-and-research/gemini-models/introducing-gemini-4-argon/).
+17. <a id="ref-17"></a>Gemini 4 Argon: primary documentation / artifact evidence. 확인일 2026-11-15. [Source](https://ai.google.dev/gemini-api/docs/models/gemini-4-argon).
+18. <a id="ref-18"></a>Gemini 4 Argon: primary documentation / artifact evidence. 확인일 2026-11-15. [Source](https://ai.google.dev/gemini-api/docs/pricing).
+19. <a id="ref-19"></a>Gemini 4 Argon: evaluated system profile. 확인일 2026-11-15. [Source](https://artificialanalysis.ai/models/gemini-4-argon).
+20. <a id="ref-20"></a>DeepSeek V4.1 Flash (September profile): primary documentation / artifact evidence. 확인일 2026-11-15. [Source](https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash).
+21. <a id="ref-21"></a>DeepSeek V4.1 Flash (September profile): evaluated system profile. 확인일 2026-11-15. [Source](https://artificialanalysis.ai/models/deepseek-v4-1-flash).
+22. <a id="ref-22"></a>GLM-5.3: primary documentation / artifact evidence. 확인일 2026-11-15. [Source](https://huggingface.co/zai-org/GLM-5.3).
+23. <a id="ref-23"></a>GLM-5.3: evaluated system profile. 확인일 2026-11-15. [Source](https://artificialanalysis.ai/models/glm-5-3).
+24. <a id="ref-24"></a>Mistral Large 4: primary documentation / artifact evidence. 확인일 2026-11-15. [Source](https://huggingface.co/mistralai/Mistral-Large-4-1T-A52B).
+25. <a id="ref-25"></a>Mistral Large 4: primary documentation / artifact evidence. 확인일 2026-11-15. [Source](https://docs.mistral.ai/models/mistral-large-4-0).
+26. <a id="ref-26"></a>Mistral Large 4: primary documentation / artifact evidence. 확인일 2026-11-15. [Source](https://huggingface.co/api/models/mistralai/Mistral-Large-4-1T-A52B).
+27. <a id="ref-27"></a>Mistral Large 4: evaluated system profile. 확인일 2026-11-15. [Source](https://artificialanalysis.ai/models/mistral-large-4).
+28. <a id="ref-28"></a>Beam 1.0: primary documentation / artifact evidence. 확인일 2026-11-15. [Source](https://reflection.ai/blog/beam-is-available).
+29. <a id="ref-29"></a>Beam 1.0: primary documentation / artifact evidence. 확인일 2026-11-15. [Source](https://huggingface.co/reflection/Beam-1.0-501B-A23B).
+30. <a id="ref-30"></a>Beam 1.0: evaluated system profile. 확인일 2026-11-15. [Source](https://artificialanalysis.ai/models/reflection-beam).
+31. <a id="ref-31"></a>Muse Wonder: primary documentation / artifact evidence. 확인일 2026-11-15. [Source](https://research.meta.ai/blog/muse-wonder).
+32. <a id="ref-32"></a>Muse Wonder: evaluated system profile. 확인일 2026-11-15. [Source](https://artificialanalysis.ai/models/muse-wonder).
+33. <a id="ref-33"></a>Muse Wonder Full: evaluated system profile. 확인일 2026-11-15. [Source](https://artificialanalysis.ai/models/muse-wonder-full).
+34. <a id="ref-34"></a>Muse Spark Open: primary documentation / artifact evidence. 확인일 2026-11-15. [Source](https://research.meta.ai/blog/muse-spark-open).
+35. <a id="ref-35"></a>Muse Spark Open: primary documentation / artifact evidence. 확인일 2026-11-15. [Source](https://huggingface.co/meta-models/Muse-Spark-Open-816B-A42B).
+36. <a id="ref-36"></a>Muse Spark Open: evaluated system profile. 확인일 2026-11-15. [Source](https://artificialanalysis.ai/models/muse-spark-open).
+37. <a id="ref-37"></a>Nemotron 3.5 Super VL: primary documentation / artifact evidence. 확인일 2026-11-15. [Source](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-BF16).
+38. <a id="ref-38"></a>Nemotron 3.5 Super VL: evaluated system profile. 확인일 2026-11-15. [Source](https://artificialanalysis.ai/models/nemotron-3-5-super-vl).
+39. <a id="ref-39"></a>Nemotron 3.5 Bolt 74B-A9B 24GB: primary documentation / artifact evidence. 확인일 2026-11-15. [Source](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Bolt-74B-A9B-24GB).
+40. <a id="ref-40"></a>Nemotron 3.5 Bolt 74B-A9B 24GB: evaluated system profile. 확인일 2026-11-15. [Source](https://artificialanalysis.ai/models/nemotron-3-5-bolt-74b-a9b).
+41. <a id="ref-41"></a>Step 5 Preview: primary documentation / artifact evidence. 확인일 2026-11-15. [Source](https://huggingface.co/stepfun-ai/Step-5-Preview-BF16).
+42. <a id="ref-42"></a>Step 5 Preview: evaluated system profile. 확인일 2026-11-15. [Source](https://artificialanalysis.ai/models/step-5).
+43. <a id="ref-43"></a>DeepSeek V4.1 Flash 1017: primary documentation / artifact evidence. 확인일 2026-11-15. [Source](https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017).
+44. <a id="ref-44"></a>DeepSeek V4.1 Flash 1017: primary documentation / artifact evidence. 확인일 2026-11-15. [Source](https://api-docs.deepseek.com/updates).
+45. <a id="ref-45"></a>DeepSeek V4.1 Flash 1017: evaluated system profile. 확인일 2026-11-15. [Source](https://artificialanalysis.ai/models/deepseek-v4-1-flash-1017).
+46. <a id="ref-46"></a>MiniMax M3.1 Flash: primary documentation / artifact evidence. 확인일 2026-11-15. [Source](https://huggingface.co/MiniMaxAI/MiniMax-M3.1-Flash).
+47. <a id="ref-47"></a>MiniMax M3.1 Flash: primary documentation / artifact evidence. 확인일 2026-11-15. [Source](https://www.minimax.io/blog/minimax-m31f).
+48. <a id="ref-48"></a>MiniMax M3.1 Flash: evaluated system profile. 확인일 2026-11-15. [Source](https://artificialanalysis.ai/models/minimax-m3-1-flash).
+49. <a id="ref-49"></a>Kimi K3.1 Pro: primary documentation / artifact evidence. 확인일 2026-11-15. [Source](https://huggingface.co/moonshotai/Kimi-K3.1-Pro).
+50. <a id="ref-50"></a>Kimi K3.1 Pro: primary documentation / artifact evidence. 확인일 2026-11-15. [Source](https://huggingface.co/api/models/moonshotai/Kimi-K3.1-Pro).
+51. <a id="ref-51"></a>Kimi K3.1 Pro: primary documentation / artifact evidence. 확인일 2026-11-15. [Source](https://www.kimi.ai/blog/kimi-k3-1-pro).
+52. <a id="ref-52"></a>Kimi K3.1 Pro: evaluated system profile. 확인일 2026-11-15. [Source](https://artificialanalysis.ai/models/kimi-k3-1-pro).
+53. <a id="ref-53"></a>Ling 3.1 Flash: primary documentation / artifact evidence. 확인일 2026-11-15. [Source](https://huggingface.co/inclusionAI/Ling-3.1-flash).
+54. <a id="ref-54"></a>Ling 3.1 Flash: evaluated system profile. 확인일 2026-11-15. [Source](https://artificialanalysis.ai/models/ling-3-1-flash).
+55. <a id="ref-55"></a>Ling 3.0 Flash Sante: primary documentation / artifact evidence. 확인일 2026-11-15. [Source](https://huggingface.co/inclusionAI/Ling-3.0-flash-Sante).
+56. <a id="ref-56"></a>Smaug Nemotron 3.5 NVFP4: primary documentation / artifact evidence. 확인일 2026-11-15. [Source](https://huggingface.co/abacusai/Smaug-Nemotron-3.5-NVFP4).
+57. <a id="ref-57"></a>Smaug Nemotron 3.5 NVFP4: primary documentation / artifact evidence. 확인일 2026-11-15. [Source](https://blog.abacus.ai/blog/2026/10/22/smaug-nemotron-3-5-nvfp4-an-agentic-fine-tune-that-lives-in-4-bits/).
+58. <a id="ref-58"></a>Nemotron 3.5 Bolt E4B 4GB: primary documentation / artifact evidence. 확인일 2026-11-15. [Source](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Bolt-E4B-4GB).
+59. <a id="ref-59"></a>Nemotron 3.5 Bolt E4B 4GB: primary documentation / artifact evidence. 확인일 2026-11-15. [Source](https://research.nvidia.com/labs/nemotron/NVIDIA-Nemotron-3.5-Bolt-E4B-4GB/).
+60. <a id="ref-60"></a>GPT-6.1 Terra: primary documentation / artifact evidence. 확인일 2026-11-15. [Source](https://developers.openai.com/api/docs/models/gpt-6.1-terra).
+61. <a id="ref-61"></a>GPT-6.1 Terra: evaluated system profile. 확인일 2026-11-15. [Source](https://artificialanalysis.ai/models/gpt-6-1-terra).
+62. <a id="ref-62"></a>Claude Fable 5.2: primary documentation / artifact evidence. 확인일 2026-11-15. [Source](https://www.anthropic.com/claude-fable-and-mythos-5-2).
+63. <a id="ref-63"></a>Claude Fable 5.2: primary documentation / artifact evidence. 확인일 2026-11-15. [Source](https://www.anthropic.com/claude/fable).
+64. <a id="ref-64"></a>Claude Fable 5.2: evaluated system profile. 확인일 2026-11-15. [Source](https://artificialanalysis.ai/models/claude-fable-5-2).
+65. <a id="ref-65"></a>Inkling 2 Small: primary documentation / artifact evidence. 확인일 2026-11-15. [Source](https://huggingface.co/thinkingmachines/Inkling-2-Small).
+66. <a id="ref-66"></a>Inkling 2 Small: primary documentation / artifact evidence. 확인일 2026-11-15. [Source](https://huggingface.co/api/models/thinkingmachines/Inkling-2-Small).
+67. <a id="ref-67"></a>Inkling 2 Small: primary documentation / artifact evidence. 확인일 2026-11-15. [Source](https://vllm-project.github.io/2026/11/12/inkling2-small.html).
+68. <a id="ref-68"></a>Inkling 2 Small: evaluated system profile. 확인일 2026-11-15. [Source](https://artificialanalysis.ai/models/inkling-2-small).
+69. <a id="ref-69"></a>Qwen3.8 Flash Next: primary documentation / artifact evidence. 확인일 2026-11-15. [Source](https://huggingface.co/Qwen/Qwen3.8-Flash-Next).
+70. <a id="ref-70"></a>Qwen3.8 Flash Next: primary documentation / artifact evidence. 확인일 2026-11-15. [Source](https://huggingface.co/api/models/Qwen/Qwen3.8-Flash-Next).
+71. <a id="ref-71"></a>Qwen3.8 Flash Next: evaluated system profile. 확인일 2026-11-15. [Source](https://artificialanalysis.ai/models/qwen3-8-flash-next).
+72. <a id="ref-72"></a>GLM-5.3 Flash: primary documentation / artifact evidence. 확인일 2026-11-15. [Source](https://huggingface.co/zai-org/GLM-5.3-Flash).
+73. <a id="ref-73"></a>GLM-5.3 Flash: primary documentation / artifact evidence. 확인일 2026-11-15. [Source](https://huggingface.co/api/models/zai-org/GLM-5.3-Flash).
+74. <a id="ref-74"></a>GLM-5.3 Flash: evaluated system profile. 확인일 2026-11-15. [Source](https://artificialanalysis.ai/models/glm-5-3-flash).

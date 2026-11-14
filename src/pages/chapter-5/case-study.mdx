@@ -15,12 +15,12 @@ In this case study, we will perform a technical teardown of four seminal MoE arc
 
 ## 1. Mixtral 8x7B: The Open-Source MoE Catalyst
 
-Released in late 2023 by Mistral AI, Mixtral 8x7B [[1]](#ref-1) was the catalyst that brought MoE architectures to the open-source masses. It shattered the illusion that MoE was exclusively the domain of trillion-parameter hyperscaler models like GPT-4.
+Mixtral 8x7B provided public weights and a technical report for inspecting sparse MoE behavior directly. [[1]](#ref-1) It does not establish GPT-4 parameter counts or internal architecture, which remain undisclosed.
 
 ### The "8x7B" Misnomer
 The name "8x7B" is a brilliant marketing move, but a technical misnomer. A common misconception is that Mixtral is an ensemble of eight independent 7-billion-parameter models, which would total 56 billion parameters. In reality, Mixtral has **47B total parameters**, with only **13B active** during the forward pass for any given token.
 
-Why 47B? In the Transformer architecture, the self-attention mechanism and the token embeddings are **shared** across all experts. Only the Feed-Forward Network (FFN) layers are replicated. 
+Why 47B? In the Transformer architecture, the self-attention mechanism and the token embeddings are **shared** across all experts. Only the Feed-Forward Network (FFN) layers are replicated.
 If $P_{attn}$ represents the attention parameters and $P_{ffn}$ represents the FFN parameters of a dense 7B model, the total parameter count for Mixtral is roughly:
 
 $$ P_{total} = P_{attn} + (8 \times P_{ffn}) \approx 47B $$
@@ -36,10 +36,10 @@ By activating only two experts per token, Mixtral uses roughly 13B active parame
 
 ## 2. DBRX: The Power of Fine-Grained Experts
 
-While Mixtral proved the viability of coarse-grained MoE, Databricks' DBRX took a different path by introducing a **fine-grained MoE architecture** based on the MegaBlocks framework [[2]](#ref-2). 
+While Mixtral proved the viability of coarse-grained MoE, Databricks' DBRX took a different path by introducing a **fine-grained MoE architecture** based on the MegaBlocks framework [[2]](#ref-2).
 
 ### The Combinatorial Explosion
-DBRX features 132B total parameters with 36B active parameters. Instead of using 8 large experts and selecting 2, DBRX uses **16 smaller experts and selects 4** ($K=4, N=16$). 
+DBRX features 132B total parameters with 36B active parameters. Instead of using 8 large experts and selecting 2, DBRX uses **16 smaller experts and selects 4** ($K=4, N=16$).
 
 While both Mixtral and DBRX activate 25% of their FFN parameters, the mathematical implications for representation power are vastly different. The number of possible routing combinations (expert paths) a token can take through a single layer is determined by the binomial coefficient $\binom{N}{K}$:
 
@@ -49,7 +49,7 @@ While both Mixtral and DBRX activate 25% of their FFN parameters, the mathematic
 DBRX offers about 65 times as many unordered expert subsets per layer. That combinatorial count does not measure learned specialization, realized expressivity, or quality by itself: expert size, routing, data, and optimization differ.
 
 ### Dropless Routing (MegaBlocks)
-Traditional MoE implementations enforce a strict "capacity factor" for each expert to maintain static tensor shapes for GPU operations. If an expert receives too many tokens, the excess tokens are simply **dropped** (passed through via residual connection without FFN processing), degrading performance. 
+Traditional MoE implementations enforce a strict "capacity factor" for each expert to maintain static tensor shapes for GPU operations. If an expert receives too many tokens, the excess tokens are simply **dropped** (passed through via residual connection without FFN processing), degrading performance.
 
 DBRX utilizes MegaBlocks, which reformulates MoE computation using **block-sparse matrix multiplications**. This allows for dynamically sized experts, completely eliminating token dropping ("dropless routing") and avoiding the wasted compute associated with padding under-utilized experts.
 
@@ -88,6 +88,8 @@ Auxiliary balancing can trade task preference against utilization; its effect de
 
 Below is a PyTorch implementation demonstrating the core concept of DeepSeek-V3's dynamic bias routing. Notice how the bias is applied *only* for the Top-K selection, while the actual gating weights used for the FFN combination are derived from the unbiased logits.
 
+> **Educational router only.** This isolates affinity selection and normalization; it omits node-limited routing, shared experts, output scaling, global load aggregation and the sequence-wise auxiliary term. It is not a complete DeepSeek-V3 training implementation.
+
 ```python
 import torch
 import torch.nn as nn
@@ -99,42 +101,34 @@ class DeepSeekAuxFreeRouter(nn.Module):
         # The router network (no bias in the linear layer itself)
         self.gate = nn.Linear(d_model, num_routed_experts, bias=False)
         self.top_k = top_k
-        
+
         # The dynamic bias term for load balancing (not updated via backprop)
         self.register_buffer("expert_bias", torch.zeros(num_routed_experts))
-        
+
     def forward(self, x: torch.Tensor):
         # x shape: [batch_size, seq_len, d_model]
         logits = self.gate(x) # [B, S, E]
-        
-        # 1. Add the dynamic bias for routing decisions ONLY
-        routing_logits = logits + self.expert_bias
-        
-        # 2. Select top-k experts based on the BIASED logits
-        topk_logits, topk_indices = torch.topk(routing_logits, self.top_k, dim=-1)
-        
-        # 3. Compute gating weights using the UNBIASED logits
-        # DeepSeek uses sigmoid for affine combination rather than softmax
-        # This allows the total sum of weights to be unconstrained (not strictly 1.0)
-        unbiased_selected_logits = logits.gather(-1, topk_indices)
-        gate_weights = torch.sigmoid(unbiased_selected_logits)
-        
-        # Normalize weights (optional, depending on specific DeepSeek implementation details)
-        gate_weights = gate_weights / gate_weights.sum(dim=-1, keepdim=True)
-        
+
+        # Select using biased affinities, combine using unbiased affinities.
+        affinities = torch.sigmoid(logits.float())
+        selection_scores = affinities + self.expert_bias
+        _, topk_indices = torch.topk(selection_scores, self.top_k, dim=-1)
+        gate_weights = affinities.gather(-1, topk_indices)
+        gate_weights = gate_weights / gate_weights.sum(dim=-1, keepdim=True).clamp_min(1e-12)
+
         return gate_weights, topk_indices
-        
+
     @torch.no_grad()
     def update_bias(self, expert_load: torch.Tensor, target_load: torch.Tensor, step_size: float = 0.001):
         """
-        Called at the end of a training step. 
+        Called at the end of a training step.
         expert_load: The actual number of tokens routed to each expert in this batch.
         target_load: The ideal uniform distribution of tokens.
         """
         # If load > target, diff is negative -> bias decreases.
         # If load < target, diff is positive -> bias increases.
         load_diff = target_load - expert_load
-        
+
         # DeepSeek uses a sign-based or proportional update rule
         self.expert_bias += step_size * torch.sign(load_diff)
 ```

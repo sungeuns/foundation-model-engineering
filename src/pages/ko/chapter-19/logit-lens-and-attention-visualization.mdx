@@ -26,6 +26,8 @@ $$
 P_l(x_{t+1}) = \text{softmax}(W_U \cdot \text{LN}(h_l)) \quad \text{for } l < L
 $$
 
+
+
 이 기법을 **Logit Lens** 라고 부릅니다. 이는 밀집 벡터 $h_l \in \mathbb{R}^d$ 를 임의의 레이어 $l$ 에서 다시 어휘 공간(Vocabulary space)으로 번역해 주는 해독기 역할을 합니다.
 
 ### 무엇을 관찰할까?
@@ -53,6 +55,7 @@ import torch.nn as nn
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from typing import List
 
+@torch.inference_mode()
 def compute_logit_lens(model_name: str, prompt: str) -> List[torch.Tensor]:
     """
     LLM의 모든 중간 레이어에서 어휘(Vocabulary) 로짓을 추출합니다.
@@ -114,8 +117,10 @@ def compute_logit_lens(model_name: str, prompt: str) -> List[torch.Tensor]:
 이 문제를 해결하기 위해 Belrose et al. (2023) 은 **Tuned Lens** 를 도입했습니다 [[2]](#ref-2). 이들은 $W_U$ 를 직접 적용하는 대신, 각 레이어 $l$ 에 대해 행렬 $A_l$ 과 편향 $b_l$ 로 구성된 작은 어파인 변환(Affine transformation, 일종의 번역기)을 학습시킵니다.
 
 $$
-P_l(x_{t+1}) = \text{softmax}(W_U \cdot (A_l h_l + b_l))
+P_l(x_{t+1}) = \text{softmax}(W_U \cdot \operatorname{Norm}_{final}(A_l h_l + b_l))
 $$
+
+여기서 $h_l$ 은 중간 잔차 상태, $A_l,b_l$ 는 학습된 번역기, $\operatorname{Norm}_{final}$ 은 고정된 모델의 최종 정규화, $W_U$ 는 출력 투영입니다. 모델에 출력 편향이 있다면 함께 포함합니다.
 
 ### 목적 함수 (The Objective Function)
 여기서 매우 중요한 점은, Tuned Lens 가 실제 정답 토큰(Ground-truth next token)을 예측하도록 학습되지 **않는다** 는 것입니다. 대신, 중간 예측값과 **최종 레이어의 예측값** 사이의 KL 발산(KL divergence)을 최소화하도록 학습됩니다.
@@ -130,9 +135,9 @@ $$
 
 ## 4. Attention Visualization: The "Where" of Information
 
-Logit Lens 가 모델이 *무엇을* 생각하고 있는지 알려준다면, **Attention Visualization** (어텐션 시각화) 은 모델이 그러한 생각을 형성하기 위해 *어디를* 보고 있는지 알려줍니다.
+Logit lens는 어휘 공간에서 읽은 후보 해석을, attention 시각화는 주의 가중치를 보여줍니다. 어느 쪽도 모델의 생각을 직접 읽는 방법은 아닙니다.
 
-BertViz [[3]](#ref-3) 와 같은 도구를 사용하면 연구자들은 불투명한 $QK^V$ 행렬 곱셈을 직접 검사할 수 있습니다. 어텐션 시각화는 일반적으로 세 가지 규모(Scale)에서 이루어집니다.
+BertViz [[3]](#ref-3) 와 같은 도구를 사용하면 연구자들은 불투명한 $QK^T$ 행렬 곱셈을 직접 검사할 수 있습니다. 어텐션 시각화는 일반적으로 세 가지 규모(Scale)에서 이루어집니다.
 
 1. **Neuron View**: 특정 Query 와 Key 벡터 간의 내적(Dot product)을 시각화합니다. 어떤 특징(Feature)이 어텐션 매칭을 유발하는지 정확히 확인하는 데 유용합니다.
 2. **Head View**: 특정 헤드의 어텐션 가중치 $\alpha_{ij}$ 를 기반으로 입력 토큰과 컨텍스트 토큰을 연결하는 이분 그래프(Bipartite graph)를 표시합니다. 여기서 우리는 Induction Head 나 문법적 라우팅(예: 대명사가 명사에 어텐션을 주는 현상)을 발견할 수 있습니다.
@@ -148,7 +153,7 @@ BertViz [[3]](#ref-3) 와 같은 도구를 사용하면 연구자들은 불투�
 * 모델은 `apple` 을 순전히 위치적인 앵커(Positional anchor)로만 사용하고 있을 수 있습니다.
 * 어텐션이 **Attention Sink** (예: `<s>` 또는 `[BOS]` 토큰) 로 향하고 있을 수 있습니다. 정규화된 가중치가 초기 토큰에 집중될 수 있지만, 이 패턴만으로 value/output 기여나 헤드의 무해함을 판정하지는 못합니다.
 
-어텐션은 우리에게 라우팅 토폴로지(Routing topology)를 알려주지만, 라우팅되고 있는 *페이로드(Payload)* 가 무엇인지 이해하려면 여전히 Logit Lens 나 SAE(Sparse Autoencoders) 가 필요합니다.
+주의 가중치는 라우팅 계산의 일부를 설명합니다. 실제 전달 정보를 검사하려면 value·출력 기여도와 통제된 개입을 분석해야 합니다. Lens나 SAE의 라벨은 검증할 진단 가설입니다.
 
 ---
 

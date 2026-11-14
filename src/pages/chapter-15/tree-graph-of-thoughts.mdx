@@ -8,15 +8,13 @@ import ReasoningVisualizer from '../../components/chapter-15/ReasoningVisualizer
 
 # 15.2 Tree/Graph of Thoughts
 
-The fundamental limitation of standard autoregressive generation—including standard Chain-of-Thought (CoT)—is its strict adherence to a Markovian, left-to-right decoding process. Once a token is sampled, it becomes an immutable part of the context window. If the model makes a logical error early in a complex reasoning chain, it is forced to condition all subsequent generation on that flawed premise. 
-
-Human cognition does not operate linearly when solving hard problems. We explore alternative hypotheses, hit dead ends, backtrack, and synthesize multiple partial solutions into a cohesive whole. To bridge this gap, researchers introduced search algorithms to LLM decoding, evolving the paradigm from linear chains to **Trees**, and ultimately, to **Graphs of Thoughts**.
+An autoregressive Transformer conditions on the available prefix, not merely the previous state. A basic single-path decoder does not rewrite emitted tokens, but later text can correct earlier reasoning. ToT and GoT manage alternatives and evaluations as external search state, enabling explicit comparison and backtracking. The extra computation helps only if candidate evaluation is sufficiently reliable.
 
 ---
 
 ## 1. The Tree of Thoughts (ToT) Framework
 
-Introduced by Yao et al. (2023) [[1]](#ref-1), **Tree of Thoughts (ToT)** reframes LLM inference as a heuristic search problem over a combinatorial space of reasoning steps. 
+Introduced by Yao et al. (2023) [[1]](#ref-1), **Tree of Thoughts (ToT)** reframes LLM inference as a heuristic search problem over a combinatorial space of reasoning steps.
 
 Instead of generating a single continuous sequence, ToT decomposes the problem into discrete "thoughts" (intermediate reasoning steps). The model explores multiple branches of thoughts, evaluating them to decide which paths to pursue and which to prune.
 
@@ -30,7 +28,7 @@ In ToT, we define a state $s = [x, z_{1\dots i}]$ representing a partial reasoni
 1.  **Thought Generator $G(p_{\theta}, s, k)$:** Generates $k$ candidate next thoughts given the current state. This can be done via sampling (temperature $> 0$) or proposing distinct steps via a specific prompt.
 2.  **State Evaluator $V(p_{\theta}, s)$:** A heuristic function that scores the viability of a state. The LLM itself is typically prompted to act as the evaluator, assigning a scalar value or a categorical label (e.g., `sure`, `maybe`, `impossible`).
 
-With $G$ and $V$ defined, ToT applies classic search algorithms like **Breadth-First Search (BFS)** or **Depth-First Search (DFS)**. 
+With $G$ and $V$ defined, ToT applies classic search algorithms like **Breadth-First Search (BFS)** or **Depth-First Search (DFS)**.
 
 If using BFS with a beam width $b$, at each depth $d$, the algorithm keeps only the top $b$ states as ranked by $V(s)$. This prevents the exponential explosion of context while allowing the model to recover from localized errors by maintaining alternative branches.
 
@@ -40,23 +38,19 @@ If using BFS with a beam width $b$, at each depth $d$, the algorithm keeps only 
 
 ## 2. Graph of Thoughts (GoT): Synergy and Recurrence
 
-While ToT enables backtracking, it suffers from a structural flaw: **Trees cannot merge**. If two separate branches generate valuable, complementary partial solutions, ToT forces the system to choose one and discard the other. 
+While ToT enables backtracking, it suffers from a structural flaw: **Trees cannot merge**. If two separate branches generate valuable, complementary partial solutions, ToT forces the system to choose one and discard the other.
 
-**Graph of Thoughts (GoT)**, proposed by Besta et al. (2023) [[2]](#ref-2), elevates the reasoning structure to a **Directed Acyclic Graph (DAG)**. In GoT, vertices represent thoughts, and edges represent dependencies. This seemingly simple structural upgrade unlocks powerful cognitive operations that trees cannot support.
+**Graph of Thoughts (GoT)**, proposed by Besta et al. (2023) [[2]](#ref-2), elevates the reasoning structure to a **directed graph, potentially including feedback cycles**. In GoT, vertices represent thoughts, and edges represent dependencies. This seemingly simple structural upgrade unlocks powerful cognitive operations that trees cannot support.
 
-### The Core Transformations
+### Core transformations
 
-GoT introduces specific graph transformations modeled after human problem-solving:
+- **Generation:** Proposes candidates from the task and dependency history.
+- **Aggregation:** Combines information from several candidates into a new one. Revalidate contradictions and lost evidence; an aggregate is not necessarily better.
+- **Refinement:** Revises a candidate using feedback. An execution log can unroll revisions into a DAG even when the general GoT control flow includes cycles.
 
-*   **Aggregation (Synergy):** Multiple thoughts $v_1, v_2, \dots, v_k$ are merged into a new thought $v_{new}$. The LLM is prompted to synthesize the best elements of the parent thoughts. This is highly effective in tasks like document summarization or code synthesis.
-*   **Refinement (Looping):** A thought $v$ is iteratively improved to create $v^*$. While technically creating a new node in the DAG to preserve acyclic properties, it acts as a self-correction loop.
-*   **Generation:** The standard ToT branching operation, creating new child thoughts from a parent.
+### Measure cost and quality together
 
-### The Cost-Quality Paradox
-
-Intuitively, one might assume that GoT is vastly more expensive than ToT because it is more complex. However, GoT often achieves **higher quality at a lower computational cost** [[2]](#ref-2). 
-
-By identifying redundant or logically equivalent states across different branches and merging them (Aggregation), GoT prunes the search space more aggressively than ToT. In sorting tasks, GoT demonstrated a 62% increase in quality while reducing computational costs by over 31% compared to ToT.
+The GoT paper reports gains for particular tasks and configurations. [[2]](#ref-2) Aggregation can reduce redundant work but adds evaluation/synthesis cost and can combine errors. Bounded-width ToT does not necessarily expand exponentially: generating $k$ candidates per retained state with beam width $b$ and depth $d$ evaluates roughly $O(dbk)$ candidates. Token and tool costs per candidate are additional factors.
 
 <ReasoningVisualizer client:load lang="en" />
 
@@ -74,12 +68,13 @@ This is why they are a better fit for planning, constrained search, code repair,
 
 ## 3. Engineering the Orchestrator
 
-Implementing GoT requires separating the system into a **Controller** (which manages the graph structure and search strategy) and an **Executor** (the LLM that generates and scores thoughts). 
+Implementing GoT requires separating the system into a **Controller** (which manages the graph structure and search strategy) and an **Executor** (the LLM that generates and scores thoughts).
 
 Below is a Python implementation demonstrating the core logic of a GoT Controller handling Generation and Aggregation.
 
+> **Educational controller skeleton.** The LLM interface is a mock contract. Parsing, time/token budgets, recovery and final validation are omitted.
+
 ```python
-import torch
 from typing import List, Dict, Any
 
 class GoTNode:
@@ -94,11 +89,23 @@ class GoTController:
         self.llm = llm_executor # Mock LLM interface
         self.graph: List[GoTNode] = []
 
+    def state_text(self, node):
+        ordered, seen = [], set()
+        def visit(current):
+            if id(current) in seen:
+                return
+            seen.add(id(current))
+            for parent in current.parents:
+                visit(parent)
+            ordered.append(current.thought)
+        visit(node)
+        return "\n".join(ordered)  # Root task plus dependency history.
+
     def generate_thoughts(self, node: GoTNode, k: int) -> List[GoTNode]:
         """Branches a node into k new thoughts."""
-        prompt = f"Given the current state: {node.thought}\nGenerate {k} distinct next steps."
+        prompt = f"Given the current state: {self.state_text(node)}\nGenerate {k} distinct next steps."
         responses = self.llm.generate(prompt, num_return_sequences=k)
-        
+
         new_nodes = [GoTNode(thought=r, parents=[node]) for r in responses]
         node.children.extend(new_nodes)
         self.graph.extend(new_nodes)
@@ -107,21 +114,23 @@ class GoTController:
     def score_nodes(self, nodes: List[GoTNode]):
         """Evaluates nodes using the LLM as a heuristic function."""
         for node in nodes:
-            prompt = f"Evaluate the validity of this reasoning step: {node.thought}. Score from 0.0 to 1.0."
+            prompt = f"Evaluate the validity of this reasoning step: {self.state_text(node)}. Score from 0.0 to 1.0."
             score_str = self.llm.generate(prompt, max_tokens=5)[0]
-            node.score = float(score_str) # Simplified parsing
+            node.score = float(score_str)
+            if not 0.0 <= node.score <= 1.0:
+                raise ValueError("evaluator must return a finite score in [0,1]")
 
     def aggregate_thoughts(self, nodes: List[GoTNode]) -> GoTNode:
-        """Merges multiple synergistic nodes into a single superior node."""
-        combined_text = "\n".join([f"- {n.thought}" for n in nodes])
+        """Proposes an aggregate; improvement requires separate validation."""
+        combined_text = "\n".join([f"- {self.state_text(n)}" for n in nodes])
         prompt = f"Synthesize the following partial solutions into one optimal solution:\n{combined_text}"
-        
+
         synergy_thought = self.llm.generate(prompt, max_tokens=256)[0]
         synergy_node = GoTNode(thought=synergy_thought, parents=nodes)
-        
+
         for n in nodes:
             n.children.append(synergy_node)
-            
+
         self.graph.append(synergy_node)
         return synergy_node
 
@@ -129,15 +138,15 @@ class GoTController:
         # 1. Initialize Root
         root = GoTNode(thought=initial_prompt)
         self.graph.append(root)
-        
+
         # 2. Generate and Score (Branching)
         candidates = self.generate_thoughts(root, k=3)
         self.score_nodes(candidates)
-        
+
         # 3. Select top 2 for Aggregation (Synergy)
         candidates.sort(key=lambda x: x.score, reverse=True)
         top_candidates = candidates[:2]
-        
+
         # 4. Merge into final state
         final_node = self.aggregate_thoughts(top_candidates)
         return final_node.thought
@@ -145,28 +154,22 @@ class GoTController:
 
 ### The KV Cache Challenge
 
-At the systems level, ToT and GoT introduce severe memory fragmentation. Every branch shares a common prefix (the root prompt and early thoughts), but diverges later. 
+At the systems level, ToT and GoT introduce severe memory fragmentation. Every branch shares a common prefix (the root prompt and early thoughts), but diverges later.
 
-If implemented naively, the KV cache for the shared prefix is duplicated in VRAM for every branch. Modern inference engines like **vLLM** utilize **PagedAttention** (discussed in Chapter 12) to share memory blocks across branches. When generating thoughts in parallel, the engine uses block-level copy-on-write mechanisms, ensuring that the memory footprint scales only with the *divergent* tokens, not the full context length of every branch.
-
----
-
-## 4. State-of-the-Art: Adaptive Graph of Thoughts (AGoT)
-
-The static nature of ToT and GoT means they apply the same heavy computational framework to every problem, regardless of difficulty. 
-
-Recent advancements, such as the **Adaptive Graph of Thoughts (AGoT)** [[3]](#ref-3), introduce **Dynamic Decomposition**. AGoT unifies CoT, ToT, and GoT by evaluating the complexity of the query at test-time. 
-
-*   If the problem is simple, AGoT routes the query through a linear CoT path.
-*   If the model detects high uncertainty (often measured via entropy in the generation logits or self-reflection prompts), it dynamically expands the reasoning space into a graph.
-
-This represents the frontier of **Test-Time Scaling Laws**. By allocating computation precisely where it is most needed, AGoT achieved a 46.2% improvement on the highly complex GPQA benchmark using standard inference models, matching the performance of models explicitly trained with heavy Reinforcement Learning (like OpenAI's o1) but doing so entirely through inference-time orchestration.
+Compatible engines and requests can share KV blocks for an exact token prefix. Total memory still includes one shared prefix, divergent blocks and metadata. Model, cache format, permissions and token-prefix compatibility govern reuse; a newly aggregated prompt may not share the earlier prefix.
 
 ---
+
+## 4. Adaptive decomposition
+
+The 2025 AGoT study proposes dynamic DAG decomposition that selectively expands subproblems needing further analysis. [[3]](#ref-3) This does not make all GoT graphs DAGs. Its system-specific results should not be read as a model-independent or equal-cost comparison.
+
+For deployment, bound total tokens, tool calls, time and nodes, and compare single paths, independent sampling and tree search. Evaluator bias and correlated errors can make more branches confidently wrong. Preserve provenance, state hashes, scores and stopping reasons.
+
 
 ## 5. Summary and Open Questions
 
-The transition from Chains to Trees to Graphs represents a shift from treating LLMs as mere sequence predictors to utilizing them as engines within classical search architectures. 
+The transition from Chains to Trees to Graphs represents a shift from treating LLMs as mere sequence predictors to utilizing them as engines within classical search architectures.
 
 While GoT provides the structural capacity for human-like reasoning (synthesis and backtracking), it offloads the "thinking" policy entirely to external Python orchestrators. The next logical question—which we will explore in the next section on **Search-time Compute and o1**—is: *Can we train the model to internalize this graph search, learning to branch, prune, and merge natively within its own hidden states?*
 
@@ -175,13 +178,13 @@ While GoT provides the structural capacity for human-like reasoning (synthesis a
 ## Quizzes
 
 <details>
-<summary>Quiz 1: Why is Graph of Thoughts (GoT) often computationally cheaper than Tree of Thoughts (ToT) in tasks like sorting or set intersection, despite having a more complex DAG structure?</summary>
-*ToT forces an exponential expansion of branches. GoT allows for the "Aggregation" of states. By merging logically equivalent or redundant partial solutions from different branches into a single node, GoT drastically reduces the breadth of the search space, pruning redundant parallel computations.*
+<summary>Quiz 1: When can GoT aggregation reduce cost?</summary>
+*When avoided duplicate work exceeds evaluation and synthesis costs. Aggregation does not guarantee correctness, and bounded-width ToT does not necessarily expand exponentially.*
 </details>
 
 <details>
-<summary>Quiz 2: In a ToT implementation using Breadth-First Search (BFS) with beam width $b$ and depth $d$, what is the primary systems-level bottleneck, and how do modern engines mitigate it?</summary>
-*The primary bottleneck is KV Cache memory explosion, which scales $O(b \times d)$ if not managed, as each branch maintains its own context. Modern engines mitigate this using PagedAttention (or RadixAttention), which allows multiple sequences to share the KV cache blocks of their common prefixes, only allocating new memory for the divergent generated tokens.*
+<summary>Quiz 2: Is beam width enough to determine KV memory?</summary>
+*No. Prefix length, tokens per branch, cache format and sharing eligibility matter. Prefix sharing can reduce duplication; divergent branches and newly aggregated prompts still incur costs.*
 </details>
 
 <details>
@@ -195,8 +198,8 @@ While GoT provides the structural capacity for human-like reasoning (synthesis a
 </details>
 
 <details>
-<summary>Quiz 5: Explain the challenges of modeling state-space graph cycles when utilizing autoregressive Transformers, and how GoT frameworks circumvent this algorithmic limitation.</summary>
-*Autoregressive Transformers generate sequences linearly and are conditioned on a fixed context window where time is strictly forward-moving. This makes modeling graph cycles (revisiting a previous state) impossible natively, as appending a previous state simply extends the linear context length $L$, incurring an $O(L^2)$ attention cost without true cyclic graph logic. GoT frameworks circumvent this by utilizing an external Controller to handle cyclic operations (like refinement or looping). The Controller treats a loop as generating a new distinct node in the Directed Acyclic Graph (DAG) structure, preserving the causal attention mechanism while mimicking cyclic state refinement externally.*
+<summary>Quiz 5: Why are autoregressive generation and graph cycles compatible?</summary>
+*A model can condition on text describing earlier states, and a controller can revisit execution states and request new outputs. Cyclic control flow and a time-ordered token transcript are different representations.*
 </details>
 
 ---

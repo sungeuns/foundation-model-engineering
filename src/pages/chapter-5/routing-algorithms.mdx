@@ -8,54 +8,21 @@ import { RoutingVisualizer } from '../../components/chapter-5/RoutingVisualizer.
 
 # 5.2 Routing Algorithms
 
-In the previous section, we established that a Mixture of Experts (MoE) architecture decouples a model's total capacity from its inference compute cost. However, this architectural elegance hinges entirely on a single, highly sensitive component: the **Router** (or Gating Network). 
+A router allocates a finite expert-compute budget. Think of it as a dispatcher: sending every job to one worker leaves other workers idle, but enforcing equal counts does not necessarily minimize end-to-end latency. Token affinity, expert capacity, communication, and causal consistency all matter.
 
-If the experts are the specialized doctors in our mega-hospital, the router is the triage nurse. If the triage nurse sends 99% of the patients to the cardiologist, the cardiologist will be overwhelmed, the other specialists will sit idle, and the hospital's throughput will collapse. In MoE terminology, this catastrophic failure mode is known as **Expert Collapse** (or Routing Collapse).
+## Token choice and load balancing
 
-The evolution of MoE architectures over the last decade is, fundamentally, the history of attempting to solve this exact routing problem. This section dissects the mathematical and engineering progression of routing algorithms, from the early stochastic hacks of 2017 to the elegant, auxiliary-loss-free paradigms powering frontier models like DeepSeek-V3.
+For token representation $x$ and router matrix $W$, standard token-choice routing selects $k$ experts from $p(x)=\operatorname{softmax}(xW)$. The selected weights may be renormalized before combining outputs. Collapse is a possible feedback loop—underused experts receive fewer updates—not an inevitable event after a fixed number of steps.
 
----
+Noisy top-$k$ encourages exploration; a balancing penalty changes the training objective to $L=L_{LM}+\alpha L_{bal}$. The coefficient $\alpha$ trades modeling behavior against load. Evaluate validation loss and routing load jointly; experts do not necessarily specialize into clean human subjects such as mathematics and literature. [[1]](#ref-1)
 
-## 1. The Baseline: Standard Top-$k$ Routing and Its Flaws
+## Expert choice: fixed expert capacity
 
-The most intuitive approach to routing is **Token-Choice Routing** (specifically, Top-$k$). For a given token representation $x$, the router projects it into a vector of logits corresponding to the $E$ available experts. A softmax function creates a probability distribution, and the token is dispatched to the $k$ experts with the highest probabilities.
+Expert Choice reverses the selection axis: each expert selects a fixed number of tokens from a routing group. A capacity factor is a multiplier; the resulting integer capacity is a token count. Equal counts do not guarantee equal wall-clock work. A token can receive several expert outputs or none. With $y=x+\operatorname{MoE}(x)$, a token receiving no expert output still retains its residual representation. [[2]](#ref-2)
 
-$$ \text{Logits} = x \cdot W_{gate} $$
-$$ p(x) = \text{Softmax}(\text{Logits}) $$
-$$ \mathcal{E}_{selected} = \text{argmax}_k(p(x)) $$
+The important causal issue is competition across the routing group. If future tokens participate in the selection, changing a suffix can change how an earlier token is routed. A causal decoder therefore needs an explicitly causal grouping or routing design; merely retaining a KV cache does not solve this.
 
-While mathematically sound, this naive approach fails in practice due to a self-reinforcing feedback loop. Neural networks are prone to the "rich get richer" phenomenon. Early in training, due to random initialization, Expert A might perform slightly better on a batch of tokens than Expert B. The router learns this and begins sending more tokens to Expert A. Because Expert A receives more tokens, it receives more gradient updates, making it even better. Within a few thousand steps, the router sends *all* tokens to Expert A. The remaining experts are starved of gradients and become "dead experts."
-
----
-
-## 2. Generation 1: Noisy Top-$k$ and Auxiliary Losses
-
-To combat expert collapse, the seminal 2017 MoE paper by Shazeer et al. [[1]](#ref-1) introduced **Noisy Top-$k$ Routing**. By injecting tunable Gaussian noise into the logits before the Top-$k$ selection, the router is forced to explore different experts, preventing early lock-in.
-
-$$ H(x) = x \cdot W_{gate} + \text{StandardNormal}() \cdot \text{Softplus}(x \cdot W_{noise}) $$
-
-However, noise alone is insufficient for massive-scale training. Engineers introduced the **Auxiliary Load-Balancing Loss** ($\mathcal{L}_{bal}$). This is an additional penalty term added to the primary language modeling loss during training. It mathematically penalizes the model if the distribution of tokens across experts deviates from a uniform distribution.
-
-$$ \mathcal{L}_{total} = \mathcal{L}_{LM} + \alpha \mathcal{L}_{bal} $$
-
-Where $\alpha$ is a hyperparameter controlling the strength of the penalty.
-
-**The Engineering Trade-off (The "Alignment Tax" of MoE):**
-Auxiliary losses solve the hardware utilization problem but introduce a severe modeling problem. If $\alpha$ is too high, the router is forced to send tokens to suboptimal experts simply to satisfy the load-balancing quota. This degrades the **token-to-expert affinity**. The model sacrifices intelligence for the sake of hardware efficiency.
-
----
-
-## 3. Generation 2: Expert Choice Routing (ECR)
-
-In 2022, researchers at Google Brain proposed a paradigm shift: **Expert Choice Routing (ECR)** [[2]](#ref-2). If tokens choosing experts leads to imbalance, what if we reverse the relationship?
-
-In ECR, instead of each token selecting the top-$k$ experts, **each expert selects the top-$k$ tokens**. 
-
-Every expert is assigned a fixed **capacity factor** (the maximum number of tokens it is allowed to process in a given batch). The router computes the standard token-to-expert affinity matrix. Then, we transpose this matrix. Each expert looks at the entire batch of tokens and pulls the exact number of tokens needed to fill its buffer.
-
-### The PyTorch Implementation of ECR
-
-Unlike standard Top-$k$, ECR operates over the sequence/batch dimension rather than the expert dimension.
+> **Educational selection example.** This CPU tensor example returns indices and weights only. It omits expert computation, residual/scatter combination, causal grouping, distributed dispatch, and training. Capacity is clamped to the available token count.
 
 ```python
 import torch
@@ -65,41 +32,46 @@ import torch.nn.functional as F
 class ExpertChoiceRouting(nn.Module):
     def __init__(self, d_model, num_experts, capacity_factor):
         super().__init__()
+        if num_experts < 1 or capacity_factor <= 0:
+            raise ValueError("positive expert count and capacity factor required")
         self.num_experts = num_experts
         self.capacity_factor = capacity_factor
-        
+
         # Router network
         self.router = nn.Linear(d_model, num_experts, bias=False)
-        
+
     def forward(self, x):
         """
         x shape: [batch_size, seq_len, d_model]
         """
         batch_size, seq_len, d_model = x.shape
         num_tokens = batch_size * seq_len
-        
+
         # Calculate fixed capacity per expert
         # E.g., if capacity_factor=2.0, an expert processes twice the average token share
-        expert_capacity = int((num_tokens / self.num_experts) * self.capacity_factor)
-        
-        x_flat = x.view(-1, d_model) # [num_tokens, d_model]
-        
+        if num_tokens == 0:
+            raise ValueError("empty routing group")
+        expert_capacity = min(num_tokens, max(1, int(
+            (num_tokens / self.num_experts) * self.capacity_factor)))
+
+        x_flat = x.reshape(-1, d_model) # [num_tokens, d_model]
+
         # 1. Compute affinity logits: [num_tokens, num_experts]
         logits = self.router(x_flat)
-        
+
         # 2. Convert to routing weights (Softmax over experts)
         weights = F.softmax(logits, dim=-1)
-        
+
         # 3. TRANSPOSE: Let experts view all tokens -> [num_experts, num_tokens]
         weights_t = weights.t()
-        
+
         # 4. Expert Choice: Each expert picks its top `expert_capacity` tokens
         # top_weights, top_indices shape: [num_experts, expert_capacity]
         top_weights, top_indices = torch.topk(weights_t, expert_capacity, dim=-1)
-        
-        # (In a full implementation, tokens would now be gathered using top_indices, 
+
+        # (In a full implementation, tokens would now be gathered using top_indices,
         # processed by their respective experts, and scattered back)
-        
+
         return top_indices, top_weights
 
 # Example usage
@@ -111,78 +83,46 @@ indices, weights = layer(dummy_input)
 print(f"Indices shape: {indices.shape}") # Expected: [8, 48]
 ```
 
-**The Pros and Cons of ECR:**
-*   **Pro:** Perfect load balancing is guaranteed by definition. There is no need for auxiliary losses, avoiding the affinity degradation problem.
-*   **Con:** Variable compute per token. Highly complex tokens might be selected by 4 different experts, while simple (or uninformative) tokens might not be selected by *any* expert, effectively dropping them from the forward pass. This variable routing complicates autoregressive generation during inference.
+## Soft MoE: differentiable slots
 
----
+Soft MoE forms weighted token mixtures for expert input slots and combines expert outputs back into token representations. Sparse computation is performed over these combined slots. The original study evaluates vision models; the central obstacle to naive causal reuse is mixing across future positions, not a claim that soft assignments necessarily eliminate all compute savings. [[3]](#ref-3)
 
-## 4. Generation 3: Soft MoE and Differentiable Routing
+## Dynamic selection bias in DeepSeek-V3
 
-A parallel track of research sought to eliminate the non-differentiable `argmax` or `topk` operations entirely. **Soft MoE** [[3]](#ref-3) replaces discrete, hard routing with continuous, soft assignments.
+DeepSeek-V3 separates expert selection from output weighting. For token $t$, expert vector $e_i$, affinity $s_{i,t}$, and load-controller bias $b_i$, the simplified selection rule is:
 
-Instead of sending an intact token to a specific expert, Soft MoE computes a weighted average of *all* tokens in the sequence and passes this "blended token" to the expert. Because every operation is a continuous matrix multiplication, the entire routing layer is fully differentiable.
+$$
+s_{i,t}=\sigma(x_t^\top e_i),\qquad
+I_t=\operatorname{TopK}_i(s_{i,t}+b_i),\qquad
+g_{i,t}=\frac{\mathbf{1}[i\in I_t]s_{i,t}}{\sum_{j\in I_t}s_{j,t}}.
+$$
 
-While mathematically elegant and highly stable during training, Soft MoE requires all expert weights to be loaded into memory to compute the continuous mixtures. This negates some of the sparse activation benefits essential for extreme-scale inference, relegating it primarily to vision models (like Vision MoEs) rather than trillion-parameter LLMs.
+The bias shifts selection **after sigmoid**; selected output weights use the unbiased affinities. The load controller decreases overloaded experts' biases and increases underloaded ones. “Auxiliary-loss-free” names this load-control mechanism: the report still includes a small complementary sequence-wise balancing loss. Node limits, routed scaling and shared experts are omitted from this equation. [[4]](#ref-4)
 
-![Evolution of Routing Architectures](../../assets/images/chapter-5/routing-algorithms-evolution.png)
-*Source: AI-generated illustration*
+This is one documented design, not proof that every model should remove auxiliary losses. A useful ablation keeps data, compute, expert count, and routing capacity fixed and measures both held-out quality and imbalance.
 
----
+## Explore allocation
 
-## 5. Auxiliary-Loss-Free Routing (DeepSeek-V3)
+The following authored assignments illustrate selection axes; they are not outputs of a trained router. Compare expert load and token coverage, then ask what dispatch traffic each allocation would create. Section 5.3 follows that traffic across devices.
 
-In recent developments, the industry recognized that auxiliary losses were crippling the upper bounds of model intelligence. DeepSeek-V3 [[4]](#ref-4) introduced a masterclass in systems engineering: **Auxiliary-Loss-Free Routing via Dynamic Bias**.
-
-Instead of penalizing the loss function, DeepSeek-V3 removes the auxiliary loss entirely. To maintain load balancing, they introduce a dynamic bias term $b_i$ for each expert $i$, added to the routing logits:
-
-$$ \text{Logits}_i = (x \cdot W_{gate})_i + b_i $$
-
-**The Mechanism:**
-1.  During training, the system monitors the load of each expert.
-2.  If Expert $i$ is receiving too many tokens (overloaded), its bias term $b_i$ is slightly decreased.
-3.  If Expert $j$ is starved of tokens (underloaded), its bias term $b_j$ is slightly increased.
-4.  **Crucially:** This bias term is *only* used for the Top-$k$ selection process. It is detached from the computational graph and is *not* used when calculating the routing weights multiplied with the expert outputs.
-
-Because the bias is dynamically adjusted outside of the gradient tape, the model is physically forced to balance the load, but the backpropagation process is completely untainted by artificial balancing constraints. The model learns pure token-to-expert affinity, resulting in a significantly steeper convergence curve and higher reasoning capabilities.
-
----
-
-## Interactive Visualization: Routing Paradigms
-
-To intuitively grasp how these algorithms distribute compute, interact with the conceptual visualizer below. Observe how Token-Choice can lead to bottlenecks, while Expert-Choice guarantees hardware utilization at the cost of token coverage.
-
-<RoutingVisualizer client:load />
-
-
----
-
-## Summary and Next Steps
-
-The routing algorithm is the defining characteristic of any MoE model. While the industry has largely converged on Top-$k$ routing augmented with dynamic bias adjustments (eschewing auxiliary losses), the physical reality of moving these tokens across thousands of GPUs introduces a new bottleneck. 
-
-Even if the routing algorithm perfectly balances the load mathematically, how do we efficiently transfer a token residing on GPU 0 to the expert residing on GPU 412 without stalling the entire cluster? In the next section, **5.3 Expert Parallelism**, we will dive into the distributed systems engineering required to make these routing algorithms function at planetary scale.
-
----
+<RoutingVisualizer lang="en" client:load />
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: Why does increasing the weight ($\alpha$) of the auxiliary load-balancing loss often result in a model with worse zero-shot reasoning capabilities on benchmarks like MMLU, even if the training loss converges faster?</summary>
-*The auxiliary loss forces the router to prioritize hardware utilization (distributing tokens evenly) over token-to-expert affinity (sending a token to the expert that actually contains the most relevant knowledge). If $\alpha$ is too high, a highly complex mathematics token might be routed to an expert specialized in French literature simply because the math expert's buffer was getting full. This corrupts the specialization of the experts and degrades the model's overall reasoning capacity.*
+<summary>Quiz 1: Why can a larger balancing coefficient hurt held-out quality even when expert loads become more uniform?</summary>
+*It changes the optimization objective. Better load balance can trade off against useful routing, but the direction and size of the quality change require a controlled evaluation.*
 </details>
 
 <details>
-<summary>Quiz 2: In Expert Choice Routing (ECR), it is mathematically possible for a specific token in the sequence to not be selected by *any* expert. In a standard Transformer architecture, why is dropping a token in the middle of a sequence highly problematic, and how must the architecture adapt?</summary>
-*In a standard Transformer, if a token is completely dropped by the MoE layer, its representation becomes a zero-vector (or purely the residual connection) for subsequent layers. This destroys the continuous flow of sequence information, especially for autoregressive generation where the next token depends heavily on the precise representation of the current token. To adapt, ECR models rely heavily on the residual connection ($x + \text{MoE}(x)$) to bypass the dropped token forward, but it still makes autoregressive KV-caching highly unpredictable compared to Top-$k$ routing.*
+<summary>Quiz 2: Does an unselected ECR token disappear, and what causal problem remains?</summary>
+*The residual path retains the token. Selection over a group containing future tokens can still make its representation depend on that future context; causal grouping or another routing design is required.*
 </details>
 
 <details>
-<summary>Quiz 3: DeepSeek-V3 uses a dynamic bias term $b_i$ added to the routing logits to balance load, but explicitly excludes this bias from the gradient calculation of the routing weights. What would happen if this bias term *was* included in the gradient tape during backpropagation?</summary>
-*If the bias term were included in the gradient tape, the model would learn to permanently adjust its internal router weights ($W_{gate}$) to account for the temporary load imbalances of specific batches. The bias is meant to be a transient, systemic "nudge" to fix immediate hardware bottlenecks. By keeping it out of the gradient calculation, the router's weights are updated purely based on semantic token-expert affinity (the cross-entropy loss of the language modeling objective), ensuring the model learns "what is right" rather than "what is currently convenient for the GPUs."*
+<summary>Quiz 3: Where does DeepSeek-V3 apply its load bias, and does it remove every auxiliary term?</summary>
+*Bias modifies sigmoid affinities used for selection. Output weights use unbiased affinities, and the reported design retains a small sequence-wise auxiliary balancing loss.*
 </details>
-
----
 
 ## References
 

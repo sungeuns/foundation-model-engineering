@@ -105,7 +105,7 @@ class SimpleRNN(nn.Module):
     def __init__(self, input_size, hidden_size, output_size):
         super(SimpleRNN, self).__init__()
         self.hidden_size = hidden_size
-        
+
         # RNN 셀 연산
         self.i2h = nn.Linear(input_size + hidden_size, hidden_size)
         self.i2o = nn.Linear(input_size + hidden_size, output_size)
@@ -181,8 +181,8 @@ for i in range(seq_len):
 </details>
 
 <details>
-<summary>Quiz 6: BPTT(통사적 역전파)를 사용하여 시점 $t$의 손실 $L_t$에 대한 시점 $k$ ($k \ll t$)의 은닉 상태 $\mathbf{h}_k$의 기울기 $\frac{\partial L_t}{\partial \mathbf{h}_k}$를 유도하고, 연쇄 법칙 항인 $\prod_{j=k+1}^t \frac{\partial \mathbf{h}_j}{\partial \mathbf{h}_{j-1}}$이 기울기 소실(Vanishing Gradient)을 어떻게 유발하는지 수학적으로 증명하시오.</summary>
-*은닉 상태 업데이트 식은 $\mathbf{h}_j = \tanh(\mathbf{W}_{hh}\mathbf{h}_{j-1} + \mathbf{W}_{xh}\mathbf{x}_j + \mathbf{b}_h)$입니다. 연쇄 법칙에 따라, $t$ 시점의 손실 $L_t$에 대한 $\mathbf{h}_k$의 기울기는 다음과 같습니다: $\frac{\partial L_t}{\partial \mathbf{h}_k} = \frac{\partial L_t}{\partial \mathbf{h}_t} \frac{\partial \mathbf{h}_t}{\partial \mathbf{h}_k} = \frac{\partial L_t}{\partial \mathbf{h}_t} \prod_{j=k+1}^t \frac{\partial \mathbf{h}_j}{\partial \mathbf{h}_{j-1}}$. 여기서 야코비안 행렬은 $\frac{\partial \mathbf{h}_j}{\partial \mathbf{h}_{j-1}} = \text{diag}(1 - \tanh^2(\mathbf{W}_{hh}\mathbf{h}_{j-1} + \dots)) \mathbf{W}_{hh}^T$입니다. 가중치가 작거나 활성화 함수가 포화(Saturation)되어 $\tanh$ 값이 $\pm 1$에 가까워지면, 야코비안 행렬의 고유값(Eigenvalue)의 절대값이 $1$보다 작아지게 됩니다. 따라서 $t - k$가 커질수록 연속된 행렬곱 $\prod_{j=k+1}^t \frac{\partial \mathbf{h}_j}{\partial \mathbf{h}_{j-1}}$은 기하급수적으로 영벡터에 수렴하게 되어 기울기 소실이 발생합니다.*
+<summary>Quiz 6: BPTT의 야코비안 곱에서 어떤 조건이 기울기 소실의 충분조건인가요?</summary>
+*열벡터 상태에서 $J_j=\operatorname{diag}(1-h_j^2)W_{hh}$ 이고 $\partial h_t/\partial h_k=J_t\cdots J_{k+1}$ 입니다. 모든 연산자 norm이 $\|J_j\|_2\le\rho<1$ 이면 곱의 norm은 $\rho^{t-k}$ 이하로 수축합니다. 각 행렬의 고유값만으로 비가환 곱의 거동을 증명할 수는 없습니다. 손실의 열벡터 그래디언트에는 이 곱의 전치를 적용합니다.*
 </details>
 
 ---

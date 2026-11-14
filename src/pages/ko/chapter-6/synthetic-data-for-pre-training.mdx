@@ -92,15 +92,15 @@ def rejection_sampling_pipeline(
     threshold: float = 0.8
 ) -> List[Dict[str, Union[str, float]]]:
     """
-    Rejection Sampling을 사용하여 합성 데이터를 생성합니다.
-    보상 임계값(Threshold)을 통과한 프롬프트-응답 쌍만을 반환합니다.
+    Generates synthetic data using Rejection Sampling.
+    Returns only the prompt-response pairs that pass the reward threshold.
     """
     device = next(generator.parameters()).device
     reward_device = next(reward_model.parameters()).device
     synthetic_dataset = []
 
     for prompt in prompts:
-        # 1. Serving path와 같은 tokenizer-native chat template을 사용합니다.
+        # 1. Render the same tokenizer-native template used by serving.
         prompt_ids = gen_tokenizer.apply_chat_template(
             [{"role": "user", "content": prompt}],
             tokenize=True,
@@ -109,8 +109,8 @@ def rejection_sampling_pipeline(
         ).to(device)
         input_ids = prompt_ids.repeat(num_candidates, 1)
         attention_mask = torch.ones_like(input_ids)
-        
-        # 합성 후보군 간의 다양성을 유도하기 위해 높은 Temperature 설정
+
+        # High temperature to encourage diversity in the synthetic candidates
         outputs = generator.generate(
             input_ids=input_ids,
             attention_mask=attention_mask,
@@ -119,12 +119,12 @@ def rejection_sampling_pipeline(
             do_sample=True,
             pad_token_id=gen_tokenizer.eos_token_id
         )
-        
-        # 문자 길이가 아니라 token 위치로 응답 부분을 분리합니다.
+
+        # Slice by token position, never by prompt character length.
         response_ids = outputs[:, prompt_ids.shape[1]:]
         responses = gen_tokenizer.batch_decode(response_ids, skip_special_tokens=True)
 
-        # 2. Reward Model을 사용하여 후보군 평가
+        # 2. Score candidates using the Reward Model
         eval_texts = [
             reward_tokenizer.apply_chat_template(
                 [{"role": "user", "content": prompt}, {"role": "assistant", "content": response}],
@@ -134,17 +134,23 @@ def rejection_sampling_pipeline(
             for response in responses
         ]
         reward_inputs = reward_tokenizer(
-            eval_texts, return_tensors="pt", padding=True, truncation=True
+            eval_texts, return_tensors="pt", padding=True, truncation=False,
+            add_special_tokens=False
         ).to(reward_device)
-        
-        # Sequence Classification 헤드에서 스칼라(Scalar) 보상 값을 출력한다고 가정
+
+        # Do not silently truncate the response being judged. This example's
+        # explicit 2048-token cap must be validated against the reward checkpoint.
+        if reward_inputs["input_ids"].shape[1] > 2048:
+            continue  # record a length-rejection reason in a real manifest
+
+        # Assuming a scalar reward output from a sequence classification head
         rewards = reward_model(**reward_inputs).logits.squeeze(-1)
-        
-        # 3. 가장 점수가 높은 후보 선택
+
+        # 3. Select the best candidate
         best_idx = torch.argmax(rewards).item()
         best_reward = rewards[best_idx].item()
 
-        # 4. 품질 보장을 위해 임계값(Threshold) 필터링 적용
+        # 4. Filter based on threshold to ensure quality
         if best_reward >= threshold:
             synthetic_dataset.append({
                 "prompt": prompt,
@@ -154,9 +160,9 @@ def rejection_sampling_pipeline(
 
     return synthetic_dataset
 
-# 활용 예시 (모델이 로드되어 있다고 가정):
+# Example Usage (Assuming models are loaded):
 # dataset = rejection_sampling_pipeline(
-#     prompts=["Transformers에서 Pre-LN과 Post-LN의 차이점을 설명해 줘."],
+#     prompts=["Explain the difference between Pre-LN and Post-LN in Transformers."],
 #     generator=llama_3_70b,
 #     gen_tokenizer=llama_tokenizer,
 #     reward_model=nemotron_reward_model,

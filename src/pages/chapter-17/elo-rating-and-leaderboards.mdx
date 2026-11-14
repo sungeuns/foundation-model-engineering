@@ -6,9 +6,9 @@ lang: en
 
 # 17.3 Elo Rating & Leaderboards
 
-Evaluating Large Language Models (LLMs) is one of the hardest problems in AI. Academic benchmarks like MMLU or GSM8K are static and prone to data contamination. To truly understand a model's capabilities, the AI community has turned to human preference evaluation, formalized through **Elo Rating systems** and live **Leaderboards**.
+Human preference evaluation complements answer-based benchmarks. It asks which of two responses a judge prefers; preference is distinct from factuality, safety and task success. This section explains how Elo and Bradley–Terry summarize pairwise comparisons.
 
-The most prominent example of this is the **LMSYS Chatbot Arena**, where users chat with two anonymous models side-by-side and vote on which response is better. This crowdsourced, blind A/B testing creates a dynamic, hard-to-game leaderboard.
+The 2023 Chatbot Arena study used crowdsourced votes on anonymous responses. Blinding reduces name-based bias; it does not remove style effects, sampling bias, repeated votes or evaluation contamination [[2]](#ref-2).
 
 ## The Mechanism: Crowdsourced Duels
 
@@ -26,14 +26,14 @@ Originally designed for chess, the Elo rating system calculates the relative ski
 
 ### 1. Expected Score
 
-Given two models with ratings $R_A$ and $R_B$, the expected score (probability of winning) for Model A is calculated using a logistic curve:
+Given two models with ratings $R_A$ and $R_B$, the expected score for Model A is calculated using a logistic curve:
 
 $$E_A = \frac{1}{1 + 10^{(R_B - R_A)/400}}$$
 
 Similarly, for Model B:
 $$E_B = \frac{1}{1 + 10^{(R_A - R_B)/400}}$$
 
-Note that $E_A + E_B = 1$. If Model A has a rating $400$ points higher than Model B, $E_A \approx 0.91$, meaning Model A is expected to win $91\%$ of the time.
+With half credit for a tie, $E_A=P(A\text{ wins})+0.5P(\text{tie})$ and $E_A+E_B=1$. A 400-point advantage gives an expected score of about 0.91, which is a win probability only when ties are absent. The scale 400 and rating origin are conventions; scores from different leaderboards are not directly comparable.
 
 ### 2. Rating Update
 
@@ -50,11 +50,17 @@ If a highly-rated model loses to a low-rated model, the rating change is large b
 
 ### Beyond Elo: The Bradley-Terry Model
 
-While standard Elo updates ratings sequentially, platforms like LMSYS often use the **Bradley-Terry model** for offline analysis. The Bradley-Terry model fits a probability model to the entire dataset of duels at once using maximum likelihood estimation. It handles ties and multiple comparisons more robustly than sequential Elo updates.
+Elo depends on match order. Bradley–Terry estimates latent score differences from a set of comparisons. Its basic form models binary wins: declare whether ties receive half credit or use an explicit tie model. Relative scores across disconnected comparison groups are not identified by the data, and complete separation can prevent a finite MLE. Record the reference-score constraint and regularization policy.
+
+### Reading a leaderboard
+
+Report uncertainty in the **score difference**, using a bootstrap or model that accounts for repeated users and prompts. Overlap of two marginal confidence intervals alone does not establish equivalence. Check prompt mix, style preference, model identity leakage, repeated voters and version changes. Public preference is a candidate-selection signal; private workflow, latency/cost and safety evaluations still gate deployment.
 
 ## Implementing Batch Elo Updates in PyTorch
 
 For developers running internal model evaluations (e.g., comparing multiple fine-tuned versions), implementing a batch Elo update system in PyTorch can be highly efficient. Here is how to compute expected scores and updates for a batch of duels.
+
+> **Educational example.** Each row updates an independent pair of ratings. This is not a shared rating registry or sequential Elo when a model appears in several rows. A real evaluator must manage model IDs, duplicate votes, update order, tie policy and uncertainty.
 
 ```python
 import torch
@@ -62,14 +68,14 @@ import torch
 def compute_batch_elo_update(ratings_a, ratings_b, outcomes, k_factor=32.0):
     """
     Compute Elo rating updates for a batch of duels.
-    
+
     Args:
         ratings_a: Tensor of current ratings for Model A. Shape (batch_size,)
         ratings_b: Tensor of current ratings for Model B. Shape (batch_size,)
         outcomes: Tensor of outcomes for Model A (1.0 for win, 0.5 for tie, 0.0 for loss).
                   Shape (batch_size,)
         k_factor: The K-factor hyperparameter.
-        
+
     Returns:
         new_ratings_a: Updated ratings for Model A.
         new_ratings_b: Updated ratings for Model B.
@@ -79,15 +85,15 @@ def compute_batch_elo_update(ratings_a, ratings_b, outcomes, k_factor=32.0):
     exponent = (ratings_b - ratings_a) / 400.0
     expected_a = 1.0 / (1.0 + torch.pow(10.0, exponent))
     expected_b = 1.0 - expected_a
-    
+
     # Compute updates
     # outcomes are scores for A. For B, score is (1.0 - outcomes)
     update_a = k_factor * (outcomes - expected_a)
     update_b = k_factor * ((1.0 - outcomes) - expected_b)
-    
+
     new_ratings_a = ratings_a + update_a
     new_ratings_b = ratings_b + update_b
-    
+
     return new_ratings_a, new_ratings_b
 
 # Example Usage
@@ -107,29 +113,36 @@ print("Original B:", r_b)
 print("Updated B:", new_b)
 ```
 
+## A product leaderboard
+
+Stratify prompts by task; ensure useful pair coverage; calibrate automated judges against humans; permit ties; and report severe failure categories separately from style preferences. If you weight comparisons by severity, predeclare the weights and resulting estimand. Pin model/system-prompt versions and retain auditable votes. These controls lead into the next sections on contamination and release gates.
+
 ## Quizzes
 
 <details>
-<summary>Quiz 1: Why is a blind A/B test (like Chatbot Arena) considered superior to standard benchmarks for evaluating chat models?</summary>
-*Standard benchmarks are static and can be contaminated (included in training data), leading to inflated scores. A blind A/B test with human judges evaluates models on diverse, real-world prompts that are hard to predict or game. It measures actual user preference, which is the ultimate goal for chat assistants.*
+<summary>Quiz 1: Does blind preference evaluation replace correctness evaluation?</summary>
+*No. Blinding can reduce name-based bias, but style effects, sampling bias and judge errors remain. Evaluate correctness, safety and workflow success separately.*
 </details>
 
 <details>
-<summary>Quiz 2: What happens to the ratings if a model with 2000 Elo wins against a model with 1000 Elo? What if it loses?</summary>
-*If the 2000 Elo model wins, the rating change will be very small because the expected score was already close to 1.0. If it loses, the rating change will be very large (up to the full K-factor) because it was a highly unexpected result, causing the winner to gain many points and the loser to lose many.*
+<summary>Quiz 2: Does a 400-point advantage mean a 91% win rate?</summary>
+*Only without ties. With half credit for ties, about 0.91 is the expected score: win probability plus half the tie probability.*
 </details>
 
 <details>
-<summary>Quiz 3: What is the main limitation of the sequential Elo update system compared to the Bradley-Terry model in evaluation platforms?</summary>
-*Sequential Elo updates are order-dependent; the final rating depends on the order in which games were processed. The Bradley-Terry model is a full-dataset optimization approach that considers all games simultaneously, making it more robust to the order of data and better at handling sparse data where not all models have played against each other.*
+<summary>Quiz 3: Can Bradley–Terry compare disconnected groups of models?</summary>
+*Their relative scores are not identified by the observations alone. Connect the comparison graph; do not interpret a regularizer-imposed difference as observed evidence.*
 </details>
 
 <details>
-<summary>Quiz 4: Derive the explicit optimization sequence logic when utilizing the Bradley-Terry model via Maximum Likelihood Estimation (MLE) for offline leaderboard updates.</summary>
-*The Bradley-Terry model defines the win probability as $P(i > j) = \frac{e^{s_i}}{e^{s_i} + e^{s_j}}$ where $s_i$ is the continuous latent skill parameter. Offline calibration minimizes the aggregate negative log-likelihood $L = -\sum \ln P(i > j)$. The gradient update for skill parameter $s_i$ is derived as: $\frac{\partial L}{\partial s_i} = -\sum_j \left( \mathbb{I}(i \text{ beats } j) - P(i > j) \right)$. Optimization applies sequentially $s_i \leftarrow s_i - \eta \frac{\partial L}{\partial s_i}$ until global calibration boundaries are converged, avoiding the order-dependent noise inherent in incremental Elo updates.*
+<summary>Quiz 4: Why not deploy the top public model directly into a RAG product?</summary>
+*Its prompt distribution and preference criteria may differ from the product. Check grounding, citations, security, cost and latency in private workflow evaluations and a canary.*
 </details>
 
----
+<details>
+<summary>Quiz 5: What constraints and policies must an offline Bradley–Terry estimate record?</summary>
+*Record the reference-score or zero-sum constraint, tie treatment, regularization, comparison-graph connectivity, sample weights and uncertainty method. Optimizing binary comparison likelihood does not automatically resolve bias or identification.*
+</details>
 
 ## References
 

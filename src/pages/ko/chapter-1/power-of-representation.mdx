@@ -77,14 +77,9 @@ AI가 왜 수동으로 작성된 규칙(기호주의)에서 표현을 스스로 
 
 ---
 
-### Hierarchical Feature Extraction (계층적 특징 추출)
+### 계층적 특징 추출
 
-Deep network는 여러 층(layer)으로 구성됩니다. 각 층은 서로 다른 추상화 수준에서 데이터를 표현하는 법을 배웁니다.
-1.  **하위 층 (Low-level layers):** 선, 단순한 기울기, 기본 모양을 감지합니다.
-2.  **중위 층 (Mid-level layers):** 선을 결합하여 객체의 부분(예: 모서리, 바퀴, 눈)을 감지합니다.
-3.  **상위 층 (High-level layers):** 부분을 결합하여 전체 객체나 추상적인 개념(예: 자동차, 얼굴, 의미론적 의미)을 감지합니다.
-
----
+층을 쌓으면 특징을 결합해 더 추상적인 표현을 만들 수 있습니다. 비전 신경망의 초기 층은 경계·질감에, 중간 층은 객체의 부분 같은 조합에, 후반 층은 객체 인식에 유용한 특징에 반응할 수 있습니다. 이는 유용한 직관이며 층마다 하나의 개념을 배정하는 보편 법칙은 아닙니다. 표현은 분산되어 있고 과제와 아키텍처에 따라 달라집니다.
 
 ## The Manifold Hypothesis (매니폴드 가설)
 
@@ -150,11 +145,11 @@ optimizer = optim.Adam(model.parameters(), lr=0.01)
 for epoch in range(1000):
     reconstructed, latent = model(X)
     loss = criterion(reconstructed, X)
-    
+
     optimizer.zero_grad()
     loss.backward()
     optimizer.step()
-    
+
     if (epoch + 1) % 200 == 0:
         print(f'Epoch [{epoch+1}/1000], Loss: {loss.item():.4f}')
 

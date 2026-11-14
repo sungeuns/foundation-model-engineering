@@ -53,7 +53,7 @@ test('feedback pages address exposure bias, annotation quality, privacy, and lea
     assert.match(page, /abstain|판단 보류/i);
     assert.match(page, /inter-annotator|annotator agreement|평가자.*일치/i);
     assert.match(page, /PII/);
-    assert.match(page, /sibling.*holdout|형제.*holdout/i);
+    assert.match(page, /quarantine the entire cluster|군집 전체를 평가용으로 격리/i);
     assert.match(page, /selection bias|선택 편향/i);
   }
 });

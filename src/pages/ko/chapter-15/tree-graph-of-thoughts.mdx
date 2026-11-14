@@ -8,9 +8,7 @@ import ReasoningVisualizer from '../../../components/chapter-15/ReasoningVisuali
 
 # 15.2 생각의 트리와 그래프 (Tree/Graph of Thoughts)
 
-표준 자기회귀(Autoregressive) 생성 방식—표준적인 **Chain-of-Thought (CoT)** 를 포함하여—이 가지는 근본적인 한계는 마르코프(Markovian) 속성을 따르는 좌에서 우로(left-to-right)의 디코딩 과정에 엄격하게 종속된다는 점입니다. 일단 하나의 토큰이 샘플링되면, 이는 컨텍스트 윈도우의 불변하는 일부가 됩니다. 만약 모델이 복잡한 추론 과정의 초반부에서 논리적 오류를 범한다면, 이후의 모든 생성 과정은 그 잘못된 전제 조건에 얽매일 수밖에 없습니다.
-
-인간의 인지 과정은 어려운 문제를 해결할 때 선형적으로만 작동하지 않습니다. 우리는 대안적인 가설을 탐색하고, 막다른 길에 다다르면 되돌아가며(backtrack), 여러 부분적인 해결책을 종합하여 하나의 일관된 결론을 도출합니다. 이러한 간극을 메우기 위해 연구자들은 LLM 디코딩 과정에 탐색 알고리즘을 도입하였고, 선형적인 체인(Chain) 패러다임을 **Tree** 로, 그리고 궁극적으로는 **Graph of Thoughts** 로 진화시켰습니다.
+자기회귀 Transformer는 한 단계 전의 상태만이 아니라 사용 가능한 접두사 전체에 조건화됩니다. 기본적인 단일 생성 경로에서는 이미 출력한 토큰을 다시 쓰지 않지만, 뒤의 텍스트에서 앞선 실수를 수정할 수 있습니다. ToT와 GoT는 여러 후보와 평가를 외부 탐색 상태로 관리해 대안을 비교하고 되돌아갈 수 있게 합니다. 이 추가 계산이 유용하려면 후보 평가가 충분히 신뢰할 만해야 합니다.
 
 ---
 
@@ -43,21 +41,17 @@ $G$ 와 $V$ 가 정의되면, ToT는 **Breadth-First Search (BFS)** 나 **Depth-
 
 ToT는 백트래킹(backtracking)을 가능하게 하지만, 구조적인 결함을 안고 있습니다. 바로 **트리(Trees)는 병합될 수 없다** 는 점입니다. 만약 두 개의 서로 다른 브랜치가 가치 있고 상호 보완적인 부분 해답을 생성했다 하더라도, ToT는 시스템이 둘 중 하나만을 선택하고 나머지는 버리도록 강제합니다.
 
-Besta et al. (2023) [[2]](#ref-2) 가 제안한 **Graph of Thoughts (GoT)** 는 추론 구조를 **Directed Acyclic Graph (DAG)** 로 격상시킵니다. GoT에서 정점(vertices)은 생각을 나타내고, 간선(edges)은 종속성을 의미합니다. 겉보기에는 단순한 이 구조적 업그레이드가 트리는 지원할 수 없는 강력한 인지적 연산을 해제(unlock)합니다.
+Besta et al. (2023) [[2]](#ref-2) 가 제안한 **Graph of Thoughts (GoT)** 는 추론 구조를 **피드백 순환도 포함할 수 있는 방향 그래프** 로 격상시킵니다. GoT에서 정점(vertices)은 생각을 나타내고, 간선(edges)은 종속성을 의미합니다. 겉보기에는 단순한 이 구조적 업그레이드가 트리는 지원할 수 없는 강력한 인지적 연산을 해제(unlock)합니다.
 
-### 핵심 변환 연산
+### 핵심 변환
 
-GoT는 인간의 문제 해결 방식을 모델링한 특정 그래프 변환 연산을 도입합니다:
+- **Generation:** 현재 작업과 의존 이력에서 새 후보를 제안합니다.
+- **Aggregation:** 여러 후보의 정보를 하나의 후보로 합칩니다. 서로 모순되는 부분이나 근거 손실이 없는지 다시 검증해야 합니다.
+- **Refinement:** 피드백으로 후보를 수정합니다. 실행 기록은 수정을 별도 노드로 펼친 DAG로 남길 수 있지만, 일반 GoT의 제어 흐름은 순환을 포함할 수 있습니다.
 
-*   **Aggregation (Synergy):** 여러 개의 생각 $v_1, v_2, \dots, v_k$ 가 하나의 새로운 생각 $v_{new}$ 로 병합됩니다. LLM은 부모 생각들의 가장 좋은 요소들을 종합(synthesize)하도록 프롬프팅됩니다. 이는 문서 요약이나 코드 합성(code synthesis)과 같은 작업에서 매우 효과적입니다.
-*   **Refinement (Looping):** 생각 $v$ 가 반복적으로 개선되어 $v^*$ 를 생성합니다. 비순환(acyclic) 속성을 유지하기 위해 기술적으로는 DAG에 새로운 노드를 생성하는 것이지만, 실질적으로는 자기 교정(self-correction) 루프의 역할을 합니다.
-*   **Generation:** 부모로부터 새로운 자식 생각들을 생성하는 표준적인 ToT의 브랜칭 연산입니다.
+### 비용과 품질은 함께 측정하기
 
-### 비용과 품질의 역설
-
-직관적으로 생각하면, GoT가 ToT보다 구조적으로 더 복잡하기 때문에 연산 비용이 훨씬 더 많이 들 것이라고 가정하기 쉽습니다. 하지만 실제로는 GoT가 **더 낮은 연산 비용으로 더 높은 품질** 을 달성하는 경우가 많습니다 [[2]](#ref-2).
-
-서로 다른 브랜치에 있는 중복되거나 논리적으로 동등한 상태를 식별하고 이를 병합(Aggregation)함으로써, GoT는 ToT보다 탐색 공간을 훨씬 더 공격적으로 가지치기(prune)합니다. 정렬(sorting) 작업에서 GoT는 ToT에 비해 연산 비용을 31% 이상 절감하면서도 품질은 62% 향상시키는 결과를 보여주었습니다.
+GoT 논문은 특정 작업과 설정에서 이득을 보고합니다. [[2]](#ref-2) 병합은 중복 작업을 줄일 수 있지만 평가와 합성 비용을 추가하고 오류를 결합할 수도 있습니다. 너비가 제한된 ToT가 반드시 지수적으로 확장되는 것은 아닙니다. 상태마다 후보 $k$ 개를 만들고 빔 너비 $b$, 깊이 $d$ 를 유지하면 대략 $O(dbk)$ 개의 후보를 평가합니다. 각 후보의 토큰·도구 비용은 별도로 계산해야 합니다.
 
 <ReasoningVisualizer client:load lang="ko" />
 
@@ -79,8 +73,9 @@ GoT를 구현하기 위해서는 시스템을 그래프 구조와 탐색 전략�
 
 아래는 Generation과 Aggregation을 처리하는 GoT Controller의 핵심 로직을 보여주는 Python 구현 예시입니다.
 
+> **교육용 컨트롤러 골격.** LLM 인터페이스는 모의 인터페이스이며 입력 파싱, 시간·토큰 예산, 상태 복구와 최종 검증을 생략했습니다.
+
 ```python
-import torch
 from typing import List, Dict, Any
 
 class GoTNode:
@@ -95,51 +90,65 @@ class GoTController:
         self.llm = llm_executor # Mock LLM interface
         self.graph: List[GoTNode] = []
 
+    def state_text(self, node):
+        ordered, seen = [], set()
+        def visit(current):
+            if id(current) in seen:
+                return
+            seen.add(id(current))
+            for parent in current.parents:
+                visit(parent)
+            ordered.append(current.thought)
+        visit(node)
+        return "\n".join(ordered)  # Root task plus dependency history.
+
     def generate_thoughts(self, node: GoTNode, k: int) -> List[GoTNode]:
-        """하나의 노드를 k개의 새로운 생각으로 브랜칭합니다."""
-        prompt = f"Given the current state: {node.thought}\nGenerate {k} distinct next steps."
+        """Branches a node into k new thoughts."""
+        prompt = f"Given the current state: {self.state_text(node)}\nGenerate {k} distinct next steps."
         responses = self.llm.generate(prompt, num_return_sequences=k)
-        
+
         new_nodes = [GoTNode(thought=r, parents=[node]) for r in responses]
         node.children.extend(new_nodes)
         self.graph.extend(new_nodes)
         return new_nodes
 
     def score_nodes(self, nodes: List[GoTNode]):
-        """LLM을 휴리스틱 함수로 사용하여 노드들을 평가합니다."""
+        """Evaluates nodes using the LLM as a heuristic function."""
         for node in nodes:
-            prompt = f"Evaluate the validity of this reasoning step: {node.thought}. Score from 0.0 to 1.0."
+            prompt = f"Evaluate the validity of this reasoning step: {self.state_text(node)}. Score from 0.0 to 1.0."
             score_str = self.llm.generate(prompt, max_tokens=5)[0]
-            node.score = float(score_str) # 단순화된 파싱
+            node.score = float(score_str)
+            if not 0.0 <= node.score <= 1.0:
+                raise ValueError("evaluator must return a finite score in [0,1]")
 
     def aggregate_thoughts(self, nodes: List[GoTNode]) -> GoTNode:
-        """시너지를 내는 여러 노드들을 하나의 우수한 노드로 병합합니다."""
-        combined_text = "\n".join([f"- {n.thought}" for n in nodes])
+        """Proposes an aggregate; improvement requires separate validation."""
+        combined_text = "\n".join([f"- {self.state_text(n)}" for n in nodes])
         prompt = f"Synthesize the following partial solutions into one optimal solution:\n{combined_text}"
-        
+
         synergy_thought = self.llm.generate(prompt, max_tokens=256)[0]
         synergy_node = GoTNode(thought=synergy_thought, parents=nodes)
-        
+
         for n in nodes:
             n.children.append(synergy_node)
-            
+
         self.graph.append(synergy_node)
         return synergy_node
 
     def execute_search(self, initial_prompt: str):
-        # 1. Root 초기화
+        # 1. Initialize Root
         root = GoTNode(thought=initial_prompt)
         self.graph.append(root)
-        
-        # 2. 생성 및 평가 (Branching)
+
+        # 2. Generate and Score (Branching)
         candidates = self.generate_thoughts(root, k=3)
         self.score_nodes(candidates)
-        
-        # 3. Aggregation (Synergy)을 위한 상위 2개 선택
+
+        # 3. Select top 2 for Aggregation (Synergy)
         candidates.sort(key=lambda x: x.score, reverse=True)
         top_candidates = candidates[:2]
-        
-        # 4. 최종 상태로 병합
+
+        # 4. Merge into final state
         final_node = self.aggregate_thoughts(top_candidates)
         return final_node.thought
 ```
@@ -148,22 +157,16 @@ class GoTController:
 
 시스템 관점에서 볼 때, ToT와 GoT는 심각한 메모리 단편화(memory fragmentation)를 유발합니다. 모든 브랜치는 공통된 접두사(초기 프롬프트 및 초기 생각들)를 공유하지만 이후에 분기됩니다.
 
-이를 순진하게(naively) 구현할 경우, 공통 접두사에 대한 KV 캐시가 모든 브랜치마다 VRAM에 중복으로 할당됩니다. **vLLM** 과 같은 최신 추론 엔진은 브랜치 간에 메모리 블록을 공유하기 위해 **PagedAttention** (12장에서 논의됨)을 활용합니다. 생각들을 병렬로 생성할 때, 엔진은 블록 수준의 Copy-on-Write 메커니즘을 사용하여 메모리 사용량이 모든 브랜치의 전체 컨텍스트 길이가 아닌 *분기된(divergent)* 토큰에 대해서만 확장되도록 보장합니다.
+호환되는 엔진과 요청에서는 동일한 토큰 접두사의 KV 블록을 공유할 수 있습니다. 총 메모리에는 공유 접두사 한 벌, 분기별 블록과 메타데이터가 남습니다. 모델·캐시 형식·권한·실제 토큰 접두사가 공유 조건을 만족해야 하며, 여러 생각을 합쳐 만든 새 프롬프트는 공유되지 않을 수도 있습니다.
 
 ---
 
-## 4. 최신 흐름: Adaptive Graph of Thoughts (AGoT)
+## 4. 적응형 분해
 
-ToT와 GoT의 정적(static)인 특성은 문제의 난이도와 관계없이 동일하게 무거운 연산 프레임워크를 모든 문제에 적용한다는 것을 의미합니다.
+2025년 AGoT 연구는 추가 분석이 필요한 하위 문제를 선택적으로 확장하는 동적 DAG 분해를 제안합니다. [[3]](#ref-3) 이는 일반 GoT가 반드시 DAG라는 뜻은 아닙니다. 논문의 특정 시스템 결과를 다른 모델이나 동일 비용의 비교로 해석하면 안 됩니다.
 
-최근의 발전된 형태인 **Adaptive Graph of Thoughts (AGoT)** [[3]](#ref-3) 는 **동적 분해(Dynamic Decomposition)** 개념을 도입했습니다. AGoT는 테스트 시간(test-time)에 쿼리의 복잡성을 평가하여 CoT, ToT, GoT를 하나로 통합합니다.
+실무에서는 총 토큰·도구 호출·시간·노드 수 제한을 두고 한 경로 생성, 독립 샘플링, 트리 탐색과 비교합니다. 평가기의 편향과 오류 상관관계 때문에 가지가 많아질수록 자신 있게 틀릴 수도 있습니다. 출처, 상태 해시, 평가 점수와 중단 이유를 보존해야 합니다.
 
-*   문제가 단순하다면, AGoT는 쿼리를 선형적인 CoT 경로로 라우팅합니다.
-*   모델이 높은 불확실성(종종 생성 로짓의 엔트로피나 자기 반성 프롬프트를 통해 측정됨)을 감지하면, 동적으로 추론 공간을 그래프 형태로 확장합니다.
-
-이는 **Test-Time Scaling Laws** 의 최전선을 보여줍니다. 연산량을 가장 필요한 곳에 정확하게 할당함으로써, AGoT는 표준 추론 모델을 사용하고도 매우 복잡한 GPQA 벤치마크에서 46.2%의 성능 향상을 달성했습니다. 이는 OpenAI의 o1과 같이 무거운 강화학습으로 명시적으로 훈련된 모델들의 성능에 필적하는 수준이며, 이를 전적으로 추론 시점의 오케스트레이션(inference-time orchestration)만을 통해 이루어냈습니다.
-
----
 
 ## 5. 요약과 열린 질문
 
@@ -176,13 +179,13 @@ GoT는 인간과 유사한 추론(합성 및 백트래킹)을 위한 구조적 �
 ## Quizzes
 
 <details>
-<summary>Quiz 1: 정렬(sorting)이나 집합 교차(set intersection)와 같은 작업에서, 더 복잡한 DAG 구조를 가짐에도 불구하고 Graph of Thoughts (GoT)가 Tree of Thoughts (ToT)보다 연산 비용이 더 저렴한 경우가 많은 이유는 무엇입니까?</summary>
-*ToT는 브랜치의 기하급수적인 확장을 강제합니다. 반면 GoT는 상태들의 "Aggregation(병합)"을 허용합니다. 서로 다른 브랜치에서 도출된 논리적으로 동등하거나 중복되는 부분 해답들을 단일 노드로 병합함으로써, GoT는 탐색 공간의 너비를 대폭 줄이고 불필요한 병렬 연산을 가지치기(prune)합니다.*
+<summary>Quiz 1: GoT의 병합은 언제 비용을 줄일 수 있나요?</summary>
+*중복 작업을 합쳐 절약한 비용이 평가·합성 비용보다 클 때입니다. 병합은 정확성을 보장하지 않으며 너비 제한 ToT가 반드시 지수적으로 확장되는 것도 아닙니다.*
 </details>
 
 <details>
-<summary>Quiz 2: 빔 너비가 $b$ 이고 깊이가 $d$ 인 Breadth-First Search (BFS)를 사용하는 ToT 구현에서 시스템 수준의 주요 병목 현상은 무엇이며, 최신 엔진들은 이를 어떻게 완화합니까?</summary>
-*주요 병목 현상은 KV 캐시 메모리의 폭발적인 증가입니다. 각 브랜치가 자체적인 컨텍스트를 유지하기 때문에 관리하지 않으면 $O(b \times d)$ 로 확장됩니다. 최신 엔진들은 PagedAttention (또는 RadixAttention)을 사용하여 이를 완화합니다. 이는 여러 시퀀스가 공통 접두사의 KV 캐시 블록을 공유하도록 허용하며, 새롭게 분기되어 생성된 토큰에 대해서만 새로운 메모리를 할당합니다.*
+<summary>Quiz 2: 빔 너비만 알면 KV 메모리를 계산할 수 있나요?</summary>
+*아닙니다. 접두사 길이, 가지별 생성 토큰, 캐시 형식과 공유 가능 여부가 필요합니다. 공통 접두사 공유는 중복 저장을 줄일 수 있지만 서로 다른 가지와 병합된 새 프롬프트의 비용은 남습니다.*
 </details>
 
 <details>
@@ -196,8 +199,8 @@ GoT는 인간과 유사한 추론(합성 및 백트래킹)을 위한 구조적 �
 </details>
 
 <details>
-<summary>Quiz 5: 자동회귀적(Autoregressive) 트랜스포머를 사용할 때 상태 공간 그래프 순환(cycles)을 모델링하는 것의 한계를 설명하고, GoT 프레임워크가 이 알고리즘적 제약을 어떻게 극복하는지 설명하시오.</summary>
-*자동회귀적 트랜스포머는 시퀀스를 선형적으로 생성하며 시간이 엄격히 순방향으로 진행되는 고정된 컨텍스트 창에 조건화됩니다. 이로 인해 이전 상태로 되돌아가는 그래프 순환을 기본적으로 모델링하는 것은 불가능합니다. 이전 상태를 다시 덧붙이는 것은 선형 컨텍스트 길이 $L$을 확장시킬 뿐이며, 진정한 순환 논리 없이 $O(L^2)$의 어텐션 비용을 초래합니다. GoT 프레임워크는 외부 컨트롤러(Controller)를 활용하여 순환 작업(정제 또는 루핑 등)을 처리함으로써 이 제약을 극복합니다. 컨트롤러는 루프를 방향성 비순환 그래프(DAG) 구조 내에서 새롭고 고유한 노드를 생성하는 작업으로 처리하여, 트랜스포머 고유의 인과적 어텐션(causal attention) 메커니즘을 보존하면서도 외부적으로 순환 상태 정제를 흉내 냅니다.*
+<summary>Quiz 5: 자기회귀 생성과 그래프의 순환은 왜 모순되지 않나요?</summary>
+*모델은 이전 상태에 관한 텍스트를 포함한 접두사에 조건화할 수 있습니다. 컨트롤러는 실행 상태를 재방문하고 새 출력을 요청할 수 있습니다. 순환형 제어 흐름과 시간 순서의 토큰 기록은 서로 다른 표현입니다.*
 </details>
 
 ---

@@ -179,6 +179,12 @@ KV block pool이 부족해지면, OOM을 터뜨리기 전에 context budget을 �
 
 ---
 
+## Evolving Infra: 연산 배치와 캐시 관리를 분리하기
+
+**2026-11-15 기준 — 초기 연구.** Evolving Infra는 재시작 없이 prefill/decode 역할을 바꾸는 엔진과 공유 호스트 메모리 KV 풀을 결합합니다. 계획기는 캐시된 작업과 새 연산을 나누어 추정하며, 분기 정보를 가진 디렉터리가 라우팅과 제거를 돕습니다. 보고된 이득은 실험 하드웨어·워크로드·기준 시스템에 의존합니다. [[6]](#ref-6)
+
+실무에서는 부하 구성이 바뀔 때 KV 전송량·재사용률·전환 지연·꼬리 지연을 측정하세요. 공유한다고 접근이 무료가 되지는 않습니다. 호스트/장치 전송 비용을 포함하고, 캐시 식별과 권한에 모델 버전·토큰·테넌트 범위를 반영해야 합니다.
+
 ## Quizzes
 
 <details>
@@ -205,8 +211,9 @@ KV block pool이 부족해지면, OOM을 터뜨리기 전에 context budget을 �
 
 ## References
 
-1. <a id="ref-1"></a>Yu, G.-I., Jeong, J. S., Kim, G.-W., Kim, S., & Chun, B.-G. (2022). *Orca: A Distributed Serving System for Transformer-Based Generative Models.* [arXiv:2203.10842](https://arxiv.org/abs/2203.10842).
+1. <a id="ref-1"></a>Yu, G.-I., Jeong, J. S., Kim, G.-W., Kim, S., & Chun, B.-G. (2022). *Orca: A Distributed Serving System for Transformer-Based Generative Models.* [OSDI 2022](https://www.usenix.org/conference/osdi22/presentation/yu).
 2. <a id="ref-2"></a>Kwon, W., et al. (2023). *Efficient Memory Management for Large Language Model Serving with PagedAttention.* [arXiv:2309.06180](https://arxiv.org/abs/2309.06180).
 3. <a id="ref-3"></a>Agrawal, A., et al. (2023). *SARATHI: Efficient LLM Inference by Piggybacking Decodes with Chunked Prefills.* [arXiv:2308.16369](https://arxiv.org/abs/2308.16369).
 4. <a id="ref-4"></a>Patel, P., Choukse, E., Zhang, C., Shah, A., Goiri, I., Maleki, S., & Bianchini, R. (2024). *Splitwise: Efficient Generative LLM Inference Using Phase Splitting.* [arXiv:2311.18677](https://arxiv.org/abs/2311.18677).
 5. <a id="ref-5"></a>Zhong, Y., Liu, S., Chen, J., Hu, J., Zhu, Y., Liu, X., Jin, X., & Zhang, H. (2024). *DistServe: Disaggregating Prefill and Decoding for Goodput-optimized Large Language Model Serving.* [arXiv:2401.09670](https://arxiv.org/abs/2401.09670).
+6. <a id="ref-6"></a>Research preprint (2026). [Evolving Infra: Agent-Adaptive LLM Serving at Scale](https://arxiv.org/html/2611.12304v1). Version pinned; accessed 2026-11-15.

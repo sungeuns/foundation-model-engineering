@@ -138,6 +138,12 @@ Xiong 등의 연구는 초기화 시 Post-LN 출력 부근의 큰 기대 그래�
 
 ---
 
+## SimpleHC: 잔차 상태 접근도 시스템 설계다
+
+**2026-11-15 기준 — 초기 연구.** SimpleHC는 잔차 혼합을 제거하고 학습 가능한 읽기·쓰기 게이트를 남깁니다. 여러 하위 레이어가 그룹 시작 상태를 공유하며, 일괄 읽기·지연 쓰기·스칼라 보정으로 반복 메모리 접근을 줄입니다. 논문은 실험한 15B/30B MoE에서 mHC와 비슷한 품질을 보고하지만, 모든 초대형 모델의 안정성을 입증하지는 않습니다. [[6]](#ref-6)
+
+실제 검토에서는 데이터와 연산량을 맞추고 그래디언트 norm, 처리량과 상태 전송량을 비교하세요. 잔차 경로가 저렴해도 목표 학습 환경에서 수치 안정성과 품질을 유지해야 합니다.
+
 ## Quizzes
 
 <details>
@@ -173,3 +179,4 @@ Xiong 등의 연구는 초기화 시 Post-LN 출력 부근의 큰 기대 그래�
 3. <a id="ref-3"></a>Xiong, R., et al. (2020). *On Layer Normalization in the Transformer Architecture*. [arXiv:2002.04745](https://arxiv.org/abs/2002.04745).
 4. <a id="ref-4"></a>Moonshot AI. (2026). Attention Residuals. [Source](https://arxiv.org/abs/2603.15031).
 5. <a id="ref-5"></a>Su, J. (2026). Low-Rank Attention Residuals, September 22 revision. [Source](https://arxiv.org/abs/2607.09694).
+6. <a id="ref-6"></a>Research preprint (2026). [On the Design of Hyper-Connections: Simplification, Stability, and Scalability](https://arxiv.org/html/2611.05984v1). Version pinned; accessed 2026-11-15.

@@ -8,27 +8,21 @@ import MTPVisualizer from '../../components/chapter-20/MTPVisualizer.tsx';
 
 # 20.5 Multi-Token Prediction (MTP)
 
-For years, the fundamental axiom of autoregressive language modeling has been the Next-Token Prediction (NTP) objective. We train models to maximize the likelihood of $x_{t+1}$ given the historical context $x_{1:t}$. While mathematically elegant, this approach enforces a severe structural bottleneck: the model must compress all its "planning" for future syntax, logic, and reasoning into a single dense vector representing the very next step. 
-
-Think of standard NTP as driving a car in pitch darkness with headlights that only illuminate one meter ahead. You can stay in your lane by making continuous micro-adjustments, but anticipating a sharp turn requires implicit, latent foresight that is notoriously difficult for models to maintain over long horizons.
-
-**Multi-Token Prediction (MTP)** shatters this bottleneck. By explicitly forcing the model to predict $n$ tokens into the future during training, we densify the supervision signal and force the hidden representations to encode long-range structural dependencies [2]. In this section, we will deconstruct the MTP paradigm, comparing the foundational parallel architecture introduced by Meta with the sequential causal architecture deployed in DeepSeek-V3 [1].
+Multi-token prediction (MTP) adds training losses for several future positions from the same prefix. Next-token prediction (NTP) can already learn long-range dependencies; MTP does not uniquely make planning possible. The practical question is whether extra supervision improves representations and downstream behavior for a particular model, dataset and budget. [[2]](#ref-2)
 
 ---
 
 ## 1. The Architectural Evolution
 
-Historically, multi-token decoding was treated merely as an inference-time trick. Frameworks like Medusa or Eagle grafted auxiliary prediction heads onto pre-trained models, fine-tuning them to act as draft models for speculative decoding. While this accelerated inference, it did nothing to improve the base model's intrinsic reasoning capabilities.
-
-The paradigm shifted when researchers began applying MTP as a **pre-training objective**.
+MTP is a training objective; its future predictions can also supply inference-time drafts. Evaluate these two uses separately. Auxiliary modules can be used during training and removed for ordinary inference.
 
 ![mtp_architecture_comparison](../../assets/images/chapter-20/mtp_architecture_comparison.png)
 
 ### Meta's Parallel Heads (Gloeckle et al., 2024)
-Meta FAIR demonstrated that training a model from scratch to predict multiple future tokens simultaneously yields superior representations [2]. In this architecture, the main Transformer trunk outputs a hidden state $h_t$. Instead of a single LM head, the model features $n$ independent projection blocks. Each block takes $h_t$ and independently predicts $x_{t+1}, x_{t+2}, \dots, x_{t+n}$. 
+Meta FAIR reported improvements from multi-token training in the tested settings [[2]](#ref-2). In this architecture, the main Transformer trunk outputs a hidden state $h_t$. Instead of a single LM head, the model features $n$ independent projection blocks. Each block takes $h_t$ and independently predicts $x_{t+1}, x_{t+2}, \dots, x_{t+n}$.
 
 ### DeepSeek-V3's Sequential Heads (Liu et al., 2024)
-DeepSeek-V3 refined this by introducing a sequential, causal MTP module [1]. Instead of parallel independent heads predicting the future in isolation, DeepSeek's MTP maintains the causal chain. To predict $x_{t+2}$, the module takes the hidden state used to predict $x_{t+1}$ and combines it with the actual embedding of $x_{t+1}$ (which is known during training), passing them through an additional shared Transformer layer [1]. This ensures that the prediction of token $t+k$ is causally conditioned on the representations of all preceding tokens.
+DeepSeek-V3 refined this by introducing a sequential, causal MTP module [[1]](#ref-1). Instead of parallel independent heads predicting the future in isolation, DeepSeek's MTP maintains the causal chain. To predict $x_{t+2}$, the module takes the hidden state used to predict $x_{t+1}$ and combines it with the actual embedding of $x_{t+1}$ (which is known during training), passing them through a depth-specific Transformer block (the embedding and output head are shared) [[1]](#ref-1). This ensures that the prediction of token $t+k$ is causally conditioned on the representations of all preceding tokens.
 
 ---
 
@@ -38,11 +32,13 @@ Let's formalize the parallel MTP approach. In standard NTP, the cross-entropy lo
 
 $$ \mathcal{L}_{NTP} = -\log P(x_{t+1} | x_{1:t}) $$
 
-In an $n$-token MTP setup, we compute the loss for the next token, plus the auxiliary losses for the $n-1$ future tokens, weighted by a hyperparameter $\lambda_k$ (often set to 1.0 or decayed for distant tokens) [2]:
+In an $n$-token MTP setup, we compute the loss for the next token, plus the auxiliary losses for the $n-1$ future tokens, weighted by a hyperparameter $\lambda_k$ (often set to 1.0 or decayed for distant tokens) [[2]](#ref-2):
 
 $$ \mathcal{L}_{MTP} = - \sum_{k=1}^{n} \lambda_k \log P(x_{t+k} | x_{1:t}) $$
 
-To implement this efficiently in PyTorch without destroying training throughput, we share the main LM head (which maps $d_{model} \to \text{Vocab}$) across all $n$ predictions, but introduce lightweight projection blocks to shift the hidden state $h_t$ into the future latent spaces $z_t^{(k)}$.
+The educational variant below shares a vocabulary projection and uses an MLP projection for each future offset. It does not reproduce the paper’s head architecture or throughput results. Materializing all output logits also has a separate memory cost.
+
+> **Educational heads and loss.** This is not a reproduction of the paper’s Transformer heads or a complete trainer. It materializes $[B,n,S,V]$ logits, increasing memory with $n$; real implementations should bound this through sequential heads or fused loss. The backbone must use causal attention and isolate packed segments; the loss mask alone does not prevent attention leakage.
 
 ```python
 import torch
@@ -51,16 +47,17 @@ import torch.nn.functional as F
 
 class ParallelMTPModule(nn.Module):
     """
-    Implementation of Multi-Token Prediction (Parallel Heads) 
-    Reference: Gloeckle et al., 2024 (Meta FAIR)
+    Educational parallel MTP head sketch; not a paper reproduction.
     """
     def __init__(self, d_model: int, vocab_size: int, num_future_tokens: int = 4):
         super().__init__()
+        if num_future_tokens < 1:
+            raise ValueError("at least one prediction head required")
         self.num_future_tokens = num_future_tokens
-        
+
         # Shared LM head for all predictions to conserve VRAM
         self.shared_lm_head = nn.Linear(d_model, vocab_size, bias=False)
-        
+
         # MTP projection blocks (for k=2 to n)
         # k=1 is the standard next-token prediction, handled directly by the trunk
         self.mtp_projections = nn.ModuleList([
@@ -80,76 +77,77 @@ class ParallelMTPModule(nn.Module):
         # 1. Standard next-token prediction (k=1)
         logits_k1 = self.shared_lm_head(hidden_states) # [B, S, V]
         all_logits = [logits_k1]
-        
+
         # 2. Future token predictions (k=2 to n)
         for proj in self.mtp_projections:
             # Project the trunk's hidden state for the k-th future token
             # We use a residual connection to anchor the representation
-            z_k = proj(hidden_states) + hidden_states 
+            z_k = proj(hidden_states) + hidden_states
             logits_k = self.shared_lm_head(z_k)
             all_logits.append(logits_k)
-            
+
         return torch.stack(all_logits, dim=1) # [B, n, S, V]
 
-def compute_mtp_loss(logits: torch.Tensor, targets: torch.Tensor, loss_weights: list[float]) -> torch.Tensor:
-    """
-    Aligns the shifted predictions with the target sequence and computes CE loss.
-    logits:  [B, n, S, V]
-    targets: [B, S]
-    """
+def compute_mtp_loss(logits, targets, loss_weights, response_mask, segment_ids):
+    # logits [B,n,S,V]; targets, response_mask, segment_ids [B,S].
+    # Segment IDs are unique contiguous conversation IDs within each row.
     B, n, S, V = logits.shape
-    total_loss = 0.0
-    
+    if targets.shape != (B,S) or response_mask.shape != (B,S) or segment_ids.shape != (B,S):
+        raise ValueError("target/mask/segment shape mismatch")
+    if len(loss_weights) != n or any(not 0 <= w < float("inf") for w in loss_weights):
+        raise ValueError("one finite nonnegative weight per head required")
+    total = torch.zeros((), device=logits.device, dtype=torch.float32)
+    used = False
     for k in range(n):
-        shift = k + 1 # k=0 predicts t+1, k=1 predicts t+2, etc.
-        
-        # Truncate invalid positions at the end of the sequence
-        valid_logits = logits[:, k, :-shift, :].reshape(-1, V)
-        valid_targets = targets[:, shift:].reshape(-1)
-        
-        step_loss = F.cross_entropy(valid_logits, valid_targets)
-        total_loss += loss_weights[k] * step_loss
-        
-    return total_loss
+        shift = k + 1
+        if shift >= S or loss_weights[k] == 0:
+            continue
+        tgt = targets[:, shift:]
+        valid = response_mask[:, shift:].bool() & (tgt != -100)
+        valid &= (segment_ids[:, :-shift] == segment_ids[:, shift:])
+        valid &= segment_ids[:, shift:] >= 0
+        if not valid.any():
+            continue
+        # Each head averages over its valid target tokens; then weighted sum.
+        total = total + loss_weights[k] * F.cross_entropy(
+            logits[:, k, :-shift, :][valid].float(), tgt[valid])
+        used = True
+    if not used:
+        raise ValueError("no valid weighted future targets")
+    return total
 ```
 
 ### The Target Alignment Challenge
-Notice the `shift = k + 1` logic in the loss function. In standard autoregressive training, the logits at index `t` are evaluated against the target at `t+1`. For the second MTP head ($k=1$), the logits at index `t` are evaluated against the target at `t+2`. This shifting means that as $k$ increases, we lose $k$ valid training tokens at the end of the sequence. For sequences of length 4096 and $n=4$, this truncation is negligible, but it requires careful tensor slicing to avoid out-of-bounds errors.
+Notice the `shift = k + 1` logic in the loss function. In standard autoregressive training, the logits at index `t` are evaluated against the target at `t+1`. For the second MTP head ($k=1$), the logits at index `t` are evaluated against the target at `t+2`. This shifting means that as $k$ increases, we lose $k+1$ valid training positions at the end of the sequence. For sequences of length 4096 and $n=4$, this truncation is negligible, but it requires careful tensor slicing to avoid out-of-bounds errors.
 
 ---
 
-## 3. Inference: The "Free Lunch" of Speculative Decoding
+## 3. Using the heads as inference drafts
 
-MTP is inherently a training objective designed to improve the model's internal representations. However, it yields a massive secondary benefit: **built-in Speculative Decoding** [2].
+Auxiliary heads can propose candidates without a separate draft model, but incur nonzero compute and memory. Shared representations do not guarantee acceptance. Parallel marginal predictions also differ from sequential predictions conditioned on earlier draft tokens.
 
-Standard speculative decoding requires loading a separate, smaller "draft model" into VRAM to generate candidate tokens, which the large "target model" then verifies. This dual-model setup is computationally awkward, wastes memory bandwidth, and suffers from feature misalignment (the draft model often predicts tokens the target model would never choose).
+Preserving the target distribution requires verification, correct acceptance/rejection sampling, and rollback of rejected KV/recurrent state. Compare with ordinary decoding at matched temperature, filters, output lengths and load, including drafting, verification and restoration costs.
 
-With MTP, the auxiliary heads trained to predict $x_{t+2}, \dots, x_{t+n}$ are retained during inference. Because they share the exact same transformer trunk and vocabulary as the main model, they act as an ideal, zero-overhead draft model [1]. At inference step $t$, the MTP heads generate a sequence of $n-1$ draft tokens. In the next step, the main model verifies these drafts in a single parallel forward pass. 
+<MTPVisualizer client:load lang="en" />
 
-<MTPVisualizer client:load />
 
-If the main model agrees with the drafts, generation skips ahead by $n$ tokens in a single step, resulting in up to a 3x speedup in wall-clock time [2].
+## 4. Scale and task tradeoffs
 
----
+Gloeckle et al. report coding gains at 13B, contradicting a rule that MTP only helps above 70B. [[2]](#ref-2) Small-model outcomes also depend on tasks and settings. Do not assume a fixed capacity threshold or an inevitable reasoning-versus-fact-retrieval tradeoff.
 
-## 4. Scaling Laws and Trade-offs
+Compare against NTP with matched data and compute budgets. Ablate future offsets, loss weights, head architecture and training length. Track token-normalized loss by head, base-capability retention and held-out code, reasoning and knowledge slices.
 
-MTP is not a universal silver bullet; it obeys strict scaling laws and introduces specific engineering trade-offs [2].
 
-1. **The Capacity Threshold**: MTP actively degrades the performance of small models (under 7B parameters). Forcing a small network to predict multiple future tokens overwhelms its limited parameter capacity, causing it to underfit the primary next-token objective. The benefits of MTP only emerge at scale, showing significant gains for models in the 70B+ regime [2].
-2. **Reasoning vs. Fact Retrieval**: MTP heavily biases the model towards structural planning. Consequently, MTP-trained models dominate on Code Generation (HumanEval) and Mathematical Reasoning (GSM8K) benchmarks, where foreseeing the structure of a function or proof is critical [2]. However, this comes at a slight cost to pure factual retrieval tasks (e.g., TriviaQA). The latent space compresses future syntax rather than deep, static memorization.
+## 5. Run contract and takeaway
 
----
+Pin base/tokenizer/chat template and data manifests. For assistant-only adaptation, mask the future **target position**. Verify BOS/EOS, truncation, padding and variable-length reduction, and do not cross packed-conversation boundaries. Pretraining instead uses all targets admitted by its data policy. Explicitly record that this objective has no reference model if none is used.
 
-## 5. Summary and Open Questions
+Record future-head count/weights, optimizer/learning rate, batch and context length. Budget parameters, gradients, optimizer states, activations, temporary logits, collectives, checkpoints and evaluation with precision/sharding/recomputation assumptions. Observe token-normalized losses, valid target counts per head, nonfinite values, gradient/activation norms, throughput, MFU, data wait and stragglers with reconstructable batch IDs.
 
-Multi-Token Prediction represents a shift from reactive sequence modeling to proactive structural planning. By densifying the training signal and forcing the model to explicitly model future states, MTP improves reasoning capabilities while providing a native mechanism for inference acceleration.
+Predefine numerical and retention abort thresholds. Atomically save model including heads, optimizer, scheduler/scaler, RNG, sampler/exact data cursor and hashes, and rehearse restoration. Gate release on untouched domain, retention, safety, format/tool, latency, cost and error-rate evaluations with uncertainty. Retain the artifact bundle and rollback to a last-known-good version.
 
-As we look toward the future of foundation models, consider the following open questions:
-- If MTP forces a trade-off between reasoning and factual retrieval, can we dynamically route tokens during training so that code blocks receive MTP supervision while factual text receives standard NTP?
-- How does MTP interact with advanced positional embeddings like RoPE when predicting tokens that technically occupy future sequence positions?
+Additional supervision and native drafting can each be useful; establish training quality and serving speed through separate experiments.
 
----
 
 ## Quizzes
 
@@ -160,17 +158,17 @@ As we look toward the future of foundation models, consider the following open q
 
 <details>
 <summary>Quiz 2: How does DeepSeek-V3's sequential MTP architecture conceptually differ from Meta's parallel MTP architecture?</summary>
-*Meta's parallel MTP uses independent projection heads branching off the same hidden state $h_t$, meaning the prediction of $t+2$ does not condition on the prediction of $t+1$. DeepSeek-V3 uses sequential Transformer blocks that maintain the causal chain; the MTP module for $t+2$ takes the hidden state of $t+1$ and the actual embedding of token $t+1$, ensuring the future prediction is grounded in the full causal context.*
+*Meta's parallel MTP uses independent projection heads branching off the same hidden state $h_t$, meaning the prediction of $t+2$ does not condition on the prediction of $t+1$. DeepSeek-V3 uses sequential Transformer blocks that maintain the causal chain; the MTP module for $t+2$ takes the state used to predict $t+1$ and the actual embedding of token $t+1$, ensuring the future prediction is grounded in the full causal context.*
 </details>
 
 <details>
-<summary>Quiz 3: Why is an MTP-trained model superior to a standard NTP model paired with a separate draft model for speculative decoding?</summary>
-*A separate draft model consumes additional VRAM, requires separate memory bandwidth to load its weights, and often suffers from vocabulary or representation misalignment with the target model, leading to low draft acceptance rates. An MTP model uses its own projection heads as the drafter, guaranteeing perfect latent space alignment, reusing the main trunk's KV cache, and requiring almost zero extra memory overhead.*
+<summary>Quiz 3: Why are MTP drafts neither free nor universally superior?</summary>
+*Auxiliary heads, verification and state restoration cost resources, and acceptance is not guaranteed. Compare total latency, memory and throughput with a separate drafter under matched quality and load.*
 </details>
 
 <details>
-<summary>Quiz 4: What explains the phenomenon where MTP degrades performance on 1B parameter models but significantly improves 70B parameter models?</summary>
-*MTP acts as a heavy regularization and structural constraint. Small models lack the parameter capacity to simultaneously memorize next-token probabilities and compress long-range structural plans, leading to underfitting. Large models have excess capacity; MTP utilizes this latent capacity to force better internal representations, preventing overfitting on local syntax and improving global reasoning.*
+<summary>Quiz 4: Why is “MTP only helps above 70B” unsupported?</summary>
+*The cited study includes coding gains at 13B. Results depend on model, data, task and objective, so they do not establish a universal parameter threshold.*
 </details>
 
 ---

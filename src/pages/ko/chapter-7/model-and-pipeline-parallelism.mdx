@@ -82,7 +82,7 @@ Tensor Parallelism은 Transformer 블록 내부에 collective를 추가하므로
 
 ## 4. 3D 병렬화와 자동 샤딩
 
-Llama 3나 GPT-4와 같은 SOTA(State-of-the-Art) 모델을 학습시킬 때, 엔지니어들은 이 기술들 중 하나만 선택하지 않습니다. 이 모든 기술을 결합하여 **3D Parallelism** 을 구축합니다.
+**3D 병렬화** 는 데이터·텐서·파이프라인 병렬화를 결합하는 설계입니다. 아래 구성은 교육용 예시이며 GPT-4의 미공개 학습 토폴로지를 나타내지 않습니다.
 
 ![3d_parallelism_topology](../../../assets/images/chapter-7/3d_parallelism_topology.png)
 *출처: AI 생성 이미지.*
@@ -109,8 +109,8 @@ Llama 3나 GPT-4와 같은 SOTA(State-of-the-Art) 모델을 학습시킬 때, �
 </details>
 
 <details>
-<summary>Quiz 3: Tensor Parallelism (TP) 이 일반적으로 단일 물리적 서버(Node) 내부의 GPU들로 제한되는 반면, Pipeline Parallelism (PP) 은 서로 다른 서버 간에 널리 배포될 수 있는 근본적인 이유는 무엇인가?</summary>
-*TP는 매 단일 Transformer 블록 내부에서(즉, 레이어마다 여러 번) 블로킹(Blocking) 방식의 All-Reduce 동기화를 요구합니다. 이렇게 빈도가 잦고 거대한 통신은 NVLink와 같은 노드 내부의 초고대역폭/초저지연 연결망을 필수적으로 요구합니다. 반면 PP는 오직 레이어의 경계에서만 활성화 텐서를 주고받으므로, 통신 빈도가 훨씬 낮고 대역폭 요구량도 적어 InfiniBand와 같은 노드 간 통신망으로도 충분히 감당할 수 있습니다.*
+<summary>Quiz 3: TP 그룹을 빠른 연결 안에 배치하는 이유와 한계는 무엇인가요?</summary>
+*레이어별 collective의 빈도가 높아 대역폭과 지연에 민감하기 때문입니다. 노드 내부 배치가 흔한 선택이지만 필수는 아니며, 네트워크 토폴로지와 통신 겹침을 포함한 측정으로 결정해야 합니다.*
 </details>
 
 <details>
@@ -119,8 +119,8 @@ Llama 3나 GPT-4와 같은 SOTA(State-of-the-Art) 모델을 학습시킬 때, �
 </details>
 
 <details>
-<summary>Quiz 5: GPipe나 1F1B 방식의 파이프라인 병렬화에서 파이프라인 스테이지 수를 $P$, 마이크로 배치 수를 $M$이라 할 때, 전체 이상적인 연산 시간 중 파이프라인 버블(Bubble)의 비율을 수식으로 도출하시오.</summary>
-*파이프라인 버블은 순전파와 역전파 과정에서 각각 $P-1$개의 마이크로 배치만큼 발생하므로 총 유휴 상태는 $2(P-1)$입니다. 전체 연산 워크로드는 $2M$ 마이크로 배치의 시간 소요를 갖습니다. 따라서 전체 연산 중 버블 비율 $F_{\text{bubble}}$은 다음과 같이 표현됩니다: $F_{\text{bubble}} = \frac{P-1}{M + P - 1}$. 결과적으로 $P$에 비해 $M$이 아득히 커질수록 파이프라인 버블 비율은 0에 수렴하며 클러스터 활용도가 최대화됩니다.*
+<summary>Quiz 5: 단순화한 파이프라인에서 버블의 두 가지 비율은 어떻게 다른가요?</summary>
+*단계 $P$ 개, 마이크로배치 $M$ 개, 동일한 순·역전파 슬롯과 통신 없음 조건에서 전체 시간 대비 유휴 비율은 $(P-1)/(M+P-1)$ 입니다. 이상적인 유효 연산 시간 대비 추가 비용 비율은 $(P-1)/M$ 입니다. 분모가 다르므로 혼동하면 안 됩니다.*
 </details>
 
 ---

@@ -26,6 +26,8 @@ $$
 P_l(x_{t+1}) = \text{softmax}(W_U \cdot \text{LN}(h_l)) \quad \text{for } l < L
 $$
 
+
+
 This technique is called the **Logit Lens**. It acts as a decoder ring, translating the dense vector $h_l \in \mathbb{R}^d$ back into the vocabulary space at any arbitrary layer $l$.
 
 ### What to Inspect
@@ -51,6 +53,7 @@ import torch.nn as nn
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from typing import List
 
+@torch.inference_mode()
 def compute_logit_lens(model_name: str, prompt: str) -> List[torch.Tensor]:
     """
     Extracts vocabulary logits from every intermediate layer of an LLM.
@@ -112,8 +115,10 @@ A final output head need not decode intermediate residual states reliably. Basis
 To solve this, Belrose et al. (2023) introduced the **Tuned Lens** [[2]](#ref-2). Instead of directly applying $W_U$, they train a small affine transformation (a translator) consisting of a matrix $A_l$ and a bias $b_l$ for each layer $l$:
 
 $$
-P_l(x_{t+1}) = \text{softmax}(W_U \cdot (A_l h_l + b_l))
+P_l(x_{t+1}) = \text{softmax}(W_U \cdot \operatorname{Norm}_{final}(A_l h_l + b_l))
 $$
+
+Here $h_l$ is an intermediate residual state, $A_l,b_l$ the learned translator, $\operatorname{Norm}_{final}$ the frozen model’s final normalization, and $W_U$ its output projection. Include an output bias if the model has one.
 
 ### The Objective Function
 Crucially, the Tuned Lens is *not* trained to predict the ground-truth next token. It is trained to minimize the KL divergence between its prediction and the **final layer's prediction**:
@@ -128,9 +133,9 @@ The target is the frozen model's final distribution, including its mistakes, rat
 
 ## 4. Attention Visualization: The "Where" of Information
 
-If the Logit Lens tells us *what* the model is thinking, **Attention Visualization** tells us *where* it is looking to form those thoughts.
+Logit-lens readouts suggest candidate vocabulary interpretations. Attention visualizations show attention weights; neither directly reveals a model’s thoughts.
 
-Tools like BertViz [[3]](#ref-3) allow researchers to inspect the otherwise opaque $QK^V$ matrix multiplications. Visualizing attention typically happens at three scales:
+Tools like BertViz [[3]](#ref-3) allow researchers to inspect the otherwise opaque $QK^T$ matrix multiplications. Visualizing attention typically happens at three scales:
 
 1. **Neuron View**: Visualizes the dot product between specific Query and Key vectors. This is useful for seeing exactly which features trigger an attention match.
 2. **Head View**: Displays a bipartite graph connecting input tokens to context tokens based on the attention weights $\alpha_{ij}$ of a specific head. This is where we spot Induction Heads or grammatical routing (e.g., pronouns attending to nouns).
@@ -146,7 +151,7 @@ Just because Head $H$ attends heavily to the token `apple`, it does not mean the
 * The model might be using `apple` purely as a positional anchor.
 * The attention might be directed to an **Attention Sink** (like the `<s>` or `[BOS]` token). Normalized weights can concentrate on an early token. This pattern alone does not establish what the value/output contribution does or whether the head is harmless.
 
-Attention tells us the routing topology, but we still need the Logit Lens or SAEs to understand the *payload* being routed.
+Attention weights describe part of a routing computation. Inspect value/output contributions and controlled interventions to test what information is transported; lens or SAE labels are diagnostic hypotheses.
 
 ---
 
@@ -214,4 +219,3 @@ To answer these questions, we must move beyond passive lenses and introduce acti
 2. <a id="ref-2"></a>Belrose, N., et al. (2023). *Eliciting Latent Predictions from Transformers with the Tuned Lens*. [arXiv:2303.08112](https://arxiv.org/abs/2303.08112).
 3. <a id="ref-3"></a>Vig, J. (2019). *A Multiscale Visualization of Attention in the Transformer Model*. [arXiv:1906.05714](https://arxiv.org/abs/1906.05714).
 4. <a id="ref-4"></a>Jain, S., & Wallace, B. C. (2019). *Attention is not Explanation*. [arXiv:1902.10186](https://arxiv.org/abs/1902.10186).
-```

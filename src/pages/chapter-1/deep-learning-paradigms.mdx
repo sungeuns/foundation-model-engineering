@@ -16,8 +16,8 @@ To understand how foundation models are built and aligned, we must explore the t
 ### **Motivation: The Recipe for General Intelligence**
 Why do we need different paradigms? Because no single method is sufficient to build a safe, useful AI:
 *   **Scale requires Self-Supervision:** Human-labeled data is too scarce to build massive knowledge bases.
-*   **Instruction requires Supervision:** Pure text completion doesn't make a good assistant.
-*   **Safety requires Reinforcement Learning:** We need to align model behavior with human values, which is hard to specify in rules or labels.
+*   **Instruction following benefits from supervision:** Pure text completion doesn't make a good assistant.
+* **Safety requires layered validation:** RL is one tool for improving behavior alongside SFT, preference optimization, access controls and deployment evaluation. It is neither necessary nor sufficient for safety.
 
 Understanding these paradigms helps you navigate the complex training pipelines of modern LLMs.
 
@@ -136,18 +136,18 @@ Experience how an Autoregressive model works. Select a prompt, and see the simul
 </details>
 
 <details>
-<summary>Quiz 4: Why is RLHF needed even after SFT?</summary>
-*SFT teaches the model the format of an assistant, but it still mimics the training data (which may contain biases or unhelpful answers). RLHF allows humans to score model outputs, guiding the model to prefer answers that are safer, more helpful, and aligned with human values, even if they deviate from pure imitation.*
+<summary>Quiz 4: Why use preference optimization after SFT?</summary>
+*It can teach output preferences not captured adequately by imitation. RLHF and direct preference optimization are options, with reward bias and gaming requiring evaluation. Neither guarantees safety.*
 </details>
 
 <details>
-<summary>Quiz 5: Can a model be trained entirely on Reinforcement Learning from scratch for natural language?</summary>
-*In theory, yes, but in practice, it is extremely difficult. The action space (all possible words) is too large for random exploration to succeed in generating coherent language. Pre-training with SSL is necessary to give the model a basic understanding of language before RL can be effectively applied.*
+<summary>Quiz 5: Why usually initialize language-model RL with self-supervised pretraining?</summary>
+*Searching a large token action space from scratch is difficult, so pretraining supplies a practical initialization. This describes a common workflow, not a mathematical necessity for every possible RL method.*
 </details>
 
 <details>
-<summary>Quiz 6: Formulate the objective function for Proximal Policy Optimization (PPO) with clipping, and explain how it prevents excessively large policy updates.</summary>
-*The clipped PPO objective is defined as: $L^{CLIP}(\theta) = \hat{\mathbb{E}}_t \left[ \min(r_t(\theta) \hat{A}_t, \text{clip}(r_t(\theta), 1 - \epsilon, 1 + \epsilon) \hat{A}_t) \right]$, where $r_t(\theta) = \frac{\pi_\theta(a_t | s_t)}{\pi_{\theta_{old}}(a_t | s_t)}$ is the probability ratio, and $\hat{A}_t$ is the estimated advantage at time $t$. The $\min$ operator forms a pessimistic lower bound. If the advantage is positive ($\hat{A}_t > 0$), the objective increases as $r_t$ increases, but it is capped at $1 + \epsilon$, preventing the policy from changing too drastically in a positive direction. If the advantage is negative ($\hat{A}_t < 0$), the objective increases as $r_t$ decreases, but it is bounded from below by $1 - \epsilon$, preventing excessive degradation of the policy.*
+<summary>Quiz 6: Does PPO clipping force policy probability ratios to stay inside the clipping interval?</summary>
+*No. $L^{CLIP}=\mathbb E[\min(r_t\hat A_t,\operatorname{clip}(r_t,1-\epsilon,1+\epsilon)\hat A_t)]$ is a surrogate that limits incentives for excessive changes in the improving direction. Here $r_t=\pi_\theta(a_t|s_t)/\pi_{old}(a_t|s_t)$, $\hat A_t$ estimates advantage and $\epsilon$ sets the clip width. Shared parameters and repeated updates can move ratios outside the interval; monitor KL and clip fraction.*
 </details>
 
 ---

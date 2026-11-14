@@ -46,15 +46,15 @@ For verifiable tasks, pair human preference with executable evidence: unit tests
 
 ## The Badcase Loop Without Leakage
 
-A production failure should first become a reproducible evaluation case, not immediately a training example:
+An incident is useful for regression testing, but a sibling of a training example is not an independent generalization test.
 
-1. freeze prompt, context, tool state, expected behavior, artifact revision, and failure taxonomy;
-2. assign its semantic cluster and create a private evaluation item;
-3. create separate **sibling holdout** variants that remain evaluation-only;
-4. only then add remediated examples or other siblings to a versioned training candidate;
-5. rerun the original, sibling holdout, capability-retention, and safety suites.
+1. Freeze prompt, context, tool state, expected behavior, artifact revision and failure taxonomy.
+2. Assign the incident and all paraphrases, related conversations and synthetic siblings to one semantic cluster before splitting.
+3. Either quarantine the entire cluster for evaluation, or admit it to the training candidate and explicitly mark its original and sibling regression tests as exposed.
+4. Keep release evaluation in separate untouched clusters; never transfer their prompts, rubrics or teacher-generated variants into training.
+5. Report known-incident regression and held-out-cluster generalization separately, alongside capability retention and safety.
 
-This prevents a fix from “passing” by memorizing the exact incident. Keep an untouched private release set and rotate access, not the answers, through training systems.
+Passing an exposed regression test shows that a known failure was addressed. Only a separate, protected evaluation can support a claim about generalization.
 
 ---
 
@@ -79,8 +79,8 @@ For release, use fixed decoding and paired comparisons with uncertainty. Gate ta
 </details>
 
 <details>
-<summary>Quiz 3: Why create a sibling holdout before training on a badcase?</summary>
-*The exact incident can be memorized. Evaluation-only siblings test whether the fix generalizes to the failure cluster rather than merely reproducing one expected answer.*
+<summary>Quiz 3: Why is a sibling of a training incident not an independent holdout?</summary>
+*Related examples share information and must be clustered before splitting. Quarantine the whole cluster, or label its regression tests as exposed if it enters training. Evaluate generalization on separate untouched clusters.*
 </details>
 
 <details>

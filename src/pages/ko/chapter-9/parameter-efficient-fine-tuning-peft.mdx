@@ -126,7 +126,7 @@ model = get_peft_model(model, LoraConfig(
 
 잘못된 base에 올바른 adapter를 올리면 그럴듯하지만 무효한 출력이 나올 수 있습니다. 명시적 compatibility guard를 둡니다. merged 배포에서는 선택한 floating-point dtype으로 merge하고 새 immutable checkpoint로 저장한 뒤 unmerged inference와 logit/generation을 비교합니다. 4-bit weight로 직접 merge하는 과정이 무손실·가역적이라고 가정하지 말고, 원래 base와 adapter를 rollback용으로 보존합니다.
 
-<LoRAParameterVisualizer client:load />
+<LoRAParameterVisualizer client:load  lang="ko" />
 
 ---
 

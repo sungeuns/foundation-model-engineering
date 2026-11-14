@@ -77,6 +77,10 @@ The history of machine learning can be viewed as an evolution in how we represen
 
 ---
 
+### Hierarchical feature extraction
+
+Stacked layers can compose features into more abstract representations. In a vision network, early layers may respond to edges and textures, intermediate layers to combinations such as object parts, and later layers to features useful for recognizing objects. This is a useful intuition, not a universal assignment of one concept to each layer: representations are distributed and depend on the task and architecture.
+
 ## The Manifold Hypothesis
 
 A key theoretical concept in representation learning is the **Manifold Hypothesis**.
@@ -141,11 +145,11 @@ optimizer = optim.Adam(model.parameters(), lr=0.01)
 for epoch in range(1000):
     reconstructed, latent = model(X)
     loss = criterion(reconstructed, X)
-    
+
     optimizer.zero_grad()
     loss.backward()
     optimizer.step()
-    
+
     if (epoch + 1) % 200 == 0:
         print(f'Epoch [{epoch+1}/1000], Loss: {loss.item():.4f}')
 

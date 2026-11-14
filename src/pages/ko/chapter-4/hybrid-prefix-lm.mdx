@@ -49,16 +49,15 @@ Encoder-only 모델과 Decoder-only 모델이 Transformer 스펙트럼의 양 �
 **Motivation**: AI 분야는 이해에 유리한 Encoder-only 모델과 생성에 유리한 Decoder-only 모델로 나뉘어 있었습니다. GLM의 저자들은 사전 학습 목표를 통합하여 단일 모델로 두 가지 유형의 과업 모두에서 탁월한 성능을 발휘하는 모델을 만들고자 했습니다. 그들은 BERT(생성에 부적합)와 GPT(단방향 어텐션으로 인해 이해에 차선책)의 한계를 극복하고자 했습니다 [[1]](#ref-1).
 
 **핵심 혁신 (Key Innovations)**:
-- **자기회귀 공백 채우기 (Autoregressive Blank Infilling)**: GLM은 입력에서 연속된 토큰 스팬을 무작위로 비웁니다(T5의 span corruption과 유사). 그러나 이를 병렬로 예측하는 대신, GPT처럼 토큰별로 autoregressive하게 복원합니다.
+- **자기회귀 공백 채우기:** GLM과 T5 모두 빠진 스팬을 자기회귀적으로 복원합니다. GLM의 차이는 스팬 생성 순서와 2차원 위치 표현, 단일 스택의 마스크 설계입니다. [[1]](#ref-1)
 - **2D 위치 인코딩 (2D Positional Encoding)**: 누락된 스팬의 autoregressive 생성을 처리하기 위해, GLM은 원래 문장에서의 위치와 생성된 스팬 내에서의 위치를 모두 캡처하는 고유한 2D 위치 인코딩을 사용합니다.
 - **유연성**: 공백의 수와 길이를 변경함으로써 GLM은 Encoder-only 모델, Decoder-only 모델 또는 전체 Encoder-Decoder 모델처럼 작동하도록 학습될 수 있습니다.
 
 ---
 
-### 2. PaLM과 병렬 어텐션 (Parallel Attention)
-Google의 PaLM (Pathways Language Model)은 주로 Decoder-only 모델이지만, 하이브리드 설계와 매우 관련이 깊은 아키텍처 수정을 도입했습니다.
-- **병렬 레이어 (Parallel Layers)**: 직렬화된 어텐션 및 피드포워드 레이어(LayerNorm -> Attention -> LayerNorm -> FFN) 대신, PaLM은 이들을 병렬로 실행했습니다. 이는 TPU 클러스터에서 학습 속도를 크게 향상시켰습니다.
-- **하이브리드 설계와의 관련성**: 이러한 병렬 구조는 인코더의 무거운 컨텍스트 처리와 디코더의 빠른 생성 간의 균형을 맞추려는 후속 하이브리드 모델에 영감을 주었습니다.
+### 2. PaLM의 병렬 하위 레이어는 별도 설계 축
+
+PaLM은 attention과 MLP 분기를 병렬로 계산합니다. 이는 연산 스케줄의 선택이며 prefix-LM의 양방향·인과적 가시 범위를 결정하지 않습니다. 병렬 분기를 사용한 decoder-only 모델이 자동으로 하이브리드 인코더가 되지는 않습니다.
 
 
 ---
@@ -75,14 +74,14 @@ def create_prefix_mask(prefix_len, total_len):
     Create an attention mask for a Prefix LM.
     """
     mask = torch.zeros(total_len, total_len)
-    
+
     # 1. Prefix can attend to all prefix tokens bidirectionally
     mask[:prefix_len, :prefix_len] = 1
-    
+
     # 2. Target tokens can attend to all prefix tokens and preceding target tokens
     for i in range(prefix_len, total_len):
         mask[i, :i+1] = 1
-        
+
     return mask
 
 # Example usage

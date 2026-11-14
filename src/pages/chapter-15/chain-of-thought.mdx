@@ -10,7 +10,7 @@ Large Language Models (LLMs) excel at many tasks, but they often struggle with c
 
 ## The Core Concept: Thinking Step by Step
 
-Standard prompting directly asks the model for an answer, which often leads to errors in complex tasks because the model tries to map the input directly to the output in a single pass. CoT prompting, on the other hand, provides the model with a few examples where the reasoning process is explicitly shown, or simply instructs the model to "think step by step."
+Both direct answers and CoT are ordinarily generated autoregressively. CoT adds intermediate tokens before the answer, providing a computation trace for later tokens to condition on. This adds sequential work without guaranteeing correct reasoning.
 
 By generating intermediate steps, the model effectively breaks down a complex problem into smaller, manageable sub-problems. This allows the model to allocate more compute (in the form of generated tokens) to the reasoning process.
 
@@ -70,6 +70,8 @@ Instead of generating a single chain of thought, the model generates *multiple* 
 
 While CoT is a prompting technique, we can simulate the "step-by-step" token generation and verification process to understand how compute scales with reasoning steps.
 
+> **Untrained token-loop illustration.** Random weights do not implement reasoning or verification. This shows batch-first causal recomputation only, with no positional encoding, tokenizer, EOS stopping, padding mask, KV cache or trained objective. Each step is one token, not one reasoning step.
+
 ```python
 import torch
 import torch.nn as nn
@@ -80,35 +82,38 @@ class SimpleReasoningModel(nn.Module):
         super().__init__()
         self.embedding = nn.Embedding(vocab_size, embed_dim)
         self.transformer = nn.TransformerEncoder(
-            nn.TransformerEncoderLayer(d_model=embed_dim, nhead=4),
+            nn.TransformerEncoderLayer(d_model=embed_dim, nhead=4, batch_first=True),
             num_layers=2
         )
         self.output_layer = nn.Linear(embed_dim, vocab_size)
-        
+
     def forward(self, x):
         x = self.embedding(x)
-        x = self.transformer(x)
+        causal_mask = torch.triu(torch.ones(x.size(1), x.size(1), device=x.device, dtype=torch.bool), diagonal=1)
+        x = self.transformer(x, mask=causal_mask)
         return self.output_layer(x)
 
+@torch.inference_mode()
 def generate_with_cot(model, prompt_tokens, max_steps=5):
     """
     Simulate generating a sequence with intermediate reasoning steps.
     """
+    model.eval()
     current_tokens = prompt_tokens
-    
+
     print(f"Initial Prompt: {current_tokens.tolist()}")
-    
+
     for step in range(max_steps):
         # Predict next token (simulating one step of reasoning)
         logits = model(current_tokens)
         next_token_logits = logits[:, -1, :]
         next_token = torch.argmax(next_token_logits, dim=-1, keepdim=True)
-        
+
         # Append to sequence
         current_tokens = torch.cat([current_tokens, next_token], dim=1)
-        
+
         print(f"Step {step + 1} Reasoning Token: {next_token.item()}")
-        
+
     return current_tokens
 
 # Example Usage
@@ -125,8 +130,8 @@ print(f"Final Sequence with CoT: {final_sequence.tolist()}")
 ## Quizzes
 
 <details>
-<summary>Quiz 1: Why does Chain of Thought prompting improve performance on complex reasoning tasks compared to standard prompting?</summary>
-*Standard prompting forces the model to map the input directly to the output in a single pass, which is hard for complex problems. CoT allows the model to generate intermediate steps, breaking the problem down and allocating more compute (tokens) to the reasoning process, leading to better accuracy.*
+<summary>Quiz 1: How do direct answers and CoT differ in inference computation?</summary>
+*Direct answers also use autoregressive forward passes per token. CoT generates additional intermediate tokens, adding compute and context for later predictions. This can help some tasks but guarantees neither correctness nor faithful explanations, and can add cost or propagate errors.*
 </details>
 
 <details>
@@ -141,7 +146,7 @@ print(f"Final Sequence with CoT: {final_sequence.tolist()}")
 
 <details>
 <summary>Quiz 4: Calculate the KV cache memory footprint for a reasoning model during CoT generation. Suppose the sequence length expands to $L$ tokens, the hidden dimension is $d$, the number of attention heads is $n_h$, the number of key-value heads is $n_{kv}$ (Grouped Query Attention), the number of layers is $l$, and the precision is FP16. Provide the explicit formula and derive the capacity for $L = 8192$, $d = 4096$, $n_h = 32$, $n_{kv} = 8$, $l = 32$.</summary>
-*The KV cache memory footprint is calculated as: $\text{Memory}_{\text{KV}} = 2 \times l \times L \times n_{kv} \times d_k \times 2 \text{ bytes}$, where $d_k = d / n_h$ is the dimension per head. Here, $d_k = 4096 / 32 = 128$. Plugging in the values: $\text{Memory}_{\text{KV}} = 2 \times 32 \times 8192 \times 8 \times 128 \times 2 \text{ bytes} = 2^{30} \text{ bytes} = 1 \text{ GB}$. This explicit capacity derivation shows how CoT generation, which significantly expands sequence length $L$, leads to linear growth in memory footprint, potentially causing OOM issues without effective memory management.*
+*The KV cache memory footprint is calculated as: $\text{Memory}_{\text{KV}} = 2 \times l \times L \times n_{kv} \times d_k \times 2 \text{ bytes}$, where $d_k = d / n_h$ is the dimension per head. Here, $d_k = 4096 / 32 = 128$. Plugging in the values: $\text{Memory}_{\text{KV}} = 2 \times 32 \times 8192 \times 8 \times 128 \times 2 \text{ bytes} = 2^{30} \text{ bytes} = 1 \text{ GiB}$. This explicit capacity derivation shows how CoT generation, which significantly expands sequence length $L$, leads to linear growth in memory footprint, potentially causing OOM issues without effective memory management.*
 </details>
 
 ---

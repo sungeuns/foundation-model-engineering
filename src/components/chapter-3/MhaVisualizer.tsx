@@ -31,9 +31,9 @@ export default function MhaVisualizer({ lang = 'en' }: MhaVisualizerProps) {
   const t = labels[lang] || labels.en;
 
   return (
-    <div style={{ 
-      padding: '20px', 
-      marginTop: '2rem', 
+    <div style={{
+      padding: '20px',
+      marginTop: '2rem',
       marginBottom: '2rem',
       background: 'rgba(255, 255, 255, 0.7)',
       backdropFilter: 'blur(10px)',
@@ -44,6 +44,7 @@ export default function MhaVisualizer({ lang = 'en' }: MhaVisualizerProps) {
     }}>
       <div style={{ textAlign: 'center', fontWeight: 'bold', marginBottom: '20px', color: '#1e293b' }}>
         {t.title}
+        <p style={{fontSize: "0.85rem", fontWeight: 400}}>{lang === "ko" ? "직접 작성한 헤드 패턴이며 실측 어텐션이나 헤드 역할의 증거가 아닙니다." : "Authored head patterns, not measured attention or proof of a head’s semantic role."}</p>
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginBottom: '20px' }}>
@@ -79,7 +80,7 @@ export default function MhaVisualizer({ lang = 'en' }: MhaVisualizerProps) {
         </button>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', height: '120px', alignItems: 'flex-end' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '15px', minHeight: '120px', alignItems: 'flex-end' }}>
         {mhaSentence.map((w, idx) => {
           const weight = data[w] || 0;
           return (

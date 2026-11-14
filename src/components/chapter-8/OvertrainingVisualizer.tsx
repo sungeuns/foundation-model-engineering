@@ -1,166 +1,25 @@
 import React, { useState } from 'react';
 import './visualizers.css';
 
-interface OvertrainingVisualizerProps {
-  lang?: 'en' | 'ko';
+export default function OvertrainingVisualizer({lang='en'}: {lang?: 'en'|'ko'}) {
+  const ko=lang==='ko';
+  const [budget,setBudget]=useState(40);
+  const [scenario,setScenario]=useState<'improve'|'plateau'|'regress'>('plateau');
+  const loss=(x:number)=>1+2*Math.exp(-x/35);
+  const score=(x:number)=>scenario==='improve' ? 30+55*(1-Math.exp(-x/35)) : scenario==='plateau' ? 30+40*(1-Math.exp(-x/20)) : 30+45*(1-Math.exp(-x/20))-Math.max(0,x-55)*.65;
+  const xs=Array.from({length:101},(_,i)=>i);
+  return <div className="overtraining-container"><h3>{ko ? '낮은 사전 학습 손실이 적응 성능을 결정할까요?' : 'Does lower pretraining loss determine adaptation quality?'}</h3>
+    <p>{ko ? '직접 작성한 세 가지 가상 시나리오입니다. Fisher trace를 계산하거나 보편적인 과잉 학습 임계값을 제시하지 않습니다. 같은 손실 곡선에도 서로 다른 다운스트림 결과를 가정할 수 있음을 보여 줍니다.' : 'Three authored hypothetical scenarios. No Fisher trace is computed and no universal overtraining threshold is claimed. The same loss curve can accompany different assumed downstream outcomes.'}</p>
+    <label>{ko ? '다운스트림 시나리오' : 'Downstream scenario'} <select value={scenario} onChange={e=>setScenario(e.target.value as typeof scenario)}><option value="improve">{ko ? '계속 개선' : 'Continued improvement'}</option><option value="plateau">{ko ? '정체' : 'Plateau'}</option><option value="regress">{ko ? '후반 회귀' : 'Late regression'}</option></select></label>
+    <label style={{display:'block',marginTop:'1rem'}}>{ko ? '상대 학습 예산' : 'Relative training budget'}: {budget} <input type="range" min="0" max="100" value={budget} onChange={e=>setBudget(Number(e.target.value))}/></label>
+    <svg viewBox="0 0 400 220" role="img" aria-label={ko ? '가정한 손실과 점수 곡선. 왼쪽은 손실, 오른쪽은 점수 축.' : 'Assumed loss and score curves. Left axis: loss; right axis: score.'}><title>{ko ? '학습 예산에 따른 가상 결과' : 'Hypothetical outcomes by training budget'}</title>
+      {[0,50,100].map(v=><g key={v}><line x1="40" x2="350" y1={180-v*1.5} y2={180-v*1.5} stroke="#64748b" strokeWidth=".5"/><text x="5" y={184-v*1.5} fill="#60a5fa" fontSize="12">{(1+v/50).toFixed(1)}</text><text x="360" y={184-v*1.5} fill="#4ade80" fontSize="12">{v}</text></g>)}
+      <polyline points={xs.map(x=>`${40+3.1*x},${180-(loss(x)-1)*75}`).join(' ')} fill="none" stroke="#60a5fa" strokeWidth="2"/>
+      <polyline points={xs.map(x=>`${40+3.1*x},${180-score(x)*1.5}`).join(' ')} fill="none" stroke="#4ade80" strokeWidth="2" strokeDasharray="4 2"/>
+      <line x1={40+3.1*budget} x2={40+3.1*budget} y1="30" y2="180" stroke="#cbd5e1"/>
+      {[0,50,100].map(x=><text key={x} x={40+3.1*x} y="205" textAnchor="middle" fill="currentColor" fontSize="12">{x}</text>)}
+    </svg>
+    <p aria-live="polite"><span style={{color:'#60a5fa'}}>{ko ? '가상 손실' : 'Hypothetical loss'}: {loss(budget).toFixed(2)}</span> · <span style={{color:'#4ade80'}}>{ko ? '가상 점수' : 'Hypothetical score'}: {score(budget).toFixed(1)} / 100</span></p>
+    <p>{ko ? '실제 판단에는 체크포인트별 동일 적응 레시피, 독립 평가 데이터와 불확실성, 추론 비용을 함께 비교해야 합니다.' : 'Real decisions require matched adaptation recipes across checkpoints, independent evaluation with uncertainty, and inference-cost measurements.'}</p>
+  </div>;
 }
-
-const OvertrainingVisualizer: React.FC<OvertrainingVisualizerProps> = ({ lang = 'en' }) => {
-  const [hoveredPoint, setHoveredPoint] = useState<number | null>(null);
-
-  const translations = {
-    en: {
-      title: "Training Dynamics: Loss vs. Brittleness",
-      desc: "Hover over the chart to inspect the trade-off between Pre-training Loss and Downstream Utility.",
-      tokens: "Tokens Trained",
-      loss: "Pre-training Loss",
-      brittleness: "Fisher Trace (Brittleness)",
-      utility: "Downstream Utility",
-      chinchilla: "Chinchilla Optimal",
-      utilityOptimal: "Utility Optimal",
-      overtraining: "Catastrophic Overtraining"
-    },
-    ko: {
-      title: "학습 역학: 손실 vs 부서짐성",
-      desc: "차트 위에 마우스를 올려 사전 학습 손실과 다운스트림 효용성 간의 트레이드오프를 확인하세요.",
-      tokens: "학습된 토큰",
-      loss: "사전 학습 손실",
-      brittleness: "피셔 정보 대각합 (부서짐성)",
-      utility: "다운스트림 효용성",
-      chinchilla: "친칠라 최적점",
-      utilityOptimal: "효용 최적점",
-      overtraining: "파국적 과잉 학습"
-    }
-  };
-
-  const text = translations[lang];
-
-  // Mock data for the curve
-  const dataPoints = Array.from({ length: 100 }, (_, i) => {
-    const tokens = i * 10; // 0 to 990 Billion tokens
-    // Loss decreases logarithmically
-    const loss = 4.5 - Math.log(tokens + 10) * 0.4;
-    // Brittleness (Fisher Trace) increases exponentially after a certain point
-    const brittleness = 0.5 + Math.exp((tokens - 600) / 100) * 0.1;
-    // Downstream Utility increases then drops (The Paradox)
-    const utility = tokens < 700 
-      ? 10 + Math.log(tokens + 10) * 15 
-      : 10 + Math.log(710) * 15 - Math.exp((tokens - 700) / 80) * 2;
-
-    return { tokens, loss, brittleness, utility };
-  });
-
-  const getX = (tokens: number) => (tokens / 1000) * 300;
-  const getY = (val: number, max: number, min: number = 0) => 100 - ((val - min) / (max - min)) * 100;
-
-  const activeData = hoveredPoint !== null ? dataPoints[hoveredPoint] : dataPoints[0];
-
-  return (
-    <div className="overtraining-container">
-      <div className="ot-header">
-        <h3>{text.title}</h3>
-        <p>{text.desc}</p>
-      </div>
-
-      <div className="ot-chart-wrapper">
-        <svg viewBox="0 0 300 100" className="ot-svg">
-          {/* Zones */}
-          <rect x="0" y="0" width="60" height="100" fill="#f0f4f8" opacity="0.2" />
-          <rect x="60" y="0" width="120" height="100" fill="#e6fffa" opacity="0.2" />
-          <rect x="180" y="0" width="120" height="100" fill="#fff5f5" opacity="0.2" />
-
-          {/* Lines */}
-          <polyline
-            fill="none"
-            stroke="#3182ce"
-            strokeWidth="2"
-            points={dataPoints.map(d => `${getX(d.tokens)},${getY(d.loss, 4.5, 1.5)}`).join(' ')}
-          />
-          <polyline
-            fill="none"
-            stroke="#e53e3e"
-            strokeWidth="2"
-            points={dataPoints.map(d => `${getX(d.tokens)},${getY(d.brittleness, 6, 0)}`).join(' ')}
-          />
-          <polyline
-            fill="none"
-            stroke="#38a169"
-            strokeWidth="2"
-            strokeDasharray="2,2"
-            points={dataPoints.map(d => `${getX(d.tokens)},${getY(d.utility, 100, 0)}`).join(' ')}
-          />
-
-          {/* Zone Labels inside SVG */}
-          <text x="30" y="12" textAnchor="middle" className="ot-svg-text" fontSize="3.5" fill="#e2e8f0">{text.chinchilla}</text>
-          <text x="120" y="12" textAnchor="middle" className="ot-svg-text" fontSize="3.5" fill="#e2e8f0">{text.utilityOptimal}</text>
-          <text x="240" y="12" textAnchor="middle" className="ot-svg-text" fontSize="3.5" fill="#e2e8f0">{text.overtraining}</text>
-
-          {/* Hover Interaction Overlay */}
-          {dataPoints.map((d, i) => (
-            <rect
-              key={i}
-              x={getX(d.tokens) - 1.5}
-              y="0"
-              width="3"
-              height="100"
-              fill="transparent"
-              onMouseEnter={() => setHoveredPoint(i)}
-              onMouseLeave={() => setHoveredPoint(null)}
-              style={{ cursor: 'crosshair' }}
-            />
-          ))}
-
-          {/* Active Indicator */}
-          {hoveredPoint !== null && (
-            <line
-              x1={getX(activeData.tokens)}
-              y1="0"
-              x2={getX(activeData.tokens)}
-              y2="100"
-              stroke="#718096"
-              strokeWidth="0.5"
-              strokeDasharray="1,1"
-            />
-          )}
-        </svg>
-      </div>
-
-      {/* Legend */}
-      <div className="ot-legend">
-        <div className="ot-legend-item">
-          <span className="ot-legend-color" style={{ backgroundColor: '#3182ce' }}></span>
-          <span>{text.loss}</span>
-        </div>
-        <div className="ot-legend-item">
-          <span className="ot-legend-color" style={{ backgroundColor: '#e53e3e' }}></span>
-          <span>{text.brittleness}</span>
-        </div>
-        <div className="ot-legend-item">
-          <span className="ot-legend-color" style={{ backgroundColor: '#38a169' }}></span>
-          <span>{text.utility}</span>
-        </div>
-      </div>
-
-      <div className="ot-dashboard">
-        <div className="ot-stat">
-          <span className="ot-stat-title">{text.tokens}</span>
-          <span className="ot-stat-value">{activeData.tokens}B</span>
-        </div>
-        <div className="ot-stat loss">
-          <span className="ot-stat-title">{text.loss}</span>
-          <span className="ot-stat-value">{activeData.loss.toFixed(2)}</span>
-        </div>
-        <div className="ot-stat brittleness">
-          <span className="ot-stat-title">{text.brittleness}</span>
-          <span className="ot-stat-value">{activeData.brittleness.toFixed(2)}</span>
-        </div>
-        <div className="ot-stat utility">
-          <span className="ot-stat-title">{text.utility}</span>
-          <span className="ot-stat-value">{activeData.utility.toFixed(1)} / 100</span>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default OvertrainingVisualizer;

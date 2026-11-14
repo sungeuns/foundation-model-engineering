@@ -16,12 +16,12 @@ MoE는 모델 용량과 토큰당 연산을 분리하는 설계입니다. Dense 
 
 ## 1. Mixtral 8x7B: 오픈소스 MoE의 촉매제
 
-Mistral AI가 2023년 말에 출시한 **Mixtral 8x7B** [[1]](#ref-1) 는 **MoE** 아키텍처를 대중적인 오픈소스 생태계로 이끈 촉매제였습니다. 이 모델은 **MoE** 가 GPT-4와 같은 빅테크 기업의 조 단위 파라미터 모델 전유물이라는 환상을 깨뜨렸습니다.
+Mixtral 8x7B의 공개 가중치와 기술 보고서는 희소 MoE를 직접 검증할 수 있는 사례를 제공했습니다. [[1]](#ref-1) 이를 GPT-4의 규모나 내부 구조에 대한 증거로 사용할 수는 없습니다. 해당 세부 사항은 공개되지 않았습니다.
 
 ### "8x7B"라는 이름의 오해
 "8x7B"라는 이름은 훌륭한 마케팅 용어이지만, 기술적으로는 오해의 소지가 있습니다. 가장 흔한 오해는 Mixtral이 70억(7B) 개의 파라미터를 가진 독립적인 모델 8개의 앙상블이며, 따라서 총 560억(56B) 개의 파라미터를 가질 것이라는 생각입니다. 하지만 실제 Mixtral의 총 파라미터 수는 **47B** 개이며, 특정 토큰에 대한 포워드 패스(Forward pass) 동안 활성화되는 파라미터는 **13B** 개뿐입니다.
 
-왜 47B일까요? Transformer 아키텍처에서 Self-Attention 메커니즘과 토큰 임베딩은 모든 전문가(Expert) 간에 **공유** 됩니다. 오직 Feed-Forward Network (FFN) 레이어만이 복제됩니다. 
+왜 47B일까요? Transformer 아키텍처에서 Self-Attention 메커니즘과 토큰 임베딩은 모든 전문가(Expert) 간에 **공유** 됩니다. 오직 Feed-Forward Network (FFN) 레이어만이 복제됩니다.
 Dense 7B 모델의 어텐션 파라미터를 $P_{attn}$ , FFN 파라미터를 $P_{ffn}$ 이라고 할 때, Mixtral의 대략적인 총 파라미터 수는 다음과 같이 계산됩니다.
 
 $$ P_{total} = P_{attn} + (8 \times P_{ffn}) \approx 47B $$
@@ -89,6 +89,8 @@ Grok-1은 Top-2 expert routing을 사용합니다 [[3]](#ref-3). 여덟 expert �
 
 다음은 **DeepSeek-V3** 의 동적 바이어스 라우팅의 핵심 개념을 보여주는 PyTorch 구현입니다. 바이어스는 Top-K '선택' 과정에만 적용되며, FFN 조합에 실제로 사용되는 게이팅 가중치(Gating weights)는 바이어스가 없는 원래의 로짓에서 파생된다는 점에 주목하십시오.
 
+> **교육용 라우터입니다.** 선호도 기반 선택과 정규화만 보입니다. 노드 제한 라우팅, 공유 전문가, 출력 스케일, 전역 부하 집계, 시퀀스별 보조 손실은 생략했으므로 DeepSeek-V3의 완전한 학습 구현이 아닙니다.
+
 ```python
 import torch
 import torch.nn as nn
@@ -100,31 +102,23 @@ class DeepSeekAuxFreeRouter(nn.Module):
         # 라우터 네트워크 (Linear 레이어 자체에는 bias가 없음)
         self.gate = nn.Linear(d_model, num_routed_experts, bias=False)
         self.top_k = top_k
-        
+
         # 부하 분산을 위한 동적 바이어스 항 (역전파를 통해 업데이트되지 않음)
         self.register_buffer("expert_bias", torch.zeros(num_routed_experts))
-        
+
     def forward(self, x: torch.Tensor):
         # x shape: [batch_size, seq_len, d_model]
         logits = self.gate(x) # [B, S, E]
-        
-        # 1. 라우팅 결정에만 동적 바이어스(Dynamic bias)를 추가합니다.
-        routing_logits = logits + self.expert_bias
-        
-        # 2. 바이어스가 추가된 로짓을 기반으로 top-k 전문가를 선택합니다.
-        topk_logits, topk_indices = torch.topk(routing_logits, self.top_k, dim=-1)
-        
-        # 3. 바이어스가 없는(UNBIASED) 원래의 로짓을 사용하여 게이팅 가중치를 계산합니다.
-        # DeepSeek은 Softmax 대신 Sigmoid를 사용하여 Affine 조합을 수행합니다.
-        # 이를 통해 가중치의 총합이 엄격하게 1.0으로 제한되지 않도록 합니다.
-        unbiased_selected_logits = logits.gather(-1, topk_indices)
-        gate_weights = torch.sigmoid(unbiased_selected_logits)
-        
-        # 가중치 정규화 (DeepSeek의 세부 구현에 따라 선택적 적용)
-        gate_weights = gate_weights / gate_weights.sum(dim=-1, keepdim=True)
-        
+
+        # Select using biased affinities, combine using unbiased affinities.
+        affinities = torch.sigmoid(logits.float())
+        selection_scores = affinities + self.expert_bias
+        _, topk_indices = torch.topk(selection_scores, self.top_k, dim=-1)
+        gate_weights = affinities.gather(-1, topk_indices)
+        gate_weights = gate_weights / gate_weights.sum(dim=-1, keepdim=True).clamp_min(1e-12)
+
         return gate_weights, topk_indices
-        
+
     @torch.no_grad()
     def update_bias(self, expert_load: torch.Tensor, target_load: torch.Tensor, step_size: float = 0.001):
         """
@@ -135,7 +129,7 @@ class DeepSeekAuxFreeRouter(nn.Module):
         # load > target 이면 차이가 음수 -> 바이어스 감소.
         # load < target 이면 차이가 양수 -> 바이어스 증가.
         load_diff = target_load - expert_load
-        
+
         # DeepSeek은 부호(sign) 기반 또는 비례 업데이트 규칙을 사용합니다.
         self.expert_bias += step_size * torch.sign(load_diff)
 ```

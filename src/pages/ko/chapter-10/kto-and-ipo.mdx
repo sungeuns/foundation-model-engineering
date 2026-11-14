@@ -43,6 +43,8 @@ Estimator를 정확히 문서화해야 합니다. 원래 구성은 독립적이�
 
 교육용 분해는 다음과 같습니다.
 
+> **교육용 목적 함수 개요입니다.** KTO는 음의 로그 시그모이드가 아니라 유계 시그모이드 손실을 사용합니다. 로그를 추가하면 포화 특성과 기울기가 달라집니다. 양수 클래스 가중치 `lambda_desirable`, `lambda_undesirable`, 레이블 마스크, KL 추정량, 분산 집계를 지정해야 합니다. 아래 미정의 입력은 완성 구간에 마스크를 적용한 로그 확률을 뜻하며 실행 가능한 트레이너는 아닙니다.
+
 ```python
 # completion_logp는 policy와 reference에 같은 prompt/completion mask,
 # EOS, padding, truncation, sum/mean 규약을 사용합니다.
@@ -53,8 +55,8 @@ log_ratio = policy_completion_logp - reference_completion_logp
 kl_reference_point = estimate_nonnegative_kl_reference(unmatched_batch).detach()
 value = log_ratio - kl_reference_point
 
-loss_desirable = -torch.nn.functional.logsigmoid(beta * value)
-loss_undesirable = -torch.nn.functional.logsigmoid(-beta * value)
+loss_desirable = lambda_desirable * (1 - torch.sigmoid(beta * value))
+loss_undesirable = lambda_undesirable * (1 - torch.sigmoid(-beta * value))
 ```
 
 이는 semantic sketch이며 그대로 쓰는 trainer가 아닙니다. 실제 구현은 rank 간 sampling과 reduction을 명시해야 합니다.

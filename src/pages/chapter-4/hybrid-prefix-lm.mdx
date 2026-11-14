@@ -49,16 +49,15 @@ As shown in the diagram, the attention mask is a hybrid: full visibility in the 
 **Motivation**: The AI field was divided between Encoder-only models (good for understanding) and Decoder-only models (good for generation). The authors of GLM wanted to create a single model that could excel at both types of tasks by unifying the pre-training objectives. They aimed to overcome the limitations of BERT (not suitable for generation) and GPT (suboptimal for understanding due to unidirectional attention).
 
 **Key Innovations**:
-- **Autoregressive Blank Infilling**: GLM randomly blanks out contiguous spans of tokens from the input (similar to T5's span corruption). However, instead of predicting them in parallel, it reconstructs them autoregressively, token by token [[1]](#ref-1).
+- **Autoregressive blank infilling:** Both GLM and T5 reconstruct missing spans autoregressively. GLM differs in span generation order, two-dimensional positions and its single-stack mask design. [[1]](#ref-1)
 - **2D Positional Encoding**: To handle the autoregressive generation of missing spans, GLM uses a unique 2D positional encoding that captures both the position in the original sentence and the position within the generated span.
 - **Flexibility**: By varying the number and length of blanks, GLM can be trained to act like an Encoder-only model, a Decoder-only model, or a full Encoder-Decoder model.
 
 ---
 
-### 2. PaLM and Parallel Attention
-While Google's PaLM (Pathways Language Model) is primarily a Decoder-only model, it introduced architectural tweaks that are highly relevant to hybrid designs.
-- **Parallel Layers**: Instead of serialized attention and feed-forward layers (LayerNorm -> Attention -> LayerNorm -> FFN), PaLM executed them in parallel. This improved training speed significantly on TPU clusters.
-- **Relevance to Hybrid Designs**: This parallel structure inspired later hybrid models that try to balance the heavy context processing of encoders with the fast generation of decoders.
+### 2. PaLM parallel sublayers are a separate design axis
+
+PaLM computes attention and MLP branches in parallel. This is an execution/architecture choice, separate from the bidirectional and causal visibility defined by a prefix-LM mask. Parallel branches do not make a decoder-only model a hybrid encoder.
 
 
 ---
@@ -75,14 +74,14 @@ def create_prefix_mask(prefix_len, total_len):
     Create an attention mask for a Prefix LM.
     """
     mask = torch.zeros(total_len, total_len)
-    
+
     # 1. Prefix can attend to all prefix tokens bidirectionally
     mask[:prefix_len, :prefix_len] = 1
-    
+
     # 2. Target tokens can attend to all prefix tokens and preceding target tokens
     for i in range(prefix_len, total_len):
         mask[i, :i+1] = 1
-        
+
     return mask
 
 # Example usage

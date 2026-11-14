@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
 import './visualizers.css';
 
-const SpatiotemporalAttentionVisualizer = () => {
+const SpatiotemporalAttentionVisualizer = ({ lang = "en" }: { lang?: "en" | "ko" }) => {
+  const translations: Record<string,string> = {"Spatiotemporal Attention Routing": "시공간 어텐션 연결", "Select or focus a patch to inspect its allowed attention connections.": "패치를 선택하면 해당 쿼리가 연결되는 위치가 표시됩니다.", "Factorized Spatial": "분리된 공간 어텐션", "Factorized Temporal": "분리된 시간 어텐션", "Full Spatiotemporal": "전체 시공간 어텐션"};
+  const t = (s: string) => lang === "ko" ? (translations[s] ?? s) : s;
+
   const [attentionType, setAttentionType] = useState('full');
-  const [hoveredToken, setHoveredToken] = useState<{ frame: number; patch: number } | null>(null);
+  const [hoveredToken, setHoveredToken] = useState<{ frame: number; patch: number } | null>({frame:0,patch:0});
 
   const frames = [0, 1, 2];
   const patches = Array.from({ length: 16 }, (_, i) => i); // 4x4 grid
@@ -30,57 +33,53 @@ const SpatiotemporalAttentionVisualizer = () => {
   return (
     <div className="attention-visualizer-container">
       <div className="attention-header">
-        <h3>Spatiotemporal Attention Routing</h3>
-        <p>Hover over tokens to see the receptive field for each attention mechanism.</p>
+        <h3>{t("Spatiotemporal Attention Routing")}</h3>
+        <p>{t("Select or focus a patch to inspect its allowed attention connections.")}</p>
         <div className="attention-controls">
-          <button 
-            className={attentionType === 'spatial' ? 'active' : ''} 
+          <button
+            className={attentionType === 'spatial' ? 'active' : ''}
             onClick={() => setAttentionType('spatial')}
-          >
-            Factorized Spatial
-          </button>
-          <button 
-            className={attentionType === 'temporal' ? 'active' : ''} 
+          >{t('Factorized Spatial')}</button>
+          <button
+            className={attentionType === 'temporal' ? 'active' : ''}
             onClick={() => setAttentionType('temporal')}
-          >
-            Factorized Temporal
-          </button>
-          <button 
-            className={attentionType === 'full' ? 'active' : ''} 
+          >{t('Factorized Temporal')}</button>
+          <button
+            className={attentionType === 'full' ? 'active' : ''}
             onClick={() => setAttentionType('full')}
-          >
-            Full Spatiotemporal
-          </button>
+          >{t('Full Spatiotemporal')}</button>
         </div>
       </div>
 
       <div className="frames-container">
         {frames.map((frameIdx) => (
           <div key={`frame-${frameIdx}`} className="video-frame">
-            <div className="frame-label">Frame {frameIdx + 1}</div>
+            <div className="frame-label">{lang === "ko" ? "프레임" : "Frame"} {frameIdx + 1}</div>
             <div className="patch-grid">
               {patches.map((patchIdx) => {
                 const attended = isAttended(frameIdx, patchIdx);
                 const isSelf = hoveredToken?.frame === frameIdx && hoveredToken?.patch === patchIdx;
-                
+
                 return (
-                  <div
+                  <button
+                    type="button" aria-label={`${lang === "ko" ? "프레임 / 패치" : "Frame / patch"} ${frameIdx + 1} / ${patchIdx + 1}`} aria-pressed={isSelf}
                     key={`patch-${frameIdx}-${patchIdx}`}
                     className={`patch ${attended ? 'attended' : ''} ${isSelf ? 'self' : ''}`}
-                    onMouseEnter={() => setHoveredToken({ frame: frameIdx, patch: patchIdx })}
-                    onMouseLeave={() => setHoveredToken(null)}
-                  ></div>
+                    onFocus={() => setHoveredToken({ frame: frameIdx, patch: patchIdx })}
+                    onClick={() => setHoveredToken({ frame: frameIdx, patch: patchIdx })}
+
+                  ></button>
                 );
               })}
             </div>
           </div>
         ))}
       </div>
-      
+
       <div className="attention-description">
-        {attentionType === 'spatial' && <p><strong>Factorized Spatial:</strong> Low computational cost, but poor tracking if objects move fast across frames.</p>}
-        {attentionType === 'temporal' && <p><strong>Factorized Temporal:</strong> Tracks only temporal changes in the same spatial location, limiting the understanding of global physical laws.</p>}
-        {attentionType === 'full' && <p><strong>Full Spatiotemporal:</strong> All tokens attend to each other across space and time. Highest computational complexity ($O(n^2)$), but ensures perfect 3D consistency.</p>}
+        {attentionType === 'spatial' && <p>{lang === "ko" ? "이 층에서는 같은 프레임의 패치끼리 연결됩니다. 시간 층과 교차 배치하면 다른 프레임으로도 정보를 전달할 수 있습니다." : "This layer connects patches within a frame. Alternating it with temporal layers can propagate information across frames."}</p>}
+        {attentionType === 'temporal' && <p>{lang === "ko" ? "이 층에서는 같은 공간 위치의 패치끼리 연결됩니다. 연결 위치 자체가 움직임 추적의 정확도를 뜻하지는 않습니다." : "This layer connects the same spatial location across frames. Connectivity alone does not measure motion-tracking accuracy."}</p>}
+        {attentionType === 'full' && <p>{lang === "ko" ? "n개 전체 패치가 서로 연결되어 어텐션 코어의 연산량은 O(n²d)입니다. 이 그림은 마스크를 보여 주며, 학습된 가중치나 물리·3D 일관성을 보장하지 않습니다." : "All n patches connect; attention-core work is O(n²d). This shows the mask, not learned weights or a guarantee of physical or 3D consistency."}</p>}
       </div>
     </div>
   );

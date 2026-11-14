@@ -8,11 +8,7 @@ import QuantizationMethodVisualizer from '../../components/chapter-13/Quantizati
 
 # 13.2 Quantization Methods
 
-In the previous section, we established the fundamental difference between Post-Training Quantization (PTQ) and Quantization-Aware Training (QAT). While QAT provides the highest accuracy floor by actively training the model to survive low precision, it requires significant computational resources. For the vast majority of deployments, engineers rely on advanced PTQ algorithms to compress pre-trained Foundation Models quickly and efficiently.
-
-The naive approach to PTQ—simply rounding weights to the nearest 4-bit integer—results in catastrophic accuracy loss for Large Language Models (LLMs). The distribution of weights and activations in LLMs contains extreme outliers that dictate the model's reasoning capabilities. If these outliers are clipped or rounded away, the model collapses.
-
-To solve this, the AI engineering community has developed highly sophisticated, mathematically rigorous methods to compress weights while preserving these critical outliers. In this section, we will dissect the three dominant paradigms of modern quantization: **GPTQ**, **AWQ**, and the **GGUF** ecosystem, concluding with an analysis of bit-level formats like **FP8**.
+Quantization represents weights, activations or KV state with fewer bits. Quality loss is not determined by bit width alone: calibration data, scale granularity, outliers, architecture and kernels matter. GPTQ and AWQ are PTQ algorithms; GGUF is a file format and runtime ecosystem.
 
 ---
 
@@ -34,57 +30,43 @@ GPTQ processes the weight matrix row by row. When a weight $w_i$ is quantized to
 
 Below is a conceptual PyTorch implementation of the core GPTQ algorithm. In a production environment, this is heavily optimized using block-wise updates and Cholesky decomposition to avoid numerical instability when inverting massive matrices.
 
+> **Educational single-layer example.** Uses CPU FP32 operations. Calibration-data selection, group-scale search, packing/kernels, distributed execution and model-level quality validation are omitted.
+
 ```python
 import torch
 
-def quantize_to_nearest(w, bits=4):
-    """Simulates basic uniform quantization."""
-    q_max = (1 << (bits - 1)) - 1
-    q_min = -(1 << (bits - 1))
-    scale = w.abs().max() / q_max
-    q = torch.clamp(torch.round(w / scale), q_min, q_max) * scale
-    return q
+@torch.no_grad()
+def gptq_core_loop(W, H, bits=4, damping=0.01):
+    """Educational FP32, per-output-row symmetric quantization; no packing."""
+    if W.ndim != 2 or H.shape != (W.shape[1], W.shape[1]):
+        raise ValueError("incompatible W/H shapes")
+    if not 2 <= bits <= 8 or damping <= 0:
+        raise ValueError("invalid quantization settings")
+    work = W.detach().float().clone()
+    hessian = H.detach().to(device=W.device, dtype=torch.float32).clone()
+    ridge = damping * hessian.diag().mean().clamp_min(1e-6)
+    hessian.diagonal().add_(ridge)
+    # U.T @ U = inverse(H); not the unchanged raw inverse Hessian.
+    chol = torch.linalg.cholesky(hessian)
+    inverse = torch.cholesky_inverse(chol)
+    U = torch.linalg.cholesky(inverse, upper=True)
+    qmax = 2 ** (bits - 1) - 1
+    scales = (work.abs().amax(dim=1) / qmax).clamp_min(1e-8)
+    quantized = torch.zeros_like(work)
+    for i in range(work.shape[1]):
+        column = work[:, i]
+        q = (column / scales).round().clamp(-qmax, qmax) * scales
+        quantized[:, i] = q
+        error = (column - q) / U[i, i]
+        work[:, i+1:] -= error[:, None] * U[i, i+1:][None, :]
+    return quantized
 
-def gptq_core_loop(W, H_inv, bits=4):
-    """
-    Simplified GPTQ update loop.
-    W: Full precision weight matrix [out_features, in_features]
-    H_inv: Inverse Hessian of the activations [in_features, in_features]
-    """
-    W_q = torch.zeros_like(W)
-    W_temp = W.clone()
-
-    in_features = W.shape[1]
-
-    for i in range(in_features):
-        # 1. Extract the current column of weights
-        w = W_temp[:, i]
-        d = H_inv[i, i]
-
-        # 2. Quantize the current column
-        q = quantize_to_nearest(w, bits)
-        W_q[:, i] = q
-
-        # 3. Calculate the quantization error, scaled by the Hessian diagonal
-        error = (w - q) / d
-
-        # 4. Compensate: Update all remaining unquantized weights
-        # We subtract the error multiplied by the cross-correlation in the Hessian
-        W_temp[:, i+1:] -= error.unsqueeze(1) @ H_inv[i, i+1:].unsqueeze(0)
-
-    return W_q
-
-# Example execution
-out_feat, in_feat = 128, 128
-W_full = torch.randn(out_feat, in_feat)
-
-# Simulate a Hessian inverse (in reality, computed from a calibration dataset)
-H = torch.randn(in_feat, in_feat)
-H = H.T @ H + torch.eye(in_feat) * 0.01 # Make positive semi-definite
-H_inv = torch.linalg.inv(H)
-
-W_quantized = gptq_core_loop(W_full, H_inv, bits=4)
-print(f"GPTQ Quantization Complete. Shape: {W_quantized.shape}")
+torch.manual_seed(7)
+W = torch.randn(16, 32)
+X = torch.randn(32, 64)  # calibration features x samples
+H = 2 * X @ X.T / X.shape[1]
+W_q = gptq_core_loop(W, H)
+print("Calibration reconstruction MSE:", ((W - W_q) @ X).square().mean().item())
 ```
 
 GPTQ is highly effective but requires a careful calibration phase to compute the Hessian. If the calibration data is skewed, the Hessian will prioritize compensating for the wrong features, leading to poor generalization.
@@ -108,82 +90,47 @@ $$ Y = WX = (W \cdot S) (X \cdot S^{-1}) $$
 
 AWQ calculates a per-channel scaling factor $S$ that scales *up* the weights corresponding to large activations. By scaling the salient weights up, they occupy a larger portion of the INT4 quantization bins, drastically reducing their relative quantization error. During inference, the activations are scaled *down* by $S^{-1}$ before the matrix multiplication, ensuring the final mathematical output remains identical.
 
+> **Educational single-layer example.** Uses CPU FP32 operations. Calibration-data selection, group-scale search, packing/kernels, distributed execution and model-level quality validation are omitted.
+
 ```python
 import torch
 
+@torch.no_grad()
 def awq_scale_weights(W, X, s_x=0.5):
-    """
-    W: Weight matrix [out_features, in_features]
-    X: Calibration activations [batch, seq_len, in_features]
-    s_x: Hyperparameter controlling scaling intensity
-    """
-    # 1. Identify salient channels by averaging activation magnitudes
-    act_magnitudes = X.abs().mean(dim=(0, 1)) # Shape: [in_features]
+    """Illustrate reciprocal channel scaling, not the AWQ scale search."""
+    if W.ndim != 2 or X.ndim != 3 or W.shape[1] != X.shape[-1]:
+        raise ValueError("incompatible calibration shape")
+    if not 0 <= s_x <= 1:
+        raise ValueError("s_x must be in [0,1]")
+    magnitudes = X.float().abs().mean(dim=(0, 1)).clamp_min(1e-6)
+    scales = magnitudes.pow(s_x)
+    scales = scales / torch.sqrt(scales.max() * scales.min())
+    return W.float() * scales[None, :], scales
 
-    # 2. Calculate the scaling factor
-    # We scale up weights where the corresponding activation is large
-    scales = act_magnitudes ** s_x
-    scales = scales / scales.max() # Normalize to prevent overflow
-
-    # 3. Apply the scale to the weights
-    # Weights are multiplied by the scale (scaled UP)
-    W_scaled = W * scales.unsqueeze(0)
-
-    # 4. In a real deployment, the inverse scale is folded into the
-    # preceding layer's bias/weights or applied to the activations.
-    # X_scaled = X / scales
-
-    return W_scaled, scales
-
-# Example Execution
-W = torch.randn(256, 128)
-X = torch.randn(16, 512, 128) # Batch=16, Seq=512, Dim=128
-
-W_awq, scales = awq_scale_weights(W, X)
-print(f"AWQ Scaling Applied. Max Scale: {scales.max():.4f}, Min Scale: {scales.min():.4f}")
+W = torch.randn(16, 32)
+X = torch.randn(2, 8, 32)
+X[..., 0] = 0  # inactive channels must not cause division by zero
+scaled_W, scales = awq_scale_weights(W, X)
+assert torch.allclose(X @ W.T, (X / scales) @ scaled_W.T, atol=1e-5)
 ```
 
-AWQ is fundamentally faster to process than GPTQ because it does not require calculating or inverting a Hessian matrix, and it has proven exceptionally robust for instruction-tuned and multi-modal models.
+AWQ and GPTQ spend work on different calibration operations. Compare their implementations on the same model, calibration set, precision and hardware rather than assuming a universal runtime or quality ranking.
 
 ---
 
-## 3. TurboQuant: Rotation-Domain Quantization
+## 3. TurboQuant: rotation and residual correction
 
-Introduced by researchers at Google in 2025 [[3]](#ref-3), **TurboQuant** tackles the outlier problem at its geometric root. Instead of trying to accommodate outliers in the standard basis, TurboQuant **rotates the entire vector space** before quantization.
+TurboQuant studies online vector quantization for mean-squared and inner-product error. It uses scalar quantization optimized for the rotated distribution and a QJL residual correction for inner-product estimation. A Hadamard rotation followed by uniform rounding is not the complete algorithm. [[3]](#ref-3)
 
-### The Mechanism: Fast Walsh-Hadamard Transform (FWHT)
-Imagine a vector with a massive outlier: `[0.1, 0.2, 100.0, 0.1]`. Quantizing this directly is difficult. TurboQuant applies an orthogonal transformation, typically the Fast Walsh-Hadamard Transform (FWHT) or a random rotation matrix, to the weight or activation vectors.
+Orthogonal rotation preserves inner products before quantization, not after introducing quantization error. Reported KV quality concerns the tested models and tasks. Concurrency depends on weights, KV, temporary buffers, metadata and kernel costs together; bit width alone cannot establish a doubling. Section 13.5 develops these distinctions.
 
-Because rotations are orthogonal, they preserve the inner product (the core operation of attention and linear layers). However, the rotation *spreads the energy* of the outlier across all dimensions. The resulting vector has a near-Gaussian (or concentrated Beta) distribution with virtually no extreme outliers.
 
-1. **Rotate**: $x' = R \cdot x$ (Outliers are smoothed out).
-2. **Quantize**: $\hat{x}' = Q(x')$ (Quantization is now highly efficient and uniform).
-3. **De-rotate (Compute)**: Perform operations in the rotated space, or apply the inverse transform $R^T$ directly in the fused CUDA kernel.
+## 4. GGUF and llama.cpp
 
-**💡 Behind the Scenes: The KV-Cache Savior**
-TurboQuant was initially highly praised for **KV Cache Quantization**. By rotating the keys and values, TurboQuant achieved absolute quality neutrality at just 3.5 bits per channel, and marginal degradation at 2.5 bits. This allows serving frameworks to double their concurrent batch sizes without hitting the KV-cache memory wall.
+GGUF is a container for tensors and metadata, not a single quantization algorithm. Block size, scales, offsets and code representation depend on tensor type; not every block stores a zero-point.
 
----
+Separate a block format from a converter's mixed-tensor policy. A label such as `Q4_K_M` does not specify every layer's precision: type selection depends on converter version and architecture. Inspect actual tensor types and sizes, record converter commit/configuration and weight hashes, and validate quality and performance on the intended backend.
 
-## 4. GGUF and the llama.cpp Ecosystem
-
-While GPTQ and AWQ are algorithms, **GGUF** (GPT-Generated Unified Format) is a file format and quantization ecosystem tightly coupled with the `llama.cpp` project. It was designed to solve the fragmentation of open-source LLM deployment, allowing models to run efficiently on standard consumer hardware, particularly CPUs and Apple Silicon (via Metal).
-
-### Blocked Quantization
-Unlike standard PyTorch tensors, GGUF does not quantize an entire matrix at once. It uses **Blocked Quantization**. A weight matrix is flattened and divided into small blocks (e.g., 32 weights per block). Each block receives its own scaling factor and zero-point. This localized scaling prevents a single massive outlier from ruining the precision of the entire matrix.
-
-### K-Quants: Hierarchical Mixed Precision
-The defining feature of the GGUF ecosystem is the **k-quant** family (e.g., `Q4_K_M`, `Q5_K_S`). These represent a sophisticated hierarchy of mixed-precision quantization.
-
-Instead of applying a flat 4-bit quantization across the entire model, k-quants use 256-weight super-blocks split into smaller sub-blocks. More importantly, they apply different bit-widths to different *types* of layers.
-For example, in a `Q4_K_M` model:
-*   Attention projection layers ($Q, K, V$) might be quantized to 5-bit or 6-bit because they are highly sensitive to noise.
-*   Feed-Forward Network (FFN) expansion layers are quantized to a strict 4-bit because they contain redundant parameters and are robust to noise.
-*   The final `lm_head` is often kept in 8-bit.
-
-Mixed-bit allocation can improve size/accuracy trade-offs in evaluated settings, but the result depends on the model, calibration data, formats, and kernels.
-
----
 
 ## 5. The Datatype War: FP8 vs INT4
 
@@ -195,57 +142,23 @@ Integer quantization distributes its bins uniformly. The distance between 1 and 
 Floating-point formats use an exponent and a mantissa. This allows them to allocate high precision near zero (where the majority of weights live) while simultaneously maintaining a massive dynamic range to represent outliers without clipping them.
 
 ### E4M3 vs E5M2
-The IEEE FP8 standard defines two distinct encodings:
+The 2022 FP8 proposal describes two encodings; E5M2 follows IEEE 754 special-value conventions, which does not make this an “IEEE FP8 standard”:
 1.  **E4M3 (4 Exponent bits, 3 Mantissa bits)**: Provides higher precision but lower dynamic range. It is the standard choice for quantizing **Weights** and **Activations** during forward-pass inference.
 2.  **E5M2 (5 Exponent bits, 2 Mantissa bits)**: Sacrifices precision for a massive dynamic range. It is primarily used to store **Gradients** during training, which can fluctuate wildly.
 
-Because FP8 natively matches the distribution of neural network weights much better than INT8, converting an FP16 model to FP8 (E4M3) requires almost no calibration and zero complex algorithms (like GPTQ/AWQ). It is effectively a "free" 2x reduction in VRAM and memory bandwidth, making it the default serving standard for enterprise models today.
+FP8 range does not guarantee quality or memory savings. Validate scaling, accumulation precision, calibration, overflow and kernel support. Replacing a 16-bit tensor with 8-bit storage halves its raw payload; KV state, activations, buffers and metadata mean total VRAM need not halve. [[4]](#ref-4)
 
 ---
 
-## 6. Quantization & Compression: The Complete Synthesis
+## 6. Formats and deployment budgets
 
-To provide a practical guide for engineers, let's synthesize the various quantization and compression techniques discussed throughout Chapter 13 and provide a real-world deployment calculator.
+GGUF/GPTQ/AWQ tags alone do not determine online/static batching performance or hardware suitability. Pin the checkpoint, group size, scale/zero-point format, packing order and runtime kernel. GGUF quant formats and per-tensor bit allocations differ; not every block uses the same metadata.
 
-### The Compression Landscape
+For $P$ weights at $b$ bits, ideal payload is $Pb/8$ bytes. An 8B model therefore has 16/8/4/2GB decimal payload at 16/8/4/2 bits, respectively. These are not minimum GPU capacities or quality guarantees. Add scales/indices, unquantized tensors, KV/recurrent state, activations, workspaces, allocator reserve and concurrency separately. Measure peak memory at the intended context and batch instead of applying a universal 20% multiplier.
 
-| Technique | Paradigm | Bit-width | Best Used For | HW Support |
-| :--- | :--- | :--- | :--- | :--- |
-| **PTQ (Naive)** | Post-Training | 8-bit | Fast deployment, minimal drop | Any |
-| **AWQ / GPTQ** | Post-Training | 4-bit | Production LLM serving, balanced | GPU (Tensor Cores) |
-| **QAT** | During Training | 4-bit / 2-bit | Max accuracy at low bits | GPU |
-| **GGUF** | Post-Training | Mixed (2-8 bit) | On-device / CPU execution | CPU / Metal / GPU |
-| **TurboQuant** | Pre-rotation PTQ | 2-3 bit | KV Cache compression | GPU |
-| **BitNet b1.58** | Native 1-bit | 1.58-bit | Future non-MatMul hardware | Specialized AI chips |
+## 7. Explore range and output error
 
-### HuggingFace Keywords Mapping
-When browsing HuggingFace, you will encounter specific tags. Here is what they mean:
-- **`AWQ`**: Activation-aware Weight Quantization. Great for online serving (vLLM).
-- **`GPTQ`**: Post-Training Quantization using approximate Hessian. Good for static batching.
-- **`GGUF`**: The format used by `llama.cpp`. Optimized for CPU and edge devices (MacBook).
-- **`EXL2`**: ExLlamaV2 format. Highly optimized for fast GPU inference on consumer hardware.
-
-### Memory Requirements & Deployment Guide
-How much VRAM do you actually need to load a model? Here is a quick reference for common model sizes and quantization levels (excluding KV Cache).
-
-| Model Size | FP16 (Unquantized) | INT8 | INT4 | INT2 | Minimum GPU |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **7B / 8B** | ~16 GB | ~8 GB | ~4 GB | ~2 GB | Single consumer GPU (RTX 4060) |
-| **13B / 14B** | ~28 GB | ~14 GB | ~7 GB | ~3.5 GB | Single GPU (RTX 4070/4080) |
-| **70B** | ~140 GB | ~70 GB | ~35 GB | ~17.5 GB | 1x H100 or 2x RTX 3090/4090 |
-
-**Formula for rough estimation**:
-$$\text{VRAM (GB)} \approx \frac{\text{Parameters (B)} \times \text{Bits per parameter}}{8} \times 1.2 \text{ (overhead)}$$
-*(Note: Add active KV Cache memory to this base footprint for total serving memory).*
-
----
-
-## 7. Interactive Component: Quantization Algorithm Simulator
-
-The interactive visualization below demonstrates how different PTQ algorithms handle a block of weights containing a massive outlier.
-*   **Uniform INT4** clips the outlier or destroys the precision of the smaller weights.
-*   **AWQ** scales the weights based on activation magnitude, preserving relative precision.
-*   **GPTQ** shifts the rounding error of the first weight onto the subsequent weights in the block.
+Change range and bit width to compare rounding, clipping and activation-weighted output error. This computes uniform quantization; it is not a GPTQ/AWQ benchmark.
 
 <QuantizationMethodVisualizer client:load />
 
@@ -264,13 +177,13 @@ The interactive visualization below demonstrates how different PTQ algorithms ha
 </details>
 
 <details>
-<summary>Quiz 3: What is the primary advantage of GGUF's k-quant system over standard uniform 4-bit quantization?</summary>
-*K-quants utilize hierarchical mixed-precision. Instead of forcing all layers into 4-bit, k-quants allocate higher precision (e.g., 5-bit or 6-bit) to highly sensitive layers like attention projections, and lower precision (e.g., 4-bit) to robust layers like FFNs. This optimizes the trade-off between file size and model accuracy far better than uniform quantization.*
+<summary>Quiz 3: Does a Q4-family GGUF name mean every tensor is exactly four bits?</summary>
+*No. Block metadata, format-specific super-block structure and per-tensor mixed precision affect storage. Inspect the format, conversion settings and runtime, then measure size and quality.*
 </details>
 
 <details>
-<summary>Quiz 4: Why is the FP8 (E4M3) format inherently better suited for quantizing LLM weights than traditional INT8?</summary>
-*Integer formats distribute their bins uniformly, which struggles to represent the Gaussian distribution of LLM weights (clustered near zero with extreme outliers). FP8 uses an exponent and mantissa, providing high precision near zero while maintaining a large dynamic range to capture outliers without severe clipping, resulting in near-lossless compression without complex calibration.*
+<summary>Quiz 4: Is FP8 always better than INT8, and does it halve total VRAM?</summary>
+*No. Results depend on value distributions, scaling, accumulation and kernels. Its raw payload is half a 16-bit tensor’s, but other state and metadata remain. Validate quality and measured peak memory on the same workload.*
 </details>
 
 <details>
