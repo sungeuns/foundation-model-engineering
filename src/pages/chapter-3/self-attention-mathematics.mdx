@@ -159,8 +159,8 @@ Visualize how words attend to each other. Click on a word in the sentence to see
 </details>
 
 <details>
-<summary>Quiz 3: In the interactive example, why does the word "it" attend strongly to "animal"?</summary>
-*This demonstrates coreference resolution. The model learns that "it" refers to the "animal" in this context, because of the semantic relationship and the word "tired" appearing later. This is the power of Self-Attention—capturing long-range dependencies and context.*
+<summary>Quiz 3: Does the illustrated attention from "it" to "animal" prove learned coreference?</summary>
+*No. The weights are authored for teaching, not measured from a trained model. Attention alone does not establish causal contribution. A bidirectional encoder may use the later word "tired", but a causal decoder at "it" cannot see it. Test a trained model with controlled interventions before attributing a mechanism.*
 </details>
 
 <details>

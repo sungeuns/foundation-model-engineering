@@ -159,8 +159,8 @@ print("Attention Weights Shape:", weights.shape)
 </details>
 
 <details>
-<summary>Quiz 3: 인터랙티브 예시에서 "it"이라는 단어가 "animal"에 강하게 주의를 기울이는 이유는 무엇인가요?</summary>
-*이는 상호 참조 해결(coreference resolution)을 보여줍니다. 모델은 이 문맥에서 "it"이 "animal"을 가리킨다는 것을 의미론적 관계와 나중에 나오는 "tired"라는 단어를 통해 학습합니다. 이것이 Self-Attention의 힘입니다. 긴 범위의 의존성과 문맥을 포착하는 것입니다.*
+<summary>Quiz 3: 그림에서 "it"이 "animal"에 주의를 기울이면 학습한 상호 참조의 증거인가요?</summary>
+*아닙니다. 가중치는 교육을 위해 작성한 값이며 학습 모델의 측정값이 아닙니다. Attention만으로 인과적 기여를 입증할 수 없습니다. 양방향 인코더는 뒤의 "tired"를 볼 수 있지만 인과 디코더의 "it" 위치에서는 볼 수 없습니다. 메커니즘을 주장하려면 학습 모델에 통제된 개입을 해야 합니다.*
 </details>
 
 <details>

@@ -176,6 +176,12 @@ Simple projection-layer models work best when the input pattern is straightforwa
 | **Compute Cost** | Low | High (requires new layers) | Low (simple MLP) |
 | **Flexibility** | Retrieval & Zero-shot | Interleaved Text/Image | Fixed Image Input |
 
+## Research Check: Which Part of a Vision Encoder Helps?
+
+**As of 2026-11-17.** *Unbundling Multimodal Vision Encoding* separates three choices: upstream visual pretraining, dedicated vision capacity, and where that capacity enters the backbone. Under its matched-lifetime-compute experiments, jointly trained vision capacity can match a pretrained encoder; deleting dedicated vision capacity is a different intervention and hurts visual understanding [[4]](#ref-4). This does not establish that pretrained encoders are unnecessary at every scale or data budget.
+
+Reproduction exercise: compare a pretrained encoder, a same-size jointly trained encoder, and a capacity-matched encoder-free model on common data. Charge upstream pretraining to the budget, then separately report a reuse scenario where that cost is already sunk. Keep visual tokenization and evaluation controls explicit; measure language retention and time to first token alongside VQA. A comparison of unrelated released models cannot isolate this mechanism.
+
 ## Quizzes
 
 <details>
@@ -200,3 +206,5 @@ Simple projection-layer models work best when the input pattern is straightforwa
 1. <a id="ref-1"></a>Radford, A., et al. (2021). *Learning Transferable Visual Models From Natural Language Supervision*. [arXiv:2103.00020](https://arxiv.org/abs/2103.00020).
 2. <a id="ref-2"></a>Alayrac, J. B., et al. (2022). *Flamingo: a Visual Language Model for Few-Shot Learning*. [arXiv:2204.14198](https://arxiv.org/abs/2204.14198).
 3. <a id="ref-3"></a>Liu, H., et al. (2023). *Visual Instruction Tuning*. [arXiv:2304.08485](https://arxiv.org/abs/2304.08485).
+
+4. <a id="ref-4"></a>Brown et al. (2026). Unbundling Multimodal Vision Encoding, v1. Verified 2026-11-17. [Source](https://arxiv.org/abs/2611.17334v1).

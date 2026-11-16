@@ -1,0 +1,97 @@
+[
+  {
+    "url": "https://arxiv.org/abs/1412.6980",
+    "status": 200,
+    "final": "https://arxiv.org/abs/1412.6980"
+  },
+  {
+    "url": "https://arxiv.org/abs/1711.05101",
+    "status": 200,
+    "final": "https://arxiv.org/abs/1711.05101"
+  },
+  {
+    "url": "https://arxiv.org/abs/2611.03633v2",
+    "status": 200,
+    "final": "https://arxiv.org/abs/2611.03633v2"
+  },
+  {
+    "url": "https://arxiv.org/abs/2611.17334v1",
+    "status": 200,
+    "final": "https://arxiv.org/abs/2611.17334v1"
+  },
+  {
+    "url": "https://arxiv.org/abs/2611.17876v1",
+    "status": 200,
+    "final": "https://arxiv.org/abs/2611.17876v1"
+  },
+  {
+    "url": "https://blog.google/innovation-and-ai/models-and-research/gemini-models/introducing-gemini-4-hydrogen/",
+    "status": 200,
+    "final": "https://blog.google/innovation-and-ai/models-and-research/gemini-models/introducing-gemini-4-hydrogen/"
+  },
+  {
+    "url": "https://docs.pytorch.org/docs/stable/notes/randomness.html",
+    "status": 200,
+    "final": "https://docs.pytorch.org/docs/stable/notes/randomness.html"
+  },
+  {
+    "url": "https://docs.pytorch.org/tutorials/beginner/saving_loading_models.html",
+    "status": 200,
+    "final": "https://docs.pytorch.org/tutorials/beginner/saving_loading_models.html"
+  },
+  {
+    "url": "https://docs.qwencloud.com/changelog/models",
+    "status": 200,
+    "final": "https://docs.qwencloud.com/changelog/models"
+  },
+  {
+    "url": "https://docs.qwencloud.com/developer-guides/getting-started/latest-model",
+    "status": 200,
+    "final": "https://docs.qwencloud.com/developer-guides/getting-started/latest-model"
+  },
+  {
+    "url": "https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats._result_classes.BinomTestResult.proportion_ci.html",
+    "status": 200,
+    "final": "https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats._result_classes.BinomTestResult.proportion_ci.html"
+  },
+  {
+    "url": "https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.bootstrap.html",
+    "status": 200,
+    "final": "https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.bootstrap.html"
+  },
+  {
+    "url": "https://download.pytorch.org/whl/cpu",
+    "status": 200,
+    "final": "https://download.pytorch.org/whl/cpu"
+  },
+  {
+    "url": "https://huggingface.co/Agnes-AI/Agnes-2.5-Pro-Theta",
+    "status": 200,
+    "final": "https://huggingface.co/Agnes-AI/Agnes-2.5-Pro-Theta"
+  },
+  {
+    "url": "https://huggingface.co/meituan-longcat/LongCat-2.5",
+    "status": 200,
+    "final": "https://huggingface.co/meituan-longcat/LongCat-2.5"
+  },
+  {
+    "url": "https://neurips.cc/public/guides/PaperChecklist",
+    "status": 200,
+    "final": "https://neurips.cc/public/guides/PaperChecklist"
+  },
+  {
+    "url": "https://pytorch.org/get-started/locally/",
+    "status": 200,
+    "final": "https://pytorch.org/get-started/locally/"
+  },
+  {
+    "url": "https://qwen.ai/blog?id=qwen4-max",
+    "status": 200,
+    "final": "https://qwen.ai/blog?id=qwen4-max"
+  },
+  {
+    "url": "https://tech.meituan.com/2026/11/10/Meituan-LongCat-2.5-Open-Source.html",
+    "status": 200,
+    "final": "https://tech.meituan.com/2026/11/10/Meituan-LongCat-2.5-Open-Source.html"
+  }
+]

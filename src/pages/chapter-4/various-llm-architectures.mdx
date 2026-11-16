@@ -272,6 +272,12 @@ For adoption, pin the model and numerical format, tokenizer or encoding toolkit,
 
 GPT-6.1 Terra and Claude Fable/Mythos 5.2 add hosted operating points, but their parameter counts and detailed training recipes remain undisclosed. Section 17.6 separates their access, pricing and evaluated profiles from these downloadable artifacts.
 
+## Qwen4: Separate Backbone, Active Compute, and Lookup Capacity
+
+**As of 2026-11-17.** Qwen's November 16 launch reports a 2.4T backbone, 71B active parameters per token, plus 328B n-gram embedding parameters. It combines three Gated DeltaNet layers per Qwen Sparse Attention layer, micro-block context selection, four gated residual branches, and second-layer n-gram lookup [[36]](#ref-36). These are provider disclosures; training data composition remains undisclosed. Smaller open models are announced/planned, not released weights.
+
+Engineering inference: active parameters estimate neither resident weight memory nor lookup traffic. Benchmark recurrent-state compression, sparse retrieval and lexical lookup separately; do not attribute a system-level gain to one component without ablations. This connects Chapters 5, 12 and 13: compute, stored capacity and recoverable context are different budgets.
+
 ## Quizzes
 
 <details>
@@ -346,3 +352,5 @@ GPT-6.1 Terra and Claude Fable/Mythos 5.2 add hosted operating points, but their
 34. <a id="ref-34"></a>Qwen3.8 Flash Next. Model card, verified 2026-11-15. [Source](https://huggingface.co/Qwen/Qwen3.8-Flash-Next).
 
 35. <a id="ref-35"></a>GLM-5.3 Flash. Model card, verified 2026-11-15. [Source](https://huggingface.co/zai-org/GLM-5.3-Flash).
+
+36. <a id="ref-36"></a>Qwen Team. Qwen4-Max: Your New Teammate Has Arrived. Verified 2026-11-17. [Source](https://qwen.ai/blog?id=qwen4-max).

@@ -1,0 +1,80 @@
+---
+layout: ../../layouts/BookLayout.astro
+title: 6.6 Optimization Mechanics and Fair Experiments
+lang: en
+---
+
+# 6.6 Optimization Mechanics and Fair Experiments
+
+A loss is a measurement; an optimizer turns its derivatives into a trajectory. Before tuning a trillion-parameter run, be able to explain one parameter update and verify that batching preserves the intended objective.
+
+## From Likelihood to an Update
+
+For logits $z_k$, class probability is $p_k=\exp(z_k)/\sum_j\exp(z_j)$. The loss for correct class $y$ is $-\log p_y$, whose logit derivative is $p_k-\mathbf{1}[k=y]$. The chain rule maps that derivative through the network to $g_t=\nabla_\theta L_t$, the gradient of the batch objective at update $t$. Gradient descent uses $\theta_t=\theta_{t-1}-\eta_t g_t$, with learning rate $\eta_t$.
+
+For the diagnostic quadratic $L(x,y)=(x^2+100y^2)/2$, the gradient at $(1,1)$ is $(1,100)$. One SGD step with $\eta=0.01$ gives $(0.99,0)$; with $\eta=0.03$ it gives $(0.97,-2)$. Along the high-curvature direction, convergence requires $0<\eta<2/100$. A small gradient in one coordinate does not make the same step size stable in another. This is a local teaching example, not a convergence guarantee for a neural network.
+
+## What AdamW Remembers
+
+Adam keeps exponential averages of the gradient and its elementwise square. With $m_0=v_0=0$, decay coefficients $\beta_1,\beta_2$, and update index $t\ge1$ [[1]](#ref-1):
+
+$$
+m_t=\beta_1m_{t-1}+(1-\beta_1)g_t,\qquad
+v_t=\beta_2v_{t-1}+(1-\beta_2)g_t^2
+$$
+
+$$
+\widehat m_t=\frac{m_t}{1-\beta_1^t},\qquad
+\widehat v_t=\frac{v_t}{1-\beta_2^t}
+$$
+
+AdamW applies decay coefficient $\lambda$ separately from the adaptive update; $\epsilon>0$ stabilizes the denominator [[2]](#ref-2):
+
+$$
+\theta_t=(1-\eta_t\lambda)\theta_{t-1}
+-\eta_t\frac{\widehat m_t}{\sqrt{\widehat v_t}+\epsilon}.
+$$
+
+At the first step, bias correction gives $\widehat m_1=g_1$ and $\widehat v_1=g_1^2$. Ignoring $\epsilon$ and decay, each nonzero coordinate moves approximately $-\eta_1\operatorname{sign}(g_1)$, not proportionally to its raw gradient magnitude. This is why “same learning rate” does not mean “same update” across optimizers.
+
+Adding $\lambda\|\theta\|_2^2/2$ to the loss instead puts $\lambda\theta$ into Adam's moments and preconditioner. It is therefore different from AdamW. In plain SGD the two forms coincide under matching coefficients. Record which parameters receive decay; excluding biases and normalization parameters is a policy to test, not a mathematical necessity.
+
+## Token Weighting Must Survive Parallelism
+
+Let rank $r$ have summed valid-token loss $S_r$, token count $n_r$, and let $R$ be the number of ranks. The desired objective is $L=\sum_r S_r/N$ with $N=\sum_r n_r$. If the distributed reducer **averages** gradients, each rank must backpropagate $R S_r/N$ to recover that objective. A reducer that sums needs a different factor.
+
+For two ranks, take $S_1=4,n_1=2$ and $S_2=7,n_2=7$. Averaging local means gives $(2+1)/2=1.5$, while the token mean is $11/9$. The gradient generally changes too. Across accumulated microbatches, use the valid count over the entire update window; do not average unequal microbatch means. Unscale mixed-precision gradients first, aggregate the complete update, then clip the global norm once. Clipping each microbatch is a different algorithm.
+
+For fixed-length dense batches, effective input tokens per update are local batch × data-parallel ranks × accumulation steps × sequence length. Prompt masking and padding reduce the supervised-token count. Track both. Increasing batch size changes gradient noise and updates per token; linear learning-rate scaling is a hypothesis, not a universal law.
+
+## Design an Optimizer Experiment
+
+Use the [7.5 lab](../../chapter-7/tiny-decoder-lab/) as the executable contract: input manifest and integer tokenizer, masked next-token objective, FP32 CPU memory budget, AdamW settings, token-normalized metrics, abort checks, complete local checkpoint, held-out evaluation, and reproducibility gate. It uses no reference model. The schedule multiplies a ten-update warmup envelope by a cosine envelope indexed against the final planned budget. At fixed batch size, steps map to tokens; if batch size changes, preserve the intended token-indexed schedule explicitly.
+
+Change one hypothesis at a time, but tune each competing optimizer on development data with an equal search budget. Match initialization, data stream, target-token budget, and evaluation points; also report wall time and optimizer overhead. Log gradient and parameter-update norms separately. Select the recipe on validation data, then evaluate the locked choice on untouched test clusters. Reusing the lab's test set for repeated recipe selection turns it into development data.
+
+**Research snapshot, as of 2026-11-17.** Li et al. report that the Muon–AdamW ordering after fine-tuning can reverse as pretraining data budget grows [[3]](#ref-3). Arefin et al. report delayed effects of temporary Muon weight decay: an intervention can look worse when removed and better at the final budget [[4]](#ref-4). These are bounded experimental findings, not a universal optimizer ranking. They motivate measuring the final downstream objective and full learning trajectory, rather than selecting from early pretraining loss alone.
+
+## Quizzes
+
+<details>
+<summary>Quiz 1: Why does restoring only weights fail to reproduce an AdamW run?</summary>
+*The next update depends on first and second moments, step-dependent bias correction, learning-rate schedule, RNG state, and the next data batch. Equal weights do not imply equal next updates.*
+</details>
+
+<details>
+<summary>Quiz 2: With an averaging reducer, why is the local loss multiplied by world size?</summary>
+*The reducer divides the sum of local gradients by R. Backpropagating R times the local loss sum divided by the global token count cancels that division and yields the global token-mean gradient.*
+</details>
+
+<details>
+<summary>Quiz 3: An optimizer reaches lower loss after 20% of training. What is still missing?</summary>
+*The final-budget comparison, downstream adaptation and retention results, equal tuning budgets, run-to-run variation, and actual compute cost. Early ordering need not persist.*
+</details>
+
+## References
+
+1. <a id="ref-1"></a>Kingma & Ba. *Adam: A Method for Stochastic Optimization*. [Paper](https://arxiv.org/abs/1412.6980).
+2. <a id="ref-2"></a>Loshchilov & Hutter. *Decoupled Weight Decay Regularization*. [Paper](https://arxiv.org/abs/1711.05101).
+3. <a id="ref-3"></a>Li et al. (2026). *Pretraining Data Scale Reverses the Muon-AdamW Fine-Tuning Gap*. [v2](https://arxiv.org/abs/2611.03633v2).
+4. <a id="ref-4"></a>Arefin et al. (2026). *Delayed Effects of Temporary Weight Decay in Muon Pretraining*. [v1](https://arxiv.org/abs/2611.17876v1).

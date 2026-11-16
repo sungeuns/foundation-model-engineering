@@ -85,7 +85,7 @@ Some side effects cannot be undone by a model rollback. Use idempotency keys, dr
 
 **Eval-set maintenance** is a controlled data lifecycle. Assign stable evaluation IDs and cluster IDs, provenance, creation reason, owner, severity, rubric version, access class, and retirement state. Deduplicate and quarantine semantic neighbors from every training and synthetic pipeline.
 
-When a production badcase appears, freeze it as evaluation evidence and create evaluation-only sibling holdouts before training on related examples. Add fresh slices for distribution drift, but keep a stable anchor set for longitudinal comparison. Version changes and rerun both champion and candidate when prompts, graders, tools, or schemas change.
+When a production badcase appears, either quarantine its entire semantic cluster for evaluation or admit the cluster to training and label all related regression tests exposed. Generalization claims require separate untouched clusters; creating siblings before training does not make them independent. Add fresh slices for distribution drift, but keep a stable anchor set for longitudinal comparison. Version changes and rerun both champion and candidate when prompts, graders, tools, or schemas change.
 
 Audit evaluation access and contamination regularly. Rotate secret cases when exposure is suspected; never silently rewrite answers to preserve a trend line.
 
@@ -97,6 +97,10 @@ Audit evaluation access and contamination regularly. Rotate secret cases when ex
 
 Add a gate for **unauthorized attempted actions** even when an executor blocks them and the final answer looks correct. Record policy decisions and actual side effects outside the agent's own transcript. Version any offline substitute, because it changes the evaluated task and cannot inherit a live benchmark's score. Run containment tests through every enabled tool path, including redirected and indirect requests.
 
+
+## Worked Release Decision
+
+Use [17.7](../experimental-design-and-uncertainty/) to compute a paired cluster estimate, distinguish noninferiority from an inconclusive result, and quantify a zero-event safety bound. For canaries, declare persistent user/session assignment, sample size and one terminal efficacy analysis. Continuous safety-abort monitoring remains active; early efficacy promotion requires a sequential design. Hysteresis alone does not correct repeated statistical looks.
 
 ## Quizzes
 

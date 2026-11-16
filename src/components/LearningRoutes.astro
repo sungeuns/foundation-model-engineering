@@ -1,0 +1,36 @@
+---
+import { withPagePath } from '../utils/paths.js';
+const { lang = 'en' } = Astro.props;
+const ko = lang === 'ko';
+const routes = [
+  { path: '/chapter-1/learning-path-and-mastery', en: 'Choose your learning path', ko: '학습 경로 정하기', detailEn: 'Diagnose prerequisites and define evidence of mastery.', detailKo: '선수 지식을 진단하고 숙련도를 입증할 과제를 정합니다.' },
+  { path: '/chapter-6/optimization-mechanics', en: 'Derive the training update', ko: '학습 갱신 직접 유도하기', detailEn: 'Connect likelihood, AdamW, token weighting and fair experiments.', detailKo: '우도·AdamW·토큰 가중치·공정한 실험을 연결합니다.' },
+  { path: '/chapter-7/tiny-decoder-lab', en: 'Train and challenge a decoder', ko: '디코더 학습하고 검증하기', detailEn: 'Run a CPU lab with causal checks, an ablation and exact resume.', detailKo: 'CPU 실습으로 인과성·ablation·정확한 재개를 확인합니다.' },
+  { path: '/chapter-17/experimental-design-and-uncertainty', en: 'Defend an evaluation decision', ko: '평가 결과로 판단하기', detailEn: 'Calculate paired uncertainty, retention gates and rare-event bounds.', detailKo: '대응 비교의 불확실성·능력 보존·희귀 사건 상한을 계산합니다.' },
+];
+---
+<section class="learning-routes" aria-labelledby="learning-routes-title">
+  <h2 id="learning-routes-title">{ko ? '읽기에서 검증 가능한 역량으로' : 'From reading to demonstrated competence'}</h2>
+  <p>{ko ? '처음부터 순서대로 읽거나, 아래 실습 경로로 핵심 개념을 연결해보세요.' : 'Read in chapter order, or connect the core ideas through these practical milestones.'}</p>
+  <ol>
+    {routes.map((route, index) => (
+      <li>
+        <a href={withPagePath(`${ko ? '/ko' : ''}${route.path}`)}>
+          <span class="step" aria-hidden="true">{index + 1}</span>
+          <span><strong>{ko ? route.ko : route.en}</strong><span class="detail">{ko ? route.detailKo : route.detailEn}</span></span>
+        </a>
+      </li>
+    ))}
+  </ol>
+</section>
+<style>
+  .learning-routes { margin: 2rem 0; }
+  .learning-routes ol { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem; }
+  .learning-routes li { margin: 0; }
+  .learning-routes a { display: flex; align-items: flex-start; gap: .75rem; height: 100%; box-sizing: border-box; padding: 1rem; border: 1px solid #cbd5e1; border-radius: .65rem; background: #f8fafc; color: #172554; text-decoration: none; }
+  .learning-routes a:hover { background: #eff6ff; border-color: #2563eb; }
+  .learning-routes a:focus-visible { outline: 3px solid #2563eb; outline-offset: 3px; }
+  .step { flex: 0 0 1.7rem; height: 1.7rem; border-radius: 50%; background: #dbeafe; text-align: center; line-height: 1.7rem; font-size: .85rem; font-weight: 700; }
+  .detail { display: block; color: #475569; font-size: .93rem; line-height: 1.6; margin-top: .35rem; }
+  @media (max-width: 640px) { .learning-routes ol { grid-template-columns: 1fr; } }
+</style>

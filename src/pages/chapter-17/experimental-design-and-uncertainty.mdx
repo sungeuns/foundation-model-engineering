@@ -1,0 +1,88 @@
+---
+layout: ../../layouts/BookLayout.astro
+title: 17.7 Experimental Design and Uncertainty
+lang: en
+---
+
+# 17.7 Experimental Design and Uncertainty
+
+A candidate wins 56% of cases and the champion wins 54%. Before calling that progress, ask: which population, which independent units, which paired observations, and which decision threshold? Statistical machinery cannot repair a contaminated test set or a changed scaffold.
+
+## Define the Claim Before Measuring It
+
+An **estimand** is the population quantity you want to estimate. In this exercise it is the mean candidate-minus-champion success difference, giving each independent task cluster equal weight. A cluster may be a document, conversation, repository, or a family of synthetic siblings. Give every related case the same exposure status and split assignment. A traffic-weighted mean answers a different question; choose weights before seeing results.
+
+Let $d_{ci}=y^{candidate}_{ci}-y^{champion}_{ci}$ for paired binary outcomes on case $i$ in cluster $c$. With $C$ clusters and $n_c$ cases per cluster:
+
+$$
+\widehat\Delta=\frac{1}{C}\sum_{c=1}^{C}\left(\frac{1}{n_c}\sum_{i=1}^{n_c}d_{ci}\right).
+$$
+
+The model revision, prompt, scaffold, tools, decoding budget, and grader remain fixed. Resample whole clusters with replacement, preserving each pair and all its siblings; then recompute the same statistic. Independent row resampling falsely increases the effective sample size when siblings are correlated. Paired resampling means using the same sampled units for both systems [[1]](#ref-1).
+
+## Run a Complete Decision Exercise
+
+**Simplified, smoke-tested statistical lab.** Download [paired_release.py](../../labs/paired_release.py); Python 3.10+ and the standard library are sufficient. The outcomes are authored synthetic fixtures, not measurements of named models. The transparent percentile bootstrap is approximate and can behave poorly with small samples, rare outcomes, or degenerate empirical distributions. Validate coverage for the intended design before a consequential application.
+
+```bash
+python paired_release.py --scenario gain
+python paired_release.py --scenario uncertain
+python paired_release.py --scenario regression
+python paired_release.py --scenario missing
+```
+
+Each quality slice has 80 independent clusters with four sibling cases each. The script excludes exposed incident clusters, rejects duplicate case IDs and missing pairs, and produces a JSON decision packet using 4,000 bootstrap replicates with seed 23. In a real harness, predeclare whether a timeout counts as failure; never silently drop an unobserved outcome. Here unresolved missing evidence produces **Review**.
+
+| Scenario | Result | Reason |
+|---|---|---|
+| `gain` | Pass | Target gain is 15 percentage points; its one-sided 95% lower bound is 11.25 points, above the required 5 points. Retention passes its −2-point margin. |
+| `uncertain` | Review | The target evidence does not establish the required improvement. |
+| `regression` | Block | The retention slice loses 25 points despite the target gain. |
+| `missing` | Review | A paired outcome is unresolved. |
+
+The retention fixture deliberately has identical paired outcomes, so its bootstrap distribution is zero-width. This describes the empirical fixture; it does not prove the population has no uncertainty. Do not use a degenerate bootstrap to claim a real safety guarantee.
+
+A lower bound above zero establishes evidence of improvement under the method's assumptions; above 0.05 supports the stronger five-point gate. Noninferiority instead asks whether the lower bound exceeds a prespecified tolerated loss, here −0.02. “No significant degradation” does not establish noninferiority. The script uses separate one-sided bounds; the displayed lower and upper bounds together are a central 90% interval, not a two-sided 95% interval. Pass covers these synthetic offline gates only, not authorization to deploy.
+
+## Zero Observed Failures Is Not Zero Risk
+
+For $n$ independent Bernoulli trials, zero failures has probability $(1-p)^n$ at failure rate $p$. Setting that probability to $\alpha$ gives the exact one-sided upper bound $p_U=1-\alpha^{1/n}$ [[2]](#ref-2). At 95% confidence, 1,000 zero-failure trials give about **0.299%**, satisfying the exercise's 0.5% risk limit. One hundred give about **2.95%**. To put the bound below 0.1%, more than $\log(0.05)/\log(0.999)\approx2994.2$ independent zero-failure trials are needed, so use at least 2,995.
+
+The safety sample is a separate authored scenario in the script. Correlated retries are not independent trials, and selected red-team prompts do not estimate production prevalence. Production safety also needs threat coverage, severity handling, judge validation, and operational controls; a single binomial rate is insufficient.
+
+## Budget, Selection, and Stopping
+
+Plan sample size from a meaningful effect, discordant-pair frequency, cluster variation and desired power, using pilot data outside the sealed release set. Simulate the planned analysis when a closed-form approximation is unsuitable. A larger bootstrap replicate count reduces Monte Carlo noise; it does not create more independent tasks.
+
+Choose checkpoints and hyperparameters on development data. Lock the final comparison before opening the release set. Repeatedly selecting among many candidates or highlighting favorable slices requires multiplicity control or a fresh confirmation set. Requiring all prespecified gates to pass is different from searching for any favorable result; do not advertise all intervals as simultaneous confidence statements without a suitable adjustment.
+
+For canaries, randomize persistently by the user/session unit appropriate to interference. A practical default is a fixed sample size and one terminal efficacy analysis, with immediate safety-abort monitoring throughout. Repeatedly checking an ordinary confidence interval and stopping at its first favorable crossing invalidates its nominal interpretation. Early efficacy decisions need a sequential design; operational hysteresis does not supply one. Specify whether ramp stages reuse observations.
+
+Task resampling for a fixed checkpoint estimates uncertainty over tasks, not variability from retraining. For a recipe claim, repeat training seeds and model that additional hierarchy. To extend this lab, replicate sibling cases under distinct case IDs within each cluster: the cluster estimate must not become more certain merely because the same evidence was copied. Then compare a deliberately incorrect row bootstrap and explain its narrower interval.
+
+## Quizzes
+
+<details>
+<summary>Quiz 1: Why bootstrap clusters rather than individual paraphrases?</summary>
+*Paraphrases share information and outcomes. Resampling them as independent units exaggerates effective sample size. Whole-cluster resampling preserves the dependence represented by the grouping.*
+</details>
+
+<details>
+<summary>Quiz 2: Does an interval crossing zero prove retention is acceptable?</summary>
+*No. The lower bound must exceed a prespecified noninferiority margin. An interval can cross zero while still admitting an unacceptable loss.*
+</details>
+
+<details>
+<summary>Quiz 3: Why do 10,000 bootstrap replicates not replace 10,000 independent tasks?</summary>
+*Replicates approximate a sampling distribution from existing observations. They reduce numerical simulation noise but add no new independent evidence about the population.*
+</details>
+
+<details>
+<summary>Quiz 4: When is stopping early appropriate?</summary>
+*Safety or operational aborts can be monitored continuously. Early promotion based on efficacy requires a valid prespecified sequential design; otherwise use the fixed terminal analysis.*
+</details>
+
+## References
+
+1. <a id="ref-1"></a>SciPy. *bootstrap*. [Paired resampling and interval methods](https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.bootstrap.html).
+2. <a id="ref-2"></a>SciPy. *BinomTestResult.proportion_ci*. [Exact binomial intervals](https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats._result_classes.BinomTestResult.proportion_ci.html).

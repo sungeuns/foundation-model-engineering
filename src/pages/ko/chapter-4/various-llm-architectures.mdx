@@ -272,6 +272,12 @@ class SimpleLatentAttention(nn.Module):
 
 GPT-6.1 Terra와 Claude Fable/Mythos 5.2는 새로운 hosted 선택지를 제공하지만 매개변수 수와 상세 학습 레시피는 미공개입니다. 17.6절에서 접근 방식·가격·평가 프로필을 다운로드 가능한 아티팩트와 구분합니다.
 
+## Qwen4: Backbone·활성 연산·조회 용량을 구분하기
+
+**As of 2026-11-17.** 11월 16일 Qwen 발표는 2.4T backbone, 토큰당 71B 활성 매개변수, 별도의 328B n-gram embedding을 공개했습니다. Qwen Sparse Attention 한 층마다 Gated DeltaNet 세 층을 배치하고, micro-block 문맥 선택, 네 개의 gated residual 경로, 두 번째 층의 n-gram 조회를 결합합니다 [[36]](#ref-36). 제공자 공개 내용이며 학습 데이터 구성은 미공개입니다. 소형 open 모델은 announced/planned 상태로, 공개된 가중치가 아닙니다.
+
+공학적 해석: 활성 매개변수만으로 상주 가중치 메모리나 조회 트래픽을 추정할 수 없습니다. 순환 상태 압축, 희소 검색, 어휘 조회를 따로 평가하고 ablation 없이 시스템 개선을 한 구성요소의 효과로 돌리지 마세요. 5·12·13장이 다루는 연산량, 저장 용량, 복원 가능한 문맥은 서로 다른 예산입니다.
+
 ## Quizzes
 
 <details>
@@ -346,3 +352,5 @@ GPT-6.1 Terra와 Claude Fable/Mythos 5.2는 새로운 hosted 선택지를 제공
 34. <a id="ref-34"></a>Qwen3.8 Flash Next. Model card, verified 2026-11-15. [Source](https://huggingface.co/Qwen/Qwen3.8-Flash-Next).
 
 35. <a id="ref-35"></a>GLM-5.3 Flash. Model card, verified 2026-11-15. [Source](https://huggingface.co/zai-org/GLM-5.3-Flash).
+
+36. <a id="ref-36"></a>Qwen Team. Qwen4-Max: Your New Teammate Has Arrived. Verified 2026-11-17. [Source](https://qwen.ai/blog?id=qwen4-max).

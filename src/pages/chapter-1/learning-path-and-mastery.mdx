@@ -1,0 +1,70 @@
+---
+layout: ../../layouts/BookLayout.astro
+title: 1.5 Learning Paths and Evidence of Mastery
+lang: en
+---
+
+# 1.5 Learning Paths and Evidence of Mastery
+
+Reading an explanation and independently diagnosing a failed experiment are different achievements. Use this book as a sequence of increasingly demanding demonstrations: **derive, implement, measure, challenge, decide**. A useful portfolio contains reproducible evidence and failed hypotheses, not just completed pages.
+
+## Diagnose Your Starting Point
+
+Try these without a model assistant first. Then use an assistant to critique your reasoning, and record what you changed.
+
+| Task | Check your answer | If this is difficult |
+|---|---|---|
+| Multiply queries shaped `[B,H,T,D]` by transposed keys. | Scores are `[B,H,T,T]`; the contraction is over `D`. | Revisit 3.1–3.2; write the dimensions on every operation. |
+| Explain why predicting token `t` from an input already containing that token can produce a misleadingly low loss. | The target is visible; shift inputs/targets and enforce causal visibility. | Study 4.2, then run the 7.5 decoder lab. |
+| Combine loss sums 4 and 14 over 2 and 7 tokens. | Global mean is 18/9 = 2; an unweighted average of local means works here only because the means happen to match. Change the second sum to 7: the correct answer is 11/9, not 1.5. | Derive the unequal-token example in 6.6. |
+| Decide whether zero failures in 100 trials establishes a failure rate below 0.1%. | No; under independent Bernoulli trials, the one-sided 95% upper bound is about 2.95%. | Work through 17.7 before interpreting release gates. |
+
+Prerequisites are Python functions and arrays, matrix multiplication, derivatives and the chain rule, logarithms, conditional probability, and expectations. When a gap appears, repair that dependency with a small calculation before continuing. Mathematical notation should explain an executable quantity.
+
+## Choose a Route, Then Rejoin the Shared Core
+
+| Route | Reading order | Evidence to produce |
+|---|---|---|
+| Architecture and training | 1–4 → 6.1–6.3 → 6.6 → 7.5 → 5 and 7 → 8–10 | Correct causal decoder, optimization derivation, replayable training run, adaptation ablation. |
+| Inference and systems | 3–5 → 6.6 → 7.5 → 12–13 → 17.5–17.7 | Memory budget, measured latency distribution, batching/quantization comparison, rollback decision. |
+| Evaluation and agents | 3–4 → 8–10 → 14–16 → 17 → 18 | Quarantined evaluation set, fixed scaffold, paired comparison, failure analysis and release packet. |
+| Multimodal research | 3–7 → 11 → 17 → 19–20 | Matched-compute architecture comparison with visual and language retention measurements. |
+
+The routes change the entry point, not the required standards. All routes need masking, data isolation, resource accounting, and uncertainty. Read historical chapters to understand the bottleneck a method was invented to solve; revisit them when an apparent new idea resembles an older tradeoff.
+
+## Three Competence Gates
+
+**Gate A — explain and falsify a mechanism.** Complete the [optimization chapter](../../chapter-6/optimization-mechanics/) and [decoder lab](../../chapter-7/tiny-decoder-lab/). Predict what removing context access will do before running it. Submit the objective, tensor shapes, loss masks, measured results, causal-invariance check, and exact-resume result. A lower loss obtained by leaking the answer fails the gate.
+
+**Gate B — improve one property under a constraint.** Choose an adaptation, retrieval, or inference change. Freeze the baseline, data, scorer, and resource budget. Use development data for design choices, keep related examples in one split, and compare at least one plausible competing explanation. Submit a quality/cost/latency table with uncertainty and critical slices. If extra compute explains the gain, say so.
+
+**Gate C — defend a release or a rejection.** Use [17.7's paired release exercise](../../chapter-17/experimental-design-and-uncertainty/) before a real evaluation. Submit an immutable artifact manifest, independent release set, predetermined thresholds, failure taxonomy, staged rollout, and a restore rehearsal. A well-supported “do not release” earns the gate; a favorable average with an unexamined critical regression does not.
+
+## A Capstone Rubric
+
+Choose a bounded task such as domain document answering, structured extraction, or repository issue triage. A CPU-only capstone may use small local models or a deterministic retrieval baseline; purchasing frontier API access is not required. State clearly which foundation-model claims the available compute cannot test.
+
+Score each dimension 0–2: **0** missing/incorrect, **1** described but unverified, **2** independently reproducible. Dimensions are mechanism correctness, data lineage/isolation, fair comparison, uncertainty and slices, resource accounting, and recovery. Require 2 on correctness and isolation before accepting any performance claim; revise weak dimensions even when the total is high. This is an editorial self-assessment rubric, not an accredited qualification.
+
+Keep a one-page experiment record: question; predicted result; baseline and intervention; controlled variables; independent unit; budget; stopping rule; artifact hashes; observations; alternative explanation; next experiment. Ask a peer to reproduce it from a clean environment. The tiny lab practices reproducibility, but broad expertise also requires unfamiliar data, sustained debugging, paper reproduction, and review by other engineers. Reproducibility checklists provide a useful external audit of this record [[1]](#ref-1).
+
+## Quizzes
+
+<details>
+<summary>Quiz 1: Why can a rejected model be a successful capstone?</summary>
+*The competence being assessed is reliable inference and engineering judgment. Discovering a reproducible critical regression and rejecting the candidate is stronger evidence than promoting it on an aggregate gain.*
+</details>
+
+<details>
+<summary>Quiz 2: A reader can explain attention but cannot detect target leakage. Which gate is incomplete?</summary>
+*Gate A: the mechanism must be implemented and challenged with invariants, including shifting and causal visibility. A verbal explanation alone does not demonstrate this.*
+</details>
+
+<details>
+<summary>Quiz 3: Why is the highest rubric total insufficient when data isolation scores zero?</summary>
+*Contamination invalidates the generalization claim; strengths in presentation, speed, or recovery do not compensate for an exposed release set.*
+</details>
+
+## References
+
+1. <a id="ref-1"></a>NeurIPS. *Paper Checklist Guidelines*. [Reproducibility and experimental reporting](https://neurips.cc/public/guides/PaperChecklist).

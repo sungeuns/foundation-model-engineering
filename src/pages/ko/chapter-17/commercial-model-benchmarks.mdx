@@ -12,6 +12,8 @@ import CommercialModelBenchmarkExplorer from '../../../components/chapter-17/Com
 
 **2026-11-15 기준.** 전체 출시 목록이 아닌 32개 프로필의 정적 스냅샷입니다. 날짜는 출시, 가중치 공개, 확인한 아티팩트 리비전 중 명시된 이정표이며 모두 최초 출시일인 것은 아닙니다. 공개 저장소가 생성된 날짜만으로 가중치 공개일을 확정할 수 없습니다. 이후 출판·배포 시 출처를 다시 확인하세요.
 
+Qwen4-Max·Gemini 4 Hydrogen·LongCat-2.5·Agnes 2.5 Pro Theta는 [11월 17일 출시 보충](#11월-17일-출시-보충)에서 확인할 수 있습니다.
+
 ## 1. 벤치마크 버전이 바뀌면 측정도 달라집니다
 
 Artificial Analysis의 현재 **Intelligence Index v5.0.1**은 지식 업무, 코딩, 과학, 일반 과업의 9개 평가를 포함합니다 [[1]](#ref-1). 이 장은 10월의 v4.3.2 값을 전부 새 기준으로 교체했습니다. 두 버전 사이의 점수 변화가 같은 가중치의 성능 향상이나 저하를 뜻하지는 않습니다. 이전 점수를 새 점수에서 빼서 성능 추세로 해석하면 안 됩니다.
@@ -92,6 +94,23 @@ Anthropic은 **Claude Fable 5.2**와 **Mythos 5.2**의 기본 모델은 같고 �
 하나의 보편적 승자보다 품질·비용·지연·문맥·개방성·안전성의 파레토 관점으로 선택합니다. 도구, 권한, 실행 프레임워크, 추론 강도, 재시도, 입출력 한도, 채점기를 고정하고 같은 비공개 과업을 평가하세요. 짝지은 불확실성, 언어·도메인별 결과, 기본 능력 보존, 형식·도구 정확성, 안전성, 꼬리 지연, 오류율, 성공한 워크플로당 비용을 보고합니다. 평균이 개선돼도 핵심 집단이 실패하면 릴리스를 막아야 합니다.
 
 가중치/API 리비전, 토크나이저·템플릿, 양자화, 런타임, 생성 설정, 도구 스키마, 안전 정책을 하나의 불변 아티팩트 묶음으로 유지합니다. 호스팅과 로컬 버전은 따로 평가합니다. 제한된 권한으로 카나리 배포하고 정상 경로를 유지하며 캐시 상태와 대기 중인 외부 작업까지 롤백을 연습하세요. 형식이 정해진 결정 모델에는 별도 보정·선택적 위험 평가가 필요합니다. [16.7절](/ko/chapter-16/decision-models-and-selective-prediction)을 참고하세요.
+
+## 11월 17일 출시 보충
+
+**As of 2026-11-17.** 위 32개 프로필 차트는 **2026-11-15 평가 스냅샷**입니다. 아래는 1차 출처로 확인한 출시 보충이며 같은 방법으로 측정한 추가 벤치마크 점이 아닙니다. 출시 사실만으로 기존 Pareto 차트의 위치를 정할 수 없습니다.
+
+| 모델 | 확인한 접근·공개 상태 | 자체 평가에서 확인할 것 | 1차 증거 |
+|---|---|---|---|
+| Qwen4-Max | 11월 16일 released/API-only; 11월 11일 preview와 구분 | 네이티브 이미지·영상 이해, 1M 문맥, 도구 실행과 추론 예산. 이 출처들에서는 Max 가중치 공개가 확인되지 않음 | [[75]](#ref-75) [[76]](#ref-76) |
+| Gemini 4 Hydrogen | 11월 12일 released/API-only | 네 단계 thinking과 모델 라우팅 오버헤드. 조정자·작업 모델 전체 평가 | [[77]](#ref-77) |
+| LongCat-2.5 | 11월 10일 MIT 가중치 공개, released/open-weight | 멀티모달 장기 실행, 전체 상주 가중치, expert 라우팅과 KV 메모리 | [[78]](#ref-78) [[79]](#ref-79) |
+| Agnes 2.5 Pro Theta | 11월 17일 저장소 확인, Apache 2.0 released/open-weight | 사용자 정의 구현, 설정상 262,144 문맥, 실제 런타임 메모리와 template 동작 | [[80]](#ref-80) |
+
+Qwen4-Max 문서는 명시적 캐시와 적중을 보장하지 않는 암시적 캐시를 구분합니다. 읽기용 추론 요약은 후속 도구 호출에 필요한 암호화 추론 이력을 대신하지 않습니다 [[76]](#ref-76). 에이전트 평가에서는 이런 프로토콜 선택을 고정해야 합니다.
+
+Google은 Hydrogen을 빠른 실행용으로 소개하며 다중 모델 조합의 개선을 보고합니다. 제공자의 시스템 평가이지 Hydrogen 가중치만의 인과적 효과는 아닙니다 [[77]](#ref-77). LongCat card는 전체 1.6T·활성 약 48B를 보고하지만 저장소의 자동 tensor 총계는 다릅니다. 집계 범위를 섞지 말고 제공자 수치의 정의를 유지하세요 [[79]](#ref-79). Agnes card는 전체 약 187.8B와 BF16 tensor payload 375.5 GB를 보고하며, 제공한 벤치마크 차트에 완전한 평가 설정이 없다고 명시합니다 [[80]](#ref-80). 가중치 공개는 검사를 가능하게 하지만 점수 재현성이나 저렴한 로컬 배포를 보장하지 않습니다.
+
+수치 비교 전 evaluator 버전, 정확한 모델 ID, effort, scaffold, sampling, 도구와 비용 집계 방식을 기록하세요. 비교 조건이 확인되지 않은 점수는 차트에 넣지 않고 제공자 차트로 기존 독립 index를 대신하지 않습니다.
 
 ## Quizzes
 
@@ -196,3 +215,15 @@ Anthropic은 **Claude Fable 5.2**와 **Mythos 5.2**의 기본 모델은 같고 �
 72. <a id="ref-72"></a>GLM-5.3 Flash: primary documentation / artifact evidence. 확인일 2026-11-15. [Source](https://huggingface.co/zai-org/GLM-5.3-Flash).
 73. <a id="ref-73"></a>GLM-5.3 Flash: primary documentation / artifact evidence. 확인일 2026-11-15. [Source](https://huggingface.co/api/models/zai-org/GLM-5.3-Flash).
 74. <a id="ref-74"></a>GLM-5.3 Flash: evaluated system profile. 확인일 2026-11-15. [Source](https://artificialanalysis.ai/models/glm-5-3-flash).
+
+75. <a id="ref-75"></a>QwenCloud. Model releases. Verified 2026-11-17. [Source](https://docs.qwencloud.com/changelog/models).
+
+76. <a id="ref-76"></a>QwenCloud. Qwen4-Max specifications and protocol notes. Verified 2026-11-17. [Source](https://docs.qwencloud.com/developer-guides/getting-started/latest-model).
+
+77. <a id="ref-77"></a>Google. Introducing Gemini 4 Hydrogen. Verified 2026-11-17. [Source](https://blog.google/innovation-and-ai/models-and-research/gemini-models/introducing-gemini-4-hydrogen/).
+
+78. <a id="ref-78"></a>Meituan. LongCat-2.5 open-weight release. Verified 2026-11-17. [Source](https://tech.meituan.com/2026/11/10/Meituan-LongCat-2.5-Open-Source.html).
+
+79. <a id="ref-79"></a>Meituan. LongCat-2.5 model card and downloadable files. Verified 2026-11-17. [Source](https://huggingface.co/meituan-longcat/LongCat-2.5).
+
+80. <a id="ref-80"></a>Agnes AI. Agnes 2.5 Pro Theta model card and weights. Verified 2026-11-17. [Source](https://huggingface.co/Agnes-AI/Agnes-2.5-Pro-Theta).

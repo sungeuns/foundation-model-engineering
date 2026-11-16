@@ -36,7 +36,7 @@ To understand the benefit of Multi-Head Attention, consider the word "bank". It 
 *   In a single-head attention mechanism, the model must create a single attention distribution for "bank". If it needs to capture both the financial context (relating to "money") and the syntactic context (relating to the preceding article "the"), it has to compromise.
 *   With Multi-Head Attention, one head can focus on the **semantic relationship** (bank $\to$ money), while another head can focus on the **syntactic relationship** (bank $\to$ the).
 
-By projecting the $d_{model}$-dimensional embeddings into $h$ smaller subspaces of dimension $d_k$, each head can specialize in finding specific types of patterns without interference from other patterns. This is analogous to how CNNs use multiple filters to detect different visual features (e.g., edges, textures).
+By projecting the $d_{model}$-dimensional embeddings into $h$ smaller subspaces of dimension $d_k$, heads can represent different patterns, but specialization is not guaranteed and their outputs interact through the output projection and shared residual stream. This is analogous to how CNNs use multiple filters to detect different visual features (e.g., edges, textures).
 
 ---
 

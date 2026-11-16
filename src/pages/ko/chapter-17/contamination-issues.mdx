@@ -76,7 +76,7 @@ Hidden text의 정확한 continuation, answer-label 순서에 대한 brittleness
 
 Benchmark report에는 data cutoff claim, protected-registry version, scanned manifest, representation level, threshold와 calibration set, exclusion, residual uncertainty, training provider가 제공한 lineage 범위를 적습니다. “No match found”는 테스트한 detector에서 찾지 못했다는 뜻입니다.
 
-Protected evaluation ID나 semantic neighbor가 training에 들어갔거나, 중요한 synthetic data의 teacher/judge lineage가 없거나, candidate가 exposed case에서만 좋아졌다면 release claim을 차단합니다. 가능하면 clean manifest로 다시 학습하고 untouched sibling에서 평가합니다.
+Protected evaluation ID나 semantic neighbor가 training에 들어갔거나, 중요한 synthetic data의 teacher/judge lineage가 없거나, candidate가 exposed case에서만 좋아졌다면 release claim을 차단합니다. 가능하면 clean manifest로 다시 학습하고 독립된 미노출 의미 집단에서 평가합니다. 학습 사례의 형제 예시는 노출된 회귀 테스트이며 독립 보류셋이 아닙니다.
 
 ---
 

@@ -76,7 +76,7 @@ Suspicious behavior includes exact continuation of hidden text, brittle answer-l
 
 A benchmark report states the data cutoff claim, protected-registry version, scanned manifests, representation levels, thresholds and calibration set, exclusions, residual uncertainty, and whether training providers exposed sufficient lineage. “No match found” means no match under the tested detector.
 
-Block release claims when protected evaluation IDs or semantic neighbors entered training, when teacher/judge lineage is unavailable for material synthetic data, or when the candidate gains only on exposed cases. Rebuild from a clean manifest where feasible and evaluate on untouched siblings.
+Block release claims when protected evaluation IDs or semantic neighbors entered training, when teacher/judge lineage is unavailable for material synthetic data, or when the candidate gains only on exposed cases. Rebuild from a clean manifest where feasible and evaluate on independent, untouched semantic clusters. Siblings of training examples are exposed regression tests, not independent holdouts.
 
 ---
 

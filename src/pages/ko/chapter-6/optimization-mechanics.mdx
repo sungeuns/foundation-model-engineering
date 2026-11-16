@@ -1,0 +1,80 @@
+---
+layout: ../../../layouts/BookLayout.astro
+title: 6.6 최적화의 원리와 공정한 실험
+lang: ko
+---
+
+# 6.6 최적화의 원리와 공정한 실험
+
+손실은 측정값이고, 최적화기는 그 미분을 매개변수의 이동 경로로 바꿉니다. 거대한 모델의 설정을 조정하기 전에 한 번의 갱신을 설명하고, 배치를 나누어도 의도한 목적함수가 유지되는지 확인할 수 있어야 합니다.
+
+## 우도에서 매개변수 갱신까지
+
+Logit $z_k$에 대한 확률은 $p_k=\exp(z_k)/\sum_j\exp(z_j)$입니다. 정답 클래스가 $y$이면 손실은 $-\log p_y$이고 logit에 대한 미분은 $p_k-\mathbf{1}[k=y]$입니다. 연쇄 법칙으로 이 미분을 네트워크에 전달하면 갱신 $t$의 배치 기울기 $g_t=\nabla_\theta L_t$를 얻습니다. 경사 하강법은 학습률 $\eta_t$로 $\theta_t=\theta_{t-1}-\eta_t g_t$를 계산합니다.
+
+진단용 이차함수 $L(x,y)=(x^2+100y^2)/2$에서 $(1,1)$의 기울기는 $(1,100)$입니다. SGD 한 번에 $\eta=0.01$이면 $(0.99,0)$, $\eta=0.03$이면 $(0.97,-2)$가 됩니다. 곡률이 큰 방향의 수렴 조건은 $0<\eta<2/100$입니다. 한 좌표의 기울기가 작다고 다른 좌표에서도 같은 학습률이 안정적인 것은 아닙니다. 이는 국소적인 교육 예제이며 신경망의 수렴 보장은 아닙니다.
+
+## AdamW가 기억하는 것
+
+Adam은 기울기와 원소별 제곱의 지수 이동평균을 저장합니다. $m_0=v_0=0$, 감쇠 계수 $\beta_1,\beta_2$, 갱신 번호 $t\ge1$일 때 다음과 같습니다 [[1]](#ref-1).
+
+$$
+m_t=\beta_1m_{t-1}+(1-\beta_1)g_t,\qquad
+v_t=\beta_2v_{t-1}+(1-\beta_2)g_t^2
+$$
+
+$$
+\widehat m_t=\frac{m_t}{1-\beta_1^t},\qquad
+\widehat v_t=\frac{v_t}{1-\beta_2^t}
+$$
+
+AdamW는 적응적 갱신과 별도로 계수 $\lambda$의 가중치 감쇠를 적용합니다. $\epsilon>0$은 분모를 안정화합니다 [[2]](#ref-2).
+
+$$
+\theta_t=(1-\eta_t\lambda)\theta_{t-1}
+-\eta_t\frac{\widehat m_t}{\sqrt{\widehat v_t}+\epsilon}.
+$$
+
+첫 갱신에서는 편향 보정으로 $\widehat m_1=g_1$, $\widehat v_1=g_1^2$가 됩니다. $\epsilon$과 감쇠를 무시하면 0이 아닌 각 좌표는 기울기 크기에 비례하는 대신 대략 $-\eta_1\operatorname{sign}(g_1)$만큼 움직입니다. 따라서 최적화기가 다르면 같은 학습률도 같은 갱신을 뜻하지 않습니다.
+
+손실에 $\lambda\|\theta\|_2^2/2$를 더하면 $\lambda\theta$가 Adam의 moment와 좌표별 스케일 조정에 들어갑니다. AdamW와 다른 이유입니다. 일반 SGD에서는 계수를 맞추면 두 형태가 같습니다. 어느 매개변수에 감쇠를 적용했는지 기록하세요. Bias와 정규화 매개변수를 제외하는 것은 검증할 정책이지 수학적 필연이 아닙니다.
+
+## 병렬화해도 토큰별 가중치 유지하기
+
+Rank $r$의 유효 토큰 손실 합을 $S_r$, 토큰 수를 $n_r$, rank 수를 $R$이라 합시다. 원하는 목적함수는 $N=\sum_r n_r$에 대해 $L=\sum_r S_r/N$입니다. 분산 reducer가 기울기를 **평균** 낸다면 각 rank에서 $R S_r/N$을 역전파해야 합니다. 합산하는 reducer에는 다른 계수가 필요합니다.
+
+두 rank에서 $S_1=4,n_1=2$, $S_2=7,n_2=7$이면 지역 평균의 평균은 $(2+1)/2=1.5$지만 토큰 평균은 $11/9$입니다. 일반적으로 기울기도 달라집니다. Microbatch를 누적할 때는 전체 갱신 구간의 유효 토큰 수를 사용하세요. 토큰 수가 다른 microbatch 평균을 단순 평균하면 안 됩니다. 혼합 정밀도 기울기의 스케일을 먼저 되돌리고 전체 갱신을 집계한 다음 전역 norm을 한 번 클리핑합니다. Microbatch마다 클리핑하면 다른 알고리즘입니다.
+
+고정 길이 밀집 배치의 갱신당 입력 토큰 수는 지역 배치 × 데이터 병렬 rank 수 × 누적 횟수 × 시퀀스 길이입니다. Prompt 마스크와 padding은 감독 대상 토큰 수를 줄이므로 두 수를 모두 기록합니다. 배치를 늘리면 기울기 잡음과 토큰당 갱신 횟수가 바뀝니다. 학습률을 선형으로 키우는 규칙은 검증할 가설이지 보편 법칙이 아닙니다.
+
+## 최적화기 실험 설계하기
+
+실행 계약은 [7.5 실습](../../chapter-7/tiny-decoder-lab/)을 따릅니다. 입력 manifest와 정수 tokenizer, 마스크를 적용한 다음 토큰 목적함수, FP32 CPU 메모리 예산, AdamW 설정, 토큰 정규화 지표, 중단 조건, 완전한 로컬 체크포인트, 보류 평가, 재현성 통과 기준을 제공합니다. 참조 모델은 사용하지 않습니다. 스케줄은 10회 warmup 계수와 최종 계획 예산에 맞춘 cosine 계수를 곱합니다. 배치가 고정이면 step과 토큰 수가 대응하지만 배치를 바꿀 때는 의도한 토큰 기준 스케줄을 명시적으로 유지해야 합니다.
+
+가설을 하나씩 바꾸되 경쟁 최적화기마다 같은 탐색 예산으로 개발셋 튜닝을 수행합니다. 초기값, 데이터 순서, 감독 토큰 예산, 평가 시점을 맞추고 실제 시간과 최적화기 오버헤드도 보고하세요. 기울기 norm과 실제 매개변수 갱신 norm은 따로 기록합니다. 검증셋으로 레시피를 정한 뒤 고정된 선택을 미노출 test cluster에서 평가합니다. 실습의 test 결과를 반복해서 선택에 사용하면 그 집합은 개발셋이 됩니다.
+
+**연구 스냅샷: as of 2026-11-17.** Li 등의 실험에서는 사전 학습 데이터 예산이 커질 때 미세조정 후 Muon과 AdamW의 순위가 뒤집힐 수 있었습니다 [[3]](#ref-3). Arefin 등은 Muon의 일시적 가중치 감쇠가 종료 시점에는 불리해 보여도 최종 예산에서는 유리해지는 지연 효과를 보고합니다 [[4]](#ref-4). 제한된 실험 결과이며 보편적인 최적화기 순위가 아닙니다. 초기 사전 학습 손실만으로 선택하지 말고 최종 downstream 목적과 전체 학습 경로를 측정해야 하는 이유입니다.
+
+## Quizzes
+
+<details>
+<summary>Quiz 1: 가중치만 복원하면 AdamW 실행이 재현되지 않는 이유는 무엇인가요?</summary>
+*다음 갱신은 1·2차 moment, step별 편향 보정, 학습률 스케줄, RNG 상태와 다음 배치에도 의존합니다. 같은 가중치가 같은 다음 갱신을 보장하지 않습니다.*
+</details>
+
+<details>
+<summary>Quiz 2: 평균 reducer에서 지역 손실에 rank 수를 곱하는 이유는 무엇인가요?</summary>
+*Reducer가 지역 기울기 합을 R로 나누기 때문입니다. 지역 손실 합에 R을 곱하고 전역 토큰 수로 나누어 역전파하면 이 나눗셈이 상쇄되어 전역 토큰 평균 기울기가 됩니다.*
+</details>
+
+<details>
+<summary>Quiz 3: 학습 20% 지점에서 손실이 낮다면 무엇을 더 확인해야 하나요?</summary>
+*최종 예산 비교, downstream 적응과 기존 능력 보존, 동일 튜닝 예산, 실행 간 변동, 실제 연산 비용이 필요합니다. 초기 순위는 유지되지 않을 수 있습니다.*
+</details>
+
+## References
+
+1. <a id="ref-1"></a>Kingma & Ba. *Adam: A Method for Stochastic Optimization*. [Paper](https://arxiv.org/abs/1412.6980).
+2. <a id="ref-2"></a>Loshchilov & Hutter. *Decoupled Weight Decay Regularization*. [Paper](https://arxiv.org/abs/1711.05101).
+3. <a id="ref-3"></a>Li et al. (2026). *Pretraining Data Scale Reverses the Muon-AdamW Fine-Tuning Gap*. [v2](https://arxiv.org/abs/2611.03633v2).
+4. <a id="ref-4"></a>Arefin et al. (2026). *Delayed Effects of Temporary Weight Decay in Muon Pretraining*. [v1](https://arxiv.org/abs/2611.17876v1).

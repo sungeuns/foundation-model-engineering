@@ -1,6 +1,11 @@
 // Keep search snippets separate from chapter prose so editorial work can proceed
 // independently. A chapter's own frontmatter description always takes priority.
 export const searchDescriptions = {
+  '/chapter-1/learning-path-and-mastery': { en: 'Learning Paths and Evidence of Mastery: derive mechanisms, run controlled experiments, and assess reproducible evidence.', ko: '학습 경로와 숙련도 입증: 메커니즘을 유도하고 통제 실험과 재현 가능한 증거로 판단합니다.' },
+  '/chapter-6/optimization-mechanics': { en: 'Optimization Mechanics and Fair Experiments: derive mechanisms, run controlled experiments, and assess reproducible evidence.', ko: '최적화의 원리와 공정한 실험: 메커니즘을 유도하고 통제 실험과 재현 가능한 증거로 판단합니다.' },
+  '/chapter-7/tiny-decoder-lab': { en: 'Build, Break, and Resume a Tiny Decoder: derive mechanisms, run controlled experiments, and assess reproducible evidence.', ko: '작은 디코더 실습과 재개 검증: 메커니즘을 유도하고 통제 실험과 재현 가능한 증거로 판단합니다.' },
+  '/chapter-17/experimental-design-and-uncertainty': { en: 'Experimental Design and Uncertainty: derive mechanisms, run controlled experiments, and assess reproducible evidence.', ko: '실험 설계와 불확실성: 메커니즘을 유도하고 통제 실험과 재현 가능한 증거로 판단합니다.' },
+
   '/chapter-15/chain-of-thought': {
     en: 'Understand chain-of-thought prompting, compare zero-shot and example-based reasoning prompts, and examine when added reasoning helps or hurts.',
     ko: '사고의 사슬 프롬프팅을 이해하고 제로샷·예시 기반 추론 프롬프트를 비교하며, 추론 과정이 도움이 되거나 해가 되는 조건을 살펴봅니다.',
@@ -66,8 +71,8 @@ export const searchDescriptions = {
     ko: '데이터 계보, 여러 표현 수준의 중복 탐지, 오염 제거 파이프라인과 비공개 평가셋으로 벤치마크 오염을 탐지하고 방지합니다.',
   },
   '/chapter-17/commercial-model-benchmarks': {
-    en: 'Interpret commercial model benchmarks across quality, cost, latency, and public evaluation methodologies without reducing model choice to one leaderboard.',
-    ko: '상용 모델 벤치마크의 품질·비용·지연 시간과 공개 평가 방법론을 비교하고, 하나의 순위표에 의존하지 않는 모델 선택 기준을 살펴봅니다.',
+    en: 'Compare model quality, cost and evaluation methods, including the November 17 Qwen4-Max, Gemini 4 Hydrogen, LongCat-2.5 and Agnes release supplement.',
+    ko: '모델 품질·비용·평가 방법을 비교하고 11월 17일 Qwen4-Max·Gemini 4 Hydrogen·LongCat-2.5·Agnes 출시 보충을 확인합니다.',
   },
   '/chapter-18/red-teaming': {
     en: 'Explore LLM red teaming through threat taxonomies, automated testing, multi-turn attacks, and the gap between refusal behavior and robust safety.',

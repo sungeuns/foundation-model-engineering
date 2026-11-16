@@ -182,3 +182,11 @@ Inspected and updated 11 EN/KO pairs in this pass. Current per-file inspection d
 - [x] `chapter-16/decision-models-and-selective-prediction` — EN/KO inspected 2026-10-25; numbered navigation, search metadata, references, equations, quizzes, and browser behavior checked. Current hashes are in the canonical inventory.
 
 The October 25 pass compares the complete ordered inventory (103 EN/KO pairs), changes 19 pairs, and checks all 53 mounted interactions in both languages at desktop/mobile widths. Seven pages received full editorial inspection; other changes received focused or mechanical review. This does not mark the entire book freshly reviewed. See the October 25 evidence in `editorial_rewrite_worklog.md`.
+
+
+## 2026-11-17 additions inspected
+
+- 1.5 `learning-path-and-mastery` — Inspected 2026-11-17; EN/KO source, numerical semantics and rendered output checked.
+- 6.6 `optimization-mechanics` — Inspected 2026-11-17; EN/KO source, numerical semantics and rendered output checked.
+- 7.5 `tiny-decoder-lab` — Inspected 2026-11-17; EN/KO source, numerical semantics and rendered output checked.
+- 17.7 `experimental-design-and-uncertainty` — Inspected 2026-11-17; EN/KO source, numerical semantics and rendered output checked.

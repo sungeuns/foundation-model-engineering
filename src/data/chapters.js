@@ -7,6 +7,7 @@ export const chapters = [
       { id: "1-2", title: { en: "1.2 The Power of Representation", ko: "1.2 표현의 힘" }, path: "/chapter-1/power-of-representation" },
       { id: "1-3", title: { en: "1.3 Deep Learning Paradigms", ko: "1.3 딥러닝 패러다임" }, path: "/chapter-1/deep-learning-paradigms" },
       { id: "1-4", title: { en: "1.4 The Bitter Lesson", ko: "1.4 쓴 교훈" }, path: "/chapter-1/bitter-lesson" },
+      { id: "1-5", title: { en: "1.5 Learning Paths and Evidence of Mastery", ko: "1.5 학습 경로와 숙련도 입증" }, path: "/chapter-1/learning-path-and-mastery" },
     ]
   },
   {
@@ -61,6 +62,7 @@ export const chapters = [
       { id: "6-3", title: { en: "6.3 Large-scale Training Stability", ko: "6.3 대규모 학습 안정성" }, path: "/chapter-6/large-scale-training-stability" },
       { id: "6-4", title: { en: "6.4 Infrastructure", ko: "6.4 인프라" }, path: "/chapter-6/infrastructure" },
       { id: "6-5", title: { en: "6.5 Synthetic Data for Pre-training", ko: "6.5 사전 학습을 위한 합성 데이터" }, path: "/chapter-6/synthetic-data-for-pre-training" },
+      { id: "6-6", title: { en: "6.6 Optimization Mechanics and Fair Experiments", ko: "6.6 최적화의 원리와 공정한 실험" }, path: "/chapter-6/optimization-mechanics" },
     ]
   },
   {
@@ -71,6 +73,7 @@ export const chapters = [
       { id: "7-2", title: { en: "7.2 ZeRO (Zero Redundancy Optimizer)", ko: "7.2 ZeRO (Zero Redundancy Optimizer)" }, path: "/chapter-7/zero-redundancy-optimizer" },
       { id: "7-3", title: { en: "7.3 Model & Pipeline Parallelism", ko: "7.3 모델 및 파이프라인 병렬화" }, path: "/chapter-7/model-and-pipeline-parallelism" },
       { id: "7-4", title: { en: "7.4 Flash Attention 1, 2, 3", ko: "7.4 Flash Attention 1, 2, 3" }, path: "/chapter-7/flash-attention" },
+      { id: "7-5", title: { en: "7.5 Build, Break, and Resume a Tiny Decoder", ko: "7.5 작은 디코더 실습과 재개 검증" }, path: "/chapter-7/tiny-decoder-lab" },
     ]
   },
   {
@@ -187,6 +190,7 @@ export const chapters = [
       { id: "17-4", title: { en: "17.4 Contamination Issues", ko: "17.4 오염 문제" }, path: "/chapter-17/contamination-issues" },
       { id: "17-5", title: { en: "17.5 Production Evaluation and Release Gates", ko: "17.5 프로덕션 평가와 릴리스 게이트" }, path: "/chapter-17/production-evaluation-and-release-gates" },
       { id: "17-6", title: { en: "17.6 Commercial Model Benchmarks", ko: "17.6 상업용 모델 Benchmark" }, path: "/chapter-17/commercial-model-benchmarks" },
+      { id: "17-7", title: { en: "17.7 Experimental Design and Uncertainty", ko: "17.7 실험 설계와 불확실성" }, path: "/chapter-17/experimental-design-and-uncertainty" },
     ]
   },
   {

@@ -268,12 +268,13 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 1.2 | `/chapter-1/power-of-representation` | Inspected 2026-11-15 | 02953c0fa37f1cf79992015776672e8e8e1c4b4346803513bc4edb1b17c8892f | b67091f78be5e17ef78e1a5816bdb71b2eed0fd8444ab78f4b7893c468dda9fa |
 | 1.3 | `/chapter-1/deep-learning-paradigms` | Inspected 2026-11-15 | f373b59e6d5782c6150b3b363f1d61ba9d3a4ecab555ade160773d88a2489ff5 | 942a6ebe78204301a370fab8741dfd51ef3a63c274cfba57ca39a9ba18852aea |
 | 1.4 | `/chapter-1/bitter-lesson` | Inspected 2026-11-15 | f69188e38bc792ee461c83466da32354065ebdff52e5a7197d8a2d81743e92e3 | 6aa556b9971b28ccd3103e40dc174142ffe1fdf73673b64467fd0ef8dbd0baf1 |
+| 1.5 | `/chapter-1/learning-path-and-mastery` | Inspected 2026-11-17 | 0f8f04bb12ad70521b3c701fae89e83133b936a5d28d74a07b17d6a0f9d55c12 | 7afd35142e5986833e81c484c1c3d7fe0b717d7d728be32693fb4ec93a0ff029 |
 | 2.1 | `/chapter-2/markov-chains-to-rnns` | Inspected 2026-11-15 | 0ce137827271786ce59fbb687ede850189b1842843a7e11d9420e8d51da672c8 | 0d4b5440f58a02205e9c981af00a3d028f6e7081b2923f0a609a0f0f9e581e2a |
 | 2.2 | `/chapter-2/vanishing-exploding-gradients` | Inspected 2026-11-15 | f883974659fb302e235151e51e0cffb5a6f9418089342fa6be149d94c207ffac | 7a4baf6b5be2bf9ff72621f15581483e6595c47296cb169d5d1c03395b882385 |
 | 2.3 | `/chapter-2/dawn-of-attention` | Inspected 2026-11-15 | e3df7fbeb285121402336d5a6a0c154e791da8c420e0e19716aa9a78ed478b16 | f8ca565f4756b8e2138133b67002a29e007ed381cbd24be6cf79b518888600c0 |
 | 2.4 | `/chapter-2/cnns-for-nlp` | Inspected 2026-11-15 | 37f7b031323ada4d1eb80b89d4ba1a7a33eb6ec127580aaed5e31500107e5ca2 | 4ffc530cb6c1a5483ef59e35462a49712c19200a70593fd408e5698050ec53c5 |
-| 3.1 | `/chapter-3/self-attention-mathematics` | Inspected 2026-11-15 | 4dd65d3dc10bc955e6208f3f4715a3454714e6692c0fd84569fe7c3b138a2ab0 | ffbaea4cff2f83b697a94836987d009a17471c20b5f0ea7bc2ca12ad0e623ee0 |
-| 3.2 | `/chapter-3/multi-head-attention` | Inspected 2026-11-15 | 1ffc5d48e6e9780be4cc3e88694819fe084e68e890a2542b64ec76141dc09b4f | 292ec069569078cddc475a2a83a82584a272aeb23c427a03009de9bd416c1495 |
+| 3.1 | `/chapter-3/self-attention-mathematics` | Inspected 2026-11-17 | c05d8269cdbab869a5edd5aa3c010c851d2f42cf067e6ca1baf149c80137b742 | 956f01ee2ea07ca922954953b985d05212f4b7d356ca1cafe9e30c8ce45d4baa |
+| 3.2 | `/chapter-3/multi-head-attention` | Inspected 2026-11-17 | dee853ce0966bb3f16f917320d63510b5d75e8cba877cfaa59a8aed045b46ed6 | e7d1daa0d332ef06e7cc5328bf97d782c318ef6a2b9ad88096325d2bb3fd491e |
 | 3.3 | `/chapter-3/position-encoding-strategy` | Inspected 2026-11-15 | 63c3645268727e12760f56b1748a44bbac8afd1c7f66f9d49329e76e39130fb8 | 17d34127b63e936f20ca9f2440fa2aed52e5291548cf18a9dcf8b4f3fdf7463e |
 | 3.4 | `/chapter-3/layer-normalization-residuals` | Inspected 2026-11-15 | d9c2b8dbee0ba9d5c365d0395014e3e9d6fe06e7f58387401fd6ae625584825f | 7571b6552563c1bc6c771e9a1cb3acc1163645b179e7bb7e6a3dc2769e2cfe5e |
 | 3.5 | `/chapter-3/complexity-analysis` | Inspected 2026-11-15 | 528f765af0e658c5d7116b5d3651be5a3ec6496b5651970285143831e0344b2c | d5da6dea75982e92dc97033508aacd582e677911caa2afbfb61f1356fbf12537 |
@@ -281,7 +282,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 4.2 | `/chapter-4/decoder-only` | Inspected 2026-11-15 | c0c4d6a6c3109423997c9d58d65f923f6e2375445577a79054e871947dd2a372 | 61354f7957d28e3c4f40faa53d541b7c03b3e48206976b5f84834ce814f89d83 |
 | 4.3 | `/chapter-4/encoder-decoder` | Inspected 2026-11-15 | c0372544843683d2e7b80936ba33fd4c343a4b6850c40844ae59ccc34362f918 | d1c77e9b87235b6e7d00b7350a01d5d813567221ce8ca91edf14e5241f400905 |
 | 4.4 | `/chapter-4/hybrid-prefix-lm` | Inspected 2026-11-15 | ebe7194bc50255772200359bc604906d56494def1f09ca586850109416062cec | 69e056f6690ea2345e02be5001a87a64f7bcfe902add9d9ae759071d38bb7ae1 |
-| 4.5 | `/chapter-4/various-llm-architectures` | Inspected 2026-11-15 | 8777f81be1df6d27c33ac8a9b858a254bbbc33b21e6a784a06c43a70c527ed7f | 3f67105ad0ce6fd6419bd5d19cdf0bc52b67164212a6ae64be79c986931dcaa4 |
+| 4.5 | `/chapter-4/various-llm-architectures` | Inspected 2026-11-17 | c5b6dad94e44b5064be40007e7c2cb70924022228bc0921ed4d50e8f6bbc52a1 | cd5a3f20afe20d3daceba7ef2b20df43b10688857eab4510e68e60233938b177 |
 | 5.1 | `/chapter-5/sparse-vs-dense-models` | Inspected 2026-11-15 | 34f083166e4d9b6677c4c18ddc372048f6f252450ca7265cfa555d03c11deb09 | 890d84a1b6c8fc59a601463209724beb86d21ef4fdf31eb5d5620831522a2117 |
 | 5.2 | `/chapter-5/routing-algorithms` | Inspected 2026-11-15 | 3b83671dec53a4a69ee8c357d810ac48b3b2b069f1b54fdb76a8e567ae6ed3e7 | 436d75fa19297b28084c3bf55cb2e92e341e86d33370e1843de1c263a8f9d356 |
 | 5.3 | `/chapter-5/expert-parallelism` | Inspected 2026-11-15 | a11075121fc5a2afee688651392c4cf6175276f873f722334e423fabe2a9f919 | 99b77f853089d119dcddbd2d2ebc0e9a97c4158914095733b4292a4fdb27ccd1 |
@@ -292,10 +293,12 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 6.3 | `/chapter-6/large-scale-training-stability` | Inspected 2026-11-15 | 233421b292101c94f4746e41c29de6422c5c103333a5c1c6968cfe0cd3cc6604 | 149cc8e85a1db21731313a38038b3f3d23c5fdc16711b51534764c5e4fd2da89 |
 | 6.4 | `/chapter-6/infrastructure` | Inspected 2026-11-15 | db766374738bc9706d644b19fc1d6ff8dcddbe74bc265f21de02ac95efbffa6d | 04218b7b41cc9ee92416a1f69070eebbbb6afcb6994a1fff5c98fe3e8b5de264 |
 | 6.5 | `/chapter-6/synthetic-data-for-pre-training` | Inspected 2026-11-15 | 3d2bab63db26c5456f88eab0f51e2e7e70ac49d93d868427783f625e4ae166ee | c00d1ac3c7345b301c837f4065a2f62187a9a7d8ddc6210604d6861a1228206e |
+| 6.6 | `/chapter-6/optimization-mechanics` | Inspected 2026-11-17 | 942111c9629675b61e7af38dd1e0bb94a0dbe0aeff5c9d142fd7c7d0cc167b3e | 948f68b51e05f15a67755538714f595ff03ec214fe3c5d518eb6ebbff8000c22 |
 | 7.1 | `/chapter-7/data-parallelism` | Inspected 2026-11-15 | 8c37d63a720ee64a8c4f37ac09c3062f12df4870500f1ee54d598637de7e8b8c | 92eda4cd1e42afb32a5f74183fb6f59c15c4fe8ab85070464b0fd553ce2db987 |
 | 7.2 | `/chapter-7/zero-redundancy-optimizer` | Inspected 2026-11-15 | b126180d4c8d978f8925ed51d7ace338f8cdf2e7c7ecc1309ef2301714bd4e47 | 27d8e5e67bf17cd5ddd308bffd01bac2f6ed7b1b11bcfea218dd52e9924cd43d |
 | 7.3 | `/chapter-7/model-and-pipeline-parallelism` | Inspected 2026-11-15 | 0832cffc306946b61c817850cb07cdbebf0d06aadfe607b6b7dfe75d14d010bf | b645ef818ecb8e33702468b9dcacf90a130b6c229ed8603d055736e2e62f5db4 |
 | 7.4 | `/chapter-7/flash-attention` | Inspected 2026-11-15 | f08f54be082e18331641c469a8450d4239ece7542ff99bf05d28b6c8ca53e808 | 41aa2cfd204051dd169fa72160e0414d7f67a802679d06e87467d634881b0bd5 |
+| 7.5 | `/chapter-7/tiny-decoder-lab` | Inspected 2026-11-17 | 0369bb0003de17f1da4af7c16bd6fdb4b35c190363c08f7cc1d727ca05233e63 | 22431dab4958ec62f0ed22b73ace9fbae1a4a9b0b71958afab5c3a438747e566 |
 | 8.1 | `/chapter-8/power-law` | Inspected 2026-11-15 | 94438ed30e8ba8b78be44ecdc3d372fa2e7115574128f6cef0aa5f712abf0488 | dccb2549850ca1156ce5dbde865083e3375246190ae771ccf027c864321ae090 |
 | 8.2 | `/chapter-8/chinchilla-optimality` | Inspected 2026-11-15 | a5c303a07cd048a5700ec4cf86eeb44387cdcc43775eb4a2c5678f4aed6250d1 | 113d3edaa8047c8e5b5455f712a931429e550d22c1d260be5947dab80f4ef2a6 |
 | 8.3 | `/chapter-8/over-training-vs-optimal-training` | Inspected 2026-11-15 | 0cd59dc676f0efe54f93a85775af740fc13bd689502b3ead940bf61212f2d83c | 21d9ca8bfbe9e711f63a75a24d0760d53ffdd87d8f22954f7ac911f7c0a18248 |
@@ -311,7 +314,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 10.3 | `/chapter-10/dpo` | Inspected 2026-11-15 | 7e4f3631827b07506801aafb6e8a06de50b0c341231b4dbd8d46e2be72f2f57e | 6996af5f5f56fc57afd5f48177621cba58cae1d5898f2007a27be44806889762 |
 | 10.4 | `/chapter-10/kto-and-ipo` | Inspected 2026-11-15 | 61ac741df320db7fb3031414fdacaf5770fa28200d3f91f8d69cec83c273c046 | a4efc7610bf213a07fe5fcabf60033b2ab28a12d8fb257270bd9900a69e5a4e3 |
 | 10.5 | `/chapter-10/alignment-tax` | Inspected 2026-11-15 | e630460ac1b1a8620d753362e400c3bea18d69cff7a6265b3820b6ce7230c6f6 | 5041f746d84764553aecee5b114599a703cc2206889aa57838d5b2719b0bec7e |
-| 11.1 | `/chapter-11/vision-language-bridges` | Inspected 2026-11-15 | 5963b042c0e0ee6b5a201f2e7774a9197160814bc9f994a876718ed2f66bd82b | 48febd4ee8db1fd5b0b38b15e5af03ddaec3d04f6c2da897f54ec7223b0f350f |
+| 11.1 | `/chapter-11/vision-language-bridges` | Inspected 2026-11-17 | 821e9cc5083e4bedc7315993ab1d841eb4b0864e52633036bbe175fd885cf6b5 | 85884e1add65d8a5e7b357a601d60929e0bc4e7c2a27835517a497c0712b6d29 |
 | 11.2 | `/chapter-11/audio-and-speech-integration` | Inspected 2026-11-15 | fa7776b0ab0b37009a782b6a3a287422cadbca98042f32aeb96d15128840cbe4 | 7b5ea4a0872f18019dd5c3e2717a5f86cf91542503a80b389373ca856e2207da |
 | 11.3 | `/chapter-11/unified-multimodal-any-to-any` | Inspected 2026-11-15 | 63b49653980ac69e7662b92d1423aad27976789545651d8f21bb97c04a0993a2 | 05b4775ea2e63d295a8def6928b0a7280187755f1e95669da1a9db2ad9134158 |
 | 11.4 | `/chapter-11/image-diffusion-models` | Inspected 2026-11-15 | 5265db10626a4d18d63acdb1e293291a7f01d1dcc268653fc6652d3f8fa0763a | 1f2ab29ac2ec01c17264d955839890dc9c71e349b82a087520d2291799a3d8c1 |
@@ -349,9 +352,10 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 17.1 | `/chapter-17/academic-benchmarks` | Inspected 2026-11-15 | 2949edf4e9fe1e16fda3f118fa009854dbb67b9501b7989aece12379a4df2686 | 68c20de93679d7182f7813dbdb81fcacfeba0b5da7fa7cd25f2b210281858f9b |
 | 17.2 | `/chapter-17/llm-as-a-judge` | Inspected 2026-11-15 | b9ad37a58310ad8c790ac4c8988342a2233b3c96889f8fae279810964a470374 | df7b1b47ce2477bb8949d82cfa3e8336eb19b383bc7e9bdc25f940fb771c800f |
 | 17.3 | `/chapter-17/elo-rating-and-leaderboards` | Inspected 2026-11-15 | 14f931df5e4641c576c1763d446b2c663d1f282abf438767e5a330d49b31a9b9 | 1e78f5819e5452372109f72327dad0f7831b3b9ce66750000c9378a906744c30 |
-| 17.4 | `/chapter-17/contamination-issues` | Inspected 2026-11-15 | 62c64faa2eace7fc44a1a5cacdd1d18f66a77076f895cdc174e3567a3eb670e3 | 34a7f9ae4c5bd1a8a665432847db7e40944911304323b083fd917b8300ab6ac2 |
-| 17.5 | `/chapter-17/production-evaluation-and-release-gates` | Inspected 2026-11-15 | 5d35307a30661bc74be66c3fda51ba7dba5e72b94178a8ba20c6f6504ba2fd84 | 187f256cc5b3b64f82e3d4afae03ed6ea2ba45f5156ff232e9c75cb185dd2464 |
-| 17.6 | `/chapter-17/commercial-model-benchmarks` | Inspected 2026-11-15 | bb761b51e4efa366f00591815af5f2e79fbe93f17d5181f7b2074fd5a6ce9a25 | 4157f8aff3ab4eedb07b4c2ccbb5b2aed324a8450f8efb7759ed556ab62d774a |
+| 17.4 | `/chapter-17/contamination-issues` | Inspected 2026-11-17 | 38a0cad52c7504804a57a8cc2deed94a3ac2fe68f7648809261abad1cf6b4fa5 | c84e9e5b241d9c3cc9b97275c090011f12a10ebef18b8a7e4e0ff71e7d263cf4 |
+| 17.5 | `/chapter-17/production-evaluation-and-release-gates` | Inspected 2026-11-17 | 60ddb6057d61fb19bdcbbed9bdb165b892e506e549dbe2b985e976bab1ef60f4 | f3d34678eed1bb32eb0eb28f1c7537c781107e7beada12aa3d5ddba8092b30e0 |
+| 17.6 | `/chapter-17/commercial-model-benchmarks` | Inspected 2026-11-17 | 99bc9919a5892b1c462ffac49ce1b7d1396d3182a616955a4434db8d59642824 | 94c7a9b9a9aaad4771236e73895c1aa0d36f5f6536279d7ca359f4d3ab2ed7ca |
+| 17.7 | `/chapter-17/experimental-design-and-uncertainty` | Inspected 2026-11-17 | b8241e7e59234233d48eacbeca4f64fb54e373948678b8ff0be37dc9310b97c0 | 5303b225c521c059de6c42ee72522f513763a2c093f87178eae753f1f2c94ac1 |
 | 18.1 | `/chapter-18/red-teaming` | Inspected 2026-11-15 | fa815b07490b4a1039a2e91d2c98e9f1f212d6479f534afa5f09020cc8f93598 | fb6f4167f16906d882401b58a001a0ff0e3a4912cd5142852c7c26b84d547b0b |
 | 18.2 | `/chapter-18/jailbreaking-and-defense` | Inspected 2026-11-15 | caff93966e1d1a925120d696bf37a09fa46cc63cd9378c818ac9f1d489348afd | 520c11ef550bc2ca4ca9675449ce923a1b0ef2968b59cab0ba1dbdd85597f6be |
 | 18.3 | `/chapter-18/hallucination-detection` | Inspected 2026-11-15 | d3a1ee8ab17c7b845363483dd7b3112556523b0df6d833116a334717d79bdea3 | 85d58b77dcac5ff08bbdb13964faff2e93d8223760b0b46f4055337515d5162f |
@@ -557,3 +561,10 @@ Current benchmark dataset SHA-256: `49ff48120b3b889c671b270e8d8d466348ad2e1f0b50
 ## November 15 content and reading review
 
 All 103 EN/KO pairs were inspected through the chapter-group editorial review and follow-up corrections. Current file hashes above identify the inspected text, not a guarantee of exhaustive correctness. Three independent, read-only reviewers covered foundations (1–7), training (8–13) and applications/frontiers (14–20); targeted rereviews found and resolved additional quiz, translation, masking and numerical issues. See `docs/review-2026-11-15.md` for scope, dispositions and validation limits.
+
+
+## 2026-11-17 expertise and release follow-up
+
+Canonical inventory: **107 EN/KO pairs**. Four new pairs were initially Mechanical only, then inspected in both languages and rendered before recording current hashes. Eleven pairs changed in this follow-up; unchanged pairs retain their November 15 inspection evidence. This is a focused follow-up to that full-book pass, not a second claim of a fresh exhaustive review.
+
+See `docs/review-2026-11-17/goldfish_review_report.md` for review scope, findings and verification. The 32-model chart remains the dated November 15 evaluation snapshot; November 17 release evidence is a separate supplement.

@@ -12,6 +12,8 @@ A new release changes more than a name on a leaderboard. It may change the downl
 
 **As of 2026-11-15.** This static snapshot covers 32 selected profiles, not every release. Dates identify an explicit launch, weight-publication milestone or checked artifact revision; they are not uniformly first-launch dates. A public repository's creation date alone does not establish when its weights became available. Reverify the linked sources before a later publication or deployment.
 
+New release checks for Qwen4-Max, Gemini 4 Hydrogen, LongCat-2.5 and Agnes 2.5 Pro Theta appear in the [November 17 supplement](#release-supplement-november-17).
+
 ## 1. A New Benchmark Version Is a New Measurement
 
 Artificial Analysis now reports **Intelligence Index v5.0.1**, with nine evaluations spanning knowledge work, coding, science and general tasks [[1]](#ref-1). This chapter replaces its October v4.3.2 values throughout. A score that changes between those versions is not evidence that the same weights improved or deteriorated. Do not subtract the old score from the new score as a performance trend.
@@ -92,6 +94,23 @@ The token-price axis uses the explicitly illustrative uncached mix $(3p_{in}+p_{
 Use the quality/cost/latency/context/openness/safety Pareto surface rather than choosing one universal winner. Evaluate the same private tasks with pinned tools, permissions, scaffold, effort, retries, input/output limits and grader. Report paired uncertainty, language/domain slices, base-capability retention, format/tool correctness, safety, tail latency, error rate and cost per successful workflow. A critical slice failure blocks release even if the mean improves.
 
 Keep weights/API revision, tokenizer/template, quantization, runtime, generation configuration, tool schema and safety policy in one immutable artifact bundle. Test hosted and local versions separately. Canary with bounded permissions, retain a known-good route and rehearse rollback of cached state and pending effects. Typed decision models need a separate calibration/selective-risk evaluation; see [Section 16.7](/chapter-16/decision-models-and-selective-prediction).
+
+## Release Supplement: November 17
+
+**As of 2026-11-17.** The 32-profile chart above remains a **2026-11-15 evaluation snapshot**. The following primary-source release checks extend coverage; they are not additional equal-methodology benchmark points. A launch does not establish its place on the existing Pareto chart.
+
+| Model | Verified access/status | What to verify in a private evaluation | Primary evidence |
+|---|---|---|---|
+| Qwen4-Max | released/API-only on November 16; distinct from November 11 preview | Native image/video understanding, 1M context, tool execution and reasoning budget; no released Max weights established by these sources | [[75]](#ref-75) [[76]](#ref-76) |
+| Gemini 4 Hydrogen | released/API-only, November 12 | Four thinking levels and model-routing overhead; assess the whole coordinator/worker system | [[77]](#ref-77) |
+| LongCat-2.5 | released/open-weight; MIT publication November 10 | Multimodal long-horizon execution; total resident weights, expert routing and KV memory | [[78]](#ref-78) [[79]](#ref-79) |
+| Agnes 2.5 Pro Theta | released/open-weight; repository checked November 17, Apache 2.0 | Custom implementation, 262,144 configured context, actual runtime memory and template behavior | [[80]](#ref-80) |
+
+Qwen4-Max's docs distinguish explicit caching from best-effort implicit hits and reasoning summaries from encrypted reasoning history. A readable summary is not a substitute for the history required by later tool turns [[76]](#ref-76). Pin these protocol choices in an agent evaluation.
+
+Google's Hydrogen announcement positions it for fast execution and reports multi-model orchestration gains. Those are provider system evaluations, not an isolated causal effect of Hydrogen weights [[77]](#ref-77). LongCat's model card reports 1.6T total and approximately 48B active parameters; the repository's automatic tensor total is different, so retain the publisher's scope rather than silently merging counters [[79]](#ref-79). Agnes's card reports about 187.8B total parameters and 375.5 GB of BF16 tensor payload, and explicitly notes that its supplied benchmark chart lacks complete evaluation settings [[80]](#ref-80). Public weights permit inspection; they do not establish reproducible scores or affordable local deployment.
+
+Before comparing these additions numerically, record the evaluator version, exact model ID, effort, scaffold, sampling, tool access and cost accounting. Unverified comparable scores stay out of the chart; do not substitute provider charts for the existing independent index.
 
 ## Quizzes
 
@@ -196,3 +215,15 @@ Keep weights/API revision, tokenizer/template, quantization, runtime, generation
 72. <a id="ref-72"></a>GLM-5.3 Flash: primary documentation / artifact evidence. Verified 2026-11-15. [Source](https://huggingface.co/zai-org/GLM-5.3-Flash).
 73. <a id="ref-73"></a>GLM-5.3 Flash: primary documentation / artifact evidence. Verified 2026-11-15. [Source](https://huggingface.co/api/models/zai-org/GLM-5.3-Flash).
 74. <a id="ref-74"></a>GLM-5.3 Flash: evaluated system profile. Verified 2026-11-15. [Source](https://artificialanalysis.ai/models/glm-5-3-flash).
+
+75. <a id="ref-75"></a>QwenCloud. Model releases. Verified 2026-11-17. [Source](https://docs.qwencloud.com/changelog/models).
+
+76. <a id="ref-76"></a>QwenCloud. Qwen4-Max specifications and protocol notes. Verified 2026-11-17. [Source](https://docs.qwencloud.com/developer-guides/getting-started/latest-model).
+
+77. <a id="ref-77"></a>Google. Introducing Gemini 4 Hydrogen. Verified 2026-11-17. [Source](https://blog.google/innovation-and-ai/models-and-research/gemini-models/introducing-gemini-4-hydrogen/).
+
+78. <a id="ref-78"></a>Meituan. LongCat-2.5 open-weight release. Verified 2026-11-17. [Source](https://tech.meituan.com/2026/11/10/Meituan-LongCat-2.5-Open-Source.html).
+
+79. <a id="ref-79"></a>Meituan. LongCat-2.5 model card and downloadable files. Verified 2026-11-17. [Source](https://huggingface.co/meituan-longcat/LongCat-2.5).
+
+80. <a id="ref-80"></a>Agnes AI. Agnes 2.5 Pro Theta model card and weights. Verified 2026-11-17. [Source](https://huggingface.co/Agnes-AI/Agnes-2.5-Pro-Theta).

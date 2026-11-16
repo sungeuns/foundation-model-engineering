@@ -85,9 +85,9 @@ Rollback은 weight만 교체하는 것이 아니라 **last-known-good** complete
 
 **평가셋 유지보수(eval-set maintenance)** 는 통제된 data lifecycle입니다. Stable evaluation ID와 cluster ID, provenance, creation reason, owner, severity, rubric version, access class, retirement state를 부여합니다. Semantic neighbor를 deduplicate하고 모든 human·synthetic training pipeline에서 격리합니다.
 
-Production badcase가 나타나면 evaluation evidence로 먼저 고정하고 관련 예시를 학습하기 전에 evaluation-only sibling holdout을 만듭니다. Distribution drift에는 fresh slice를 더하지만 longitudinal comparison을 위한 stable anchor set을 유지합니다. Prompt, grader, tool, schema가 바뀌면 version을 올리고 champion과 candidate를 모두 재실행합니다.
+운영 실패 사례가 생기면 의미 집단 전체를 평가용으로 격리하거나, 학습에 사용하고 관련 회귀 테스트 모두를 노출된 것으로 표시합니다. 일반화 주장은 별도의 미노출 집단에서 평가해야 합니다. 학습 전에 형제 예시를 만들었다고 독립성이 생기지는 않습니다. 분포 변화에는 새로운 평가 집단을 추가하되 장기 비교용 고정 기준셋을 유지합니다. Prompt, 채점기, 도구, schema가 바뀌면 버전을 올리고 기준 모델과 후보를 모두 다시 평가합니다.
 
-Evaluation access와 contamination을 정기 감사합니다. Exposure가 의심되면 secret case를 회전하되 trend line을 유지하려고 정답을 조용히 다시 쓰면 안 됩니다.
+평가 접근 이력과 오염 여부를 정기적으로 점검합니다. 노출이 의심되면 비공개 사례를 교체하되, 추세를 유지하려고 정답을 몰래 바꾸면 안 됩니다.
 
 ---
 
@@ -97,6 +97,10 @@ Evaluation access와 contamination을 정기 감사합니다. Exposure가 의심
 
 실행기가 차단했고 최종 답이 맞아도 **권한 밖 행동을 시도한 경우** 를 출시 조건에 포함합니다. 정책 결정과 실제 부수 효과는 에이전트 transcript와 별도 기록합니다. 오프라인 대체 환경은 평가 과업을 바꾸므로 버전 관리해야 하며 live benchmark 점수를 그대로 물려받지 못합니다. redirect·간접 요청을 포함한 모든 도구 경로에서 격리 검사를 수행합니다.
 
+
+## 실제 수치로 출시 판단하기
+
+[17.7](../experimental-design-and-uncertainty/)에서 대응 집단 추정, 비열등성과 증거 부족의 구분, 실패 0회의 위험 상한을 계산합니다. Canary에서는 사용자·세션 배정을 지속적으로 고정하고 표본 크기와 종료 시 효능 분석 한 번을 사전에 정합니다. 안전 중단 감시는 계속 유지합니다. 효능에 따른 조기 승격에는 순차 설계가 필요하며 hysteresis만으로 반복 검정 문제를 해결할 수 없습니다.
 
 ## Quizzes
 

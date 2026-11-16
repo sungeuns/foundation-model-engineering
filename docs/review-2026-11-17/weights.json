@@ -1,0 +1,18 @@
+[
+  {
+    "url": "https://huggingface.co/api/models/meituan-longcat/LongCat-2.5",
+    "revision": "60032d966e6369b822f0e61d2eff01368d38b111",
+    "weight_files": 210,
+    "example": [
+      "model_00001-of-00208.safetensors"
+    ]
+  },
+  {
+    "url": "https://huggingface.co/api/models/Agnes-AI/Agnes-2.5-Pro-Theta",
+    "revision": "6c06a374dd7f0b0ce254544aebadcf0a4f992b7c",
+    "weight_files": 105,
+    "example": [
+      "model-00001-of-00105.safetensors"
+    ]
+  }
+]

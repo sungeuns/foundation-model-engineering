@@ -1,0 +1,83 @@
+---
+layout: ../../layouts/BookLayout.astro
+title: 7.5 Build, Break, and Resume a Tiny Decoder
+lang: en
+---
+
+# 7.5 Build, Break, and Resume a Tiny Decoder
+
+Attention formulas become useful engineering knowledge when you can assemble a model, make it learn, and detect an invalid improvement. This lab connects Chapters 3, 4, and 6 with one downloadable, inspectable program.
+
+## Scope and Input Contract
+
+**Deliberately simplified, smoke-tested educational implementation.** This is a one-layer synthetic copying task, not language pretraining or SFT. It omits distributed execution, mixed precision, chat templates, natural-language data, packed samples, remote checkpoint replication, and serving. It does not establish frontier-model scalability. Reference checkpoint: none. There is no teacher or judge model.
+
+Download [causal_lab.py](../../labs/causal_lab.py) and use an isolated environment with Python 3.12+ and CPU PyTorch. The verification environment used PyTorch 2.15.0+cpu on 2026-11-17; exact trajectories are not promised across releases or hardware [[1]](#ref-1).
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install torch==2.15.0 --index-url https://download.pytorch.org/whl/cpu
+python causal_lab.py --output /tmp/causal-lab --steps 160 --seed 7
+```
+
+The setup commands target Linux CPU wheels; for another platform use the [official installer](https://pytorch.org/get-started/locally/). The multiplicative schedule does not reach exactly 0.003.
+
+The local generator samples four distinct symbols from IDs 1–16 and repeats that motif to create a 17-token sequence. Rotations belong to the same semantic group; canonicalization happens **before** the 128/16/16 train/validation/test split. No external text, PII, secrets, or third-party dataset rights are involved. The immutable manifest records generator version, seed, grouping rule, mixture, integer-tokenizer version, and every group's symbols. Group IDs can be reconstructed from their hashes. The checkpoint binds the manifest, configuration, code hash, and PyTorch version.
+
+Input tensors are `[B,16]`; output logits are `[B,16,17]`. The first four symbols are the observed prompt. Logits at positions 3–15 predict targets at positions 4–16: **13 supervised targets per sequence**. Initial prompt predictions are masked from the objective. There is no padding, BOS, EOS, chat template, generation prompt, variable length, or cross-sample attention; ID 0 is unused. The response policy is exactly 13 continuation symbols. Do not transfer this tokenizer policy to SFT: Chapter 8's native-template requirements still apply.
+
+## Assemble the Mechanism
+
+The program implements token plus position embeddings → pre-normalized causal two-head attention → residual addition → pre-normalized feed-forward network → residual addition → vocabulary projection. Width is 32, and the feed-forward expansion is 32 → 64 → 32 with GELU. Each batch row has its own attention matrix. Unlike some larger decoder recipes, this toy omits a final normalization layer; treat it as part of the fixed experimental architecture.
+
+In `MultiheadAttention`, a boolean `True` masks a position. Do not assume every PyTorch attention API uses that same convention. Target shifting is separate from masking: one controls which token is predicted, the other which inputs it can see.
+
+The ablation leaves parameters, initialization, data sampling, optimizer, and step budget unchanged but blocks attention to every position except the current one. Both models still have embeddings, position information, and nonlinear layers. The intervention asks whether access to preceding symbols explains the gain. It does not compare equal wall time or prove how a particular head represents copying.
+
+## Training and Resource Contract
+
+AdamW uses learning-rate scale 0.003, betas `(0.9,0.95)`, epsilon `1e-8`, decay 0.01 on all parameters, batch 16, a ten-update linear warmup envelope multiplied by a cosine envelope approaching a 10% floor over the full budget, and global gradient clipping at 1.0. There are 160 updates and 33,280 supervised training tokens. The loss mask and training budget are identical in the ablation.
+
+The model has 10,161 trainable parameters. FP32 parameters, gradients, and two Adam moments require approximately **158.8 KiB together**, excluding small optimizer counters. This is not total process memory: embeddings/residuals, attention scores, backward buffers, optimizer temporaries, Python/PyTorch runtime, dataset tensors, checkpoint copies, and evaluation consume additional memory. There is no sharding, recomputation, collective communication, or active-expert distinction. A CPU with 1 GiB of free memory is a conservative planning allowance for this tiny run, not a measured peak. Measure peak RSS before extrapolating.
+
+`trace.json` records token-normalized train loss, learning rate, pre-clipping gradient norm, batch IDs and supervised-token counts. `result.json` includes held-out loss, nonfinite count, parameters, timing and target throughput. Its timed interval includes training, checkpoint I/O and half-run replay; it excludes the ablation and held-out evaluation. MFU is `null`: no validated hardware peak/FLOP model is provided. For a production extension, also instrument activation/update norms, data wait, evaluation time, stragglers and collectives as described in 6.3.
+
+## Predict, Run, Then Explain
+
+Before running, predict the effect of the attention ablation and whether changing future input symbols can alter earlier logits. The script verifies causal invariance, saves a midpoint checkpoint, finishes, restores, and replays the remaining updates. Its checkpoint contains weights, optimizer moments, step and target-token count, torch and sampler RNG states, schedule definition and data cursor, plus configuration and manifest hashes. FP32 has no scaler. A temporary file is renamed into place, and a SHA-256 marker must match before loading. This is a local teaching recovery protocol, not distributed atomic publication or changed-world-size recovery [[2]](#ref-2).
+
+A recorded seed-7 run produced validation loss **0.0453**, test loss **0.0508**, and self-only test loss **2.7042 nats per target**. A uniform predictor over the 16 valid symbols has loss $\log16\approx2.773$. These are measurements of the supplied synthetic task, not externally reported model scores. Exact replay and causal invariance passed. Greedy continuation achieved 98.08% token accuracy and 93.75% whole-sequence accuracy (15/16 held-out sequences). Teacher forcing and free-running generation therefore answer different questions. The [recorded seed-7 packet](../../labs/verified-seed-7.json) preserves the code hash and an example; it excludes machine-specific timing. Other seeds and runtimes can differ; rerun rather than treating these numbers as thresholds.
+
+Abort on a nonfinite loss/gradient, failed invariance, corrupt checkpoint, or replay mismatch. Do not release a changed lab artifact until those checks pass and the held-out comparison is explained. Keep the previous known-good script and output directory for rollback. Changing a recipe after examining test outcomes requires a new held-out set for a new generalization claim.
+
+## Extend the Experiment Without Fooling Yourself
+
+1. Repeat seeds 7, 19, and 31, preserving separate output directories. Report each run; three seeds are a sensitivity check, not a precise confidence interval for all training runs.
+2. Compare correctly shifted targets with a deliberately unshifted diagnostic branch. Explain why predicting visible inputs changes the task rather than improving the model.
+3. Inspect the program’s greedy autoregressive continuation using only the four-symbol prompt, appending one prediction at a time. Compare with teacher-forced loss, where correct previous symbols are supplied. Count whole-sequence correctness; one early error can propagate.
+4. Adapt the experiment to longer motifs and newly generated, group-disjoint data. State which mechanism the new task tests and whether position memorization is an alternative explanation. Select on validation data before opening test results.
+
+Submit the manifest, script hash, trace, results, one failed hypothesis, and a paragraph explaining what this task cannot tell you about natural-language generalization. Use 17.7 to distinguish task uncertainty from training-seed uncertainty.
+
+## Quizzes
+
+<details>
+<summary>Quiz 1: Why are there 13 targets although the input length is 16?</summary>
+*The first four symbols form the prompt. Positions 3–15 predict the thirteen continuation symbols at positions 4–16; the three earlier next-token predictions are excluded from the loss.*
+</details>
+
+<details>
+<summary>Quiz 2: Why does the self-only model retain the same parameter count?</summary>
+*Only the attention mask changes. This isolates access to preceding positions more cleanly than deleting attention parameters, although it does not equalize measured runtime.*
+</details>
+
+<details>
+<summary>Quiz 3: Does an exact midpoint replay prove distributed fault tolerance?</summary>
+*No. It tests this CPU process, fixed world size, runtime, sampler, and local checkpoint contract. Distributed atomicity, remote storage, changed topology, and numerical nondeterminism need separate tests.*
+</details>
+
+## References
+
+1. <a id="ref-1"></a>PyTorch. *Reproducibility*. [Documentation](https://docs.pytorch.org/docs/stable/notes/randomness.html).
+2. <a id="ref-2"></a>PyTorch. *Saving and Loading Models*. [Documentation](https://docs.pytorch.org/tutorials/beginner/saving_loading_models.html).

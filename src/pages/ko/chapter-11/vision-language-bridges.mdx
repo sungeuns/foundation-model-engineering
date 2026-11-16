@@ -176,6 +176,12 @@ LLM에 대한 입력 시퀀스 = $[X_v, X_{text}]$
 | **연산 비용** | 낮음 | 높음 (새로운 레이어 필요) | 낮음 (단순한 MLP) |
 | **유연성** | 검색 및 Zero-shot | 텍스트/이미지 혼합 입력 | 고정된 이미지 입력 |
 
+## 연구 점검: 시각 인코더의 어떤 부분이 도움이 될까?
+
+**As of 2026-11-17.** *Unbundling Multimodal Vision Encoding*은 시각 사전 학습, 시각 전용 용량, backbone에 그 용량을 배치하는 위치를 분리합니다. 전체 생애 연산량을 맞춘 실험에서 공동 학습한 시각 용량은 사전 학습 인코더에 필적할 수 있었지만, 전용 용량 자체를 없애는 개입은 시각 이해를 떨어뜨렸습니다 [[4]](#ref-4). 모든 규모와 데이터 예산에서 사전 학습 인코더가 불필요하다는 결론은 아닙니다.
+
+재현 과제: 같은 데이터에서 사전 학습 인코더, 같은 크기의 공동 학습 인코더, 용량을 맞춘 encoder-free 모델을 비교합니다. 선행 사전 학습 비용을 예산에 포함하고, 이미 확보한 인코더를 재사용하는 경우는 따로 보고하세요. 시각 토큰화와 평가 조건을 명시하고 VQA와 함께 언어 능력 보존과 첫 토큰 지연도 측정합니다. 서로 다른 출시 모델의 비교만으로 이 메커니즘을 분리할 수는 없습니다.
+
 ## Quizzes
 
 <details>
@@ -200,3 +206,5 @@ LLM에 대한 입력 시퀀스 = $[X_v, X_{text}]$
 1. <a id="ref-1"></a>Radford, A., et al. (2021). *Learning Transferable Visual Models From Natural Language Supervision*. [arXiv:2103.00020](https://arxiv.org/abs/2103.00020).
 2. <a id="ref-2"></a>Alayrac, J. B., et al. (2022). *Flamingo: a Visual Language Model for Few-Shot Learning*. [arXiv:2204.14198](https://arxiv.org/abs/2204.14198).
 3. <a id="ref-3"></a>Liu, H., et al. (2023). *Visual Instruction Tuning*. [arXiv:2304.08485](https://arxiv.org/abs/2304.08485).
+
+4. <a id="ref-4"></a>Brown et al. (2026). Unbundling Multimodal Vision Encoding, v1. Verified 2026-11-17. [Source](https://arxiv.org/abs/2611.17334v1).

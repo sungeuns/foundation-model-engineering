@@ -25,3 +25,7 @@ selective prediction = 선택적 예측
 selective risk = 선택 위험
 coverage (selective prediction) = 자동 처리율
 probabilistic coherence = 확률 정합성
+
+estimand = 추정 대상
+noninferiority = 비열등성
+cluster bootstrap = 집단 단위 부트스트랩

@@ -6,6 +6,7 @@
 * **1.2 The Power of Representation:** 왜 Feature Engineering에서 Deep Learning으로 전환되었는가.
 * **1.3 Deep Learning Paradigms:** Supervised, Unsupervised, Reinforcement Learning의 경계와 융합.
 * **1.4 The Bitter Lesson:** 리처드 서튼의 '쓴 교훈'—연산량의 압도적 중요성 분석.
+* **1.5 Learning Paths and Evidence of Mastery:** 학습 경로와 숙련도 입증.
 * **Summary:** AI가 '사람이 가르친 규칙'에서 '데이터에서 스스로 찾는 패턴'으로 진화해 온 과정을 공학적 관점에서 정리합니다.
 
 ### **Chapter 2: The Sequence Modeling Era**
@@ -50,6 +51,7 @@
 * **6.3 Large-scale Training Stability:** Loss Spike 대응, Gradient Clipping, z-loss 등 학습 기법.
 * **6.4 Infrastructure:** TPU(Pod) vs GPU(H100/B200) 클러스터 구성, NVLink/InfiniBand 및 네트워킹(NCCL).
 * **6.5 Synthetic Data for Pre-training:** 데이터 고갈 문제와 AI 생성 데이터의 활용 가능성.
+* **6.6 Optimization Mechanics and Fair Experiments:** 최적화의 원리와 공정한 실험.
 * **Summary:** 수조 개의 토큰을 안정적으로 학습시키기 위한 데이터 전처리와 인프라 엔지니어링의 정수를 담습니다.
 
 ### **Chapter 7: Training Optimization & Systems**
@@ -58,6 +60,7 @@
 * **7.2 ZeRO (Zero Redundancy Optimizer):** 메모리 최적화의 혁명 (Stage 1, 2, 3).
 * **7.3 Model & Pipeline Parallelism:** 거대 모델을 쪼개어 학습하는 텐서 병렬화와 파이프라인 스케줄링.
 * **7.4 Flash Attention 1, 2, 3:** IO-Awareness를 통한 메모리 대역폭 한계 돌파.
+* **7.5 Build, Break, and Resume a Tiny Decoder:** 작은 디코더 실습과 재개 검증.
 * **Summary:** 한 대의 GPU에 담을 수 없는 모델을 학습시키기 위한 최신 분산 학습 소프트웨어 기술을 다룹니다.
 
 ### **Chapter 8: Scaling Laws & Compute Optimality**
@@ -153,7 +156,8 @@
 * **17.3 Elo Rating & Leaderboards:** LMSYS Chatbot Arena와 같은 인간 선호도 기반 평가.
 * **17.4 Contamination Issues:** 학습 데이터에 평가셋이 포함되는 문제와 검증법.
 * **17.5 Production Evaluation and Release Gates:** offline eval, judge calibration, canary, rollout gate를 실제 릴리스 프로세스와 연결하는 방법.
-* **17.6 Commercial Model Benchmarks:** 2026-10-25 기준 26개 프로필. MiniMax M3.1 Flash·Kimi K3.1 Pro·Ling·Smaug·Bolt E4B의 실제 공개 상태와 리비전별 평가·비용을 탐색.
+* **17.6 Commercial Model Benchmarks:** 2026-11-15의 32개 비교 프로필과 2026-11-17에 확인한 Qwen4-Max·Gemini 4 Hydrogen·LongCat-2.5·Agnes 2.5 Pro Theta 출시 보충. 평가 스냅샷과 출시 확인 날짜를 구분.
+* **17.7 Experimental Design and Uncertainty:** 실험 설계와 불확실성.
 * **Summary:** 모델의 '진짜 실력'을 객관적이고 공정하게 측정하기 위한 평가 방법론과 지표를 다룹니다.
 
 ### **Chapter 18: AI Safety & Alignment Research**

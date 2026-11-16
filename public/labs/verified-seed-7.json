@@ -1,0 +1,65 @@
+{
+  "verified_on": "2026-11-17",
+  "limitations": "CPU synthetic task; not a language benchmark; timing excluded",
+  "config": {
+    "steps": 160,
+    "seed": 7,
+    "batch": 16,
+    "width": 32,
+    "heads": 2,
+    "layers": 1,
+    "dtype": "float32",
+    "device": "cpu",
+    "code_hash": "d3488b924a81a2cc50a381583903e8756c7b76846d1221cabd63e490bba1ba0c",
+    "torch_version": "2.15.0+cpu"
+  },
+  "parameters": 10161,
+  "initial_validation_nats": 3.0856950283050537,
+  "validation_nats": 0.04528987035155296,
+  "test_nats": 0.050811074674129486,
+  "self_only_test_nats": 2.7041945457458496,
+  "greedy_test_token_accuracy": 0.9807692170143127,
+  "greedy_test_sequence_accuracy": 0.9375,
+  "example": {
+    "prompt": [
+      9,
+      14,
+      10,
+      16
+    ],
+    "generated": [
+      9,
+      14,
+      10,
+      16,
+      9,
+      14,
+      10,
+      16,
+      9,
+      14,
+      10,
+      16,
+      9
+    ],
+    "expected": [
+      9,
+      14,
+      10,
+      16,
+      9,
+      14,
+      10,
+      16,
+      9,
+      14,
+      10,
+      16,
+      9
+    ]
+  },
+  "exact_resume": true,
+  "causal_invariance": true,
+  "nonfinite_count": 0,
+  "mfu": null
+}
