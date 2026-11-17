@@ -1,0 +1,93 @@
+{
+  "verified_at": "2026-11-17T17:30:13.373Z",
+  "base": "https://sungeuns.github.io/foundation-model-engineering/",
+  "results": [
+    {
+      "width": 390,
+      "lang": "en",
+      "slug": "",
+      "errors": [],
+      "issues": []
+    },
+    {
+      "width": 390,
+      "lang": "en",
+      "slug": "chapter-20/multi-token-prediction/",
+      "errors": [],
+      "issues": []
+    },
+    {
+      "width": 390,
+      "lang": "en",
+      "slug": "chapter-20/mamba-and-s6/",
+      "errors": [],
+      "issues": []
+    },
+    {
+      "width": 390,
+      "lang": "ko",
+      "slug": "",
+      "errors": [],
+      "issues": []
+    },
+    {
+      "width": 390,
+      "lang": "ko",
+      "slug": "chapter-20/mamba-and-s6/",
+      "errors": [],
+      "issues": []
+    },
+    {
+      "width": 1440,
+      "lang": "en",
+      "slug": "",
+      "errors": [],
+      "issues": []
+    },
+    {
+      "width": 390,
+      "lang": "ko",
+      "slug": "chapter-20/multi-token-prediction/",
+      "errors": [],
+      "issues": []
+    },
+    {
+      "width": 1440,
+      "lang": "ko",
+      "slug": "",
+      "errors": [],
+      "issues": []
+    },
+    {
+      "width": 1440,
+      "lang": "en",
+      "slug": "chapter-20/mamba-and-s6/",
+      "errors": [],
+      "issues": []
+    },
+    {
+      "width": 1440,
+      "lang": "en",
+      "slug": "chapter-20/multi-token-prediction/",
+      "errors": [],
+      "issues": []
+    },
+    {
+      "width": 1440,
+      "lang": "ko",
+      "slug": "chapter-20/mamba-and-s6/",
+      "errors": [],
+      "issues": []
+    },
+    {
+      "width": 1440,
+      "lang": "ko",
+      "slug": "chapter-20/multi-token-prediction/",
+      "errors": [],
+      "issues": []
+    }
+  ],
+  "content_commit": "613a052487407945392a828b202d6a44c79455b7",
+  "workflow_url": "https://github.com/sungeuns/foundation-model-engineering/actions/runs/44137335308",
+  "workflow_conclusion": "success"
+}
