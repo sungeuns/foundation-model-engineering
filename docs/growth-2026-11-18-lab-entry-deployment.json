@@ -1,0 +1,22 @@
+{
+  "observed_at": "2026-11-17 17:13:40 UTC",
+  "content_commit": "dee03dca16228c6a0256f54bb69b22f19bb92c35",
+  "workflow_url": "https://github.com/sungeuns/foundation-model-engineering/actions/runs/44132482238",
+  "status": "in_progress",
+  "conclusion": null,
+  "jobs": [
+    {
+      "id": 134213012327,
+      "name": "build",
+      "status": "in_progress",
+      "conclusion": null,
+      "current_steps": [
+        {
+          "name": "Checkout",
+          "started_at": "2026-11-17T17:02:15Z"
+        }
+      ]
+    }
+  ],
+  "production_verification": "Not completed: the new notebook URL returned 404 while the workflow remained in Checkout. Local verification is recorded in the release report."
+}

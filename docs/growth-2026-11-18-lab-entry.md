@@ -14,6 +14,7 @@ The two existing CPU labs already contained independently useful exercises, but 
 - Replaced generic descriptions for the learning-path, optimizer, decoder and evaluation lessons with their actual subject and exercise. Page-specific descriptions can help communicate relevance; Google may choose a different snippet. [Google snippet guidance](https://developers.google.com/search/docs/appearance/snippet).
 - Added four localized 1200×630 SVG/PNG lab previews. Open Graph, Twitter and structured data use the same selected asset; other pages retain the book cover. These are original text/vector cards, not measured-result plots. See the discovery companion report and generation script.
 - Corrected the decoder lesson's existing SFT-template cross-reference from Chapter 8 to section 9.1 in both languages.
+- Prepared independently reviewed English/Korean standalone notebook articles in `docs/outreach/tiny-decoder-article.md` and `docs/outreach/tiny-decoder-article-ko.md`. They explain future-input invariance, the matched self-only ablation and checkpoint replay, and disclose AI assistance and the local execution scope. These are unsubmitted drafts.
 
 ## Visual and editorial follow-up
 
@@ -37,7 +38,7 @@ The review is scoped editorial/comprehension work, not a claim of full EGM proto
 - Visually inspected the notebook entry, readout controls and pipeline at desktop and mobile widths. Four original social previews and the separately rendered notebook pages were also inspected.
 - `git diff --check` passed before commit.
 
-Production deployment is recorded separately after the pushed workflow completes; these results describe the local release candidate.
+Content commit `dee03dca16228c6a0256f54bb69b22f19bb92c35` was pushed to `main`. The [GitHub Pages run](https://github.com/sungeuns/foundation-model-engineering/actions/runs/44132482238) remains in progress at checkout in the latest recorded observation, after more than ten minutes. The previous deployment's checkout took three seconds. Public annotations contain no error and job logs are not yet available, so no cause is asserted. The new public notebook URL still returned 404; production verification has **not** completed. The observation is saved in `docs/growth-2026-11-18-lab-entry-deployment.json`. The test results above describe the local release candidate, not a completed production deployment.
 
 ## Remaining limits
 
