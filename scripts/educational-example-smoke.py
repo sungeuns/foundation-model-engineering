@@ -77,13 +77,19 @@ for locale in ['', 'ko/']:
     assert good < bad and clip.logit_scale.exp()>0
     bad.backward();assert torch.isfinite(clip.logit_scale.grad)
 
-    Model=definitions(locale+'chapter-15/chain-of-thought.mdx')['SimpleReasoningModel']
-    model=Model(20,8).eval();ids=torch.tensor([[1,2,3],[4,5,6]])
-    with torch.inference_mode():
-        first=model(ids);changed=ids.clone();changed[:,-1]=7
-        assert torch.allclose(first[:,:-1],model(changed)[:,:-1],atol=1e-6)
-        assert torch.allclose(first[:1],model(ids[:1]),atol=1e-6)
-    print(f'{locale or "en/"}: GPTQ, AWQ, KD masking, DDPM, RWR, CLIP and causal/batch invariants passed')
+    cot=definitions(locale+'chapter-15/chain-of-thought.mdx')
+    select,verify=cot['select_majority'],cot['verify_bolt_answer']
+    for answers,expected in [([33,33,33,29,29],33),([29,29,29,33,33],29),([33,29],None)]:
+        result=select([{'answer':a} for a in answers]);assert result['answer']==expected
+        assert verify(result['answer'])==(expected==33)
+    malformed=select([{'answer':33},{'answer':33},{},{},{'answer':True}])
+    assert malformed['answer'] is None and malformed['valid']==2 and malformed['attempted']==5
+    assert select([{'answer':33,'extra':0},'33',None])['valid']==0
+    try:select([])
+    except ValueError:pass
+    else:raise AssertionError('empty sample pool accepted')
+    print(f'{locale or "en/"}: GPTQ, AWQ, KD masking, DDPM, RWR, CLIP and CoT voting/verification invariants passed')
+
 
 # KTO bounded loss is intentionally a semantic sketch; evaluate its exact expressions.
 for locale in ['', 'ko/']:

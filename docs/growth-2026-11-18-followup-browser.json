@@ -1,0 +1,182 @@
+[
+  {
+    "width": 390,
+    "lang": "en",
+    "slug": "chapter-13/quantization-methods",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 390,
+    "lang": "en",
+    "slug": "chapter-7/flash-attention",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 390,
+    "lang": "en",
+    "slug": "chapter-5/expert-parallelism",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 390,
+    "lang": "en",
+    "slug": "chapter-15/chain-of-thought",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 390,
+    "lang": "en",
+    "slug": "chapter-14/graphrag-and-ontology",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 390,
+    "lang": "ko",
+    "slug": "chapter-7/flash-attention",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 390,
+    "lang": "ko",
+    "slug": "chapter-5/expert-parallelism",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 390,
+    "lang": "ko",
+    "slug": "chapter-13/quantization-methods",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 390,
+    "lang": "ko",
+    "slug": "chapter-15/chain-of-thought",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 390,
+    "lang": "ko",
+    "slug": "chapter-14/graphrag-and-ontology",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 1440,
+    "lang": "en",
+    "slug": "chapter-5/expert-parallelism",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 1440,
+    "lang": "en",
+    "slug": "chapter-7/flash-attention",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 1440,
+    "lang": "en",
+    "slug": "chapter-13/quantization-methods",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 1440,
+    "lang": "en",
+    "slug": "chapter-15/chain-of-thought",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 1440,
+    "lang": "en",
+    "slug": "chapter-14/graphrag-and-ontology",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 1440,
+    "lang": "ko",
+    "slug": "chapter-5/expert-parallelism",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 1440,
+    "lang": "ko",
+    "slug": "chapter-7/flash-attention",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 1440,
+    "lang": "ko",
+    "slug": "chapter-13/quantization-methods",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 1440,
+    "lang": "ko",
+    "slug": "chapter-15/chain-of-thought",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 1440,
+    "lang": "ko",
+    "slug": "chapter-14/graphrag-and-ontology",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 390,
+    "lang": "en",
+    "slug": "chapter-13/weight-sparsification",
+    "errors": [],
+    "issues": [],
+    "previousIssues": [
+      "sparse count 1"
+    ]
+  },
+  {
+    "width": 390,
+    "lang": "ko",
+    "slug": "chapter-13/weight-sparsification",
+    "errors": [],
+    "issues": [],
+    "previousIssues": [
+      "sparse count 1"
+    ]
+  },
+  {
+    "width": 1440,
+    "lang": "en",
+    "slug": "chapter-13/weight-sparsification",
+    "errors": [],
+    "issues": [],
+    "previousIssues": [
+      "2:4 groups"
+    ]
+  },
+  {
+    "width": 1440,
+    "lang": "ko",
+    "slug": "chapter-13/weight-sparsification",
+    "errors": [],
+    "issues": [],
+    "previousIssues": [
+      "2:4 groups"
+    ]
+  }
+]

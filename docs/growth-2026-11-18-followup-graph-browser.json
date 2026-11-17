@@ -1,0 +1,74 @@
+[
+  {
+    "route": "chapter-14/graphrag-and-ontology",
+    "lang": "en",
+    "width": 390,
+    "status": 200,
+    "errors": [],
+    "overflow": false,
+    "mathErrors": 0
+  },
+  {
+    "route": "chapter-15/chain-of-thought",
+    "lang": "en",
+    "width": 390,
+    "status": 200,
+    "errors": [],
+    "overflow": false,
+    "mathErrors": 0
+  },
+  {
+    "route": "chapter-14/graphrag-and-ontology",
+    "lang": "ko",
+    "width": 390,
+    "status": 200,
+    "errors": [],
+    "overflow": false,
+    "mathErrors": 0
+  },
+  {
+    "route": "chapter-15/chain-of-thought",
+    "lang": "ko",
+    "width": 390,
+    "status": 200,
+    "errors": [],
+    "overflow": false,
+    "mathErrors": 0
+  },
+  {
+    "route": "chapter-14/graphrag-and-ontology",
+    "lang": "en",
+    "width": 1440,
+    "status": 200,
+    "errors": [],
+    "overflow": false,
+    "mathErrors": 0
+  },
+  {
+    "route": "chapter-15/chain-of-thought",
+    "lang": "en",
+    "width": 1440,
+    "status": 200,
+    "errors": [],
+    "overflow": false,
+    "mathErrors": 0
+  },
+  {
+    "route": "chapter-14/graphrag-and-ontology",
+    "lang": "ko",
+    "width": 1440,
+    "status": 200,
+    "errors": [],
+    "overflow": false,
+    "mathErrors": 0
+  },
+  {
+    "route": "chapter-15/chain-of-thought",
+    "lang": "ko",
+    "width": 1440,
+    "status": 200,
+    "errors": [],
+    "overflow": false,
+    "mathErrors": 0
+  }
+]

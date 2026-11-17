@@ -1,0 +1,148 @@
+[
+  {
+    "url": "https://arxiv.org/abs/1805.02867",
+    "status": 200,
+    "final": "https://arxiv.org/abs/1805.02867"
+  },
+  {
+    "url": "https://arxiv.org/abs/1810.08473",
+    "status": 200,
+    "final": "https://arxiv.org/abs/1810.08473"
+  },
+  {
+    "url": "https://arxiv.org/abs/2006.16668",
+    "status": 200,
+    "final": "https://arxiv.org/abs/2006.16668"
+  },
+  {
+    "url": "https://arxiv.org/abs/2201.11903",
+    "status": 200,
+    "final": "https://arxiv.org/abs/2201.11903"
+  },
+  {
+    "url": "https://arxiv.org/abs/2203.11171",
+    "status": 200,
+    "final": "https://arxiv.org/abs/2203.11171"
+  },
+  {
+    "url": "https://arxiv.org/abs/2205.11916",
+    "status": 200,
+    "final": "https://arxiv.org/abs/2205.11916"
+  },
+  {
+    "url": "https://arxiv.org/abs/2205.14135",
+    "status": 200,
+    "final": "https://arxiv.org/abs/2205.14135"
+  },
+  {
+    "url": "https://arxiv.org/abs/2209.05433",
+    "status": 200,
+    "final": "https://arxiv.org/abs/2209.05433"
+  },
+  {
+    "url": "https://arxiv.org/abs/2210.17323",
+    "status": 200,
+    "final": "https://arxiv.org/abs/2210.17323"
+  },
+  {
+    "url": "https://arxiv.org/abs/2301.00774",
+    "status": 200,
+    "final": "https://arxiv.org/abs/2301.00774"
+  },
+  {
+    "url": "https://arxiv.org/abs/2305.04388",
+    "status": 200,
+    "final": "https://arxiv.org/abs/2305.04388"
+  },
+  {
+    "url": "https://arxiv.org/abs/2306.00978",
+    "status": 200,
+    "final": "https://arxiv.org/abs/2306.00978"
+  },
+  {
+    "url": "https://arxiv.org/abs/2306.11695",
+    "status": 200,
+    "final": "https://arxiv.org/abs/2306.11695"
+  },
+  {
+    "url": "https://arxiv.org/abs/2307.08691",
+    "status": 200,
+    "final": "https://arxiv.org/abs/2307.08691"
+  },
+  {
+    "url": "https://arxiv.org/abs/2401.15024",
+    "status": 200,
+    "final": "https://arxiv.org/abs/2401.15024"
+  },
+  {
+    "url": "https://arxiv.org/abs/2404.16130",
+    "status": 200,
+    "final": "https://arxiv.org/abs/2404.16130"
+  },
+  {
+    "url": "https://arxiv.org/abs/2405.04434",
+    "status": 200,
+    "final": "https://arxiv.org/abs/2405.04434"
+  },
+  {
+    "url": "https://arxiv.org/abs/2405.14831",
+    "status": 200,
+    "final": "https://arxiv.org/abs/2405.14831"
+  },
+  {
+    "url": "https://arxiv.org/abs/2407.08608",
+    "status": 200,
+    "final": "https://arxiv.org/abs/2407.08608"
+  },
+  {
+    "url": "https://arxiv.org/abs/2412.19437",
+    "status": 200,
+    "final": "https://arxiv.org/abs/2412.19437"
+  },
+  {
+    "url": "https://arxiv.org/abs/2504.19874",
+    "status": 200,
+    "final": "https://arxiv.org/abs/2504.19874"
+  },
+  {
+    "url": "https://docs.nvidia.com/cutlass/latest/media/docs/cpp/grouped_scheduler.html",
+    "status": 200,
+    "final": "https://docs.nvidia.com/cutlass/latest/media/docs/cpp/grouped_scheduler.html"
+  },
+  {
+    "url": "https://docs.pytorch.org/docs/2.15/distributed.html#torch.distributed.all_to_all_single",
+    "status": 200,
+    "final": "https://docs.pytorch.org/docs/2.15/distributed.html#torch.distributed.all_to_all_single"
+  },
+  {
+    "url": "https://docs.pytorch.org/docs/2.15/generated/torch.nn.functional.scaled_dot_product_attention.html",
+    "status": 200,
+    "final": "https://docs.pytorch.org/docs/2.15/generated/torch.nn.functional.scaled_dot_product_attention.html"
+  },
+  {
+    "url": "https://docs.pytorch.org/docs/2.15/sparse.html#sparse-semi-structured-tensors",
+    "status": 200,
+    "final": "https://docs.pytorch.org/docs/2.15/sparse.html#sparse-semi-structured-tensors"
+  },
+  {
+    "url": "https://github.com/ggml-org/ggml/blob/master/docs/gguf.md",
+    "first_attempt_error": "HTTP Error 503: Service Unavailable",
+    "status": 200,
+    "final": "https://github.com/ggml-org/ggml/blob/master/docs/gguf.md"
+  },
+  {
+    "url": "https://microsoft.github.io/graphrag/index/overview/",
+    "status": 200,
+    "final": "https://microsoft.github.io/graphrag/index/overview/"
+  },
+  {
+    "url": "https://microsoft.github.io/graphrag/query/global_search/",
+    "status": 200,
+    "final": "https://microsoft.github.io/graphrag/query/global_search/"
+  },
+  {
+    "url": "https://microsoft.github.io/graphrag/query/local_search/",
+    "status": 200,
+    "final": "https://microsoft.github.io/graphrag/query/local_search/"
+  }
+]

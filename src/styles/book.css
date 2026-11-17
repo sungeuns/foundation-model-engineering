@@ -400,6 +400,9 @@ main > h2 { margin-top: 2.75rem; padding-top: .5rem; font-size: 1.5rem; line-hei
 main > h3 { font-size: 1.2rem; line-height: 1.5; margin-top: 2rem; }
 main > p { margin-block: 1.2rem; }
 main a { color: #70408d; text-underline-offset: .18em; overflow-wrap: anywhere; }
+main .section-permalink { display: inline-block; padding: 0 .25rem; color: #52616b; font-size: .85em; font-weight: 400; text-decoration: none; }
+main .section-permalink:hover { color: #70408d; text-decoration: underline; }
+@media print { main .section-permalink { display: none; } }
 main > blockquote { margin-inline: 0; padding: .5rem 1.25rem; border-left: 3px solid #a98abd; background: #f3eef6; }
 main > table { display: block; max-width: 100%; overflow-x: auto; }
 main .katex-display { max-width: 100%; overflow-x: auto; overflow-y: hidden; padding-block: .4rem; }

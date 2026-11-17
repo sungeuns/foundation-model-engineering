@@ -332,6 +332,19 @@ if (currentIndex !== -1) {
       });
       if (outline && outlineList?.children.length) outline.hidden = false;
 
+      // Share a specific explanation with a normal fragment link. Only use
+      // manuscript headings; component-generated IDs need not survive a reload.
+      document.querySelectorAll<HTMLElement>('main > h2[id], main > h3[id]').forEach(heading => {
+        const title = heading.textContent?.trim() || '';
+        const permalink = document.createElement('a');
+        permalink.className = 'section-permalink';
+        permalink.href = `#${encodeURIComponent(heading.id)}`;
+        permalink.textContent = '#';
+        permalink.setAttribute('aria-label', isKo ? `${title} 절의 링크` : `Link to section: ${title}`);
+        permalink.title = isKo ? '이 절의 링크' : 'Link to this section';
+        heading.append(' ', permalink);
+      });
+
       // Scroll regions keep wide equations and tables usable without shrinking type.
       document.querySelectorAll<HTMLElement>('main > table, main .katex-display, main pre').forEach(element => {
         element.tabIndex = 0;

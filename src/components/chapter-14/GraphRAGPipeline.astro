@@ -1,0 +1,37 @@
+---
+import './graphrag-pipeline.css';
+const { lang = 'en' } = Astro.props;
+const ko = lang === 'ko';
+const indexing = ko ? [
+  ['원문과 식별자', '문서 버전·근거 구간을 보존합니다.'],
+  ['엔터티와 관계 추출', '문서에서 그래프 후보를 만듭니다.'],
+  ['계층적 커뮤니티 탐지', '연결된 엔터티를 군집으로 묶습니다.'],
+  ['커뮤니티 보고서 저장', '질문을 받기 전에 요약을 생성합니다.'],
+] : [
+  ['Source text and IDs', 'Retain document versions and evidence spans.'],
+  ['Extract entities and relations', 'Build candidate graph records from text.'],
+  ['Detect hierarchical communities', 'Group connected entities into clusters.'],
+  ['Store community reports', 'Generate summaries before a question arrives.'],
+];
+const querying = ko ? [
+  ['질문 + 저장된 보고서', '선택한 계층 수준의 보고서를 문맥 예산에 맞게 나눕니다.'],
+  ['Map: 질문별 근거 후보', '각 보고서 묶음에서 질문에 답할 요점을 생성합니다.'],
+  ['선별·순위화 → Reduce', '선택한 요점을 종합해 최종 답변을 만듭니다.'],
+] : [
+  ['Question + stored reports', 'Batch reports from a chosen hierarchy level within the context budget.'],
+  ['Map: question-specific points', 'Generate candidate answer points from each report batch.'],
+  ['Filter/rank → reduce', 'Synthesize selected points into the final answer.'],
+];
+---
+<figure class="graphrag-pipeline" lang={lang}>
+  <div class="graph-stage graph-index">
+    <h4>{ko ? '색인 시점: 반복해서 사용할 자료 준비' : 'Index time: prepare reusable material'}</h4>
+    <ol>{indexing.map(([title, detail]) => <li><strong>{title}</strong><span>{detail}</span></li>)}</ol>
+  </div>
+  <p class="graph-boundary">{ko ? '저장된 보고서를 재사용합니다. 최종 답변은 아직 없습니다.' : 'Stored reports are reused. There is no final answer yet.'}</p>
+  <div class="graph-stage graph-query">
+    <h4>{ko ? '질의 시점: 이번 질문에 답하기' : 'Query time: answer this question'}</h4>
+    <ol>{querying.map(([title, detail]) => <li><strong>{title}</strong><span>{detail}</span></li>)}</ol>
+  </div>
+  <figcaption>{ko ? 'HTML/CSS로 작성한 global-search 개념도입니다. Microsoft GraphRAG 논문과 공식 색인·전역 검색 문서를 바탕으로 정리했으며, 모든 검색 모드나 구현 단계를 나타내지는 않습니다. 문서 확인: 2026-11-18.' : 'HTML/CSS schematic of global search, based on the Microsoft GraphRAG paper and official indexing/global-search documentation. It does not enumerate every search mode or implementation step. Documentation checked: 2026-11-18.'}</figcaption>
+</figure>

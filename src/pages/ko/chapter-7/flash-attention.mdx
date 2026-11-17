@@ -6,76 +6,111 @@ lang: "ko"
 
 # 7.4 Flash Attention 1, 2, 3
 
-3장에서 우리는 자가 어텐션(Self-attention)의 복잡도를 분석하면서 시간과 메모리 복잡도가 시퀀스 길이($L$)의 제곱에 비례하여 증가한다는 점($O(L^2)$)을 확인했습니다. 파운데이션 모델이 128k에서 1M 이상의 거대한 컨텍스트를 처리하도록 확장됨에 따라, 이 이차식(quadratic) 스케일링은 치명적인 병목 현상이 됩니다.
+4,096개 토큰을 처리하는 attention 헤드 하나는 $4,096^2$개의 쌍별 점수를 만듭니다. 이 행렬 하나를 FP32로 저장하면 **64 MiB** 가 필요합니다. 배치 크기 2, 헤드 수 8이면 점수 행렬만 **1 GiB** 입니다. 점수를 계산하는 연산과, 곧 버릴 전체 행렬을 메모리에 쓰고 다시 읽는 작업은 별개의 비용입니다.
 
-그러나 어텐션을 확장하는 데 있어 주된 병목은 종종 연산량(FLOPs)이 아니라 **메모리 대역폭(Memory Bandwidth, I/O)** 입니다. 느린 GPU HBM(High Bandwidth Memory)과 빠른 칩 내부 SRAM 사이에서 거대한 어텐션 행렬을 읽고 쓰는 데 걸리는 시간이 실행 시간을 지배합니다.
+FlashAttention은 attention의 실행 순서를 바꿔 메모리 이동을 줄입니다 [[1]](#ref-1). 빠른 온칩 메모리에서 타일 단위로 계산하고 출력을 누적해 전체 점수·확률 행렬을 GPU 고대역폭 메모리(HBM)에 저장하지 않습니다. 조밀한 attention의 산술 연산량은 여전히 시퀀스 길이의 제곱에 비례합니다. 실제 성능을 가르는 것은 구현이 얼마나 많은 데이터 이동, 저장 공간, 연산 장치의 대기 시간을 줄이는가입니다.
 
-**FlashAttention** 은 어텐션을 **IO-Aware** 하게 만듦으로써 트랜스포머 학습에 혁명을 일으켰습니다. HBM과 SRAM 간의 메모리 읽기/쓰기 횟수를 줄여, 수학적으로 완벽하게 동일한 결과를 내면서도 엄청난 속도 향상을 달성합니다.
+## 1. 중간 행렬과 전체 메모리를 따로 계산하기
 
-이 섹션에서는 최초의 타일링(Tiling) 개념부터 FlashAttention-3의 하드웨어 특화 최적화에 이르기까지 FlashAttention의 진화를 추적합니다.
+헤드 하나에 대해 $Q,K\in\mathbb R^{L\times d}$, $V\in\mathbb R^{L\times d_v}$ 로 둡니다. $L$ 은 시퀀스 길이, $d$ 는 query/key 차원, $d_v$ 는 value 차원입니다. 마스크를 잠시 생략하면
 
----
+$$
+S=QK^\top/\sqrt d,\qquad P=\operatorname{softmax}(S),\qquad O=PV.
+$$
 
-## 1. 어텐션의 메모리 벽 (The Memory Wall)
+Softmax는 각 query의 key 방향으로 적용합니다. 단순한 구현은 각각 $[L,L]$ 형태인 $S$ 와 $P$ 를 메모리에 만듭니다. 배치 크기 $B$, 헤드 수 $H$, 원소당 바이트 수 $s$ 일 때 이런 할당 **하나** 는 $BHL^2s$ 바이트입니다. $B=2$, $H=8$, $L=4096$, $s=4$ 이면 1,073,741,824바이트, 즉 1 GiB입니다. FP16은 이 할당의 크기를 절반으로 줄입니다. 두 행렬이 동시에 존재하면 두 배가 필요하지만, 연산 융합이나 버퍼 재사용에 따라 실제 최대 사용량은 달라집니다.
 
-표준 어텐션은 행렬 $\mathbf{S} = \mathbf{Q}\mathbf{K}^T$ 를 계산하여 HBM에 쓰고, 이를 다시 읽어와 소프트맥스(softmax)를 계산한 뒤 $\mathbf{P} = \text{softmax}(\mathbf{S})$ 를 HBM에 쓰고, 마지막으로 이를 다시 읽어와 $\mathbf{O} = \mathbf{P}\mathbf{V}$ 를 계산합니다.
+이것이 모델 전체의 메모리는 아닙니다. 파라미터, Q/K/V, 다른 활성값, 출력, 임시 버퍼와 할당자 여유 공간도 필요합니다. 학습에는 그래디언트와 옵티마이저 상태도 필요하며 샤딩·재계산 설정이 크기에 영향을 줍니다. Attention 중간 행렬을 없앴다고 전체 모델이 반드시 메모리에 들어가거나 모든 형태에서 대역폭이 병목이 되는 것은 아닙니다.
 
-시퀀스 길이가 $L=4096$ 일 때, 어텐션 행렬 하나만 해도 헤드당 $4096 \times 4096 \times 4 \text{ bytes} \approx 64 \text{ MB}$ 의 메모리를 소비합니다. 이 행렬을 HBM과 SRAM 사이로 계속해서 이동시키는 것은 엄청난 시간 낭비를 초래합니다.
+## 2. FlashAttention-1: 모든 점수를 저장하지 않고 누적하기
 
----
+### 온라인 softmax: 기준점을 바꾸되 비율은 유지하기
 
-## 2. FlashAttention-1: 타일링과 재계산 (Tiling and Recomputation)
+모든 점수에서 같은 상수를 빼도 softmax 결과는 같습니다. 온라인 정규화는 점수를 나누어 처리하면서 이 성질을 활용합니다 [[5]](#ref-5). Query 하나에 대해 $z_j$ 를 스케일링된 점수, $v_j$ 를 대응하는 value 벡터라 합시다. 지금까지 처리한 key의 최댓값 $m$, 분모 $\ell$, 정규화 전 출력 벡터 $u$ 를 유지합니다. 새 타일 $T$ 를 만나면
 
-Dao 등(2022) [[1]](#ref-1) 에 의해 도입된 FlashAttention-1은 두 가지 주요 기술을 사용하여 메모리 병목 현상을 해결합니다.
+$$
+\begin{aligned}
+m'&=\max\bigl(m,\max_{j\in T}z_j\bigr), & a&=e^{m-m'},\\
+p_j&=e^{z_j-m'}, & \ell'&=a\ell+\sum_{j\in T}p_j,\\
+u'&=au+\sum_{j\in T}p_jv_j. &&
+\end{aligned}
+$$
 
-### 2.1 타일링 (Tiling)
-FlashAttention은 $L \times L$ 어텐션 행렬을 한 번에 모두 계산하는 대신, $\mathbf{Q}, \mathbf{K}, \mathbf{V}$ 를 GPU의 빠른 SRAM에 들어갈 수 있는 크기의 블록(타일)으로 나눕니다.
-1. $\mathbf{Q}, \mathbf{K}, \mathbf{V}$ 의 블록을 SRAM으로 로드합니다.
-2. 해당 블록에 대한 어텐션을 계산합니다.
-3. HBM에 있는 출력값을 업데이트합니다.
+$m=-\infty$, $\ell=0$, $u=0$ 에서 시작하고 마지막에 $u/\ell$ 을 반환합니다. 뒤의 타일에서 더 큰 최댓값이 나오면 $a$ 를 곱해 기존 합 **둘 다** 새 기준점으로 옮깁니다. 각 타일을 따로 정규화한 뒤 출력을 평균내면, 타일별 분모가 다를 때 올바른 가중치를 얻지 못합니다.
 
-한 번에 전체 행을 보지 않고 블록 간에 소프트맥스를 올바르게 계산하기 위해, FlashAttention은 실행 중인 최댓값과 지수 합을 추적하는 **online softmax** 기법을 활용합니다.
+> **의도적으로 단순화한 점화식 예제.** CPU FP64에서 query 하나와 유한한 마스크 없는 점수만 처리합니다. 점화식을 쉽게 살펴보도록 점수 한 행은 미리 저장합니다. FlashAttention GPU 구현은 아닙니다. Q/K 타일링, causal/padding 마스크, dropout, 역전파 재계산, 스케줄링, 성능 측정을 생략합니다. 전부 마스킹된 타일·행에는 별도 처리가 필요하며 이 예제에서는 거부합니다.
 
-### 2.2 재계산 (Recomputation, 역전파 시)
-역전파(Backward pass)를 위해 $L \times L$ 어텐션 행렬을 저장하는 것은 메모리 절약 효과를 무력화하므로, FlashAttention은 이를 저장하지 않습니다. 대신 역전파 과정에서 저장된 $\mathbf{Q}, \mathbf{K}, \mathbf{V}$ 블록을 사용하여 SRAM에서 즉석으로 어텐션 행렬을 **재계산** 합니다. 이는 약간의 추가 연산을 대가로 메모리 사용량을 획기적으로 줄이는 트레이드오프입니다.
+```python
+import torch
 
----
+@torch.no_grad()
+def online_attention_row(scores, values, tile_size=2):
+    """Finite CPU FP64 scores [keys], values [keys, value_dim]; no mask."""
+    if scores.ndim != 1 or values.ndim != 2 or len(scores) != len(values):
+        raise ValueError("expected scores[keys], values[keys,value_dim]")
+    if len(scores) == 0 or tile_size <= 0:
+        raise ValueError("need at least one key and a positive tile size")
+    if scores.device.type != "cpu" or values.device.type != "cpu":
+        raise ValueError("this teaching example is CPU-only")
+    if scores.dtype != torch.float64 or values.dtype != torch.float64:
+        raise ValueError("use FP64 to check the recurrence")
+    if not torch.isfinite(scores).all() or not torch.isfinite(values).all():
+        raise ValueError("masked/nonfinite entries are outside this example")
+    maximum = scores.new_tensor(float("-inf"))
+    denominator = scores.new_zeros(())
+    numerator = values.new_zeros(values.shape[1])
+    for start in range(0, len(scores), tile_size):
+        block = scores[start:start + tile_size]
+        new_maximum = torch.maximum(maximum, block.max())
+        correction = torch.exp(maximum - new_maximum)
+        probabilities = torch.exp(block - new_maximum)
+        denominator = correction * denominator + probabilities.sum()
+        numerator = correction * numerator + probabilities @ values[start:start + tile_size]
+        maximum = new_maximum
+    return numerator / denominator
 
-## 3. FlashAttention-2: 더 빠른 속도와 향상된 병렬화
+scores = torch.tensor([1000., 1001., 999., 1002., 998.], dtype=torch.float64)
+values = torch.arange(10, dtype=torch.float64).reshape(5, 2)
+expected = torch.softmax(scores, dim=0) @ values
+for tile_size in (1, 2, 3, 5):
+    actual = online_attention_row(scores, values, tile_size)
+    torch.testing.assert_close(actual, expected, rtol=1e-12, atol=1e-12)
+print(expected)  # approximately tensor([4.5067, 5.5067])
+```
 
-FlashAttention-2 (2023) [[2]](#ref-2) 는 작업 분할(Work partitioning)과 병렬화를 최적화하여 오리지널 버전을 개선했습니다.
-- **더 나은 작업 분할**: 배치(Batch)와 헤드(Head) 차원뿐만 아니라 시퀀스 길이 차원에 대해서도 연산을 병렬화하여 GPU 활용도를 높였습니다.
-- **비행렬 곱 연산(Non-MatMul FLOPs) 감소**: GPU에서 행렬 곱에 비해 상대적으로 느린 지수(exponential) 연산 횟수를 줄이도록 online softmax 계산 방식을 리팩토링했습니다.
+점수에 더해진 큰 상수 때문에 그대로 지수 함수를 적용하면 overflow가 나지만, 누적 최댓값을 빼면 유한한 값을 유지합니다. 두 key씩 처리하는 경우에는 마지막 타일의 크기가 1이므로 불완전한 타일도 확인합니다. 분할 방식에 따라 수학적 결과가 바뀌지 않아야 하므로 여러 타일 크기를 비교합니다.
 
-FlashAttention-2는 1버전에 비해 최대 2배의 속도 향상을 달성했으며, A100 GPU의 이론적 피크 FLOPs의 최대 70%에 도달했습니다.
+### 재계산과 ‘정확한 attention’의 의미
 
----
+FlashAttention은 필요한 입력·출력·행별 통계량을 보존하고, 역전파에서 전체 $P$ 를 저장하는 대신 확률 타일을 다시 계산합니다 [[1]](#ref-1). 산술 연산을 더 수행하는 대신 HBM 이동과 저장 공간을 줄이는 교환입니다. 이 교환이 얼마나 유리한지는 워크로드에 달렸습니다.
 
-## 4. FlashAttention-3: Hopper 및 FP8 최적화
+‘정확한 attention’은 key를 일부 버리거나 softmax를 다른 함수로 근사하지 않는다는 뜻입니다. 부동소수점 구현 간 **비트 단위 동일성** 을 보장하지는 않습니다. 누적 순서와 정밀도가 달라지면 반올림도 달라질 수 있습니다. FP8 양자화는 별도의 근사 오차를 추가하므로 따로 평가해야 합니다.
 
-FlashAttention-3 (2024) [[3]](#ref-3) 는 새로운 하드웨어 기능을 활용하기 위해 NVIDIA Hopper 아키텍처(예: H100)를 타겟으로 설계되었습니다.
-- **WGMMA (Warpgroup Matrix Multiply-Accumulate)**: H100의 새로운 하드웨어 명령어를 활용하여 행렬 곱셈 속도를 대폭 향상시켰습니다.
-- **비동기 실행 (Asynchronous Execution)**: 행렬 곱셈 연산과 HBM-SRAM 간의 데이터 이동을 중첩(Overlap)시켜 데이터 전송 지연 시간을 숨겼습니다.
-- **FP8 지원**: 새로운 8비트 부동 소수점 포맷을 네이티브하게 지원하여 훨씬 더 빠른 연산과 더 낮은 메모리 대역폭 사용을 가능하게 했습니다.
+## 3. FlashAttention-2: 연산 장치에 일을 더 고르게 배분하기
 
----
+FlashAttention-2는 thread block과 warp 사이의 작업 배분을 바꿉니다 [[2]](#ref-2). 행렬곱 이외 연산을 줄이고, 한 헤드 안에서도 query block별로 일을 병렬화하며, warp 사이의 공유 메모리 통신을 줄입니다. 배치·헤드 방향의 병렬성만으로 GPU를 충분히 채우지 못할 때 이런 변화가 중요해집니다.
 
-## 4.5 비교 표: FlashAttention의 진화
+논문은 A100 실험에서 기존 FlashAttention 대비 약 두 배의 커널 속도와 이론적 최대 FLOPs/s의 50–73%를 보고합니다. 특정 구성에서 측정한 결과이며, 모든 시퀀스 길이·dtype·GPU에 대한 약속은 아닙니다. Attention 커널이 빨라져도 애플리케이션에서 그 커널이 담당하는 부분만 직접 빨라집니다.
 
-| 특성 | FlashAttention-1 | FlashAttention-2 | FlashAttention-3 |
-| :--- | :--- | :--- | :--- |
-| **주요 초점** | IO-Awareness 및 타일링 | 병렬화 및 작업 분할 | 비동기성 및 Hopper 최적화 |
-| **타겟 하드웨어** | Ampere (A100) 및 이전 세대 | Ampere (A100) 및 이후 세대 | Hopper (H100) 특화 |
-| **병렬화** | 배치, 헤드 | 배치, 헤드, **시퀀스 길이** | 배치, 헤드, 시퀀스 길이 |
-| **I/O 전략** | 동기식 타일링 | 동기식 타일링 | **비동기식 (TMA)** |
-| **정밀도** | FP16/BF16 | FP16/BF16 | **FP8 지원** |
-| **피크 FLOPs (A100)** | ~30-40% | ~70% | 해당 없음 (H100에 최적화됨) |
+## 4. FlashAttention-3: Hopper의 비동기 연산에 맞춘 스케줄링
 
----
+FlashAttention-3는 Hopper의 비동기 데이터 이동과 행렬 연산을 활용합니다 [[3]](#ref-3). TMA는 다른 작업이 진행되는 동안 타일을 옮기고, WGMMA는 warpgroup 단위 비동기 행렬곱을 지원합니다. 데이터 전송과 계산을 겹치고 행렬곱과 softmax도 교차 실행합니다. 더 많은 지연을 숨기려는 설계이지, 모든 조건에서 I/O 대기를 완전히 없애는 보장은 아닙니다.
 
-## 5. PyTorch SDPA: Flash 선택을 실제로 검증하기
+FP8 경로는 블록 양자화와 incoherent processing으로 수치 오차도 제어합니다. 비교 대상 FP8 attention 구현보다 수치 오차가 작다는 결과가 모든 모델 능력을 그대로 보존한다는 뜻은 아닙니다. 처리량과 별도로 수치적 일치도와 태스크 품질을 검증해야 합니다.
 
-PyTorch의 scaled-dot-product attention(SDPA) dispatch는 설치한 PyTorch/CUDA 버전, GPU 기능, dtype, 형상, 마스크, 드롭아웃에 따라 달라집니다. 아래 예제는 의도적으로 CUDA 전용이며 현재 `sdpa_kernel` backend 선택을 사용합니다. Causal 언어 모델 어텐션을 보여주지만 가변 길이 학습 루프는 아닙니다.
+아래 표는 각 논문의 핵심 설계를 정리한 것입니다. 현재의 하드웨어 지원표나 서로 다른 하드웨어의 성능 비교표가 아닙니다.
+
+| 논문 | 핵심 변화 | 이 설계만으로 보장하지 않는 것 |
+|---|---|---|
+| FlashAttention-1 (2022) [[1]](#ref-1) | Attention을 타일로 나누고 중간값을 재계산 | 선형 산술 연산량이나 OOM 방지 |
+| FlashAttention-2 (2023) [[2]](#ref-2) | 병렬 작업 분배와 행렬곱 이외 연산 개선 | 모든 형태·애플리케이션에서 같은 속도 향상 |
+| FlashAttention-3 (2024) [[3]](#ref-3) | Hopper 연산 중첩과 스케일을 제어한 FP8 경로 | 저정밀도 오차 제거나 모든 태스크 품질 보존 |
+
+## 5. PyTorch SDPA: 실제 Flash 실행을 확인하기
+
+**2026-11-18 기준**, PyTorch 2.15 문서는 `sdpa_kernel` 을 통한 백엔드 선택을 설명합니다 [[4]](#ref-4). 선택 결과는 설치된 소프트웨어, GPU, dtype, 텐서 형태, attention 옵션에 달렸습니다. 전역 설정에서 Flash를 켠 사실만으로 특정 연산이 Flash를 사용했다고 결론 내릴 수 없습니다.
+
+> **CUDA 디스패치 예제이며, 이 책의 CPU smoke 실행에서는 GPU 검증하지 않았습니다.** 고정 길이 causal 추론에 FP16/BF16과 Flash 백엔드를 강제합니다. 가변 길이 padding, 학습 그래디언트, dropout, 성능 측정을 생략합니다. 지원되지 않는 입력은 오류를 내야 하며, 실행 경로가 확인되지 않은 결과로 성능을 주장하면 안 됩니다.
 
 ```python
 import torch
@@ -105,37 +140,43 @@ assert output.dtype == dtype and torch.isfinite(output).all()
 print(torch.backends.cuda.flash_sdp_enabled(), output.shape, output.dtype)
 ```
 
-학습에서는 SDPA가 모듈의 training mode와 별개로 전달된 확률을 적용하므로 `dropout_p`를 명시합니다. `is_causal=True`만으로 가변 길이 배치의 패딩이 제거되지는 않습니다. 프레임워크가 지원하는 causal/패딩 결합 마스크 또는 가변 길이 표현을 사용하고, 의도한 backend 자격을 유지하는지 확인합니다. 작은 텐서에서 math backend와 출력·그래디언트를 dtype에 맞는 허용 오차로 비교하고 profiler·kernel 로그로 실제 backend를 증명합니다 [[4]](#ref-4). Flash 강제 dispatch가 입력을 거부하면 설정을 바꾸거나 문서화한 fallback을 허용해야 하며, math 경로의 성능을 FlashAttention 성능으로 보고해서는 안 됩니다.
+출력되는 `flash_sdp_enabled()` 는 설정 플래그입니다. 실제 실행은 프로파일러나 커널 기록으로 확인합니다. 작은 텐서에서 dtype에 맞는 허용 오차로 math 백엔드와 출력을 비교하고, 학습에 쓴다면 그래디언트도 비교합니다. GPU, 프레임워크/CUDA 버전, 입력 형태, 마스크, 정밀도를 결과와 함께 기록합니다.
 
----
+`dropout_p` 는 명시적으로 지정해야 합니다. SDPA는 모듈의 학습 모드와 무관하게 전달된 확률을 적용합니다. `is_causal=True` 는 가변 길이 배치의 padding을 제거하지 않습니다. 지원되는 causal/padding 결합 마스크나 가변 길이 표현을 사용하고 백엔드 실행 조건을 다시 확인합니다 [[4]](#ref-4).
+
+시간을 측정할 때는 워밍업과 올바른 동기화를 수행하고 입력·마스크·정밀도를 맞춥니다. Prefill과 토큰별 decode는 query 형태와 병목이 다르므로 분리해서 측정합니다. 커널뿐 아니라 전체 워크로드의 지연, 처리량, 최대 메모리도 기록합니다. 목표 커널이 처리하지 못하는 구성을 위한 검증된 대체 경로를 유지합니다.
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: **FlashAttention** 이 해결하고자 하는 주된 병목 현상은 무엇입니까? 연산량(FLOPs)입니까, 아니면 메모리 대역폭(I/O)입니까?</summary>
-*주된 병목 현상은 메모리 대역폭(I/O)입니다. 느린 HBM과 빠른 칩 내부 SRAM 사이에서 거대한 $L \times L$ 어텐션 행렬을 읽고 쓰는 데 걸리는 시간이, 행렬 곱셈에 필요한 실제 부동 소수점 연산 시간보다 훨씬 큽니다.*
+<summary>Quiz 1: 예제의 점수 행렬 할당이 64 MiB가 아니라 1 GiB인 이유는 무엇인가요?</summary>
+*64 MiB는 FP32 $4096\times4096$ 행렬 하나의 크기입니다. 배치 크기 2와 헤드 수 8을 곱하면 이런 행렬이 16개이므로 $16\times64$ MiB = 1 GiB입니다. 중간값 하나만 센 것이며 Q/K/V나 전체 모델을 포함하지 않습니다.*
 </details>
 
 <details>
-<summary>Quiz 2: FlashAttention-1은 어텐션 행렬의 전체 행을 한 번에 SRAM에 로드하지 않고 어떻게 소프트맥스 함수를 올바르게 계산합니까?</summary>
-*FlashAttention은 **online softmax** 라는 기법을 사용합니다. 행을 블록(타일) 단위로 처리하면서 실행 중인 통계치(최댓값 및 지수 합)를 유지합니다. 새로운 블록으로 이동할 때 새로운 최댓값을 기반으로 기존에 누적된 결과를 재조정(rescale)함으로써, 메모리에 전체 행을 올리지 않고도 정확한 소프트맥스 결과를 계산할 수 있습니다.*
+<summary>Quiz 2: 누적 최댓값이 커지면 분모와 분자를 모두 재조정해야 하는 이유는 무엇인가요?</summary>
+*기존 두 합은 이전 기준점의 지수값으로 계산됐습니다. 둘 다 $e^{m-m'}$ 를 곱해야 새 기준점의 값과 합칠 수 있습니다. 하나만 바꾸면 출력 비율이 달라집니다. 각 타일을 따로 정규화하고 평균내는 방법도 타일 사이의 상대 가중치를 잃습니다.*
 </details>
 
 <details>
-<summary>Quiz 3: 왜 **FlashAttention** 은 순전파 시에 어텐션 행렬을 저장하지 않고 역전파 시에 이를 재계산합니까?</summary>
-*순전파 시에 $L \times L$ 어텐션 행렬을 저장하면 $O(L^2)$ 의 메모리가 필요하므로 **FlashAttention** 의 주된 목적인 메모리 절약 효과가 사라집니다. 따라서 저장된 $\mathbf{Q}, \mathbf{K}, \mathbf{V}$ 블록을 사용하여 빠른 SRAM에서 즉석으로 어텐션 행렬을 재계산함으로써, 약간의 추가 연산을 수행하는 대신 메모리 대역폭과 저장 비용을 획기적으로 줄일 수 있습니다.*
+<summary>Quiz 3: 정확한 attention이면 비트 단위로 같고 FP8 오차도 없나요?</summary>
+*아닙니다. 정확성은 attention 알고리즘을 설명하며, 부동소수점 누적 순서는 반올림 결과를 바꿀 수 있습니다. FP8 양자화는 표현 오차를 추가합니다. 수치 허용 오차와 다운스트림 평가는 서로 다른 영향을 확인합니다.*
 </details>
 
 <details>
-<summary>Quiz 4: FP16을 적용하고 시퀀스 길이가 $L = 128,000$일 때, 단일 헤드에 대한 중간 어텐션 행렬 ($\mathbf{S} = \mathbf{Q}\mathbf{K}^T$)의 메모리 점유율을 계산하고, FlashAttention이 이 시나리오에서 Out-Of-Memory(OOM) 에러를 방지하는 원리를 설명하시오.</summary>
-*FP16을 사용할 경우, 각 원소는 2바이트를 소비합니다. 중간 행렬의 차원은 $L \times L = 128,000 \times 128,000 = 1.6384 \times 10^{10}$개의 원소입니다. 따라서 헤드당 메모리 사용량은 $1.6384 \times 10^{10} \times 2 \text{ 바이트} \approx 32.77 \text{ GB}$ 입니다. 만약 32개의 헤드를 가진 표준 모델이라면 총 1테라바이트가 넘는 VRAM을 요구하여 즉각 OOM 에러가 발생합니다. FlashAttention은 SRAM 타이링(Tiling) 기법을 활용하여 매우 작은 블록(예: $64 \times 64$)만을 SRAM에 올려 계산하므로, 거대한 중간 행렬을 HBM에 절대 기록하지 않아 OOM 에러를 방지합니다.*
+<summary>Quiz 4: 128,000토큰의 FP16 점수 행렬 하나는 32.768 GB입니다. FlashAttention이면 반드시 메모리에 들어가나요?</summary>
+*그 전체 중간 행렬을 HBM에 저장하지 않지만 파라미터, Q/K/V, 출력, 다른 활성값, 작업 버퍼와 학습 상태는 여전히 메모리를 사용합니다. 조밀한 attention의 쌍별 연산량도 여전히 이차적입니다. 컨텍스트 한도를 정하기 전에 전체 워크로드를 측정해야 합니다.*
 </details>
 
----
+<details>
+<summary>Quiz 5: `flash_sdp_enabled() == True` 이면 측정한 속도 향상이 Flash에서 나왔다고 볼 수 있나요?</summary>
+*아닙니다. 백엔드가 활성화돼 있는지 알려주는 설정입니다. 필요하면 원하는 백엔드를 강제하고 실제 실행 커널을 확인한 뒤 조건을 맞춰 비교해야 합니다. 대체 경로 실행, 다른 마스크, 바뀐 dtype은 비교를 무효로 만들 수 있습니다.*
+</details>
 
 ## References
 
-1. <a id="ref-1"></a>Dao, T., Fu, D., Ermon, S., Rudra, A., & Ré, C. (2022). *FlashAttention: Fast and memory-efficient exact attention with IO-awareness*. [arXiv:2205.14135](https://arxiv.org/abs/2205.14135).
-2. <a id="ref-2"></a>Dao, T. (2023). *FlashAttention-2: Faster attention with better parallelism and work partitioning*. [arXiv:2307.08691](https://arxiv.org/abs/2307.08691).
-3. <a id="ref-3"></a>Dao, T., & Haziza, N. (2024). *FlashAttention-3: Fast and Accurate Attention with Asynchrony and Low-precision*. [arXiv:2407.08608](https://arxiv.org/abs/2407.08608).
-4. <a id="ref-4"></a>PyTorch. *Scaled Dot Product Attention*. [PyTorch 문서](https://docs.pytorch.org/docs/stable/generated/torch.nn.functional.scaled_dot_product_attention.html).
+1. <a id="ref-1"></a>Dao, T., Fu, D., Ermon, S., Rudra, A., & Ré, C. (2022). *FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness*. [arXiv:2205.14135](https://arxiv.org/abs/2205.14135).
+2. <a id="ref-2"></a>Dao, T. (2023). *FlashAttention-2: Faster Attention with Better Parallelism and Work Partitioning*. [arXiv:2307.08691](https://arxiv.org/abs/2307.08691).
+3. <a id="ref-3"></a>Shah, J., Bikshandi, G., Zhang, Y., Thakkar, V., Ramani, P., & Dao, T. (2024). *FlashAttention-3: Fast and Accurate Attention with Asynchrony and Low-precision*. [arXiv:2407.08608](https://arxiv.org/abs/2407.08608).
+4. <a id="ref-4"></a>PyTorch. *Scaled Dot Product Attention*. [PyTorch 2.15 documentation](https://docs.pytorch.org/docs/2.15/generated/torch.nn.functional.scaled_dot_product_attention.html).
+5. <a id="ref-5"></a>Milakov, M., & Gimelshein, N. (2018). *Online Normalizer Calculation for Softmax*. [arXiv:1805.02867](https://arxiv.org/abs/1805.02867).

@@ -1,0 +1,16 @@
+.graphrag-pipeline { margin: 1.8rem 0; padding: 0; }
+.graphrag-pipeline:lang(ko) { word-break: keep-all; overflow-wrap: anywhere; }
+.graphrag-pipeline .graph-stage { border: 1px solid #94a3b8; border-radius: .7rem; padding: 1.15rem; }
+.graphrag-pipeline .graph-index { background: #eff6ff; }
+.graphrag-pipeline .graph-query { background: #f0fdf4; }
+.graphrag-pipeline h4 { color: #172554; margin: 0 0 1rem; font-size: 1.05rem; line-height: 1.5; }
+.graphrag-pipeline ol { list-style: none; counter-reset: graph-step; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem; margin: 0; padding: 0; }
+.graphrag-pipeline li { counter-increment: graph-step; position: relative; background: #fff; border: 1px solid #cbd5e1; border-radius: .35rem; padding: .9rem .9rem .9rem 2.5rem; margin: 0; }
+.graphrag-pipeline li::before { content: counter(graph-step); position: absolute; left: .85rem; top: .9rem; font-weight: 700; color: #1d4ed8; }
+.graphrag-pipeline li strong { display: block; color: #172554; font-size: .97rem; line-height: 1.4; }
+.graphrag-pipeline li span { display: block; margin-top: .4rem; color: #334155; font-size: .9rem; line-height: 1.55; }
+.graphrag-pipeline .graph-query ol { grid-template-columns: 1fr; }
+.graphrag-pipeline .graph-query li::before { color: #166534; }
+.graphrag-pipeline .graph-boundary { text-align: center; color: #475569; font-size: .92rem; margin: .8rem 0; padding: .45rem; border-left: 3px solid #64748b; }
+.graphrag-pipeline figcaption { color: #475569; font-size: .85rem; line-height: 1.6; margin-top: .8rem; }
+@media (max-width: 640px) { .graphrag-pipeline ol { grid-template-columns: 1fr; } .graphrag-pipeline .graph-stage { padding: .8rem; } }

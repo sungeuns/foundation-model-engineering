@@ -6,74 +6,111 @@ lang: "en"
 
 # 7.4 Flash Attention 1, 2, 3
 
-In Chapter 3, we analyzed the complexity of self-attention and noted that its time and memory complexity scale quadratically with the sequence length ($O(L^2)$). As we push foundation models to handle massive contexts (e.g., 128k to 1M+ tokens), this quadratic scaling becomes a fatal bottleneck.
+A 4,096-token attention head produces $4,096^2$ pairwise scores. Stored in FP32, that single matrix occupies **64 MiB**. With a batch of two and eight heads, the score matrices alone occupy **1 GiB**. Computing the scores is useful work; repeatedly writing and reading a full matrix that will soon be discarded is a separate cost.
 
-However, the primary bottleneck in scaling attention is often not *compute* (FLOPs), but **memory bandwidth** (I/O). The time spent moving the large attention matrix between slow GPU High Bandwidth Memory (HBM) and fast on-chip SRAM dominates the execution time.
+FlashAttention changes the execution schedule of attention to reduce that memory traffic [[1]](#ref-1). It processes tiles in fast on-chip memory and accumulates the output without storing the full score or probability matrix in GPU high-bandwidth memory (HBM). The dense computation still has quadratic arithmetic cost in sequence length. The practical question is how much movement, storage and idle compute the implementation can avoid.
 
-**FlashAttention** revolutionized transformer training by making attention **IO-Aware**. It reduces the number of memory reads/writes between HBM and SRAM, achieving massive speedups while yielding mathematically exact results.
+## 1. Count the Intermediate, Then the Whole Workload
 
-In this section, we trace the evolution of FlashAttention from its original tiling concept to the hardware-specific optimizations of FlashAttention-3.
+For one head, let $Q,K\in\mathbb R^{L\times d}$ and $V\in\mathbb R^{L\times d_v}$, where $L$ is sequence length, $d$ the query/key dimension and $d_v$ the value dimension. Suppressing masks for now,
 
----
+$$
+S=QK^\top/\sqrt d,\qquad P=\operatorname{softmax}(S),\qquad O=PV.
+$$
 
-## 1. The Memory Wall in Attention
+Softmax acts across each query's keys. A straightforward implementation materializes $S$ and $P$, each shaped $[L,L]$. For batch size $B$, head count $H$ and $s$ bytes per element, **one** such allocation takes $BHL^2s$ bytes. At $B=2$, $H=8$, $L=4096$, $s=4$, this is $1,073,741,824$ bytes, or 1 GiB. FP16 halves this particular allocation. If both matrices coexist, they need twice that amount; fusion and buffer reuse can change the actual peak.
 
-Standard attention computes the matrix $\mathbf{S} = \mathbf{Q}\mathbf{K}^T$, writes it to HBM, reads it back to compute softmax, writes $\mathbf{P} = \text{softmax}(\mathbf{S})$ to HBM, and finally reads it back to compute $\mathbf{O} = \mathbf{P}\mathbf{V}$.
+This is not the model's full footprint. Parameters, Q/K/V, other activations, outputs, temporary buffers and allocator reserve remain. Training also needs gradients and optimizer state, subject to sharding and recomputation. Removing an attention intermediate cannot guarantee that a model fits or that bandwidth is the bottleneck at every shape.
 
-For a sequence length of $L=4096$, the attention matrix alone consumes $4096 \times 4096 \times 4 \text{ bytes} \approx 64 \text{ MB}$ per head. Moving this matrix back and forth between HBM and SRAM wastes immense amounts of time.
+## 2. FlashAttention-1: Accumulate Without Saving Every Score
 
----
+### Online Softmax: Change the Reference Point Safely
 
-## 2. FlashAttention-1: Tiling and Recomputation
+Softmax is unchanged if the same constant is subtracted from all scores. Online normalization uses this property while processing scores in pieces [[5]](#ref-5). For one query, let $z_j$ be a scaled score and $v_j$ its value vector. Maintain a maximum $m$, denominator $\ell$ and unnormalized output vector $u$ over processed keys. For a new tile $T$,
 
-Introduced by Dao et al. (2022) [[1]](#ref-1), FlashAttention-1 addresses the memory wall by avoiding the materialization of the full $O(L^2)$ attention matrix in slow HBM. It relies on two core ideas:
+$$
+\begin{aligned}
+m'&=\max\bigl(m,\max_{j\in T}z_j\bigr), & a&=e^{m-m'},\\
+p_j&=e^{z_j-m'}, & \ell'&=a\ell+\sum_{j\in T}p_j,\\
+u'&=au+\sum_{j\in T}p_jv_j. &&
+\end{aligned}
+$$
 
-### 2.1 Tiling (Forward Pass)
-FlashAttention loads blocks of $\mathbf{Q}, \mathbf{K}, \mathbf{V}$ from HBM to the fast, small on-chip SRAM. It computes attention for these blocks and writes the output back to HBM. To do this without seeing the full row of the attention matrix (which is needed for the Softmax denominator), it uses **Online Softmax** (based on work by Milakov and Gimelshein). This algorithm tracks running maximums and sums of exponentials to rescale the output incrementally, yielding mathematically exact results without materializing the full matrix.
+Start with $m=-\infty$, $\ell=0$ and $u=0$; the final output is $u/\ell$. When a later tile raises the maximum, $a$ rescales **both** old sums into the new reference frame. Normalizing each tile independently and averaging its output would give the wrong weights when tile denominators differ.
 
-### 2.2 Recomputation (Backward Pass)
-To compute gradients during the backward pass, standard attention requires the stored $L \times L$ attention matrix. FlashAttention avoids storing this by **recomputing** it on the fly in SRAM during the backward pass using the stored blocks of $\mathbf{Q}, \mathbf{K}, \mathbf{V}$. While this adds some FLOPs (recomputation), it drastically reduces HBM reads/writes, resulting in a net speedup of 2-4x.
+> **Deliberately simplified recurrence.** This CPU FP64 example handles one query and finite, unmasked scores. It already stores that one score row so that the recurrence is easy to inspect. It is not a FlashAttention GPU implementation: it omits Q/K tiling, causal/padding masks, dropout, backward recomputation, scheduling and performance measurement. A fully masked tile/row needs explicit handling and is rejected here.
 
----
+```python
+import torch
 
-## 3. FlashAttention-2: Better Parallelism and Work Partitioning
+@torch.no_grad()
+def online_attention_row(scores, values, tile_size=2):
+    """Finite CPU FP64 scores [keys], values [keys, value_dim]; no mask."""
+    if scores.ndim != 1 or values.ndim != 2 or len(scores) != len(values):
+        raise ValueError("expected scores[keys], values[keys,value_dim]")
+    if len(scores) == 0 or tile_size <= 0:
+        raise ValueError("need at least one key and a positive tile size")
+    if scores.device.type != "cpu" or values.device.type != "cpu":
+        raise ValueError("this teaching example is CPU-only")
+    if scores.dtype != torch.float64 or values.dtype != torch.float64:
+        raise ValueError("use FP64 to check the recurrence")
+    if not torch.isfinite(scores).all() or not torch.isfinite(values).all():
+        raise ValueError("masked/nonfinite entries are outside this example")
+    maximum = scores.new_tensor(float("-inf"))
+    denominator = scores.new_zeros(())
+    numerator = values.new_zeros(values.shape[1])
+    for start in range(0, len(scores), tile_size):
+        block = scores[start:start + tile_size]
+        new_maximum = torch.maximum(maximum, block.max())
+        correction = torch.exp(maximum - new_maximum)
+        probabilities = torch.exp(block - new_maximum)
+        denominator = correction * denominator + probabilities.sum()
+        numerator = correction * numerator + probabilities @ values[start:start + tile_size]
+        maximum = new_maximum
+    return numerator / denominator
 
-FlashAttention-2 (2023) [[2]](#ref-2) recognized that while FA-1 reduced I/O, it left some GPU compute resources underutilized. It introduced several algorithmic refinements:
+scores = torch.tensor([1000., 1001., 999., 1002., 998.], dtype=torch.float64)
+values = torch.arange(10, dtype=torch.float64).reshape(5, 2)
+expected = torch.softmax(scores, dim=0) @ values
+for tile_size in (1, 2, 3, 5):
+    actual = online_attention_row(scores, values, tile_size)
+    torch.testing.assert_close(actual, expected, rtol=1e-12, atol=1e-12)
+print(expected)  # approximately tensor([4.5067, 5.5067])
+```
 
-*   **Parallelism over Sequence Length**: FA-1 parallelized over batch size and number of heads. For small batch sizes or long sequences, this left many GPU streaming multiprocessors (SMs) idle. FA-2 adds parallelism over the sequence length dimension (blocks of $\mathbf{Q}$), significantly improving utilization.
-*   **Refactored Online Softmax**: FA-2 refactored the online softmax to reduce the number of non-matrix-multiplication operations (like exponentials), which are slow on GPUs compared to the heavily optimized Tensor Cores.
-*   **Support for Head Dimensions up to 256**: Expanded support for larger head dimensions used in some modern architectures.
+The large score offset makes direct exponentiation overflow, yet subtracting a running maximum keeps the calculation finite. The uneven two-key tiles also test the final partial tile. The example uses several tile widths because the mathematical output should not depend on the partition.
 
-These changes resulted in a 2x speedup over FA-1, achieving up to 70% of the theoretical peak FLOPs on A100 GPUs.
+### Recomputation and the Meaning of “Exact”
 
----
+FlashAttention retains the needed inputs, outputs and row statistics, then reconstructs probability tiles during backward instead of saving the full $P$ [[1]](#ref-1). This trades extra arithmetic for less HBM traffic and storage. Whether the trade wins, and by how much, depends on the workload.
 
-## 4. FlashAttention-3: Asynchrony and Low-Precision for Hopper
+“Exact attention” means that the algorithm does not approximate attention by dropping keys or replacing softmax. It does **not** promise bitwise equality across floating-point implementations: accumulation order and precision can change rounding. FP8 quantization introduces an additional approximation and must be evaluated separately.
 
-FlashAttention-3 (2024) [[3]](#ref-3) targets the specific architectural features of NVIDIA's Hopper architecture (H100) to push performance even further. The Hopper architecture introduced features that FlashAttention-3 exploits:
+## 3. FlashAttention-2: Keep More Compute Busy
 
-*   **Asynchronous Execution (Overlapping Compute and I/O)**: Hopper introduced **TMA (Tensor Memory Accelerator)**, which can move data between HBM and SRAM asynchronously, independent of the Tensor Cores. FA-3 overlaps the loading of the next block of $\mathbf{K}$ and $\mathbf{V}$ with the computation of the current block, hiding I/O latency completely.
-*   **WGMMA (Warpgroup Matrix Multiply-Accumulate)**: FA-3 utilizes H100's new WGMMA instructions, which are designed for larger matrix operations and offer higher throughput than legacy instructions.
-*   **Natively Support FP8**: FP8 reduces memory bandwidth requirements by half compared to FP16. FA-3 handles the scaling factors required for low-precision matrix multiplication accurately, maintaining model quality while doubling throughput.
+FlashAttention-2 changes how work is divided across thread blocks and warps [[2]](#ref-2). It uses fewer non-matrix operations, parallelizes work within a head across query blocks, and reduces shared-memory communication between warps. These changes matter when batch/head parallelism alone leaves too few blocks to occupy the GPU.
 
----
+The paper reports roughly twice the kernel speed of its FlashAttention baseline and 50–73% of theoretical peak FLOPs/s in its A100 experiments. Those are measured configurations, not a promise for every sequence length, dtype or GPU. A faster attention kernel also accelerates only the attention portion of an application.
 
-## 4.5 Comparison Table: Evolution of FlashAttention
+## 4. FlashAttention-3: Schedule Around Hopper's Asynchrony
 
-| Feature | FlashAttention-1 | FlashAttention-2 | FlashAttention-3 |
-| :--- | :--- | :--- | :--- |
-| **Primary Focus** | IO-Awareness & Tiling | Parallelism & Work Partitioning | Asynchrony & Hopper Optimization |
-| **Hardware Target** | Ampere (A100) and older | Ampere (A100) and newer | Hopper (H100) specific |
-| **Parallelism** | Batch, Heads | Batch, Heads, **Seq Len** | Batch, Heads, Seq Len |
-| **I/O Strategy** | Synchronous Tiling | Synchronous Tiling | **Asynchronous (TMA)** |
-| **Precision** | FP16/BF16 | FP16/BF16 | **FP8 Supported** |
-| **Peak FLOPs (A100)** | ~30-40% | ~70% | N/A (Optimized for H100) |
+FlashAttention-3 uses Hopper's asynchronous data movement and matrix operations [[3]](#ref-3). TMA moves tiles while other work proceeds; WGMMA enables asynchronous warpgroup matrix multiplication. The schedule overlaps data transfer with compute and interleaves matrix multiplication with softmax. It aims to hide more latency, not to eliminate all I/O stalls under every condition.
 
----
+Its FP8 path also uses block quantization and incoherent processing to control numerical error. Lower error than a baseline FP8 attention implementation is not proof that all downstream model capabilities are unchanged. Validate numerical agreement and task quality separately from throughput.
+
+The following table summarizes the papers' mechanisms; it is not a current hardware-support matrix or a cross-hardware benchmark.
+
+| Paper | Main change | What it does not establish |
+|---|---|---|
+| FlashAttention-1 (2022) [[1]](#ref-1) | Tile attention and recompute intermediates. | Linear arithmetic complexity or guaranteed freedom from OOM. |
+| FlashAttention-2 (2023) [[2]](#ref-2) | Improve parallel work division and reduce non-matmul work. | The same speedup for every shape and application. |
+| FlashAttention-3 (2024) [[3]](#ref-3) | Overlap Hopper operations; add a carefully scaled FP8 path. | Zero low-precision error or universal task-quality preservation. |
 
 ## 5. PyTorch SDPA: Verify That Flash Is Actually Selected
 
-PyTorch's scaled-dot-product attention (SDPA) dispatch depends on the installed PyTorch/CUDA version, GPU capability, dtype, shapes, masks, and dropout. The example below is intentionally CUDA-only and uses current `sdpa_kernel` backend selection. It demonstrates causal language-model attention; it is not a variable-length training loop.
+As of **2026-11-18**, the PyTorch 2.15 documentation describes backend selection through `sdpa_kernel` [[4]](#ref-4). Selection depends on the installed stack, GPU, dtype, shapes and attention options. Enabling Flash globally does not prove that a particular operation used it.
+
+> **CUDA dispatch example; not GPU-tested in this book's CPU smoke run.** It forces the Flash backend for fixed-length causal inference in FP16/BF16. It omits variable-length padding, training gradients, dropout and performance measurement. Unsupported inputs should raise rather than silently establish a performance claim.
 
 ```python
 import torch
@@ -103,37 +140,43 @@ assert output.dtype == dtype and torch.isfinite(output).all()
 print(torch.backends.cuda.flash_sdp_enabled(), output.shape, output.dtype)
 ```
 
-For training, set `dropout_p` explicitly because SDPA applies the supplied probability independently of module training mode. `is_causal=True` does not remove padding from variable-length batches. Use the framework's supported combined causal/padding or variable-length representation, then confirm that it remains eligible for the intended backend. Compare output and gradients with the math backend on small tensors within a dtype-appropriate tolerance, and use profiler/kernel logs to prove which backend ran [[4]](#ref-4). If forced Flash dispatch rejects the inputs, change the configuration or allow a documented fallback; do not report FlashAttention performance from the math path.
+The printed `flash_sdp_enabled()` value is a configuration flag. Use profiler/kernel evidence for the actual execution. On small tensors, compare output and, for training, gradients with the math backend at a dtype-appropriate tolerance. Record the GPU, framework/CUDA versions, input shape, mask and precision with the result.
 
----
+Set `dropout_p` explicitly: SDPA applies the supplied probability independently of module training mode. `is_causal=True` does not remove padding from a variable-length batch. Use a supported combined causal/padding or variable-length representation and check backend eligibility [[4]](#ref-4).
+
+For timing, warm up, synchronize correctly, and compare the same input/mask and precision. Measure prefill and token-by-token decode separately; their query shapes and bottlenecks differ. Record latency, throughput and peak memory for the complete workload as well as the kernel. Keep a tested fallback when the intended kernel cannot handle a configuration.
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: What is the primary bottleneck that FlashAttention attempts to solve? Is it compute (FLOPs) or memory bandwidth (I/O)?</summary>
-*The primary bottleneck is memory bandwidth (I/O). The time spent reading and writing the massive $L \times L$ attention matrix between the slow High Bandwidth Memory (HBM) and the fast on-chip SRAM dominates the execution time, rather than the actual floating-point operations required for matrix multiplication.*
+<summary>Quiz 1: Why is the worked score allocation 1 GiB rather than 64 MiB?</summary>
+*64 MiB is one FP32 $4096\times4096$ matrix. Batch size two and eight heads produce 16 such matrices: $16\times64$ MiB = 1 GiB. This counts only one intermediate, not Q/K/V or the whole model.*
 </details>
 
 <details>
-<summary>Quiz 2: How does FlashAttention-1 compute the softmax function correctly without loading the entire row of the attention matrix into SRAM at once?</summary>
-*FlashAttention uses a technique called **online softmax**. It processes the row in blocks (tiles) and maintains running statistics (specifically the running maximum and the sum of exponentials). When moving to a new block, it rescales the accumulated results using the new maximum, allowing it to compute the exact softmax result without ever materializing the full row in memory.*
+<summary>Quiz 2: Why must a new running maximum rescale both the denominator and numerator?</summary>
+*Both old sums used the previous exponential reference point. Multiplying them by $e^{m-m'}$ puts their contributions on the new scale. Rescaling just one changes the output ratio; averaging independently normalized tiles also loses their relative weights.*
 </details>
 
 <details>
-<summary>Quiz 3: Why does FlashAttention recompute the attention matrix during the backward pass instead of storing it during the forward pass?</summary>
-*Storing the $L \times L$ attention matrix during the forward pass would require $O(L^2)$ memory, defeating the main purpose of FlashAttention (reducing memory footprint). By recomputing the attention matrix on the fly in fast SRAM using the stored blocks of $\mathbf{Q}, \mathbf{K}, \mathbf{V}$ during the backward pass, FlashAttention trades a small amount of extra compute for a massive reduction in memory bandwidth and storage costs.*
+<summary>Quiz 3: Does exact attention imply bitwise equality or no FP8 error?</summary>
+*No. Exact describes the attention algorithm, while floating-point reduction order can change rounding. Quantizing tensors to FP8 adds representation error. Numerical tolerances and downstream evaluations address different consequences of these changes.*
 </details>
 
 <details>
-<summary>Quiz 4: Calculate the memory footprint of the intermediate attention matrix ($\mathbf{S} = \mathbf{Q}\mathbf{K}^T$) for a single head with sequence length $L = 128,000$ using FP16. How does FlashAttention avoid an Out-Of-Memory (OOM) error in this scenario?</summary>
-*For FP16, each element consumes 2 bytes. The intermediate matrix has dimensions $L \times L = 128,000 \times 128,000 = 1.6384 \times 10^{10}$ elements. The memory footprint is $1.6384 \times 10^{10} \times 2 \text{ bytes} \approx 32.77 \text{ GB}$ per head. For a standard hidden size with 32 heads, this would require over 1 Terabyte of VRAM, causing an immediate OOM. FlashAttention avoids this by utilizing SRAM tiling, materializing only smaller blocks (e.g., $64 \times 64$), ensuring the intermediate matrix is never written to HBM.*
+<summary>Quiz 4: A single FP16 score matrix at 128,000 tokens takes 32.768 GB. Does FlashAttention guarantee that the workload fits?</summary>
+*It avoids storing that full intermediate in HBM, but parameters, Q/K/V, outputs, other activations, workspaces and training state still consume memory. Dense attention still performs quadratic pairwise work. Measure the complete workload before setting a context limit.*
 </details>
 
----
+<details>
+<summary>Quiz 5: Does `flash_sdp_enabled() == True` prove a measured speedup came from Flash?</summary>
+*No. It reports whether that backend is enabled. Force the intended backend where appropriate, verify the executed kernel, and compare matched workloads. A fallback, different mask or changed dtype can invalidate the comparison.*
+</details>
 
 ## References
 
-1. <a id="ref-1"></a>Dao, T., Fu, D., Ermon, S., Rudra, A., & Ré, C. (2022). *FlashAttention: Fast and memory-efficient exact attention with IO-awareness*. [arXiv:2205.14135](https://arxiv.org/abs/2205.14135).
-2. <a id="ref-2"></a>Dao, T. (2023). *FlashAttention-2: Faster attention with better parallelism and work partitioning*. [arXiv:2307.08691](https://arxiv.org/abs/2307.08691).
-3. <a id="ref-3"></a>Dao, T., & Haziza, N. (2024). *FlashAttention-3: Fast and Accurate Attention with Asynchrony and Low-precision*. [arXiv:2407.08608](https://arxiv.org/abs/2407.08608).
-4. <a id="ref-4"></a>PyTorch. *Scaled Dot Product Attention*. [PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.nn.functional.scaled_dot_product_attention.html).
+1. <a id="ref-1"></a>Dao, T., Fu, D., Ermon, S., Rudra, A., & Ré, C. (2022). *FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness*. [arXiv:2205.14135](https://arxiv.org/abs/2205.14135).
+2. <a id="ref-2"></a>Dao, T. (2023). *FlashAttention-2: Faster Attention with Better Parallelism and Work Partitioning*. [arXiv:2307.08691](https://arxiv.org/abs/2307.08691).
+3. <a id="ref-3"></a>Shah, J., Bikshandi, G., Zhang, Y., Thakkar, V., Ramani, P., & Dao, T. (2024). *FlashAttention-3: Fast and Accurate Attention with Asynchrony and Low-precision*. [arXiv:2407.08608](https://arxiv.org/abs/2407.08608).
+4. <a id="ref-4"></a>PyTorch. *Scaled Dot Product Attention*. [PyTorch 2.15 documentation](https://docs.pytorch.org/docs/2.15/generated/torch.nn.functional.scaled_dot_product_attention.html).
+5. <a id="ref-5"></a>Milakov, M., & Gimelshein, N. (2018). *Online Normalizer Calculation for Softmax*. [arXiv:1805.02867](https://arxiv.org/abs/1805.02867).

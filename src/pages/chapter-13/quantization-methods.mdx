@@ -8,29 +8,31 @@ import QuantizationMethodVisualizer from '../../components/chapter-13/Quantizati
 
 # 13.2 Quantization Methods
 
-Quantization represents weights, activations or KV state with fewer bits. Quality loss is not determined by bit width alone: calibration data, scale granularity, outliers, architecture and kernels matter. GPTQ and AWQ are PTQ algorithms; GGUF is a file format and runtime ecosystem.
+An 8-billion-weight checkpoint stored at four bits has a 4 GB raw weight payload. That does not mean the complete model serves requests in 4 GB of memory. Scales, unquantized tensors, activations and the KV cache still need space. Nor do two four-bit checkpoints necessarily produce the same answers: the placement of rounding error matters as much as its size.
 
----
+This section follows two questions: **which errors matter for the layer's output, and what representation can the runtime actually execute?** GPTQ and AWQ answer the first through calibration; a format such as GGUF describes how tensors and metadata are stored. These are different parts of a deployment.
 
-## 1. GPTQ: Error Compensation via the Hessian
+## 1. GPTQ: Compensate for Layer-Output Error
 
-Introduced in late 2022, **GPTQ** (Accurate Post-Training Quantization for Generative Pre-trained Transformers) [[1]](#ref-1) revolutionized model compression by proving that 175-billion parameter models could be quantized to 3 or 4 bits on a single GPU in just a few hours, with negligible perplexity degradation.
+The GPTQ paper reports compressing its evaluated 175B models to three or four bits in a few GPU hours with small perplexity changes [[1]](#ref-1). That result is scoped to its models, calibration, quantizers and evaluations. It does not establish a universal safe bit width.
 
-### The Mathematics of Optimal Brain Surgeon
-GPTQ does not simply quantize weights in isolation. It treats quantization as an optimization problem: *If I introduce an error by rounding Weight A, how can I adjust Weight B to cancel out that error?*
+### What the Hessian Measures
 
-This concept originates from a classic neural network pruning technique called Optimal Brain Surgeon (OBS). GPTQ minimizes the squared error between the output of the full-precision layer and the quantized layer. To do this efficiently, it uses second-order information—specifically, the **Hessian matrix** (the matrix of second derivatives of the loss function).
+Let $W\in\mathbb{R}^{d_{out}\times d_{in}}$ be a linear layer's weights and $X\in\mathbb{R}^{d_{in}\times n}$ contain $n$ calibration input vectors as columns. GPTQ approximately solves a quantization-constrained layer reconstruction problem:
 
-For a given weight matrix $W$ and input $X$, the objective is to find a quantized matrix $\hat{W}$ that minimizes the squared error:
-$$ \arg\min_{\hat{W}} ||WX - \hat{W}X||_2^2 $$
+$$
+\underset{\hat W\in\mathcal Q}{\operatorname{minimize}}\;
+\frac{1}{n}\lVert WX-\hat WX\rVert_F^2,
+\qquad H=\frac{2}{n}XX^\top.
+$$
 
-GPTQ processes the weight matrix row by row. When a weight $w_i$ is quantized to $\hat{w}_i$, an error $\delta = w_i - \hat{w}_i$ is generated. GPTQ updates all the *remaining* unquantized weights in that row to compensate for $\delta$, using the inverse of the Hessian matrix ($H^{-1}$) of the layer's activations.
+Here $\mathcal Q$ is the allowed quantized representation and $\lVert\cdot\rVert_F$ is the Frobenius norm. $H$ is the Hessian of one output row's reconstruction loss with respect to its weights. It captures input-feature interactions through uncentered second moments; no mean subtraction is implied. It is not the full model's language-model-loss Hessian.
 
-### Engineering the GPTQ Loop
+Rounding one weight changes the layer's output. GPTQ uses the remaining unquantized weights to compensate for that change on the calibration inputs. Rows share this input second-moment matrix, allowing column-wise processing across rows. Correlated inputs permit compensation; diagonal $H$ provides no cross-feature correction. Damping stabilizes nearly singular estimates.
 
-Below is a conceptual PyTorch implementation of the core GPTQ algorithm. In a production environment, this is heavily optimized using block-wise updates and Cholesky decomposition to avoid numerical instability when inverting massive matrices.
+### A Small Compensation Loop
 
-> **Educational single-layer example.** Uses CPU FP32 operations. Calibration-data selection, group-scale search, packing/kernels, distributed execution and model-level quality validation are omitted.
+> **Deliberately simplified single-layer implementation.** CPU FP32 with $W$ shaped `[out_features, in_features]` and $H$ shaped `[in_features, in_features]`. It omits calibration-data preparation, group-scale search, activation ordering, bit packing, fused kernels, distributed execution and model-level quality gates. The output remains a dense FP32 tensor, so this example does not compress its storage.
 
 ```python
 import torch
@@ -69,28 +71,35 @@ W_q = gptq_core_loop(W, H)
 print("Calibration reconstruction MSE:", ((W - W_q) @ X).square().mean().item())
 ```
 
-GPTQ is highly effective but requires a careful calibration phase to compute the Hessian. If the calibration data is skewed, the Hessian will prioritize compensating for the wrong features, leading to poor generalization.
+The example measures reconstruction on the same data used to construct $H$. Also measure a separate held-out calibration slice before trusting the choice. A smaller layer error need not preserve generation, tool formatting or rare-domain behavior. Keep evaluation examples and their semantic neighbors out of calibration.
 
----
+## 2. AWQ: Protect Sensitive Channels by Rescaling
 
-## 2. AWQ: Activation-aware Weight Quantization
+AWQ studies activation-dependent sensitivity and searches channel scales before weight quantization [[2]](#ref-2). Its observation about protecting a small fraction of salient weights, including a 1% example, is an empirical finding for the studied settings. It is not a statement that every model has the same fixed set of indispensable weights.
 
-While GPTQ focuses on mathematical error compensation, **AWQ** (Activation-aware Weight Quantization) [[2]](#ref-2) takes a deeply empirical approach. The authors of AWQ made a critical observation: **Not all weights are equally important.**
+### Why Weight Error Alone Can Mislead
 
-Approximately 1% of the weights in an LLM are "salient." If you skip quantizing this 1%, the model retains nearly all of its full-precision accuracy. However, keeping 1% of weights in FP16 while the rest are INT4 creates a nightmare for hardware execution, requiring complex sparse-matrix multiplication kernels.
+Consider one output with weights $w=[0.1,1]$ and input $x=[100,1]$. The exact output is $11$. With a symmetric four-bit grid whose positive maximum is 7 and whose scale is $1/7$, the rounded weights are $[1/7,1]$ and the output is about $15.286$. A weight error of only $0.04286$ becomes an output error of about $4.286$ because it multiplies an input of 100. This is an authored two-feature example, not a model benchmark.
 
-### The Salience Paradox
-How do we identify these salient weights? Weight magnitude alone can miss activation-dependent sensitivity. A large weight might multiply against an activation that is always zero, rendering it useless. AWQ uses **activation statistics** to identify channels worth protecting in its evaluated quantization scheme. This does not prove that weight magnitude is useless for every compression method.
+Activation statistics help identify such sensitivity. They are a proxy tied to the calibration distribution, not a complete measure of a weight's causal importance.
 
-### The Scaling Trick
-To protect these salient weights without using mixed-precision hardware kernels, AWQ uses a mathematical equivalence trick.
+### What Reciprocal Scaling Preserves
 
-For a linear operation $Y = WX$, we can introduce a scaling vector $S$:
-$$ Y = WX = (W \cdot S) (X \cdot S^{-1}) $$
+Let $s$ be a positive vector of input-channel scales and $D(s)$ the diagonal matrix containing it. Before rounding,
 
-AWQ calculates a per-channel scaling factor $S$ that scales *up* the weights corresponding to large activations. By scaling the salient weights up, they occupy a larger portion of the INT4 quantization bins, drastically reducing their relative quantization error. During inference, the activations are scaled *down* by $S^{-1}$ before the matrix multiplication, ensuring the final mathematical output remains identical.
+$$
+WX=(W D(s))(D(s)^{-1}X).
+$$
 
-> **Educational single-layer example.** Uses CPU FP32 operations. Calibration-data selection, group-scale search, packing/kernels, distributed execution and model-level quality validation are omitted.
+After quantizing the scaled weights with quantizer $Q$, the actual output error is
+
+$$
+\Delta Y=\bigl[Q(WD(s))-WD(s)\bigr]D(s)^{-1}X.
+$$
+
+Scaling changes the rounding grid and the activation multiplier. A shared quantization group also couples neighboring weights: increasing one channel's range may reduce precision elsewhere. AWQ searches scales to manage that trade-off. The reciprocal identity does **not** make the quantized output identical to the original.
+
+> **Deliberately simplified scaling example.** CPU FP32; the code verifies only the unquantized reciprocal identity. It omits AWQ's scale search and clipping, quantization itself, scale folding into neighboring operators, bit packing, runtime kernels and held-out quality evaluation.
 
 ```python
 import torch
@@ -114,88 +123,86 @@ scaled_W, scales = awq_scale_weights(W, X)
 assert torch.allclose(X @ W.T, (X / scales) @ scaled_W.T, atol=1e-5)
 ```
 
-AWQ and GPTQ spend work on different calibration operations. Compare their implementations on the same model, calibration set, precision and hardware rather than assuming a universal runtime or quality ranking.
+AWQ and GPTQ spend calibration effort on different operations. Compare implementations with the same checkpoint, calibration set, quantization configuration and target runtime. Neither method's name guarantees a speed or quality ranking.
 
----
+## 3. TurboQuant: Rotation and Residual Correction
 
-## 3. TurboQuant: rotation and residual correction
-
-TurboQuant studies online vector quantization for mean-squared and inner-product error. It uses scalar quantization optimized for the rotated distribution and a QJL residual correction for inner-product estimation. A Hadamard rotation followed by uniform rounding is not the complete algorithm. [[3]](#ref-3)
+TurboQuant studies online vector quantization for mean-squared and inner-product error. It uses scalar quantization optimized for the rotated distribution and a QJL residual correction for inner-product estimation. A Hadamard rotation followed by uniform rounding is not the complete algorithm [[3]](#ref-3).
 
 Orthogonal rotation preserves inner products before quantization, not after introducing quantization error. Reported KV quality concerns the tested models and tasks. Concurrency depends on weights, KV, temporary buffers, metadata and kernel costs together; bit width alone cannot establish a doubling. Section 13.5 develops these distinctions.
 
+## 4. GGUF: Inspect the Stored Tensors
 
-## 4. GGUF and llama.cpp
+GGUF is a container for tensors and metadata, not a single quantization algorithm [[5]](#ref-5). Block size, scales, offsets and code representation depend on tensor type; not every block stores a zero-point.
 
-GGUF is a container for tensors and metadata, not a single quantization algorithm. Block size, scales, offsets and code representation depend on tensor type; not every block stores a zero-point.
+As of **2026-11-18**, the official specification describes typed tensor data and key-value metadata. Separate a block format from a converter's mixed-tensor policy. A label such as `Q4_K_M` does not specify every layer's precision. Inspect actual tensor types and sizes, record the converter commit/configuration and weight hashes, and validate quality and performance on the intended backend.
 
-Separate a block format from a converter's mixed-tensor policy. A label such as `Q4_K_M` does not specify every layer's precision: type selection depends on converter version and architecture. Inspect actual tensor types and sizes, record converter commit/configuration and weight hashes, and validate quality and performance on the intended backend.
+## 5. FP8 and Integer Grids
 
+Uniform integer quantization gives equally spaced reconstructed values *within one scale*. Floating-point formats use exponent and fraction fields, with spacing that changes with magnitude. Neither description implies that every LLM tensor follows a Gaussian distribution, or that one representation always gives smaller error.
 
-## 5. The Datatype War: FP8 vs INT4
+The 2022 FP8 proposal defines E4M3 and E5M2 [[4]](#ref-4). E4M3 has more fraction bits and less range than E5M2. The paper uses these different trade-offs for forward tensors and gradients in its training schemes; exact format variants, scaling recipes and kernel support must be checked for the chosen implementation. E5M2's IEEE-style special values do not make the proposal an “IEEE FP8 standard.”
 
-Historically, PTQ relied entirely on Integer formats (INT8, INT4). However, the release of NVIDIA's Hopper architecture (H100) introduced native hardware support for **8-bit Floating Point (FP8)**, fundamentally altering the quantization landscape [[4]](#ref-4).
+FP8 still has finite range. Scaling, clipping, overflow, accumulation precision and the input distribution affect error. Replacing a 16-bit tensor with 8-bit storage halves that tensor's raw payload; it need not halve total VRAM or execution time.
 
-### Why Floating Point?
-Integer quantization distributes its bins uniformly. The distance between 1 and 2 is the same as the distance between 100 and 101. LLM weights, however, follow a normal (Gaussian) distribution: most values are clustered near zero, with a few extreme outliers.
+## 6. Count Metadata and Runtime State Separately
 
-Floating-point formats use an exponent and a mantissa. This allows them to allocate high precision near zero (where the majority of weights live) while simultaneously maintaining a massive dynamic range to represent outliers without clipping them.
+For $P$ weights at $b$ bits, ideal payload is $Pb/8$ bytes. Suppose a **hypothetical** format stores all 8 billion weights at four bits and one FP16 scale per 128 weights. There are 62.5 million groups, so the scales add 125 MB. Total weight-plus-scale storage is **4.125 GB**, before headers, padding, unquantized tensors or runtime state.
 
-### E4M3 vs E5M2
-The 2022 FP8 proposal describes two encodings; E5M2 follows IEEE 754 special-value conventions, which does not make this an “IEEE FP8 standard”:
-1.  **E4M3 (4 Exponent bits, 3 Mantissa bits)**: Provides higher precision but lower dynamic range. It is the standard choice for quantizing **Weights** and **Activations** during forward-pass inference.
-2.  **E5M2 (5 Exponent bits, 2 Mantissa bits)**: Sacrifices precision for a massive dynamic range. It is primarily used to store **Gradients** during training, which can fluctuate wildly.
+The arithmetic below assumes one uninterrupted group sequence; real formats may start groups independently in every row or tensor. It is not a GGUF size predictor.
 
-FP8 range does not guarantee quality or memory savings. Validate scaling, accumulation precision, calibration, overflow and kernel support. Replacing a 16-bit tensor with 8-bit storage halves its raw payload; KV state, activations, buffers and metadata mean total VRAM need not halve. [[4]](#ref-4)
+```python
+parameters = 8_000_000_000
+bits, group_size, scale_bytes = 4, 128, 2
+weight_bytes = parameters * bits // 8
+groups = (parameters + group_size - 1) // group_size
+metadata_bytes = groups * scale_bytes
+assert weight_bytes == 4_000_000_000
+assert metadata_bytes == 125_000_000
+print((weight_bytes + metadata_bytes) / 1e9)  # 4.125 decimal GB
+```
 
----
+If that format also stores a two-byte zero-point per group, it adds another 125 MB. This overhead changes when the group size or metadata type changes. Separately budget KV/recurrent state, activations, workspaces and allocator reserve for the intended batch and context length. A `W4A16` label describes weight/activation precision; it does not determine KV precision or the treatment of every operator.
 
-## 6. Formats and deployment budgets
+Before switching a deployed artifact, preserve the base checkpoint, tokenizer/template, calibration manifest, converter/runtime versions and hashes. Compare domain and base-capability retention, safety, format/tool correctness, peak memory and latency on held-out slices. Reject or roll back when a predeclared quality or service-level gate fails; a smaller file alone is not a release gate.
 
-GGUF/GPTQ/AWQ tags alone do not determine online/static batching performance or hardware suitability. Pin the checkpoint, group size, scale/zero-point format, packing order and runtime kernel. GGUF quant formats and per-tensor bit allocations differ; not every block uses the same metadata.
-
-For $P$ weights at $b$ bits, ideal payload is $Pb/8$ bytes. An 8B model therefore has 16/8/4/2GB decimal payload at 16/8/4/2 bits, respectively. These are not minimum GPU capacities or quality guarantees. Add scales/indices, unquantized tensors, KV/recurrent state, activations, workspaces, allocator reserve and concurrency separately. Measure peak memory at the intended context and batch instead of applying a universal 20% multiplier.
-
-## 7. Explore range and output error
+## 7. Explore Range and Output Error
 
 Change range and bit width to compare rounding, clipping and activation-weighted output error. This computes uniform quantization; it is not a GPTQ/AWQ benchmark.
 
 <QuantizationMethodVisualizer client:load />
 
----
-
 ## Quizzes
 
 <details>
-<summary>Quiz 1: Why does AWQ use the magnitude of the activations rather than the magnitude of the weights to identify "salient" weights?</summary>
-*A weight with a large magnitude might be multiplied by an activation that is consistently near zero, rendering its actual contribution to the model's output negligible. The true importance (salience) of a weight is determined by how much data flows through it, which is measured by the magnitude of its corresponding activations.*
+<summary>Quiz 1: In the two-feature example, why does a small weight error cause a large output error?</summary>
+*The error is multiplied by the corresponding activation: $0.04286\times100\approx4.286$. Activation statistics can reveal this sensitivity, but calibration values do not prove universal importance on every future input.*
 </details>
 
 <details>
-<summary>Quiz 2: In the GPTQ algorithm, how is the quantization error of a specific weight handled to prevent overall model degradation?</summary>
-*When a weight is quantized, GPTQ calculates the exact numerical error introduced by the rounding. It then uses the inverse Hessian matrix of the activations to mathematically project that error onto the remaining unquantized weights in the same row, adjusting their values to compensate for the lost precision.*
+<summary>Quiz 2: Does GPTQ minimize the full model's language-model loss directly?</summary>
+*No. Its local objective reconstructs a linear layer's outputs on calibration inputs, using their second moments to compensate rounding error. Better local reconstruction does not guarantee that all downstream capabilities are preserved; held-out model-level evaluation remains necessary.*
 </details>
 
 <details>
-<summary>Quiz 3: Does a Q4-family GGUF name mean every tensor is exactly four bits?</summary>
-*No. Block metadata, format-specific super-block structure and per-tensor mixed precision affect storage. Inspect the format, conversion settings and runtime, then measure size and quality.*
+<summary>Quiz 3: Why can a four-bit checkpoint exceed half a byte per parameter?</summary>
+*Scales, zero-points, packing and mixed-precision tensors add storage. In the hypothetical 128-weight groups, one FP16 scale adds $2/128=0.015625$ bytes per weight, before other costs. The runtime also needs activations, KV state and workspaces.*
 </details>
 
 <details>
-<summary>Quiz 4: Is FP8 always better than INT8, and does it halve total VRAM?</summary>
-*No. Results depend on value distributions, scaling, accumulation and kernels. Its raw payload is half a 16-bit tensor’s, but other state and metadata remain. Validate quality and measured peak memory on the same workload.*
+<summary>Quiz 4: Does the reciprocal scaling identity guarantee identical outputs after AWQ quantization?</summary>
+*No. The identity applies before rounding. Quantization leaves $[Q(WD(s))-WD(s)]D(s)^{-1}X$, which depends on the scale search, group grid and inputs. Another channel in the same group can also lose precision.*
 </details>
 
 <details>
-<summary>Quiz 5: Mathematically formalize the quantization scale factor $S$ for symmetric per-tensor quantization versus dynamic per-token quantization for an activation matrix $X \in \mathbb{R}^{T \times D}$.</summary>
-*For symmetric INT8 quantization (clipping boundaries [-128, 127]), the scale factor maps the absolute maximum activation to discrete boundaries. In per-tensor quantization, a single static scale factor is derived across the entire matrix: $S_{tensor} = \frac{\max_{t, d} |X_{t, d}|}{127}$. In dynamic per-token (per-row) quantization, a scaling vector $S \in \mathbb{R}^T$ is calculated independently for each token trajectory $t$: $S_{token}(t) = \frac{\max_d |X_{t, d}|}{127}$. Dynamic per-token quantization yields higher accuracy by localized scaling, ensuring that an outlier in one token sequence does not coarse-grain the grid precision of unrelated token sequence dimensions.*
+<summary>Quiz 5: How do per-tensor and per-token symmetric INT8 scales differ?</summary>
+*For $X\in\mathbb R^{T\times D}$ with $T$ tokens and $D$ channels, choose the symmetric code range $[-127,127]$. Then $s_{tensor}=\max_{t,d}|X_{t,d}|/127$, while $s_t=\max_d|X_{t,d}|/127$ uses a separate row scale. Use a positive fallback for an all-zero row. Per-token scaling avoids letting one row's range set every other row's grid, but it adds scale work/metadata and does not guarantee better end-to-end task accuracy.*
 </details>
-
----
 
 ## References
 
 1. <a id="ref-1"></a>Frantar, E., Ashkboos, S., Hoefler, T., & Alistarh, D. (2022). *GPTQ: Accurate Post-Training Quantization for Generative Pre-trained Transformers.* [arXiv:2210.17323](https://arxiv.org/abs/2210.17323).
-2. <a id="ref-2"></a>Lin, J., Tang, J., Tang, H., Yang, S., Dang, X., & Han, S. (2023). *AWQ: Activation-aware Weight Quantization for LLM Compression and Acceleration.* [arXiv:2306.00978](https://arxiv.org/abs/2306.00978).
+2. <a id="ref-2"></a>Lin, J., Tang, J., Tang, H., et al. (2023). *AWQ: Activation-aware Weight Quantization for LLM Compression and Acceleration.* [arXiv:2306.00978](https://arxiv.org/abs/2306.00978).
 3. <a id="ref-3"></a>Zandieh, A., et al. (2025). *TurboQuant: Online Vector Quantization with Near-optimal Distortion Rate*. [arXiv:2504.19874](https://arxiv.org/abs/2504.19874).
 4. <a id="ref-4"></a>Micikevicius, P., Stosic, D., Burgess, N., Cornea, M., Dubey, P., ... & Wu, H. (2022). *FP8 Formats for Deep Learning.* [arXiv:2209.05433](https://arxiv.org/abs/2209.05433).
+5. <a id="ref-5"></a>ggml contributors. *GGUF specification*. [Official specification](https://github.com/ggml-org/ggml/blob/master/docs/gguf.md).

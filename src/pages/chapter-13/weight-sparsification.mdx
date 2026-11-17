@@ -8,180 +8,168 @@ import SparsityVisualizer from '../../components/chapter-13/SparsityVisualizer.t
 
 # 13.3 Weight Sparsification
 
-Sparsification removes selected weights or sets them to zero. Writing zeros into a dense tensor alone does not reduce storage or executed arithmetic. Gains require physically smaller structures or a supported sparse representation and kernel.
+You zero half the entries of a weight matrix, save it, and discover that the file is no smaller. The same dense matrix multiplication also takes roughly the same time. The missing step is representation: a dense tensor still stores every zero and its kernel still performs the dense computation.
 
-However, Large Language Models (LLMs) exhibit highly sensitive internal representations. Naively dropping the smallest weights—a technique known as magnitude pruning—destroys the model's reasoning capabilities at high sparsity levels. Modern LLM sparsification requires advanced algorithms that evaluate the complex interplay between weights and activations.
+Sparsification has two separate jobs. First, choose what can be removed while preserving the behavior you need. Second, encode and execute the remaining computation efficiently. A pruning score addresses the first; a sparse format or physically smaller dense matrix addresses the second. Neither alone proves end-to-end acceleration.
 
-In this section, we explore the engineering realities of structural constraints, the mathematics of one-shot Hessian pruning, and the modern algorithms that prune weights based on activation dynamics.
+## 1. A Pattern Is a Contract with the Kernel
 
----
+| Pattern | Example across eight input columns | Execution implication |
+|---|---|---|
+| Unstructured | `[0, 0, 0, 4, 5, 6, 0, 8]` | Four retained values overall, but irregular positions need a suitable sparse representation and kernel. |
+| 2:4 semi-structured | `[1, 0, 3, 0] [0, 6, 0, 8]` | Each contiguous quartet has two retained positions, matching a particular constrained layout. |
+| Structured | Remove a complete input channel and the corresponding column | Subsequent matrices must agree on the new dimensions; smaller dense kernels may be used. |
 
-## 1. The Sparsity Landscape: Unstructured vs. Structured
+The first row is 50% sparse but is **not** 2:4: its groups retain one and three entries. Unstructured means the locations are unrestricted, not that the algorithm chooses them randomly. A dense kernel does not inspect each value and dynamically skip zero multiplies; a sparse kernel needs metadata and a layout it understands.
 
-Not all zeros are created equal. The physical layout of the pruned weights dictates whether the theoretical reduction in FLOPs translates to an actual speedup on hardware.
+As of **2026-11-18**, PyTorch 2.15 documents dtype, shape and CUDA requirements for its semi-structured representation [[4]](#ref-4). The four-value pattern is necessary for that representation, but it does not guarantee that any tensor shape, transpose, device or operator is supported. Record the actual runtime and inspect the executed kernel.
 
-![sparsity_types](../../assets/images/chapter-13/sparsity_types.png)
+### Half the Values Is More Than Half the Storage
 
-1.  **Unstructured Sparsity**: Individual weights are zeroed out at random locations. While this preserves model accuracy exceptionally well, it provides almost zero actual speedup on standard GPUs. Dense matrix multiplication kernels are heavily optimized for contiguous memory access; skipping random zeros introduces branching and irregular memory access patterns that paralyze the GPU's streaming multiprocessors.
-2.  **Semi-Structured (N:M) Sparsity**: The pragmatic hardware compromise. In **2:4 sparsity**, exactly 2 out of every 4 continuous weights in a matrix are pruned. NVIDIA's Ampere, Hopper, and Blackwell architectures feature specialized Sparse Tensor Cores that compress these 2:4 matrices in memory and execute math operations at up to 2x the speed of dense matrices.
-3. **Structured sparsity:** Removes rows, columns, heads or channels to shrink matrices. Dense kernels can execute them, but quality, tile alignment and workload runtime still need measurement.
+In a representation with two FP16 values and four index bits per quartet, the original four values take 8 bytes. The retained values take 4 bytes and the metadata another 0.5 byte. Writing $M_{sparse}$ and $M_{dense}$ for the respective weight-storage sizes,
 
----
+$$
+\frac{M_{sparse}}{M_{dense}}=\frac{4+0.5}{8}=0.5625.
+$$
 
-## 2. SparseGPT: One-Shot Hessian Pruning
+For one billion original FP16 weights, that is 1.125 GB rather than 2 GB, before alignment or other tensors. The savings are 43.75%, not 50%. This encoding example matches the documented two index bits per retained value [[4]](#ref-4); metadata varies by format.
 
-Similar to how GPTQ revolutionized quantization, **SparseGPT** [[1]](#ref-1) proved that 100B+ parameter models could be pruned to 50-60% unstructured sparsity in a single shot, without requiring expensive retraining or fine-tuning.
+Even a sparse matrix kernel that runs twice as fast need not double application throughput. If that kernel accounted for 60% of baseline latency and everything else stayed unchanged, the normalized latency would be $0.6/2+0.4=0.7$, or about $1.43\times$ speedup. This is an illustrative upper-bound calculation under the stated assumptions, not a hardware measurement.
 
-SparseGPT formulates pruning as a layer-wise sparse regression problem. It does not just delete weights; it asks: *If I force this weight to be zero, how must I adjust the remaining unpruned weights to compensate for the lost signal?*
+## 2. SparseGPT: Compensate for Removed Weights
 
-To answer this, SparseGPT uses the inverse Hessian matrix ($H^{-1}$) of the layer's input activations. For a given weight matrix $W$ and input $X$, the objective is to find a sparse matrix $\hat{W}$ that minimizes the squared error:
-$$ \arg\min_{\hat{W}} ||WX - \hat{W}X||_2^2 \quad \text{subject to} \quad ||\hat{W}||_0 \le \kappa $$
+SparseGPT reports one-shot pruning of OPT-175B and BLOOM-176B to substantial unstructured sparsity with small perplexity changes in its experiments [[1]](#ref-1). These results concern the evaluated models and tasks; neither the sparsity level nor the lack of retraining guarantees preservation of every capability.
 
-SparseGPT processes the weight matrix sequentially. When a weight is pruned, the resulting error is projected onto the remaining unpruned weights using the correlations captured in the Hessian. While highly accurate, calculating and inverting massive Hessian matrices during the compression phase requires significant computational overhead.
+For $W\in\mathbb R^{d_{out}\times d_{in}}$ and calibration columns $X\in\mathbb R^{d_{in}\times n}$, the local objective is
 
----
+$$
+\underset{\hat W}{\operatorname{minimize}}\;
+\frac{1}{n}\lVert WX-\hat WX\rVert_F^2
+\quad\text{subject to}\quad\lVert\hat W\rVert_0\le\kappa.
+$$
 
-## 3. Wanda: Pruning by Weights and Activations
+Here $\lVert\cdot\rVert_F$ is the Frobenius norm, $\lVert\hat W\rVert_0$ counts retained nonzero entries and $\kappa$ is their budget. An N:M layout adds constraints inside each group. As in GPTQ, $H=2XX^\top/n$ is the Hessian of a row's local reconstruction loss, not the full language-model loss.
 
-While SparseGPT relies on complex weight updates, **Wanda** (Pruning by Weights and activations) [[2]](#ref-2) introduced a shockingly simple alternative that achieves competitive performance with zero weight updates.
+SparseGPT uses this input-correlation information to adjust still-unfixed weights as it prunes. The adjustment can recover some local output error, but second-moment estimation, damping and matrix factorization consume compression-time memory and compute. Held-out domain evaluation must decide whether the resulting artifact is usable.
 
-Wanda operates on the same principle that drives AWQ (discussed in the previous section): the importance of a weight is inextricably linked to the magnitude of the activation passing through it. A small weight is not useless if it multiplies against a massive activation outlier.
+## 3. Wanda: A Cheaper Importance Proxy
 
-Instead of pruning based on absolute weight magnitude $|W_{ij}|$, Wanda scores each weight using:
-$$ S_{ij} = |W_{ij}| \cdot ||X_j||_2 $$
-Where $||X_j||_2$ is the $\ell_2$-norm of the input activations for the $j$-th feature, calculated across a small calibration dataset.
+Wanda scores a weight using both its magnitude and the calibration activation norm [[2]](#ref-2):
 
-Wanda evaluates this score on a per-output basis (comparing weights only within the same row). By dropping weights with the lowest $S_{ij}$, Wanda naturally protects the weights aligned with the "massive outliers" in LLM activations, preserving the model's core reasoning pathways without requiring Hessian inversions.
+$$
+S_{ij}=|W_{ij}|\,\lVert X_j\rVert_2,
+$$
 
----
+where $X_j$ contains the observed values of input feature $j$ across calibration tokens. Scores are compared within an output row. Wanda removes low-scoring entries without SparseGPT-style compensation updates. This saves a calibration operation; it does not identify literal “reasoning pathways.”
 
-## 4. Implementing 2:4 Sparsity with Wanda
+Consider weights $[0.01,0.2,0.3,2]$ and one input $[100,1,1,1]$. Magnitude pruning removes the first two weights; Wanda's scores are $[1,0.2,0.3,2]$ and it removes the middle two. The original output is 3.5. The two pruned outputs are 2.3 and 3.0. In this example, weighting by activations reduces output error. On a different input distribution, that conclusion can change.
 
-To make unstructured pruning algorithms practically useful for inference acceleration, they are often constrained to an N:M pattern. The following PyTorch implementation demonstrates how to apply the Wanda metric to enforce strict 2:4 semi-structured sparsity, formatting the matrix for NVIDIA's Sparse Tensor Cores.
+Calibration tokens should represent intended traffic, with padding excluded from the statistics. Keep private release examples and related documents out of calibration; record sample IDs, tokenizer version, filters and the exact mask-generation settings.
 
-> **Educational mask example.** This zeros entries in a dense tensor; it does not implement sparse kernels or compressed storage.
+## 4. Construct and Check a 2:4 Mask
+
+> **Deliberately simplified mask implementation.** CPU FP32 with `W[out_features, in_features]` and `X[valid_tokens, in_features]`. It computes one layer's scores and a deterministic mask. It omits model-wide calibration, output compensation, sparse packing, GPU kernel conversion, quality evaluation and performance measurement. Existing zeros can leave fewer than two nonzeros in a quartet; the mask retains exactly two positions.
 
 ```python
 import torch
 
-def compute_wanda_scores(W: torch.Tensor, X: torch.Tensor) -> torch.Tensor:
-    """
-    Computes Wanda importance scores.
-    W: Weight matrix [out_features, in_features]
-    X: Calibration activations [batch * seq_len, in_features]
-    """
-    # Calculate the L2 norm of the activations for each input channel
-    X_norm = torch.norm(X, p=2, dim=0) # Shape: [in_features]
+@torch.no_grad()
+def wanda_2_4_mask(W: torch.Tensor, X: torch.Tensor):
+    """CPU FP32 teaching example; X contains valid calibration tokens only."""
+    if W.device.type != "cpu" or X.device.type != "cpu":
+        raise ValueError("this teaching example is CPU-only")
+    if W.dtype != torch.float32 or X.dtype != torch.float32:
+        raise ValueError("use FP32 weights and activations")
+    if W.ndim != 2 or X.ndim != 2 or X.shape[1] != W.shape[1]:
+        raise ValueError("expected W[out,in], X[tokens,in]")
+    if X.shape[0] == 0 or W.shape[0] == 0 or W.shape[1] == 0 or W.shape[1] % 4:
+        raise ValueError("need nonempty tensors and input width divisible by four")
+    if not torch.isfinite(W).all() or not torch.isfinite(X).all():
+        raise ValueError("nonfinite calibration data")
+    scores = W.abs() * X.norm(p=2, dim=0)[None, :]
+    blocks = scores.reshape(W.shape[0], -1, 4)
+    # Stable ordering defines what happens when scores tie.
+    pruned = blocks.argsort(dim=-1, stable=True)[..., :2]
+    keep = torch.ones_like(blocks, dtype=torch.bool)
+    keep.scatter_(dim=-1, index=pruned, value=False)
+    keep = keep.reshape_as(W)
+    return W * keep, keep
 
-    # Multiply weight magnitude by activation norm
-    # Broadcasting X_norm across all output channels
-    scores = torch.abs(W) * X_norm.unsqueeze(0)
-    return scores
+torch.manual_seed(7)
+W = torch.randn(128, 256)
+X = torch.randn(1024, 256)  # 1,024 valid calibration tokens
+W_pruned, keep = wanda_2_4_mask(W, X)
+assert torch.all(keep.reshape(128, -1, 4).sum(-1) == 2)
+assert torch.all((W_pruned.reshape(128, -1, 4) != 0).sum(-1) <= 2)
+# Zeros do not change the allocation of a dense tensor.
+assert W_pruned.numel() * W_pruned.element_size() == W.numel() * W.element_size()
 
-def apply_2_4_sparsity(W: torch.Tensor, scores: torch.Tensor) -> torch.Tensor:
-    """
-    Applies 2:4 semi-structured sparsity based on importance scores.
-    Forces exactly 2 zeros in every block of 4 contiguous weights.
-    """
-    out_features, in_features = W.shape
-    assert in_features % 4 == 0, "in_features must be divisible by 4"
-
-    # Reshape scores and weights into blocks of 4
-    scores_blocked = scores.view(out_features, in_features // 4, 4)
-    W_blocked = W.clone().view(out_features, in_features // 4, 4)
-
-    # Find the indices of the 2 smallest scores in each block
-    _, indices = torch.topk(scores_blocked, k=2, dim=-1, largest=False)
-
-    # Create a mask and scatter False where weights should be pruned
-    mask = torch.ones_like(W_blocked, dtype=torch.bool)
-    mask.scatter_(dim=-1, index=indices, value=False)
-
-    # Apply mask and reshape back to original dimensions
-    W_pruned = W_blocked * mask
-    return W_pruned.view(out_features, in_features)
-
-# Example Execution
-out_feat, in_feat = 128, 256
-W = torch.randn(out_feat, in_feat)
-X = torch.randn(1024, in_feat) # 1024 calibration tokens
-
-scores = compute_wanda_scores(W, X)
-W_sparse = apply_2_4_sparsity(W, scores)
-
-# Verify 2:4 sparsity (exactly 50% sparse)
-sparsity = (W_sparse == 0).float().mean().item()
-print(f"Model Sparsity: {sparsity * 100:.1f}%")
+# Authored one-row counterexample: compare the same input, not a model score.
+w = torch.tensor([[0.01, 0.2, 0.3, 2.0]])
+x = torch.tensor([[100.0, 1.0, 1.0, 1.0]])
+w_wanda, _ = wanda_2_4_mask(w, x)
+w_magnitude = w.clone()
+w_magnitude[:, :2] = 0
+original = x @ w.T
+print(original.item(), (x @ w_magnitude.T).item(), (x @ w_wanda.T).item())
+# Approximately 3.5, 2.3, 3.0. These figures concern this input only.
 ```
 
----
+The dense storage assertion is intentional. To obtain compression or acceleration, export a supported sparse representation and verify its metadata and kernel path. Do not time this Python mask constructor as if it were a serving kernel.
 
-## 5. SliceGPT: Deleting Rows and Columns
+## 5. SliceGPT: Reduce Dense Dimensions
 
-While 2:4 sparsity requires specific hardware support, **SliceGPT** [[3]](#ref-3) takes a radically different approach: structured pruning via computational invariance. Instead of zeroing out individual weights, SliceGPT physically deletes entire rows and columns from the weight matrices.
+SliceGPT uses computational invariance to change the representation basis, then uses calibration-driven principal directions to choose dimensions to retain [[3]](#ref-3). Full orthogonal changes of basis can preserve the model's computation when all connected operations are transformed consistently. **Removing dimensions is the lossy step.** Low activation variance does not prove that a direction contains only noise or is irrelevant to a rare task.
 
-SliceGPT mathematically projects the weight matrices into a smaller dimensional space using orthogonal transformations (similar to PCA). This transformation concentrates the model's core signal into the top rows and columns, leaving the bottom rows and columns containing mostly noise. These bottom rows and columns are then completely sliced off.
+The resulting matrices are smaller and dense, which can make them easier to execute on ordinary dense kernels. Tile alignment, conversion support, changes to intermediate dimensions and the workload still determine runtime. Compare the exported model against the original under matched quality, context and concurrency conditions.
 
-The remaining matrices are smaller and dense, so standard dense kernels can execute them. Size reduction does not imply proportional end-to-end speedup: tile alignment, batch/context length, memory traffic and other operations affect the result. Measure against the original under matched conditions.
+## 6. Compare the Authored Pruning Example
 
----
-
-## 6. Interactive Component: The Sparsity Visualizer
-
-The interactive visualization below demonstrates how different pruning algorithms handle a weight matrix subjected to extreme activation outliers.
-
-*   Compare which weights **Magnitude Pruning** removes.
-*   See how **Wanda** protects weights aligned with high activations.
-*   Understand the strict block constraints of **2:4 Sparsity**.
+The visualizer uses an authored matrix and activation values. Compare the removed entries under magnitude, activation-weighted and 2:4-constrained choices. It illustrates how a scoring rule changes a mask; it does not measure a trained model's accuracy or demonstrate a GPU speedup.
 
 <SparsityVisualizer client:load />
 
----
+## 7. Choose a Deployment, Not Just a Sparsity Percentage
 
-## 7. Summary Comparison
+| Method | What selects or adjusts weights? | What must be true for a runtime gain? |
+|---|---|---|
+| Magnitude | Weight magnitude selects entries to remove. | The exported pattern and kernel must make the remaining work cheaper. |
+| SparseGPT | Local reconstruction and compensation under a sparsity constraint. | Supported sparse layout, compatible operator shapes and measured workload benefit. |
+| Wanda | Weight magnitude times activation norm; no compensation update. | The same layout/kernel checks; a lower calibration cost does not imply faster serving. |
+| SliceGPT | Consistent basis changes and dimension removal. | Smaller dense operations must remain efficient and preserve required quality. |
 
-| Algorithm | Pruning Type | Core Mechanism | Hardware Speedup |
-| :--- | :--- | :--- | :--- |
-| **Magnitude** | Unstructured | Drops weights closest to zero. | None (requires sparse kernels). |
-| **SparseGPT** | Unstructured / N:M | Hessian-based error compensation. | High (if constrained to 2:4). |
-| **Wanda** | Unstructured / N:M | Scores via $|W| \times ||X||_2$. No weight updates. | High (if constrained to 2:4). |
-| **SliceGPT** | Structured | Orthogonal projection and row/col slicing. | Dense kernels; measure workload-specific speedup. |
-
-By intelligently removing parameters, sparsification allows engineers to deploy massively over-parameterized models onto constrained hardware. However, when we need to deploy a 70B model onto a mobile phone, even pruning and quantization are not enough. In the next section, we will explore **Knowledge Distillation**, where we abandon compressing the original weights and instead train a fundamentally smaller model to mimic the giant.
-
----
+Preserve the base checkpoint, pruning/calibration manifest, masks or transformed dimensions, tokenizer/template, runtime versions and hashes as one artifact bundle. Compare base/domain capability, safety, format/tool behavior, peak memory, latency and throughput against predeclared gates. Keep the original artifact available for rollback. If these methods cannot meet the product's quality and resource budget together, the next section considers distillation into a separately trained smaller model.
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: Why does unstructured sparsity rarely yield proportional inference speedups on standard GPUs?</summary>
-*Standard GPU matrix multiplication kernels (dense kernels) are highly optimized for contiguous memory blocks. Skipping random zeros introduces branching and irregular memory access patterns, which stalls the streaming multiprocessors and degrades performance. Hardware-specific patterns, like 2:4 sparsity, are required to leverage specialized Sparse Tensor Cores.*
+<summary>Quiz 1: A matrix has 50% zeros. Why can its stored size and runtime remain unchanged?</summary>
+*Dense storage still allocates every entry and dense matrix multiplication still executes the dense operation. A supported compressed format/kernel or physically smaller structure is needed. General sparse kernels can accelerate suitable workloads; 2:4 is one constrained route, not the only possible sparse method.*
 </details>
 
 <details>
-<summary>Quiz 2: How does Wanda's pruning metric differ fundamentally from traditional magnitude pruning?</summary>
-*Magnitude pruning assumes weights with values close to zero are unimportant. Wanda recognizes that a small weight might multiply against an extremely large activation outlier, making it critical to the network's output. Wanda scores importance by multiplying the weight's magnitude by the norm of its corresponding input activation.*
+<summary>Quiz 2: Does Wanda's lower error on the one-row example prove it preserves reasoning better?</summary>
+*No. It shows how an activation-weighted score changes local error on one authored input. Calibration distribution, correlations ignored by the proxy and downstream tasks can change the outcome. Test independent representative slices.*
 </details>
 
 <details>
-<summary>Quiz 3: Why apply 2:4 constraints within groups rather than globally?</summary>
-*The supported layout requires two retained values in each group of four. Global 50% sparsity does not guarantee that pattern. The index encoding used here costs two bits per retained value, four bits per quartet.*
+<summary>Quiz 3: Why does `[0,0,0,4,5,6,0,8]` violate 2:4 despite 50% sparsity?</summary>
+*Its two quartets retain one and three values. A global count cannot enforce the local pattern. Check every group in the actual layout expected by the target kernel.*
 </details>
 
 <details>
-<summary>Quiz 4: What deployment benefit and limitation does SliceGPT have?</summary>
-*It uses smaller dense matrices rather than requiring sparse kernels. Discarded directions are not guaranteed to contain only noise; evaluate quality and actual end-to-end speed.*
+<summary>Quiz 4: Which part of SliceGPT introduces approximation?</summary>
+*The consistent full change of basis can preserve the computation. Discarding dimensions loses information; low observed variance is not proof of irrelevance to all tasks. Validate the reduced exported model.*
 </details>
 
 <details>
-<summary>Quiz 5: What is the FP16 2:4 storage footprint including metadata?</summary>
-*Two FP16 values take 4 bytes. At two index bits per retained value, metadata is four bits (0.5 byte) per quartet. The 4.5-byte payload is 56.25% of the dense 8 bytes, saving 43.75%. Alignment/packing can add overhead. Acceleration requires a supported sparse kernel; putting zeros in a dense tensor does not skip dense arithmetic.*
+<summary>Quiz 5: Why are the example's storage savings 43.75% and its latency speedup only about 1.43×?</summary>
+*Two FP16 values plus four index bits take 4.5 bytes instead of 8, leaving 56.25% of weight storage. If a twice-as-fast kernel covers only 60% of original latency, total latency becomes $0.6/2+0.4=0.7$ and speedup is $1/0.7\approx1.43$. Additional overhead can reduce the gain further.*
 </details>
-
----
 
 ## References
 
 1. <a id="ref-1"></a>Frantar, E., & Alistarh, D. (2023). *SparseGPT: Massive Language Models Can Be Accurately Pruned in One-Shot.* [arXiv:2301.00774](https://arxiv.org/abs/2301.00774).
 2. <a id="ref-2"></a>Sun, M., Liu, Z., Bair, A., & Kolter, J. Z. (2023). *A Simple and Effective Pruning Approach for Large Language Models.* [arXiv:2306.11695](https://arxiv.org/abs/2306.11695).
 3. <a id="ref-3"></a>Ashkboos, S., Croci, M. L., Nascimento, M. G., Hoefler, T., & Hensman, J. (2024). *SliceGPT: Compress Large Language Models by Deleting Rows and Columns.* [arXiv:2401.15024](https://arxiv.org/abs/2401.15024).
+4. <a id="ref-4"></a>PyTorch. *Semi-structured sparsity*. [PyTorch 2.15 documentation](https://docs.pytorch.org/docs/2.15/sparse.html#sparse-semi-structured-tensors).

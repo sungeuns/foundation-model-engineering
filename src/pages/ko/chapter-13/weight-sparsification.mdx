@@ -8,182 +8,168 @@ import SparsityVisualizer from '../../../components/chapter-13/SparsityVisualize
 
 # 13.3 Weight Sparsification
 
-희소화는 선택한 가중치를 제거하거나 0으로 만듭니다. 밀집 텐서에 0을 쓰기만 하면 저장량이나 실제 연산량은 줄지 않습니다. 구조를 실제로 축소하거나 지원되는 희소 포맷과 커널을 사용해야 이득을 얻을 수 있습니다.
+가중치 행렬의 절반을 0으로 바꿔 저장했는데 파일 크기가 그대로입니다. 같은 밀집 행렬 곱셈을 실행해도 시간은 거의 줄지 않습니다. 빠진 단계는 표현 방식입니다. 밀집 텐서는 0도 그대로 저장하며, 밀집 커널은 여전히 전체 연산을 수행합니다.
 
-그러나 대형 언어 모델(LLM)은 내부에 매우 민감한 논리적 표현(Representations)을 가지고 있습니다. 크기가 가장 작은 가중치들을 단순히 버리는 크기 기반 가지치기(Magnitude Pruning)는 높은 희소성(Sparsity) 수준에서 모델의 추론 능력을 철저히 파괴합니다. 현대의 LLM 희소화는 가중치와 활성화(Activation) 사이의 복잡한 상호작용을 평가하는 고급 알고리즘을 필요로 합니다.
+희소화에는 두 작업이 있습니다. 먼저 필요한 동작을 유지하면서 무엇을 제거할지 정합니다. 그런 다음 남은 계산을 효율적으로 저장하고 실행해야 합니다. 가지치기 점수는 첫 번째 문제를, 희소 형식이나 실제로 작아진 밀집 행렬은 두 번째 문제를 다룹니다. 어느 하나만으로 종단 간 가속을 입증할 수는 없습니다.
 
-이 섹션에서는 구조적 제약이 가져오는 엔지니어링의 현실, One-shot 헤시안 가지치기의 수학적 원리, 그리고 활성화 동역학에 기반하여 가중치를 가지치기하는 최신 알고리즘들을 심층적으로 탐구합니다.
+## 1. 패턴은 커널과의 약속이다
 
----
+| 패턴 | 입력 열 여덟 개의 예 | 실행에 필요한 조건 |
+|---|---|---|
+| 비구조적 | `[0, 0, 0, 4, 5, 6, 0, 8]` | 전체에서 네 값을 남기지만 위치가 불규칙하므로 알맞은 희소 표현과 커널이 필요합니다. |
+| 2:4 반구조적 | `[1, 0, 3, 0] [0, 6, 0, 8]` | 연속된 네 원소마다 두 위치를 남겨 제약된 레이아웃에 맞춥니다. |
+| 구조적 | 입력 채널 하나와 대응 열 전체를 제거 | 연결된 행렬들이 새 차원에 맞아야 하며 작은 밀집 커널을 사용할 수 있습니다. |
 
-## 1. 희소성의 지형: 비구조적 vs 구조적 (Unstructured vs. Structured)
+첫 행은 50% 희소하지만 **2:4는 아닙니다**. 두 그룹에 각각 한 개와 세 개가 남습니다. 비구조적이라는 말은 제거 위치에 제약이 없다는 뜻이지 알고리즘이 무작위로 선택한다는 뜻이 아닙니다. 밀집 커널은 각 값이 0인지 검사해 곱셈을 동적으로 생략하지 않습니다. 희소 커널에는 이해할 수 있는 메타데이터와 레이아웃이 필요합니다.
 
-모든 0이 동일하게 취급되는 것은 아닙니다. 가지치기된 가중치의 물리적인 배치 구조는 이론적인 FLOPs 감소가 실제 하드웨어에서의 속도 향상으로 이어질지를 결정합니다.
+**2026-11-18 기준** PyTorch 2.15 문서는 반구조적 표현의 dtype·형상·CUDA 조건을 명시합니다 [[4]](#ref-4). 네 원소 패턴이 맞더라도 모든 형상·전치·장치·연산자가 지원되는 것은 아닙니다. 실제 런타임을 기록하고 실행된 커널을 확인하세요.
 
-![sparsity_types](../../../assets/images/chapter-13/sparsity_types.png)
-*출처: AI 생성 이미지. 다양한 희소성 패턴(비구조적, 2:4 반구조적, 구조적)의 메모리 배열 차이를 보여주는 개념도.*
+### 값이 절반이어도 저장량은 절반보다 크다
 
-1.  **Unstructured Sparsity (비구조적 희소성)** : 무작위 위치의 개별 가중치가 0으로 설정됩니다. 모델의 정확도를 유지하는 데는 탁월하지만, 표준 GPU에서는 실제 속도 향상을 거의 제공하지 못합니다. 밀집 행렬 곱셈(Dense matrix multiplication) 커널은 연속적인 메모리 접근에 고도로 최적화되어 있기 때문에, 무작위로 흩어진 0을 건너뛰는 것은 분기(Branching)와 불규칙한 메모리 접근 패턴을 유발하여 GPU의 스트리밍 멀티프로세서를 마비시킵니다.
-2.  **Semi-Structured (N:M) Sparsity (반구조적 희소성)** : 실용적인 하드웨어 타협안입니다. **2:4 희소성** 에서는 행렬의 연속된 4개의 가중치 중 정확히 2개가 가지치기됩니다. NVIDIA의 Ampere, Hopper, Blackwell 아키텍처는 이러한 2:4 행렬을 메모리에서 압축하고 밀집 행렬 대비 최대 2배 빠른 속도로 연산을 수행하는 특수 희소 텐서 코어(Sparse Tensor Cores)를 갖추고 있습니다.
-3. **구조적 희소성:** 행·열·헤드·채널을 제거해 행렬을 줄입니다. 밀집 커널을 사용할 수 있지만 품질, 타일 정렬과 실제 워크로드의 실행 시간을 측정해야 합니다.
+네 원소 묶음마다 FP16 값 두 개와 인덱스 4비트를 저장하는 표현을 생각해봅시다. 원래 네 값은 8바이트입니다. 남긴 값에는 4바이트, 메타데이터에는 0.5바이트가 듭니다. 각각의 가중치 저장량을 $M_{sparse}$ 와 $M_{dense}$ 라 하면
 
----
+$$
+\frac{M_{sparse}}{M_{dense}}=\frac{4+0.5}{8}=0.5625.
+$$
 
-## 2. SparseGPT: One-Shot 헤시안 가지치기
+원래 FP16 가중치가 10억 개라면 정렬이나 다른 텐서를 제외해도 2 GB가 1.125 GB가 됩니다. 절감률은 50%가 아닌 43.75%입니다. 이 예제는 보존한 원소당 인덱스 2비트를 쓰는 문서의 표현과 일치합니다 [[4]](#ref-4). 다른 형식은 메타데이터 비용이 달라질 수 있습니다.
 
-GPTQ가 양자화에 혁명을 일으켰듯, **SparseGPT** [[1]](#ref-1) 는 100B(1천억 개) 이상의 파라미터를 가진 거대 모델을 값비싼 재학습이나 미세 조정 없이 단 한 번의 실행(One-shot)으로 50~60%의 비구조적 희소성으로 가지치기할 수 있음을 증명했습니다.
+희소 행렬 커널이 두 배 빨라도 애플리케이션 처리량이 두 배가 되는 것은 아닙니다. 해당 커널이 기존 지연 시간의 60%이고 나머지는 그대로라면 상대 지연 시간은 $0.6/2+0.4=0.7$, 속도 향상은 약 $1.43\times$ 입니다. 명시한 가정에서 계산한 설명용 상한이며 하드웨어 측정값은 아닙니다.
 
-SparseGPT는 가지치기를 레이어 단위의 희소 회귀(Sparse regression) 문제로 공식화합니다. 단순히 가중치를 지우는 것이 아니라 다음과 같이 묻습니다: *"이 가중치를 강제로 0으로 만든다면, 손실된 신호를 보상하기 위해 남아있는 가중치들을 어떻게 조정해야 할까?"*
+## 2. SparseGPT: 제거한 가중치의 오차 보상
 
-이를 해결하기 위해 SparseGPT는 이전 양자화 섹션에서 다루었던 것과 유사하게 레이어 입력 활성화 값의 역헤시안 행렬(Inverse Hessian Matrix, $H^{-1}$)을 사용합니다. 주어진 가중치 행렬 $W$ 와 입력 $X$ 에 대해, 목표는 다음의 제곱 오차를 최소화하는 희소 행렬 $\hat{W}$ 를 찾는 것입니다:
-$$ \arg\min_{\hat{W}} ||WX - \hat{W}X||_2^2 \quad \text{subject to} \quad ||\hat{W}||_0 \le \kappa $$
+SparseGPT는 OPT-175B와 BLOOM-176B에 한 번의 가지치기를 적용해 상당한 비구조적 희소성을 얻고, 실험에서 작은 perplexity 변화를 보고했습니다 [[1]](#ref-1). 해당 모델과 작업의 결과입니다. 같은 희소성이나 재학습 생략이 모든 능력의 보존을 보장하지는 않습니다.
 
-SparseGPT는 가중치 행렬을 순차적으로 처리합니다. 특정 가중치가 가지치기될 때, 그로 인해 발생하는 오차는 헤시안에 포착된 상관관계를 사용하여 아직 가지치기되지 않은 나머지 가중치들에 투영(Project)됩니다. 매우 높은 정확도를 유지하지만, 압축 단계에서 거대한 헤시안 행렬을 계산하고 역산하는 데 상당한 연산 오버헤드가 발생합니다.
+$W\in\mathbb R^{d_{out}\times d_{in}}$ 와 보정 입력 열을 모은 $X\in\mathbb R^{d_{in}\times n}$ 에 대한 국소 목적함수는 다음과 같습니다.
 
----
+$$
+\underset{\hat W}{\operatorname{minimize}}\;
+\frac{1}{n}\lVert WX-\hat WX\rVert_F^2
+\quad\text{subject to}\quad\lVert\hat W\rVert_0\le\kappa.
+$$
 
-## 3. Wanda: 가중치와 활성화를 통한 가지치기
+$\lVert\cdot\rVert_F$ 는 Frobenius 노름, $\lVert\hat W\rVert_0$ 는 남긴 0이 아닌 원소의 수, $\kappa$ 는 그 예산입니다. N:M 레이아웃은 각 그룹 안에 제약을 더합니다. GPTQ와 마찬가지로 $H=2XX^\top/n$ 은 한 행의 국소 복원 손실에 대한 헤시안이며 전체 언어 모델링 손실의 헤시안이 아닙니다.
 
-SparseGPT가 복잡한 가중치 업데이트에 의존하는 반면, **Wanda** (Pruning by Weights and activations) [[2]](#ref-2) 는 가중치 업데이트가 전혀 없이도 경쟁력 있는 성능을 달성하는 놀랍도록 단순한 대안을 제시했습니다.
+SparseGPT는 이러한 입력 상관관계로 가지치기 과정에서 아직 고정하지 않은 가중치를 조정합니다. 국소 출력 오차를 일부 회복할 수 있지만, 이차 모멘트 추정·감쇠·행렬 분해에도 압축 시점의 메모리와 연산 비용이 듭니다. 결과 파일이 쓸 만한지는 별도 도메인 평가에서 확인해야 합니다.
 
-Wanda는 AWQ를 구동하는 것과 동일한 원칙, 즉 가중치의 중요도는 그 가중치를 통과하는 활성화 값의 크기와 뗄 수 없는 관계에 있다는 점에 기반합니다. 작은 가중치라도 거대한 활성화 이상치(Outlier)와 곱해진다면 결코 쓸모없는 것이 아닙니다.
+## 3. Wanda: 더 저렴한 중요도 대리 지표
 
-절대적인 가중치 크기 $|W_{ij}|$ 에 기반하여 무작정 가지치기하는 대신, Wanda는 다음 공식을 사용하여 각 가중치의 점수를 매깁니다:
-$$ S_{ij} = |W_{ij}| \cdot ||X_j||_2 $$
-여기서 $||X_j||_2$ 는 작은 캘리브레이션 데이터셋을 통해 계산된 $j$ 번째 특징(Feature)에 대한 입력 활성화 값의 $\ell_2$-노름(Norm)입니다.
+Wanda는 가중치 크기와 보정 활성화의 노름을 함께 사용합니다 [[2]](#ref-2).
 
-Wanda는 이 점수를 출력 채널을 기준으로(동일한 행 내에 있는 가중치들끼리만 비교하여) 평가합니다. 가장 낮은 $S_{ij}$ 를 가진 가중치를 버림으로써, Wanda는 LLM 활성화의 "거대한 이상치"와 정렬된 가중치들을 자연스럽게 보호하며, 헤시안 역산 없이도 모델의 핵심 추론 경로를 보존합니다.
+$$
+S_{ij}=|W_{ij}|\,\lVert X_j\rVert_2,
+$$
 
----
+$X_j$ 는 보정 토큰들에서 관찰한 입력 특징 $j$ 의 값입니다. 출력 한 행 안에서 점수를 비교하며 SparseGPT식 보상 갱신 없이 낮은 점수의 원소를 제거합니다. 보정 연산을 줄이는 방법이지 실제 “추론 경로”를 식별하는 방법은 아닙니다.
 
-## 4. Wanda를 활용한 2:4 희소성 구현
+가중치가 $[0.01,0.2,0.3,2]$, 입력 하나가 $[100,1,1,1]$ 이라고 해봅시다. 크기 기준 가지치기는 앞의 두 가중치를 제거하지만, Wanda 점수는 $[1,0.2,0.3,2]$ 이므로 가운데 두 값을 제거합니다. 원래 출력은 3.5이고 두 방식의 출력은 각각 2.3과 3.0입니다. 이 예제에서는 활성화로 가중한 점수가 출력 오차를 줄입니다. 입력 분포가 바뀌면 결론도 바뀔 수 있습니다.
 
-비구조적 가지치기 알고리즘을 추론 가속에 실질적으로 활용하기 위해, 엔지니어들은 종종 이를 N:M 패턴으로 제약합니다. 아래의 PyTorch 구현은 Wanda 지표를 적용하여 엄격한 2:4 반구조적 희소성을 강제하고, NVIDIA의 희소 텐서 코어에 맞게 행렬을 포맷팅하는 방법을 보여줍니다.
+보정 토큰은 목표 트래픽을 대표해야 하며 패딩은 통계에서 제외합니다. 비공개 배포 평가 예제와 관련 문서는 보정 데이터에서 격리하고, 샘플 ID·토크나이저 버전·필터·정확한 마스크 생성 설정을 기록하세요.
 
-> **교육용 마스크 예제.** 밀집 텐서에 0을 만드는 연산이며 희소 커널이나 압축 저장을 구현하지 않습니다.
+## 4. 2:4 마스크를 만들고 확인하기
+
+> **의도적으로 단순화한 마스크 구현.** CPU FP32에서 `W[out_features, in_features]` 와 `X[valid_tokens, in_features]` 를 받아 레이어 하나의 점수와 결정적인 마스크를 만듭니다. 모델 전체 보정·출력 보상·희소 패킹·GPU 커널 변환·품질 평가·성능 측정을 생략합니다. 마스크가 보존하는 위치는 정확히 두 곳이지만 기존 0 때문에 실제로 0이 아닌 값은 두 개보다 적을 수 있습니다.
 
 ```python
 import torch
 
-def compute_wanda_scores(W: torch.Tensor, X: torch.Tensor) -> torch.Tensor:
-    """
-    Wanda 중요도 점수를 계산합니다.
-    W: 가중치 행렬 [out_features, in_features]
-    X: 캘리브레이션 활성화 값 [batch * seq_len, in_features]
-    """
-    # 각 입력 채널에 대한 활성화 값의 L2 노름(Norm) 계산
-    X_norm = torch.norm(X, p=2, dim=0) # Shape: [in_features]
+@torch.no_grad()
+def wanda_2_4_mask(W: torch.Tensor, X: torch.Tensor):
+    """CPU FP32 teaching example; X contains valid calibration tokens only."""
+    if W.device.type != "cpu" or X.device.type != "cpu":
+        raise ValueError("this teaching example is CPU-only")
+    if W.dtype != torch.float32 or X.dtype != torch.float32:
+        raise ValueError("use FP32 weights and activations")
+    if W.ndim != 2 or X.ndim != 2 or X.shape[1] != W.shape[1]:
+        raise ValueError("expected W[out,in], X[tokens,in]")
+    if X.shape[0] == 0 or W.shape[0] == 0 or W.shape[1] == 0 or W.shape[1] % 4:
+        raise ValueError("need nonempty tensors and input width divisible by four")
+    if not torch.isfinite(W).all() or not torch.isfinite(X).all():
+        raise ValueError("nonfinite calibration data")
+    scores = W.abs() * X.norm(p=2, dim=0)[None, :]
+    blocks = scores.reshape(W.shape[0], -1, 4)
+    # Stable ordering defines what happens when scores tie.
+    pruned = blocks.argsort(dim=-1, stable=True)[..., :2]
+    keep = torch.ones_like(blocks, dtype=torch.bool)
+    keep.scatter_(dim=-1, index=pruned, value=False)
+    keep = keep.reshape_as(W)
+    return W * keep, keep
 
-    # 가중치의 크기(Magnitude)에 활성화 노름을 곱함
-    # X_norm을 모든 출력 채널에 브로드캐스팅(Broadcasting)
-    scores = torch.abs(W) * X_norm.unsqueeze(0)
-    return scores
+torch.manual_seed(7)
+W = torch.randn(128, 256)
+X = torch.randn(1024, 256)  # 1,024 valid calibration tokens
+W_pruned, keep = wanda_2_4_mask(W, X)
+assert torch.all(keep.reshape(128, -1, 4).sum(-1) == 2)
+assert torch.all((W_pruned.reshape(128, -1, 4) != 0).sum(-1) <= 2)
+# Zeros do not change the allocation of a dense tensor.
+assert W_pruned.numel() * W_pruned.element_size() == W.numel() * W.element_size()
 
-def apply_2_4_sparsity(W: torch.Tensor, scores: torch.Tensor) -> torch.Tensor:
-    """
-    중요도 점수에 기반하여 2:4 반구조적 희소성을 적용합니다.
-    연속된 4개의 가중치 블록마다 정확히 2개의 0을 강제합니다.
-    """
-    out_features, in_features = W.shape
-    assert in_features % 4 == 0, "in_features는 반드시 4의 배수여야 합니다."
-
-    # 점수와 가중치를 4개 단위의 블록으로 형태 변환(Reshape)
-    scores_blocked = scores.view(out_features, in_features // 4, 4)
-    W_blocked = W.clone().view(out_features, in_features // 4, 4)
-
-    # 각 블록에서 가장 점수가 낮은 2개의 인덱스를 찾음
-    _, indices = torch.topk(scores_blocked, k=2, dim=-1, largest=False)
-
-    # 마스크를 생성하고 가지치기할 위치에 False를 채움
-    mask = torch.ones_like(W_blocked, dtype=torch.bool)
-    mask.scatter_(dim=-1, index=indices, value=False)
-
-    # 마스크를 적용하고 원래 차원으로 되돌림
-    W_pruned = W_blocked * mask
-    return W_pruned.view(out_features, in_features)
-
-# 실행 예시
-out_feat, in_feat = 128, 256
-W = torch.randn(out_feat, in_feat)
-X = torch.randn(1024, in_feat) # 1024개의 캘리브레이션 토큰
-
-scores = compute_wanda_scores(W, X)
-W_sparse = apply_2_4_sparsity(W, scores)
-
-# 2:4 희소성 검증 (정확히 50%가 0이어야 함)
-sparsity = (W_sparse == 0).float().mean().item()
-print(f"적용된 모델 희소성(Sparsity): {sparsity * 100:.1f}%")
+# Authored one-row counterexample: compare the same input, not a model score.
+w = torch.tensor([[0.01, 0.2, 0.3, 2.0]])
+x = torch.tensor([[100.0, 1.0, 1.0, 1.0]])
+w_wanda, _ = wanda_2_4_mask(w, x)
+w_magnitude = w.clone()
+w_magnitude[:, :2] = 0
+original = x @ w.T
+print(original.item(), (x @ w_magnitude.T).item(), (x @ w_wanda.T).item())
+# Approximately 3.5, 2.3, 3.0. These figures concern this input only.
 ```
 
----
+밀집 저장량이 같다는 검사는 의도적입니다. 압축이나 가속을 얻으려면 지원되는 희소 표현으로 내보내고 메타데이터와 커널 경로를 검증해야 합니다. 이 Python 마스크 생성 시간을 서빙 커널의 성능처럼 측정하지 마세요.
 
-## 5. SliceGPT: 행과 열의 삭제
+## 5. SliceGPT: 밀집 행렬의 차원 줄이기
 
-2:4 희소성이 특정 하드웨어의 지원을 필요로 하는 반면, **SliceGPT** [[3]](#ref-3) 는 계산적 불변성(Computational invariance)을 통한 구조적 가지치기라는 근본적으로 다른 접근 방식을 취합니다. 개별 가중치를 0으로 만드는 대신, SliceGPT는 가중치 행렬에서 전체 행(Row)과 열(Column)을 물리적으로 삭제해 버립니다.
+SliceGPT는 계산의 불변성을 이용해 표현의 기저를 바꾼 뒤, 보정 데이터의 주성분 방향으로 유지할 차원을 선택합니다 [[3]](#ref-3). 연결된 모든 연산을 일관되게 변환하면 전체 직교 기저 변환은 계산을 보존할 수 있습니다. **정보를 잃는 단계는 차원을 제거할 때입니다.** 활성화 분산이 낮다고 해서 해당 방향에 잡음만 있거나 드문 작업에 쓸모없다는 뜻은 아닙니다.
 
-SliceGPT는 직교 변환(Orthogonal transformations, PCA와 유사한 개념)을 사용하여 가중치 행렬을 수학적으로 더 작은 차원의 공간으로 투영(Project)합니다. 이 변환은 모델의 핵심 신호를 상위 행과 열에 집중시키고, 하위 행과 열에는 주로 노이즈만 남게 만듭니다. 그런 다음 이 하위 행과 열을 완전히 잘라냅니다(Slice off).
+결과 행렬은 더 작은 밀집 행렬이므로 일반 밀집 커널에서 실행하기 쉬워질 수 있습니다. 타일 정렬·변환 지원·중간 차원의 변화·워크로드가 실제 실행 시간을 결정합니다. 내보낸 모델을 원본과 같은 품질·문맥·동시 요청 조건에서 비교하세요.
 
-남는 행렬은 더 작은 밀집 행렬이므로 일반적인 dense 커널을 사용할 수 있습니다. 다만 크기 감소율이 종단 간 속도 향상률과 같지는 않습니다. 타일 정렬, 배치·문맥 길이, 메모리 이동과 다른 연산의 비중에 따라 실제 이득이 달라지므로 원본과 동일한 조건에서 측정해야 합니다.
+## 6. 설명용 가지치기 예제 비교
 
----
+시각화는 직접 만든 행렬과 활성화 값을 사용합니다. 크기 기준, 활성화 가중 점수, 2:4 제약에서 제거되는 원소를 비교해보세요. 점수 규칙이 마스크를 어떻게 바꾸는지 보여주는 예제이며, 학습된 모델의 정확도나 GPU 가속을 측정한 것은 아닙니다.
 
-## 6. 인터랙티브 컴포넌트: 희소화 시각화 시뮬레이터
+<SparsityVisualizer client:load lang="ko" />
 
-아래의 대화형 시각화는 극단적인 활성화 이상치(Outlier)가 존재하는 환경에서 다양한 가지치기 알고리즘이 가중치 행렬을 어떻게 처리하는지 보여줍니다.
+## 7. 희소성 비율을 넘어 배포 조건 선택하기
 
-*   **Magnitude Pruning** 이 핵심 가중치를 어떻게 맹목적으로 파괴하는지 관찰해 보세요.
-*   **Wanda** 가 높은 활성화 값과 정렬된 가중치를 어떻게 보호하는지 확인해 보세요.
-*   **2:4 Sparsity** 의 엄격한 블록 단위 제약을 이해해 보세요.
+| 방법 | 가중치를 선택하거나 조정하는 기준 | 런타임 이득에 필요한 조건 |
+|---|---|---|
+| Magnitude | 가중치 크기로 제거할 원소 선택 | 내보낸 패턴과 커널이 남은 계산의 비용을 줄여야 합니다. |
+| SparseGPT | 희소성 제약 아래 국소 복원과 보상 | 지원 희소 레이아웃·호환 연산 형상·실측 워크로드 이득이 필요합니다. |
+| Wanda | 가중치 크기와 활성화 노름의 곱, 보상 갱신 없음 | 같은 레이아웃·커널 검사가 필요합니다. 보정 비용이 작다고 서빙도 빠른 것은 아닙니다. |
+| SliceGPT | 일관된 기저 변환과 차원 제거 | 작아진 밀집 연산이 효율적이어야 하며 요구 품질을 유지해야 합니다. |
 
-
-<SparsityVisualizer client:load  lang="ko" />
-
----
-
-## 7. 요약 및 비교
-
-| 알고리즘 | 가지치기 유형 | 핵심 메커니즘 | 하드웨어 가속 여부 |
-| :--- | :--- | :--- | :--- |
-| **Magnitude** | 비구조적 (Unstructured) | 0에 가장 가까운 가중치를 단순히 버림. | 없음 (희소 커널 필요). |
-| **SparseGPT** | 비구조적 / N:M | 헤시안(Hessian) 기반의 오차 보상. | 높음 (2:4로 제약 시). |
-| **Wanda** | 비구조적 / N:M | $|W| \times \|X\|_2$ 로 점수 산정. 가중치 업데이트 없음. | 높음 (2:4로 제약 시). |
-| **SliceGPT** | 구조적 (Structured) | 직교 투영 후 불필요한 행/열 물리적 삭제. | 밀집 커널 사용; 워크로드별 속도 측정 필요. |
-
-파라미터를 지능적으로 제거함으로써, 가중치 희소화 기술은 엔지니어들이 거대하게 과적합된 모델을 제한된 하드웨어에 배포할 수 있게 해줍니다. 그러나 모바일 폰과 같은 엣지 디바이스에 70B 모델을 배포해야 할 때는 가지치기나 양자화만으로는 충분하지 않습니다. 다음 섹션에서는 원본 가중치를 압축하는 방식을 포기하고, 거대 모델을 모방하는 근본적으로 작은 모델을 학습시키는 **지식 증류(Knowledge Distillation)** 기법을 탐구해 보겠습니다.
-
----
+기본 체크포인트·가지치기와 보정 데이터 명세·마스크 또는 변환한 차원·토크나이저와 템플릿·런타임 버전·해시를 하나의 아티팩트 묶음으로 보존합니다. 기본·도메인 능력, 안전성, 형식·도구 동작, 최대 메모리, 지연 시간, 처리량을 미리 정한 기준과 비교하세요. 롤백할 수 있도록 원본도 보관합니다. 이러한 방법으로 품질과 자원 예산을 동시에 맞출 수 없다면, 다음 절에서 별도로 학습한 작은 모델로 지식을 옮기는 증류를 살펴봅니다.
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: 비구조적 희소성(Unstructured Sparsity)이 표준 GPU에서 이론적인 파라미터 감소만큼의 실제 추론 속도 향상을 가져오지 못하는 이유는 무엇입니까?</summary>
-*표준 GPU의 행렬 곱셈 커널(밀집 커널)은 연속적인 메모리 블록에 접근하도록 고도로 최적화되어 있습니다. 비구조적 희소성으로 인해 무작위 위치에 0이 배치되면, 연산 시 이를 건너뛰기 위해 분기(Branching)와 불규칙한 메모리 접근 패턴이 발생합니다. 이는 스트리밍 멀티프로세서의 파이프라인을 정지(Stall)시켜 성능을 크게 저하시킵니다. 속도 향상을 얻기 위해서는 희소 텐서 코어(Sparse Tensor Cores)와 같은 특수 하드웨어를 활용할 수 있는 2:4 희소성 등의 제약된 패턴이 필요합니다.*
+<summary>Quiz 1: 행렬의 50%가 0인데도 저장량과 실행 시간이 그대로일 수 있는 이유는 무엇인가요?</summary>
+*밀집 저장소는 모든 원소를 할당하고 밀집 행렬 곱셈은 전체 연산을 실행하기 때문입니다. 지원되는 압축 표현·커널이나 실제로 작은 구조가 필요합니다. 일반 희소 커널도 알맞은 워크로드를 가속할 수 있습니다. 2:4는 제약을 둔 방법 중 하나이지 유일한 희소 방식은 아닙니다.*
 </details>
 
 <details>
-<summary>Quiz 2: Wanda 알고리즘의 가지치기 지표는 전통적인 크기 기반 가지치기(Magnitude Pruning)와 근본적으로 어떻게 다릅니까?</summary>
-*크기 기반 가지치기는 0에 가까운 작은 가중치는 중요하지 않다고 단순하게 가정합니다. 반면 Wanda는 가중치의 크기가 작더라도, 그 가중치가 극단적으로 큰 활성화 이상치(Activation outlier)와 곱해진다면 네트워크 출력에 결정적인 역할을 할 수 있음을 인지합니다. 따라서 Wanda는 가중치의 크기와 해당 입력 활성화 값의 노름(Norm)을 곱하여 중요도 점수를 산정합니다.*
+<summary>Quiz 2: 한 행 예제에서 Wanda 오차가 작다는 사실이 추론 능력도 더 잘 보존함을 증명하나요?</summary>
+*아닙니다. 직접 만든 입력 하나에서 활성화 가중 점수가 국소 오차를 어떻게 바꾸는지 보여줍니다. 보정 분포, 대리 지표가 놓치는 상관관계, 후속 작업에 따라 결과는 달라집니다. 독립적이고 대표적인 평가 구간에서 확인해야 합니다.*
 </details>
 
 <details>
-<summary>Quiz 3: 2:4 패턴을 전역이 아닌 네 원소 묶음별로 적용해야 하는 이유는 무엇인가요?</summary>
-*지원되는 레이아웃의 각 네 원소 묶음에서 두 값을 보존해야 하기 때문입니다. 전역 50% 희소성은 이를 보장하지 않습니다. 여기서 계산한 인덱스 메타데이터는 보존한 값당 2비트, 묶음당 4비트입니다.*
+<summary>Quiz 3: `[0,0,0,4,5,6,0,8]`은 50% 희소한데 왜 2:4가 아닌가요?</summary>
+*네 원소 그룹 두 개에 각각 한 값과 세 값이 남기 때문입니다. 전체 개수로는 지역적인 패턴을 보장할 수 없습니다. 대상 커널이 요구하는 실제 레이아웃에서 모든 그룹을 검사해야 합니다.*
 </details>
 
 <details>
-<summary>Quiz 4: SliceGPT의 배포상 장점과 확인해야 할 한계는 무엇인가요?</summary>
-*희소 전용 커널 대신 작은 밀집 행렬을 사용한다는 장점이 있습니다. 제거되는 방향에 유용한 신호가 없다는 보장은 없으며 품질과 실제 종단 간 속도를 평가해야 합니다.*
+<summary>Quiz 4: SliceGPT의 어느 단계에서 근사가 생기나요?</summary>
+*일관된 전체 기저 변환은 계산을 보존할 수 있습니다. 차원을 버리면 정보가 사라집니다. 관찰된 분산이 낮다고 모든 작업에서 무관하다는 뜻은 아니므로 축소한 배포 모델을 검증해야 합니다.*
 </details>
 
 <details>
-<summary>Quiz 5: FP16 2:4 희소 블록에서 메타데이터를 포함한 저장량은 얼마인가요?</summary>
-*4개 중 2개 FP16 값은 4바이트이며, 남긴 원소당 2비트 인덱스를 쓰면 한 quartet의 메타데이터는 4비트(0.5바이트)입니다. 합계 4.5바이트는 밀집 8바이트의 56.25%로 43.75% 절감입니다. 정렬·패킹은 추가 비용을 만들 수 있습니다. 실제 가속에는 지원 희소 커널이 필요하며 밀집 텐서에 0만 넣으면 연산을 건너뛰지 않습니다.*
+<summary>Quiz 5: 예제의 저장량 절감은 왜 43.75%이고 지연 시간 기준 가속은 약 1.43배인가요?</summary>
+*FP16 값 두 개와 인덱스 4비트는 원래 8바이트 대신 4.5바이트를 차지하여 56.25%가 남습니다. 두 배 빨라진 커널이 기존 지연 시간의 60%만 차지한다면 전체는 $0.6/2+0.4=0.7$ 이 되고 가속은 $1/0.7\approx1.43$ 입니다. 추가 비용이 생기면 이득은 더 작아질 수 있습니다.*
 </details>
-
----
 
 ## References
 
 1. <a id="ref-1"></a>Frantar, E., & Alistarh, D. (2023). *SparseGPT: Massive Language Models Can Be Accurately Pruned in One-Shot.* [arXiv:2301.00774](https://arxiv.org/abs/2301.00774).
 2. <a id="ref-2"></a>Sun, M., Liu, Z., Bair, A., & Kolter, J. Z. (2023). *A Simple and Effective Pruning Approach for Large Language Models.* [arXiv:2306.11695](https://arxiv.org/abs/2306.11695).
 3. <a id="ref-3"></a>Ashkboos, S., Croci, M. L., Nascimento, M. G., Hoefler, T., & Hensman, J. (2024). *SliceGPT: Compress Large Language Models by Deleting Rows and Columns.* [arXiv:2401.15024](https://arxiv.org/abs/2401.15024).
+4. <a id="ref-4"></a>PyTorch. *Semi-structured sparsity*. [PyTorch 2.15 documentation](https://docs.pytorch.org/docs/2.15/sparse.html#sparse-semi-structured-tensors).

@@ -6,153 +6,140 @@ lang: ko
 
 # 15.1 생각의 사슬 프롬프팅 (Chain of Thought Prompting)
 
-대규모 언어 모델(LLMs)은 많은 작업에서 탁월한 성능을 보이지만, 다단계 수학 문제나 기호 논리와 같은 복잡한 추론 작업에서는 종종 어려움을 겪습니다. Wei 등이 2022년에 발표한 **생각의 사슬 (Chain of Thought, CoT) 프롬프팅** [[1]](#ref-1) 은 모델이 중간 해결 단계의 시퀀스를 생성하도록 유도함으로써 LLM의 추론 능력을 극적으로 향상시키는 간단하지만 강력한 기술입니다.
+가게에 볼트가 18개 있고, 여섯 개씩 든 상자 네 개를 받은 뒤 아홉 개를 썼습니다. 답은 $18 + 4 \times 6 - 9 = 33$ 입니다. 언어 모델은 바로 `33`을 출력할 수도 있고, 먼저 `받은 수량 24개`, `사용 전 42개`처럼 중간값을 적을 수도 있습니다. 추가 토큰은 후속 예측이 참고할 계산 결과를 제공합니다. 동시에 계산에 오류가 끼어들 기회도 늘어납니다.
 
-## 핵심 개념: 단계별 생각하기
+**생각의 사슬(Chain of Thought, CoT) 프롬프팅** 은 최종 답변 전에 중간 단계를 생성하도록 요청하는 방법입니다. Wei 등은 풀이 예시를 제공해 일부 산술·상식·기호 추론 과제에서 성능이 개선되는 결과를 보였습니다 [[1]](#ref-1). 실무에서는 긴 설명이 더 깊이 생각한 것처럼 보이는지보다, 어떤 과제가 추가 토큰의 비용을 정당화할 만큼 나아지는지를 확인해야 합니다.
 
-표준 프롬프팅(Standard Prompting)은 모델에 직접 답을 요구하므로, 모델이 단일 패스로 입력을 출력에 직접 매핑하려고 하기 때문에 복잡한 작업에서 오류가 발생하기 쉽습니다. 반면 CoT 프롬프팅은 추론 과정이 명시적으로 표시된 몇 가지 예시를 모델에 제공하거나, 단순히 모델에 "단계별로 생각하라"고 지시합니다.
+## 1. 중간 토큰이 바꾸는 것
 
-중간 단계를 생성함으로써 모델은 복잡한 문제를 더 작고 관리하기 쉬운 하위 문제로 효과적으로 분해합니다. 이를 통해 모델은 추론 프로세스에 더 많은 연산량(생성된 토큰 형태)을 할당할 수 있습니다.
+직접 답변과 CoT 모두 보통 자기회귀 방식으로 생성됩니다. 새 토큰은 현재까지 주어진 접두 문맥을 참고합니다. 직접 답변이라고 해서 임의 길이의 출력을 한 번의 순전파로 생성하는 것은 아닙니다. CoT는 최종 답 앞에 모델이 작성한 계산용 메모를 덧붙입니다. 가중치를 바꾸지 않고 추론 시점의 연산을 바꾸는 셈입니다.
 
-![Standard Prompting과 Chain-of-Thought Prompting 비교](../../../assets/images/chapter-15/cot_comparison.png)
-*출처: AI 생성 이미지*
+| 볼트 문제에 대해 작성한 출력 예시 | 확인할 수 있는 내용 | 이 출력이 입증하는 것 |
+| --- | --- | --- |
+| `33` | 최종 수량 | 설명은 없지만 이 문제의 정답 |
+| `4 × 6 = 24; 18 + 24 = 42; 42 − 9 = 33` | 중간 산술과 최종 수량 | 적힌 풀이가 타당함 |
+| `4 × 6 = 20; 18 + 20 − 9 = 29` | 명시적인 곱셈 오류 | 텍스트가 길면 오류를 드러낼 수 있지만 막아주지는 않음 |
 
-## Zero-Shot CoT: 마법의 문장
+이 표는 실제 모델 출력을 수집한 결과가 아니라 설명을 위해 만든 예시입니다. 두 번째 행은 각 연산을 확인할 수 있다는 점에서 유용합니다. 그래도 그 설명이 모델의 답변을 일으킨 모든 원인을 충실히 보여준다고 입증하지는 않습니다.
 
-Few-shot CoT는 예시를 제공해야 하지만, Kojima 등(2022) [[2]](#ref-2) 은 프롬프트에 **"차근차근 생각해 봅시다 (Let's think step by step)"** 라는 문구를 추가하는 것만으로도 예시 없이 유사한 추론 행동을 유도할 수 있음을 발견했습니다. 이를 **Zero-Shot CoT** 라고 합니다.
+**Few-shot CoT** 는 프롬프트에 풀이 예시를 넣습니다. **Zero-shot CoT** 는 예시 없이 중간 작업을 요청합니다. Kojima 등은 짧은 지시로 풀이를 유도한 다음 답을 추출하는 두 단계 절차를 연구했습니다. 보고된 개선은 해당 모델과 과제에서 얻은 결과입니다 [[2]](#ref-2). 특정 문구가 모든 모델과 질문의 성능을 높이는 보편적인 스위치는 아닙니다.
 
-이 간단한 추가는 모델이 최종 답변에 도달하기 전에 추론 경로를 생성하도록 트리거하여 GSM8K(수학 문장제 문제)와 같은 벤치마크에서 정확도를 크게 향상시킵니다.
+## 2. 정확성·유용성·충실성
 
-## CoT가 도움이 될 때와 오히려 해가 될 때
+다음 세 질문을 구분해야 합니다.
 
-CoT는 실제로 문제를 분해하는 과정이 필요한 작업에서 가장 큰 힘을 발휘합니다. 예를 들어 산술 문장제, 기호 조작, 제약이 있는 계획 문제, 혹은 중간 변수들을 계속 추적해야 하는 경우가 그렇습니다.
+- **정확성:** 최종 답이 과제의 요구를 만족하는가?
+- **유용성:** 작성된 단계가 독자나 외부 검사기의 검증에 도움이 되는가?
+- **충실성:** 설명이 모델의 답을 결정한 요인을 정확하게 반영하는가?
 
-반대로 다음과 같은 작업에서는 효과가 제한적이거나 오히려 비용만 늘릴 수 있습니다.
+Turpin 등은 선택지 위치처럼 편향을 유도하는 프롬프트 요소를 바꾸고, 모델의 답이 달라져도 설명에는 그 영향이 드러나지 않는 사례를 발견했습니다 [[4]](#ref-4). 이는 연구한 조건에서 확인한 실패 모드이지, 모든 풀이가 거짓이라는 주장은 아닙니다. 유창한 설명만으로 의사결정 과정을 입증하기는 어렵다는 뜻입니다.
 
-- 단순한 사실 조회
-- 얕은 분류
-- 근거 문서만 바로 제시하면 되는 retrieval 질의
-- 중간 텍스트를 길게 쓰는 것이 정확도보다 지연 시간만 늘리는 상황
+볼트 문제에서는 산술을 독립적으로 확인할 수 있습니다. 문서에 관한 답변은 인용한 구절이 주장을 뒷받침하는지 확인하고, 코드는 격리된 환경에서 관련 테스트를 실행할 수 있습니다. 이런 검사는 관찰 가능한 정확성을 살피지만 설명을 내부 연산의 완전한 기록으로 바꾸지는 않습니다. 검증기도 불완전하거나 틀릴 수 있으므로 버전·시험 입력·실패 기록을 남겨야 합니다.
 
-여기에는 자주 놓치는 실패 모드도 있습니다. 추론 텍스트가 길어질수록 실제 논리는 틀렸는데도 답이 더 그럴듯해 보일 수 있다는 점입니다. 즉, CoT는 많은 추론 과제에서 성능을 높이지만, 중간 단계를 따로 점검하지 않으면 과신도 함께 키울 수 있습니다.
+산술이나 제약이 있는 계획처럼 중간 상태가 필요한 과제에서는 문제 분해의 효과를 시험할 가치가 있습니다. 조회·간단한 분류·추출에서는 추가 텍스트가 품질 개선 없이 지연 시간만 늘릴 수 있습니다. 같은 격리 평가 과제에서 직접 답변, CoT 한 번, 더 강한 검증 경로를 비교하세요. 추론 동작을 다른 방식으로 설정하는 인터페이스에서도 같은 프롬프팅 요령이 통할 것이라고 가정해서는 안 됩니다.
 
-### 눈에 보이는 추론과 프로덕션 인터페이스는 다르다
+## 3. 자기 일관성: 일치는 선택 규칙이다
 
-연구 논문에서는 reasoning trace 자체가 연구 대상이기 때문에 CoT를 그대로 보여 주는 경우가 많습니다. 하지만 프로덕션에서는 보통 두 문제를 분리합니다.
+자기 일관성(self-consistency)은 여러 풀이 경로를 샘플링한 뒤 최종 답을 집계합니다. Wang 등은 평가한 추론 벤치마크에서 탐욕적 CoT보다 개선된 결과를 보고했습니다 [[3]](#ref-3). 샘플링으로 서로 다른 경로가 나올 수 있지만, 같은 모델과 프롬프트가 같은 오개념을 반복할 수도 있습니다. 난수를 독립적으로 뽑았다고 해서 사실에 관한 근거까지 독립적인 것은 아닙니다.
 
-- 내부적으로는 reasoning을 쓰되, 사용자에게는 최종 답과 근거만 반환한다
-- 최종 답을 엄격한 schema 안에 넣도록 강제한다
-- reasoning 텍스트 자체를 믿기보다, 최종 결과를 별도 검증한다
+설명용 답변 집합 `[33, 33, 33, 29, 29]`에서는 투표로 정답을 고릅니다. `[29, 29, 29, 33, 33]`에서는 같은 규칙이 틀린 답을 고릅니다. $3/5$ 라는 득표 비율은 그 표본의 성질이며, 별도의 보정 없이 정답일 확률 60%를 뜻하지 않습니다.
 
-그래서 CoT는 "설명이 곧 정답을 보장한다"기보다, **토큰 형태로 소비되는 추가 test-time compute** 로 이해하는 편이 더 정확합니다.
+답의 표현도 중요합니다. 어떤 과제에서는 `33`, `33개`, `서른세 개`가 같은 답이지만, `33 kg`과 `33 g`은 다릅니다. 평가 전에 답 정규화·동률 처리·형식 오류 처리·샘플 예산을 정하세요. 파싱 방식의 차이가 성능 개선처럼 보일 수 있습니다.
 
-## 프로덕션에서의 CoT 구현 전략
+### 오프라인 투표와 검증 예제
 
-LLM을 사용하여 애플리케이션을 구축하는 개발자에게 CoT는 필수적인 기술입니다. 그러나 이는 프로덕션 환경에서 몇 가지 과제를 안겨줍니다.
-
-### 1. 출력 파싱의 어려움
-
-모델이 생각의 사슬을 생성할 때, 최종 답변은 텍스트 내에 묻혀 있습니다. 개발자는 이를 추출할 안정적인 방법이 필요합니다.
-
-**전략 A: 특정 형식 지정 프롬프팅**
-추론의 맨 끝에 특정 XML 태그나 JSON 필드에 최종 답변을 넣도록 모델에 지시합니다.
-> "추론의 끝에 최종 답변을 \<answer\>최종_답변\</answer\> 형식으로 제공하세요."
-
-**전략 B: 정규 표현식을 이용한 후처리**
-정규식을 사용하여 일반적인 패턴이나 지정된 태그를 찾습니다.
-
-### 2. 자기 일관성 (Self-Consistency): 신뢰성 향상
-
-CoT 추론은 때때로 궤도를 벗어날 수 있습니다. 신뢰성을 높이기 위해 Wang 등(2022) [[3]](#ref-3) 은 **자기 일관성 (Self-Consistency)** 을 제안했습니다.
-하나의 생각의 사슬만 생성하는 대신, 모델은 0이 아닌 온도를 설정하여 *여러 개* 의 추론 경로(예: 5개 또는 10개)를 생성합니다. 그런 다음 시스템은 최종 답변을 집계하여(예: 다수결) 가장 일관된 답변을 찾습니다. 이는 무작위 오류를 크게 줄여줍니다.
-
-### PyTorch를 이용한 CoT 로직 시뮬레이션
-
-CoT는 프롬프팅 기술이지만, 추론 단계에 따라 연산량이 어떻게 확장되는지 이해하기 위해 "단계별" 토큰 생성 및 검증 프로세스를 시뮬레이션할 수 있습니다.
-
-> **학습하지 않은 토큰 생성 예시입니다.** 무작위 가중치가 추론이나 검증을 구현하지는 않습니다. 배치 우선 형식의 인과적 재계산만 보이며 위치 인코딩, 토크나이저, EOS 종료, 패딩 마스크, KV 캐시, 학습 목적 함수는 생략했습니다. 한 단계는 추론 한 단계가 아니라 토큰 하나입니다.
+> **Python 3.12에서 실행 확인한 교육용 오프라인 예제입니다.** 입력 기록은 실제 모델 생성 결과가 아니라 직접 만든 시험 자료입니다. 정확한 정수 답변 형식, 제출된 전체 기록을 분모로 하는 엄격한 과반수, 한 합성 문제의 산술 검사를 구현합니다. 모델 호출·토큰화·의미적 답 동등성·재시도·동시 실행·범용 검증기는 생략했습니다. 잘못된 형식의 기록도 분모에 남깁니다. 이는 의도적으로 보수적인 정책이며 자기 일관성의 보편적인 규칙은 아닙니다.
 
 ```python
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
+from collections import Counter
 
-class SimpleReasoningModel(nn.Module):
-    def __init__(self, vocab_size, embed_dim):
-        super().__init__()
-        self.embedding = nn.Embedding(vocab_size, embed_dim)
-        self.transformer = nn.TransformerEncoder(
-            nn.TransformerEncoderLayer(d_model=embed_dim, nhead=4, batch_first=True),
-            num_layers=2
-        )
-        self.output_layer = nn.Linear(embed_dim, vocab_size)
 
-    def forward(self, x):
-        x = self.embedding(x)
-        causal_mask = torch.triu(torch.ones(x.size(1), x.size(1), device=x.device, dtype=torch.bool), diagonal=1)
-        x = self.transformer(x, mask=causal_mask)
-        return self.output_layer(x)
+def select_majority(records):
+    if not records:
+        raise ValueError("At least one attempted sample is required")
+    # Exact schema for this exercise. bool is not accepted as an integer answer.
+    valid = [r["answer"] for r in records
+             if isinstance(r, dict) and set(r) == {"answer"}
+             and type(r["answer"]) is int]
+    counts = Counter(valid)
+    winner, votes = counts.most_common(1)[0] if counts else (None, 0)
+    n = len(records)
+    return {
+        "answer": winner if votes * 2 > n else None,
+        "attempted": n,
+        "valid": len(valid),
+        "winner_votes": votes,
+    }
 
-@torch.inference_mode()
-def generate_with_cot(model, prompt_tokens, max_steps=5):
-    """
-    중간 추론 단계를 포함하는 시퀀스 생성을 시뮬레이션합니다.
-    """
-    model.eval()
-    current_tokens = prompt_tokens
 
-    print(f"초기 프롬프트: {current_tokens.tolist()}")
+def verify_bolt_answer(answer):
+    return type(answer) is int and answer == 18 + 4 * 6 - 9
 
-    for step in range(max_steps):
-        # 다음 토큰 예측 (추론의 한 단계를 시뮬레이션)
-        logits = model(current_tokens)
-        next_token_logits = logits[:, -1, :]
-        next_token = torch.argmax(next_token_logits, dim=-1, keepdim=True)
 
-        # 시퀀스에 추가
-        current_tokens = torch.cat([current_tokens, next_token], dim=1)
+good = select_majority([{"answer": x} for x in [33, 33, 33, 29, 29]])
+bad = select_majority([{"answer": x} for x in [29, 29, 29, 33, 33]])
+missing = select_majority([{"answer": 33}, {"answer": 33}, {}, {}, {}])
+tie = select_majority([{"answer": 33}, {"answer": 29}])
 
-        print(f"단계 {step + 1} 추론 토큰: {next_token.item()}")
-
-    return current_tokens
-
-# 예제 사용법
-vocab_size = 100
-embed_dim = 64
-model = SimpleReasoningModel(vocab_size, embed_dim)
-
-# 프롬프트 시뮬레이션
-prompt = torch.tensor([[1, 2, 3]]) # 토큰화된 프롬프트
-final_sequence = generate_with_cot(model, prompt, max_steps=4)
-print(f"CoT가 포함된 최종 시퀀스: {final_sequence.tolist()}")
+assert good["answer"] == 33 and verify_bolt_answer(good["answer"])
+assert bad["answer"] == 29 and not verify_bolt_answer(bad["answer"])
+assert missing["answer"] is None and missing["valid"] == 2
+assert tie["answer"] is None
+print(good, bad, missing, tie)
 ```
+
+두 번째와 세 번째 실패는 다릅니다. 두 번째 시험 자료에는 명확하지만 틀린 과반수가 있고, 세 번째에는 유효한 출력이 충분하지 않습니다. 평가 로그에서 이 차이를 보존하세요. 둘 다 대체 경로로 보낼 수는 있지만, 형식이 잘못된 표본을 조용히 버리면 투표 정책 자체가 바뀝니다.
+
+## 4. 연산 예산과 결과 검증
+
+설명용 워크로드에서 경로마다 중간 토큰 96개와 답변 토큰 12개를 생성한다고 합시다. 한 경로는 108토큰, 다섯 경로는 540토큰을 생성합니다. 직접 답변 12토큰과 비교하면 이 예제의 출력 토큰 수는 45배입니다. 지연 시간이나 품질도 45배 달라진다는 예측은 아닙니다. 병렬 실행은 경과 시간과 동시 사용 메모리를 바꾸며, 접두 문맥 공유·종료 규칙·서빙 엔진도 영향을 줍니다. 프롬프트 처리와 검증기의 연산은 따로 계산해야 합니다.
+
+일반적인 밀집 KV 캐시에서 시퀀스 하나의 저장량은 다음과 같습니다.
+
+$$
+M_{\mathrm{KV}} = 2\ell S H_{\mathrm{KV}}d_h p,
+$$
+
+여기서 $\ell$ 은 레이어 수, $S$ 는 프롬프트와 생성 토큰을 포함한 전체 캐시 길이, $H_{\mathrm{KV}}$ 는 KV 헤드 수, $d_h$ 는 헤드 차원, $p$ 는 저장 값 하나의 바이트 수입니다. 앞의 2는 키와 값을 모두 저장한다는 뜻입니다. 이는 순수 캐시 데이터만 계산한 값이며, 가중치·작업 공간·양자화 메타데이터·할당기 오버헤드는 별도입니다. 여러 경로를 동시에 유지하면 상태도 늘어나며, 일부 접두 문맥을 안전하게 공유할 수 있는지는 구현에 달려 있습니다.
+
+배포 전 대응 비교에서는 과제 집합·모델 리비전·프롬프트 템플릿·디코딩 설정·답변 파서·검증기를 고정합니다. 최종 정확성, 형식 오류와 답변 보류, 주요 도메인 구간, 입출력 토큰 수, 전체 지연 시간을 기록하세요. 시간·토큰 상한을 정하고 생성이 잘리거나 검증에 실패했을 때의 동작도 정의해야 합니다. 긴 풀이가 예산을 다 쓰고 유효한 답을 내지 못했다면, 평가에서 빼도 되는 부분 정답이 아니라 실패입니다.
+
+애플리케이션이 요구하는 형식으로 검증한 답을 반환하세요. 중간 텍스트가 제공되는 경우에도 신뢰되지 않은 생성물로 취급합니다. 그 안의 명령을 실행하거나, 검사를 했다는 주장만으로 실제 검사가 실행됐다고 받아들여서는 안 됩니다. 태그나 정규 표현식은 필드를 찾을 수 있지만 추론을 검증하거나 행동 권한을 부여하지는 않습니다.
+
+## 5. 다음 단계: 경로를 명시적으로 비교하기
+
+CoT는 하나의 순차 경로를 제공하고, 자기 일관성은 여러 경로의 최종 답을 비교합니다. **15.2 생각의 트리/그래프** 에서는 외부 제어기가 부분 상태를 비교하고 다른 선택지로 돌아갈 수 있게 합니다. 세 방법 모두 유용한 연산과 반복되는 실수를 구분할 과제별 기준이 필요합니다.
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: 직접 답변과 CoT는 추론 연산에서 어떻게 다른가요?</summary>
-*직접 답변도 토큰마다 자기회귀 순전파를 수행합니다. CoT는 중간 토큰을 더 생성해 후속 예측이 참고할 문맥과 연산을 늘립니다. 일부 과제에서 도움이 되지만 정확성이나 추론의 충실성을 보장하지 않으며 비용과 오류 전파도 늘 수 있습니다.*
+<summary>Quiz 1: 직접 답변은 순전파 한 번, CoT는 여러 번이라고 설명하면 왜 틀리나요?</summary>
+*자기회귀 방식의 직접 답변도 토큰마다 생성 연산을 수행합니다. CoT는 최종 답 앞에 중간 토큰을 추가해 순차 연산을 늘립니다. 특정 과제에 도움이 될 수 있지만, 추가 연산의 존재만으로 정확성이나 설명의 충실성이 입증되지는 않습니다.*
 </details>
 
 <details>
-<summary>Quiz 2: 프로덕션 API 환경에서 생각의 사슬 프롬프팅을 사용할 때의 주요 트레이드오프는 무엇인가요?</summary>
-*주요 트레이드오프는 대기 시간(Latency)과 비용의 증가입니다. CoT는 모델이 답변에 도달하기 전에 많은 중간 토큰을 생성해야 합니다. LLM 요금은 일반적으로 토큰당 부과되고 속도는 자기회귀 생성에 의해 제한되므로, CoT는 요청을 더 느리고 비싸게 만듭니다.*
+<summary>Quiz 2: 다섯 번 샘플링한 답이 모두 같습니다. 그래도 어떤 중요한 근거가 부족한가요?</summary>
+*모두 같은 오류를 공유할 수 있습니다. 일치는 독립적인 사실 검증이나 보정된 정답 확률이 아닙니다. 과제에 맞는 근거로 답을 확인하고, 격리된 평가 예제로 집계 규칙의 성능을 측정해야 합니다.*
 </details>
 
 <details>
-<summary>Quiz 3: 자기 일관성(Self-Consistency) 방법은 어떻게 CoT 추론의 신뢰성을 향상시키나요?</summary>
-*자기 일관성은 0이 아닌 온도 샘플링을 사용하여 동일한 프롬프트에 대해 독립적인 여러 추론 경로를 생성합니다. 그런 다음 최종 답변에 대해 다수결을 취합니다. 잘못된 경로는 서로 다른 답변을 생성할 가능성이 높은 반면 올바른 경로는 수렴할 가능성이 높기 때문에, 이는 모델이 단일 추론 체인에서 무작위 오류를 범할 위험을 줄여줍니다.*
+<summary>Quiz 3: 오프라인 예제는 두 표본이 33을 반환하고 세 표본의 형식이 잘못됐을 때 왜 답변을 보류하나요?</summary>
+*선언한 규칙은 전체 다섯 번의 시도 중 엄격한 과반수를 요구합니다. 유효한 답 두 개가 일치해도 그 기준을 넘지 못합니다. 형식 오류를 제외하면 규칙이 유효한 부분집합의 과반수로 바뀌며 파싱 실패율도 감춰집니다.*
 </details>
 
 <details>
-<summary>Quiz 4: CoT 생성 과정 중 추론 모델의 KV 캐시 메모리 사용량을 계산하시오. 시퀀스 길이가 $L$ 토큰으로 확장되고, 은닉 차원(hidden dimension) $d$, 어텐션 헤드 수 $n_h$, 키-값 헤드 수 $n_{kv}$ (Grouped Query Attention), 레이어 수 $l$, 데이터 정밀도는 FP16이라고 가정한다. 명시적인 공식을 제공하고 $L = 8192$, $d = 4096$, $n_h = 32$, $n_{kv} = 8$, $l = 32$인 경우의 용량을 도출하시오.</summary>
-*KV 캐시 메모리 사용량은 다음과 같이 계산됩니다: $\text{Memory}_{\text{KV}} = 2 \times l \times L \times n_{kv} \times d_k \times 2 \text{ 바이트}$ (여기서 $d_k = d / n_h$는 헤드당 차원). 이 예시에서는 $d_k = 4096 / 32 = 128$입니다. 값을 대입하면: $\text{Memory}_{\text{KV}} = 2 \times 32 \times 8192 \times 8 \times 128 \times 2 \text{ 바이트} = 2^{30} \text{ 바이트} = 1 \text{ GiB}$가 됩니다. 이 명시적인 용량 도출을 통해, 시퀀스 길이 $L$을 크게 확장시키는 CoT 생성이 메모리 공간(footprint)의 선형적 증가를 초래하며 효과적인 메모리 관리가 없을 경우 OOM(Out-Of-Memory) 문제를 일으킬 수 있음을 알 수 있습니다.*
+<summary>Quiz 4: 레이어 32개, 전체 캐시 토큰 8,192개, KV 헤드 8개, 헤드 차원 128, FP16일 때 시퀀스 하나의 밀집 KV 데이터 크기는 얼마인가요?</summary>
+*$2 \times 32 \times 8192 \times 8 \times 128 \times 2 = 2^{30}$ 바이트, 즉 1 GiB입니다. 한 시퀀스의 키와 값을 모두 포함하지만 가중치와 실행 오버헤드는 제외합니다. 토큰 수에는 프롬프트와 보존된 중간·출력 토큰이 모두 들어갑니다.*
 </details>
 
----
+<details>
+<summary>Quiz 5: 설명에 올바른 산술 풀이가 있습니다. 모델이 그 풀이로 답을 결정했다는 사실도 입증되나요?</summary>
+*아닙니다. 적힌 계산이 답을 뒷받침한다는 사실을 보여줍니다. 충실성은 모델 선택의 원인에 관한 문제이며 개입 실험이나 다른 근거가 필요할 수 있습니다. 유효한 출력과 내부 연산의 완전한 설명은 서로 다른 주장입니다.*
+</details>
 
 ## References
 
-1. <a id="ref-1"></a>Wei, J., et al. (2022). *Chain-of-Thought Prompting Elicits Reasoning in Large Language Models*. [arXiv:2201.11903](https://arxiv.org/abs/2201.11903).
-2. <a id="ref-2"></a>Kojima, T., et al. (2022). *Large Language Models are Zero-Shot Reasoners*. [arXiv:2205.11916](https://arxiv.org/abs/2205.11916).
-3. <a id="ref-3"></a>Wang, X., et al. (2022). *Self-Consistency Elicits CoT Reasoning in LLMs*. [arXiv:2203.11171](https://arxiv.org/abs/2203.11171).
+1. <a id="ref-1"></a>Wei, J., et al. (2022). *Chain-of-Thought Prompting Elicits Reasoning in Large Language Models.* [arXiv:2201.11903](https://arxiv.org/abs/2201.11903).
+2. <a id="ref-2"></a>Kojima, T., et al. (2022). *Large Language Models are Zero-Shot Reasoners.* [arXiv:2205.11916](https://arxiv.org/abs/2205.11916).
+3. <a id="ref-3"></a>Wang, X., et al. (2023). *Self-Consistency Improves Chain of Thought Reasoning in Language Models.* ICLR. [arXiv:2203.11171](https://arxiv.org/abs/2203.11171).
+4. <a id="ref-4"></a>Turpin, M., Michael, J., Perez, E., & Bowman, S. R. (2023). *Language Models Don't Always Say What They Think: Unfaithful Explanations in Chain-of-Thought Prompting.* NeurIPS. [arXiv:2305.04388](https://arxiv.org/abs/2305.04388).

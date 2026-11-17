@@ -4,13 +4,14 @@ title: 14.5 GraphRAG 및 온톨로지
 lang: ko
 ---
 
+import GraphRAGPipeline from '../../../components/chapter-14/GraphRAGPipeline.astro';
 import GraphVisualizer from '../../../components/chapter-14/GraphVisualizer.tsx';
 
 # 14.5 GraphRAG 및 온톨로지
 
-한 엔터프라이즈 어시스턴트가 다음과 같은 질문을 받았다고 생각해 봅시다. *"우리가 라이선스를 받은 모델을 만든 스타트업을 인수한 회사의 CEO는 누구인가?"* 벡터 검색기는 스타트업, 인수, CEO가 등장하는 문서 조각들을 어느 정도 찾아올 수는 있습니다. 하지만 정답에 이르는 관계 자체를 따라가지는 못할 수 있습니다. 벡터 검색은 의미적 유사성에는 강하지만, 관계형 탐색에는 약하기 때문입니다.
+한 엔터프라이즈 어시스턴트가 다음과 같은 질문을 받았다고 생각해 봅시다. *"우리가 라이선스를 받은 모델을 만든 스타트업을 인수한 회사의 CEO는 누구인가?"* 벡터 검색기는 스타트업, 인수, CEO가 등장하는 문서 조각들을 어느 정도 찾아올 수는 있습니다. 하지만 정답에 이르는 관계 자체를 따라가지는 못할 수 있습니다. 유사도 순위만으로는 찾은 회사·인수·CEO가 같은 관계 경로에 속한다는 조건을 명시적으로 강제하지 않기 때문입니다.
 
-이 차이는 중요합니다. 실제 현업의 많은 질문은 "비슷한 문단을 찾아줘"가 아니라 엔티티와 엣지를 따라가야 하는 문제이기 때문입니다. 소유 관계 추적, 장애 타임라인 분석, 의존성 출처 파악, 계약 관계 탐색, 코퍼스 전체의 주제 파악이 모두 여기에 속합니다. 이런 질문을 잘 풀려면 시스템을 단순한 의미론적 텍스트 매칭에서 관계형 추론으로 업그레이드해야 합니다. 이것이 바로 **지식 그래프 (Knowledge Graphs)** 와 **GraphRAG** 의 영역입니다.
+이 차이는 중요합니다. 실제 현업의 많은 질문은 "비슷한 문단을 찾아줘"가 아니라 엔티티와 엣지를 따라가야 하는 문제이기 때문입니다. 소유 관계 추적, 장애 타임라인 분석, 의존성 출처 파악, 계약 관계 탐색, 코퍼스 전체의 주제 파악이 모두 여기에 속합니다. **지식 그래프(Knowledge Graph, KG)** 는 이런 관계를 명시적으로 나타냅니다. 그래프를 결합한 검색은 텍스트 검색과 함께 간선을 활용할 수 있습니다. 벡터 검색을 반드시 대체해야 하는 기술이 아니라 평가할 선택지입니다.
 
 ---
 
@@ -81,13 +82,13 @@ print(len(graph["relationships"]))  # 2
 
 ### 그래프 검색 엔지니어링: 재시작이 있는 무작위 보행 (Random Walk with Restart, RWR)
 
-프로덕션 환경에서는 가능한 모든 다중 홉 경로에 대해 수동으로 Cypher 쿼리를 작성하지 않습니다. 대신 그래프 데이터베이스는 수학적 알고리즘을 사용하여 주변 노드의 관련성 점수를 매깁니다. 표준적인 접근법은 PageRank의 변형인 **재시작이 있는 무작위 보행 (Random Walk with Restart, RWR)** 입니다.
+관계가 정해져 있다면 스키마에 맞는 탐색으로 `ACQUIRED_BY` 같은 간선을 따라갈 수 있습니다. 어떤 이웃이 유용한지 덜 분명할 때는 **재시작이 있는 무작위 보행(Random Walk with Restart, RWR)** 으로 시작 분포 주변 노드의 근접도를 매길 수 있습니다. 이는 선택 가능한 그래프 검색 방법이며, Microsoft GraphRAG의 로컬 검색 자체를 정의하는 알고리즘은 아닙니다.
 
 시작 분포 $\mathbf{p}_0$ (벡터 검색을 통해 찾은 초기 노드들)가 주어지면, 알고리즘은 그래프의 엣지를 탐색하는 무작위 보행자(Random walker)를 시뮬레이션합니다. 보행자가 무관한 영역으로 너무 멀리 표류하는 것을 방지하기 위해, 시작점으로 다시 "순간 이동(Teleporting)"할 확률 $c$ 를 갖습니다.
 
 $$ \mathbf{p}_{t+1}=(1-c)(\mathbf W\mathbf p_t+\mathbf p_0\mathbf d^T\mathbf p_t)+c\mathbf p_0. $$
 
-여기서 $\mathbf W$ 는 나가는 간선이 있는 열을 정규화하고 dangling 열은 0으로 둔 인접 행렬입니다. $d_j$ 는 노드 $j$ 가 dangling이면 1, 아니면 0입니다. $\mathbf d^T\mathbf p_t$ 는 그 노드들에 놓인 확률 질량이며 초기 분포 $\mathbf p_0$ 로 재분배됩니다. 아래는 이 규칙의 교육용 구현입니다.
+여기서 $\mathbf p_t$ 는 $t$ 단계 후 각 노드의 확률을 나타내는 벡터이고, $0 < c \leq 1$ 은 재시작 확률입니다. $\mathbf W$ 는 나가는 간선이 있는 열을 정규화하고 dangling 열은 0으로 둔 인접 행렬입니다. $d_j$ 는 노드 $j$ 가 dangling이면 1, 아니면 0입니다. $\mathbf d^T\mathbf p_t$ 는 그 노드들에 놓인 확률 질량이며 초기 분포 $\mathbf p_0$ 로 재분배됩니다. 아래는 이 규칙의 교육용 구현입니다.
 
 > **교육용 밀집 CPU 예제.** 나가는 간선이 없는 노드의 질량은 초기 분포로 재분배합니다. 노드 수 $V$ 에 대해 저장과 단계당 연산은 $O(V^2)$ 입니다. 실제 그래프에는 희소 연산, 장치 처리, 접근 권한, 수렴 검사와 출처가 필요합니다. 점수는 근접도이지 진실성이 아닙니다.
 
@@ -97,7 +98,7 @@ import torch
 class GraphRetriever:
     """
     재시작이 있는 무작위 보행(RWR)을 사용한 그래프 검색의 PyTorch 구현체입니다.
-    초기 벡터 검색 결과를 고도로 관련성 있는 하위 그래프로 확장합니다.
+    초기 시작 분포 주변의 그래프 근접도 점수를 계산합니다.
     """
     def __init__(self, num_nodes: int, edges: torch.Tensor, restart_prob: float = 0.15):
         """
@@ -140,7 +141,7 @@ class GraphRetriever:
         p_0 = initial_nodes / initial_nodes.sum()
         p_t = p_0.clone()
 
-        # 정상 분포(Stationary distribution)를 계산하기 위한 거듭제곱 연산(Power iteration)
+        # 정해진 횟수만 반복하며 수렴 여부는 검사하지 않습니다.
         for _ in range(num_steps):
             dangling_mass = p_t[self.dangling].sum()
             walk = self.trans_matrix @ p_t + dangling_mass * p_0
@@ -151,7 +152,7 @@ class GraphRetriever:
 # --- 실행 예시 ---
 if __name__ == "__main__":
     # 5개의 노드를 가진 작은 온톨로지 그래프 시뮬레이션
-    # 예: 0: 사용자 쿼리, 1: Orion, 2: Northstar, 3: Mina, 4: OpenAI
+    # 예: 0: 사용자 쿼리, 1: Orion, 2: Northstar, 3: Mina, 4: Vendor Z
     edges = torch.tensor([
         [1, 2, 2], # 소스 노드
         [2, 3, 4]  # 타겟 노드
@@ -172,37 +173,39 @@ if __name__ == "__main__":
     print(f"노드 관련성 점수: {top_k.values.tolist()}")
 ```
 
-최근의 그래프 강화 검색 연구는 이 아이디어를 더 발전시키고 있습니다. 예를 들어 HippoRAG는 지식 그래프와 Personalized PageRank 계열 검색을 결합해, 반복적인 retrieval loop보다 더 낮은 비용으로 multi-hop recall을 끌어올리는 방향을 보여 줍니다 [[3]](#ref-3). 실무 관점에서 중요한 교훈은, 엔티티 그래프를 갖추는 순간 그래프 검색도 별도 세계가 아니라 retrieval stack 안의 또 하나의 retriever가 된다는 점입니다.
+HippoRAG는 추출한 지식 그래프와 Personalized PageRank를 결합하고, 논문에서 평가한 다중 홉 기준선보다 개선된 결과를 보고합니다 [[3]](#ref-3). 이는 해당 데이터셋과 검색 설정에서 얻은 결과입니다. 위의 작은 RWR 예제는 그 시스템을 재현하지 않으며 비용 우위를 입증하지도 않습니다.
 
 ---
 
-## 5. Microsoft의 GraphRAG: 전역적 의미 파악 (Global Sensemaking)
+## 5. Microsoft GraphRAG: 질문 전에 만드는 보고서
 
-엣지를 탐색하는 것이 다중 홉 질문(로컬 검색)을 해결해 주지만, RAG에서 가장 어려운 문제인 **전역적 의미 파악 (Global Sensemaking)** 을 해결해 주지는 못합니다.
+“누가 Orion을 인수했는가?”와 “이 장애 보고서 전체에 반복해서 나타나는 위험은 무엇인가?”는 필요한 근거가 다릅니다. 첫 질문에는 관계 경로가 유용할 수 있습니다. 두 번째는 여러 문서를 넓게 살펴야 하므로, 비슷한 구절 몇 개만 찾으면 작은 주제를 놓칠 수 있습니다. Microsoft의 GraphRAG 논문은 엔터티 그래프와 미리 만든 커뮤니티 보고서로 이런 질의 중심 요약 문제를 다룹니다 [[1]](#ref-1).
 
-전역적인 주제 질문은 소수의 top-k 문서만으로 대표성을 확보하기 어렵습니다. 이것은 단순 검색 설정의 한계이며, 모든 벡터 기반 방법이 반드시 실패한다는 뜻은 아닙니다.
+**문서 확인 기준: 2026-11-18.** 아래 그림은 재사용하는 색인과 전역 질문마다 반복하는 작업을 구분합니다 [[4]](#ref-4) [[5]](#ref-5). 커뮤니티를 찾는 것만으로 답변이 생기지는 않습니다.
 
-2024년, Microsoft 리서치(Microsoft Research)는 이러한 전역적 요약 문제를 해결하기 위해 특별히 설계된 **GraphRAG** [[1]](#ref-1) 라는 새로운 아키텍처를 발표했습니다. Microsoft의 접근 방식은 질의 시점에 단순히 그래프를 탐색하는 데 그치지 않고, 그래프를 사용하여 전체 데이터셋의 계층적 요약을 사전 계산(Precompute)합니다.
+<GraphRAGPipeline lang="ko" />
 
-![graphrag_architecture](../../../assets/images/chapter-14/graphrag_architecture.png)
-*Source: Edge, D., et al. (2024). "From Local to Global: A Graph RAG Approach to Query-Focused Summarization." [[1]](#ref-1)*
+### 저장되는 것과 질문마다 생성되는 것
 
-### Microsoft GraphRAG의 4단계
+색인 단계에서는 원문 근거를 연결한 엔터티와 관계를 추출합니다. 연결된 엔터티를 계층적으로 묶는 커뮤니티 탐지에 Leiden 알고리즘 등을 사용합니다 [[2]](#ref-2). 이어서 파이프라인이 커뮤니티 보고서를 생성합니다. 이 보고서는 특정 사용자의 질문을 받기 전에 이미 정보를 선택하고 압축한 요약입니다 [[4]](#ref-4).
 
-1.  **추출 (Extraction):** LLM이 모든 소스 문서를 처리하여 엔티티와 관계를 추출하고 거대한 비구조화 지식 그래프 $G = (V, E)$ 를 형성합니다.
-2.  **커뮤니티 탐지 (Community Detection):** 시스템은 **Leiden 알고리즘** [[2]](#ref-2) 을 적용하여 그래프를 계층적이고 잘 연결된 클러스터(커뮤니티)로 분할합니다. 자주 상호작용하는 엔티티들(예: 책의 특정 서브플롯에 등장하는 모든 캐릭터와 장소)은 하나의 커뮤니티 $C_i$ 로 그룹화됩니다.
-3.  **사전 생성 요약 (Pregenerated Summarization):** 사용자가 질문을 던지기도 전에, LLM은 그래프 내의 모든 단일 커뮤니티에 대해 포괄적인 요약 $S_i$ 를 생성합니다.
-4.  **맵리듀스 질의 (Map-Reduce Querying):** 전역 쿼리가 도착하면 시스템은 원시 텍스트를 검색하지 않습니다. 대신 LLM에 각 커뮤니티 요약을 독립적으로 사용하여 부분적인 답변을 생성하도록 프롬프트를 줍니다(Map). 마지막으로 모든 부분 답변을 단일하고 응집력 있는 전역 응답으로 병합합니다(Reduce).
+전역 검색은 선택한 계층 수준의 보고서를 문맥에 들어갈 크기로 나눕니다. 각 map 호출이 질문과 보고서 묶음을 받아 답변에 쓸 요점을 제안합니다. 선별·순위화를 거친 요점이 reduce 호출로 전달되고, 최종 응답을 구성합니다 [[5]](#ref-5). 중간 결과의 중요도 점수는 선택 기준이며, 내용이 사실일 확률을 보정한 값은 아닙니다.
 
-계층 요약은 넓은 범위를 다루는 한 방법입니다. 추출 오류, 소수 주제의 누락, 요약 손실과 변경된 권한의 전파를 평가해야 합니다.
+이 전역 검색 경로는 보고서를 문맥으로 사용합니다. 그렇다고 모든 GraphRAG 질의가 원문을 무시하는 것은 아닙니다. 공식 로컬 검색 경로는 관련 엔터티 주변의 그래프 기록과 입력 문서의 정보를 결합합니다 [[6]](#ref-6). 그래프를 사용하는 방법을 하나의 알고리즘으로 묶기보다 질문에 맞는 검색 경로를 선택해야 합니다.
 
----
+### 비용과 누락을 함께 보는 예제
 
-## 6. 요약 및 다음 단계
+설명용 상황에서 한 계층 수준의 사용 가능한 보고서가 120개라고 합시다. map 호출 하나에 온전한 보고서 네 개씩 들어간다면 map 30회와 reduce 1회가 필요합니다. map 결과 하나가 200토큰씩 기여하면 reduce 단계에는 자체 프롬프트와 답변 예산을 제외하고도 6,000토큰의 후보가 모입니다. 후보용 공간이 3,000토큰뿐이라면 일부를 선별하거나 압축해야 합니다. 이 수치는 교육용 예산이며 GraphRAG의 기본 설정이나 실측 비용이 아닙니다. map 호출을 병렬화하면 경과 시간을 줄일 수 있지만 토큰 연산 자체가 사라지지는 않습니다.
 
-**GraphRAG** 는 검색을 단순한 텍스트 매칭에서 관계형 추론으로 한 차원 끌어올립니다. 지식을 온톨로지와 계층적 커뮤니티로 구조화함으로써, 시스템은 엣지를 동적으로 탐색하여 다중 홉 쿼리에 답하고 방대한 데이터셋에 대한 전역적 의미 파악을 수행할 수 있습니다. 실무에서 중요한 질문은 그래프가 흥미로운가가 아니라, 실제 워크로드가 관계, 출처, 코퍼스 구조에 크게 의존하느냐입니다.
+이제 원문 두 개에만 나타나는 안전 문제를 생각해봅시다. 관계 추출, 보고서 요약, map 결과 선택 중 어느 단계에서든 그 문제가 사라질 수 있습니다. 유창한 전역 답변만으로 해당 문제가 검토됐다고 판단할 수는 없습니다. 알려진 사실과 소수 주제를 기준으로 전체 문서의 반영 범위를 평가하고, 선택한 주장을 보고서에서 원문 구간까지 추적해야 합니다.
 
-하지만 잘 설계된 그래프 파이프라인도 운영에서는 여전히 실패할 수 있습니다. 엣지가 오래됐을 수도 있고, entity resolution이 틀릴 수도 있으며, re-ranking이 timeout 날 수도 있고, 생성 모델이 근거를 무시할 수도 있습니다. 다음 절인 **14.6 RAG 실패 모드와 운영 설계** 에서는 이런 시스템이 실제로 어디서 깨지고, 어떻게 graceful degradation을 설계할지 살펴보겠습니다.
+원문이 바뀌거나 접근 권한이 사라지면, 그 원문에서 파생된 그래프 기록과 보고서도 재사용 전에 무효화하거나 다시 생성해야 합니다. 원문 스냅샷·추출 설정·그래프·보고서·접근 정책을 버전이 있는 검색 산출물로 묶어 관리하세요. 배포 전에는 더 단순한 기준선과 비교해 질의 유형별 근거 충실도와 반영 범위, 색인·갱신 비용, 질의 비용, 지연 시간을 평가합니다. 그래프 구조를 늘리는 것은 그 비교 결과가 유지 비용을 정당화할 때 유용합니다.
+
+## 6. 실무 요점
+
+그래프는 관계 경로를, 커뮤니티 보고서 계층은 더 넓은 정보 범위를 제공할 수 있습니다. 어느 쪽도 추출한 사실이나 생성한 요약을 인증하지는 않습니다. 오래된 근거와 누락을 진단할 수 있도록 원문 출처와 색인·질의 단계의 경계를 명확히 유지하세요.
+
+다음 절인 **14.6 RAG 실패 모드와 운영 설계** 에서는 틀린 답변의 근거를 추적하며 어느 단계를 고쳐야 하는지 확인합니다.
 
 ---
 
@@ -219,13 +222,13 @@ if __name__ == "__main__":
 </details>
 
 <details>
-<summary>Quiz 3: Microsoft의 GraphRAG 아키텍처에서 Leiden 알고리즘의 구체적인 수학적 목적은 무엇입니까?</summary>
-*Leiden 알고리즘은 그래프 커뮤니티 탐지(Community detection)에 사용됩니다. 거대하고 비구조화된 엔티티 지식 그래프를 계층적이고 잘 연결된 클러스터(커뮤니티)로 분할합니다. 이를 통해 시스템은 질의 시간 전에 밀접하게 관련된 엔티티들에 대한 모듈화된 요약을 생성할 수 있습니다.*
+<summary>Quiz 3: 전역 검색이 질문에 답하기 전에 Leiden 커뮤니티 탐지는 어떤 역할을 하나요?</summary>
+*연결된 엔터티의 커뮤니티를 찾습니다. 색인 파이프라인은 이를 기준으로 보고서를 구성하며, 질의 시점의 map/reduce가 구체적인 질문에 답해야 합니다. 커뮤니티 탐지 자체가 보고서를 작성하거나 그 안의 사실을 검증하지는 않습니다.*
 </details>
 
 <details>
 <summary>Quiz 4: 제공된 PyTorch의 재시작이 있는 무작위 보행(RWR) 구현에서 `restart_prob` 매개변수의 역할은 무엇입니까?</summary>
-*`restart_prob` (재시작 확률)는 무작위 보행이 초기 검색 결과에서 무한히 멀리 표류하는 것을 방지합니다. 탐색이 주기적으로 (벡터 검색을 통해 찾은) 시작 노드로 다시 "순간 이동"하도록 강제함으로써, 검색된 하위 그래프가 사용자의 원래 쿼리 컨텍스트에 강하게 편향되도록 보장합니다.*
+*매 단계마다 확률 질량의 $c$ 비중을 시작 분포에, $1-c$ 비중을 dangling 노드 처리를 포함한 그래프 전이 결과에 배정합니다. 재시작 확률이 높을수록 시작 노드의 비중이 커지고 먼 노드까지 탐색하는 정도는 줄어듭니다. 높은 점수나 잦은 재시작이 해당 노드가 질문에 필요한 사실을 담고 있음을 검증하지는 않습니다.*
 </details>
 
 <details>
@@ -233,10 +236,19 @@ if __name__ == "__main__":
 *비슷한 이름이나 설명이 같은 대상을 뜻하지는 않습니다. 식별자·유형·시간·원문을 확인하고 병합 이력을 보존해야 합니다. 병합 후에는 중복 간선과 가중치 의미를 정한 다음 전이 확률을 다시 정규화합니다.*
 </details>
 
+<details>
+<summary>Quiz 6: 원문이 색인에 남아 있는데도 드문 문제가 답변에서 사라질 수 있는 이유는 무엇인가요?</summary>
+*관계를 추출하면서 빠뜨렸거나, 커뮤니티 보고서가 요약하면서 생략했거나, 질의 시점의 map/reduce 예산 때문에 제외했을 수 있습니다. 각 경계에서 근거를 확인해야 합니다. 최종 답변을 길게 만드는 것만으로 모든 입력 보고서에서 빠진 정보를 복원할 수는 없습니다.*
+</details>
+
 ---
 
 ## References
 
 1. <a id="ref-1"></a>Edge, D., et al. (2024). *From Local to Global: A Graph RAG Approach to Query-Focused Summarization.* [arXiv:2404.16130](https://arxiv.org/abs/2404.16130).
-2. <a id="ref-2"></a>Traag, V. A., Waltman, L., & van Eck, N. J. (2019). *From Louvain to Leiden: guaranteeing well-connected communities.* [Scientific Reports](https://www.nature.com/articles/s41598-019-41695-z).
-3. <a id="ref-3"></a>Gutiérrez, B. J., Shu, Y., Gu, Y., Yasunaga, M., & Su, Y. (2025). *HippoRAG: Neurobiologically Inspired Long-Term Memory for Large Language Models.* [arXiv:2405.14831](https://arxiv.org/abs/2405.14831).
+2. <a id="ref-2"></a>Traag, V. A., Waltman, L., & van Eck, N. J. (2019). *From Louvain to Leiden: guaranteeing well-connected communities.* Scientific Reports 9, 5233. [Open manuscript](https://arxiv.org/abs/1810.08473).
+3. <a id="ref-3"></a>Gutiérrez, B. J., Shu, Y., Gu, Y., Yasunaga, M., & Su, Y. (2024). *HippoRAG: Neurobiologically Inspired Long-Term Memory for Large Language Models.* NeurIPS 2024. [arXiv:2405.14831](https://arxiv.org/abs/2405.14831).
+
+4. <a id="ref-4"></a>Microsoft. *GraphRAG Indexing Overview.* [Official documentation](https://microsoft.github.io/graphrag/index/overview/).
+5. <a id="ref-5"></a>Microsoft. *GraphRAG Global Search.* [Official documentation](https://microsoft.github.io/graphrag/query/global_search/).
+6. <a id="ref-6"></a>Microsoft. *GraphRAG Local Search.* [Official documentation](https://microsoft.github.io/graphrag/query/local_search/).
