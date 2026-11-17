@@ -1,0 +1,24 @@
+.mtp-training-diagram { margin: 1.5rem 0; color: #173247; }
+.mtp-training-diagram h3 { font-size: 1.15rem; margin: 0 0 1rem; }
+.mtp-training-diagram h4 { font-size: 1rem; line-height: 1.5; margin: 0; color: #173247; }
+.mtp-baseline { background: #f1f5f9; padding: .9rem 1rem; border-left: 4px solid #475569; border-radius: .25rem; }
+.mtp-baseline strong { font-size: .95rem; }
+.mtp-baseline p { margin: .4rem 0 0; font-size: .9rem; line-height: 1.7; }
+.mtp-designs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin-top: 1rem; }
+.mtp-design { min-width: 0; padding: 1rem; border: 1px solid #a8b6c5; border-radius: .5rem; background: #fff; }
+.mtp-source-label { color: #475569; font-size: .8rem; margin: .35rem 0 1rem; line-height: 1.5; }
+.mtp-node { min-width: 0; padding: .6rem .55rem; border: 1px solid #bcc8d4; border-radius: .35rem; text-align: center; background: #f8fafc; }
+.mtp-node strong { display: block; font-size: .86rem; line-height: 1.5; color: #173247; }
+.mtp-node span { display: block; font-size: .8rem; line-height: 1.55; margin-top: .25rem; color: #334155; }
+.mtp-shared { background: #eaf5f1; border-color: #8baea1; }
+.mtp-specific { background: #eff3ff; border-color: #9eaed5; }
+.mtp-observed { background: #fff6df; border-color: #c7b47e; }
+.mtp-arrow { text-align: center; line-height: 1.1; padding: .3rem 0; color: #475569; font-size: 1rem; }
+.mtp-heads { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .4rem; }
+.mtp-targets .mtp-node, .mtp-node.mtp-targets { background: #f8fafc; }
+.mtp-training-diagram .mtp-explanation { font-size: .85rem; line-height: 1.65; margin: 1rem 0 0; }
+.mtp-training-diagram figcaption { margin-top: .8rem; color: #475569; font-size: .83rem; line-height: 1.65; }
+.mtp-training-diagram a:focus-visible { outline: 3px solid #7c3aed; outline-offset: 3px; }
+:lang(ko) .mtp-training-diagram { word-break: keep-all; overflow-wrap: anywhere; }
+@media (max-width: 760px) { .mtp-designs { grid-template-columns: 1fr; } }
+@media (max-width: 420px) { .mtp-design { padding: .8rem; } .mtp-heads { gap: .3rem; } .mtp-heads .mtp-node { padding: .5rem .3rem; } .mtp-heads .mtp-node span { font-size: .75rem; overflow-wrap: anywhere; } }

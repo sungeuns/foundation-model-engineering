@@ -19,10 +19,11 @@ Use the [correction or learning-gap forms](https://github.com/sungeuns/foundatio
 3. Use Node 22.12.0 or newer and install with `npm ci`. Make your changes, then run:
    ```bash
    npm run test:content
-   npm run build
+   SITE_BASE=/foundation-model-engineering/ npm run build
    node --test scripts/*.test.mjs
    git diff --check
    ```
+   The rendered-site tests check GitHub Pages URLs, so this validation build needs the deployment base. Plain `npm run build` remains available for a site served at `/`.
 4. Commit your changes with a descriptive commit message.
 5. Push to your fork and submit a **Pull Request** (PR) against the `main` branch.
 

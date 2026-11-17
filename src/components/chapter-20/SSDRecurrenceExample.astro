@@ -1,0 +1,41 @@
+---
+import './ssd-recurrence-example.css';
+const { lang = 'en' } = Astro.props;
+const ko = lang === 'ko';
+const steps = [
+  { time: 1, input: 2, transition: '0.75', previous: 0, result: 2 },
+  { time: 2, input: 4, transition: '0.5', previous: 2, result: 5 },
+  { time: 3, input: 1, transition: '0.25', previous: 5, result: 2.25 },
+];
+const matrix = [[1, 0, 0], [0.5, 1, 0], [0.125, 0.25, 1]];
+---
+<figure class="ssd-recurrence-example">
+  <h4>{ko ? '같은 값을 구하는 두 가지 계산' : 'Two calculations, the same values'}</h4>
+  <p class="ssd-example-scope">{ko ? '직접 정한 수치입니다. 스칼라 상태 하나, 초기 상태 0, 입력·출력 계수 1을 사용합니다. 학습한 모델의 측정 결과가 아닙니다.' : 'Authored numbers: one scalar state, initial state 0, and input/output coefficients 1. These are not measurements from a trained model.'}</p>
+  <p class="ssd-example-label">{ko ? '1. 앞선 상태에서 다음 상태로 진행' : '1. Move forward from the previous state'}</p>
+  <ol class="ssd-example-steps">
+    {steps.map(step => <li>
+      <strong>t = {step.time}</strong>
+      <span>x<sub>{step.time}</sub> = {step.input}, a<sub>{step.time}</sub> = {step.transition}</span>
+      <span>h<sub>{step.time}</sub> = {step.transition} × {step.previous} + {step.input}</span>
+      <b>h<sub>{step.time}</sub> = {step.result}</b>
+    </li>)}
+  </ol>
+  <p class="ssd-example-label">{ko ? '2. 입력마다 남는 기여를 한 행씩 계산' : '2. Collect each input’s surviving contribution by row'}</p>
+  <div class="ssd-example-matrix">
+    <table>
+      <caption>{ko ? 'L: 행은 출력 시점, 열은 입력 시점' : 'L: rows are output times; columns are input times'}</caption>
+      <thead><tr><th scope="col">{ko ? '시점' : 'Time'}</th>{[1, 2, 3].map(i => <th scope="col">x<sub>{i}</sub></th>)}</tr></thead>
+      <tbody>{matrix.map((row, i) => <tr><th scope="row">h<sub>{i + 1}</sub></th>{row.map((value, j) => <td class={j > i ? 'ssd-future-zero' : undefined}>{value}</td>)}</tr>)}</tbody>
+    </table>
+    <div class="ssd-example-result">
+      <span>{ko ? '입력 열벡터 x' : 'Input column x'}</span>
+      <strong>[2, 4, 1]ᵀ</strong>
+      <span>{ko ? '같은 출력 h = Lx' : 'Same output h = Lx'}</span>
+      <strong>[2, 5, 2.25]ᵀ</strong>
+    </div>
+  </div>
+  <p class="ssd-example-expansion">h₃ = <b>0.125 × 2</b> + <b>0.25 × 4</b> + <b>1 × 1</b> = 2.25</p>
+  <p>{ko ? '0.125는 a₃a₂ = 0.25 × 0.5입니다. 첫 입력의 기여는 두 번의 서로 다른 전이를 거칩니다. 미래 입력에 해당하는 위쪽 삼각형은 0입니다.' : 'The 0.125 entry is a₃a₂ = 0.25 × 0.5. The first input passes through two different transitions. Entries above the diagonal are zero because those inputs are in the future.'}</p>
+  <figcaption>{ko ? 'SSD 논문의 스칼라 순환식에 근거해 HTML/CSS로 작성한 수치 예시입니다. 전체 Mamba-2 블록이나 청크 간 알고리즘의 구현도는 아닙니다.' : 'Original HTML/CSS worked example based on the SSD paper’s scalar recurrence. It does not depict a complete Mamba-2 block or the inter-chunk algorithm.'} <a href="#ref-2">[2]</a></figcaption>
+</figure>

@@ -365,10 +365,10 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 19.3 | `/chapter-19/probing-classifiers` | Inspected 2026-11-15 | ff555220f028dcfb555ef1730dbcd13126125884b4b81d97723d546b0156ce69 | ed5f87d45843638897fbd4786fd1a16ee25318fb596e7c2b0f31f6f379f5a773 |
 | 19.4 | `/chapter-19/sparse-autoencoders-sae` | Inspected 2026-11-15 | 1c9eeb21d547629108ec41532289a1de144a79897f4e85d20b421ac6603187fd | 4763fcd0d43195c1223ef37565a0b73eddca2e151e840d151b78302339bbab40 |
 | 20.1 | `/chapter-20/state-space-models-ssm` | Inspected 2026-11-15 | 62c29a98f3b7b0a6ec6474bcb6d941c649a324cb4c28be9a9f6c7938f0a939a5 | 21d0a1a63ca16d7a1777695359d7abc310d56a9d594b70b0097af63e11def139 |
-| 20.2 | `/chapter-20/mamba-and-s6` | Inspected 2026-11-15 | 9873692f6d13a88436fa71b48af24e20a8336f1df31020ac6f3cdd60c4e506de | 2b782f1dcb32ad393805bf87b8b30842bee08da7af8a4e8e45d0f6ef7d31fec0 |
+| 20.2 | `/chapter-20/mamba-and-s6` | Inspected 2026-11-18 | a89134b1f0ca60b397d0fd46c4bcfa0a1ce045cd294ff4895af664f745a59255 | f4805c489887aa69e2c78a4c55b8d10219d9a37aecdcf070a4b5f7d1b10ec988 |
 | 20.3 | `/chapter-20/linear-attention` | Inspected 2026-11-15 | fa24114e779a597a2e5337fbdfd4578973ed02167d343d554d3e87eb46afdd95 | 17360d727061bc8eb1a020397c813ed547f5f92c84759e955b565b38ed600485 |
 | 20.4 | `/chapter-20/neural-networks-as-programs` | Inspected 2026-11-15 | 55b5f77c413bfd3de7fa682467ff500d07887f4dabafbb79903beccf9b5c4759 | e88b792d77ef04624e0dee7e78480fadde710c80d0f3c1cdc729c60f56e765bf |
-| 20.5 | `/chapter-20/multi-token-prediction` | Inspected 2026-11-15 | a3809ef07f46f1dd3feba874b452263b730725e44f2cd9cad56dc2a93ee7ed51 | 5970d1120731a74174af5d46ff893b4e3b409ae8c70a93183c65b50d6159ad48 |
+| 20.5 | `/chapter-20/multi-token-prediction` | Inspected 2026-11-18 | e6f6d2d7bcefe3b290e7c0d81c7612e000d2bcfe5dc3593a29a285e27416f560 | d407bab93f7b3b6e03c5ec9d36bced5d4df7e538fe6083aadd5d636b14fe80a9 |
 | 20.6 | `/chapter-20/diffusion-based-llms` | Inspected 2026-11-15 | f2236899fbf327ac90e1c1edae9c77a4173fb6721102a7364fbf85542541d836 | 0d5a117e60a90c1f8d746e5b29f01a13cc4929aa7a0e729e93fc003611ef22ed |
 | 20.7 | `/chapter-20/path-to-agi-and-world-models` | Inspected 2026-11-15 | a3dcc811e9933684e8904932a324182ed97b068f922990872e19b57c4769f0cb | da5b3f4df663983e5d69936df8fe16315b453860a786ecdf54f0a32b419c3ea5 |
 
@@ -580,3 +580,7 @@ Six EN/KO pairs (5.3, 7.4, 13.2, 13.3, 14.5, 15.1) were inspected and revised wi
 ### 2026-11-18 runnable entry and readout pass
 
 Inspected 7.5 and 19.2 EN/KO pairs after adding self-contained notebook entry points and replacing misleading readout/attention illustrations. Hashes above identify the current inspected source. Independent review corrected source-byte preservation and scoped final-decoder equivalence to the actual output path. See `growth-2026-11-18-lab-entry.md`, notebook execution evidence, and figure/discovery companion reports. Unchanged pages retain their previous inspection dates.
+
+### 2026-11-18 causal-diagram follow-up
+
+Inspected 20.2 and 20.5 EN/KO pairs after replacing misleading generated figures with source-grounded HTML/CSS diagrams. The SSD example was checked numerically against recurrence; MTP diagrams distinguish shared parameters, auxiliary depth and training context. A fresh independent source review corrected quiz head numbering and found no remaining actionable issue in this scope. See `growth-2026-11-18-reader-feedback.md` and its SSD/MTP companion reports. Unchanged pages retain their earlier inspection evidence.

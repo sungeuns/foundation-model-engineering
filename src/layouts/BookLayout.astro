@@ -53,6 +53,9 @@ const toAbsoluteUrl = (pagePath) => {
 const githubUrl = 'https://github.com/sungeuns/foundation-model-engineering';
 const feedPath = withBasePath(isKo ? '/ko/feed.xml' : '/feed.xml', basePath);
 const canonicalUrl = toAbsoluteUrl(currentPath);
+const correctionUrl = new URL(`${githubUrl}/issues/new`);
+correctionUrl.searchParams.set('template', 'correction.yml');
+correctionUrl.searchParams.set('page', canonicalUrl);
 const enUrl = toAbsoluteUrl(enTarget);
 const koUrl = toAbsoluteUrl(koTarget);
 const pageDescription = description || searchDescriptions[enTarget]?.[lang] || (
@@ -261,7 +264,7 @@ if (currentIndex !== -1) {
           <div data-nosnippet>
             <p>{isKo ? '도움이 된 설명이 있었나요? ' : 'Found a useful explanation? '}
               <a href={githubUrl}>{isKo ? 'GitHub에서 Star로 책 저장하기' : 'Save the book with a GitHub star'}</a>
-              {' · '}<a href={`${githubUrl}/issues/new`}>{isKo ? '수정 제안하기' : 'Suggest a correction'}</a>
+              {' · '}<a href={correctionUrl.toString()}>{isKo ? '수정 제안하기' : 'Suggest a correction'}</a>
             </p>
             <p><a href={feedPath}>{isKo ? '최근 수정한 장 구독하기 (RSS)' : 'Subscribe to chapter edits (RSS)'}</a></p>
             <p>{isKo ? '저자: ' : 'Created by '}<strong><a href="https://www.linkedin.com/in/sungeuns2" target="_blank" rel="noopener noreferrer">Seongeun So</a></strong></p>

@@ -1,0 +1,81 @@
+---
+import './mtp-training-diagram.css';
+const { lang = 'en' } = Astro.props;
+const ko = lang === 'ko';
+const t = (en: string, kr: string) => ko ? kr : en;
+---
+
+<figure class="mtp-training-diagram" aria-labelledby="mtp-training-title">
+  <h3 id="mtp-training-title">{t('Where each training target gets its context', '각 학습 타깃은 어떤 문맥을 보는가')}</h3>
+  <div class="mtp-baseline">
+    <strong>{t('Ordinary next-token training', '일반적인 다음 토큰 학습')}</strong>
+    <p>{t('Observed prefix x₁:ₜ', '관측한 접두사 x₁:ₜ')} <span aria-hidden="true"> → </span>
+      {t('causal decoder', '인과적 디코더')} <span aria-hidden="true"> → </span>
+      {t('output head', '출력 헤드')} <span aria-hidden="true"> → </span>
+      {t('loss against xₜ₊₁', 'xₜ₊₁과 비교한 손실')}</p>
+  </div>
+
+  <div class="mtp-designs">
+    <section class="mtp-design">
+      <h4>{t('Parallel MTP: separate future offsets', '병렬 MTP: 미래 위치별 독립 헤드')}</h4>
+      <p class="mtp-source-label">Gloeckle et al. (2024) · {t('three offsets shown', '미래 위치 세 개를 그린 예시')}</p>
+      <div class="mtp-node mtp-shared">
+        <strong>{t('Shared causal trunk', '공유 인과적 트렁크')}</strong>
+        <span>x₁:ₜ → H₁:ₜ</span>
+      </div>
+      <div class="mtp-arrow" aria-hidden="true">↓</div>
+      <div class="mtp-heads">
+        {[1, 2, 3].map(k => <div class="mtp-node mtp-specific">
+          <strong>{t(`Head ${k}`, `헤드 ${k}`)}</strong>
+          <span>{t('Causal Transformer', '인과적 Transformer')}</span>
+        </div>)}
+      </div>
+      <div class="mtp-arrow" aria-hidden="true">↓</div>
+      <div class="mtp-node mtp-shared">
+        <strong>{t('Shared vocabulary projection Wᵤ', '공유 어휘 투영 Wᵤ')}</strong>
+        <span>{t('Applied separately to each head, then softmax', '각 헤드에 따로 적용한 뒤 softmax')}</span>
+      </div>
+      <div class="mtp-arrow" aria-hidden="true">↓</div>
+      <div class="mtp-heads mtp-targets">
+        {['xₜ₊₁', 'xₜ₊₂', 'xₜ₊₃'].map(target => <div class="mtp-node">
+          <strong>{target}</strong><span>{t('Loss target', '손실 타깃')}</span>
+        </div>)}
+      </div>
+      <p class="mtp-explanation">{t('All three heads use the same prefix representation. A later-offset head does not receive an earlier head’s sampled token. Head blocks have separate parameters; Wᵤ is shared.', '세 헤드는 같은 접두사의 표현을 봅니다. 먼 미래를 예측하는 헤드에 앞선 헤드가 뽑은 토큰을 입력하지 않습니다. 헤드 블록의 파라미터는 독립적이고 Wᵤ는 공유합니다.')}</p>
+    </section>
+
+    <section class="mtp-design">
+      <h4>{t('Sequential MTP: extend the training context', '순차 MTP: 학습 문맥을 한 토큰 확장')}</h4>
+      <p class="mtp-source-label">DeepSeek-V3 · {t('first auxiliary depth shown', '첫 보조 깊이를 그린 예시')}</p>
+      <div class="mtp-node mtp-shared">
+        <strong>{t('Main model: hₜ⁰ from x₁:ₜ', '메인 모델: x₁:ₜ에서 얻은 hₜ⁰')}</strong>
+        <span>{t('OutHead(hₜ⁰) → loss against xₜ₊₁', 'OutHead(hₜ⁰) → xₜ₊₁과 비교한 손실')}</span>
+      </div>
+      <div class="mtp-arrow" aria-hidden="true">↓</div>
+      <div class="mtp-node mtp-observed">
+        <strong>{t('Inputs', '입력')}: hₜ⁰, Emb(xₜ₊₁)</strong>
+        <span>{t('Two inputs: previous-depth state and the ground-truth token embedding', '두 입력: 이전 깊이의 상태와 정답 토큰의 임베딩')}</span>
+      </div>
+      <div class="mtp-arrow" aria-hidden="true">↓</div>
+      <div class="mtp-node mtp-specific">
+        <strong>{t('Auxiliary module 1', '보조 모듈 1')}</strong>
+        <span>{t('RMSNorm each input → concatenate → M₁ → causal TRM₁ → hₜ¹', '입력별 RMSNorm → 이어 붙이기 → M₁ → 인과적 TRM₁ → hₜ¹')}</span>
+      </div>
+      <div class="mtp-arrow" aria-hidden="true">↓</div>
+      <div class="mtp-node mtp-shared">
+        <strong>OutHead(hₜ¹)</strong>
+        <span>{t('Same output-head parameters as the main model', '메인 모델과 같은 출력 헤드 파라미터')}</span>
+      </div>
+      <div class="mtp-arrow" aria-hidden="true">↓</div>
+      <div class="mtp-node mtp-targets">
+        <strong>xₜ₊₂</strong><span>{t('Auxiliary loss target', '보조 손실 타깃')}</span>
+      </div>
+      <p class="mtp-explanation">{t('Emb and OutHead are shared with the main model. M₁ and TRM₁ belong to this auxiliary depth. Further depths repeat with the next ground-truth token; they are not successive layers of the main decoder.', 'Emb와 OutHead는 메인 모델과 공유합니다. M₁과 TRM₁은 이 보조 깊이에 속합니다. 더 깊은 보조 모듈은 다음 정답 토큰으로 같은 과정을 반복하며, 메인 디코더의 다음 층을 뜻하지 않습니다.')}</p>
+    </section>
+  </div>
+
+  <figcaption>{t('Original HTML/CSS training schematic based on Gloeckle et al. Figure 1 and §2, and DeepSeek-V3 Figure 3 and §2.2.', 'Gloeckle 등의 그림 1·2절과 DeepSeek-V3의 그림 3·2.2절에 근거해 HTML/CSS로 작성한 학습 구조도입니다.')}
+    <a href="#ref-2">[2]</a> <a href="#ref-1">[1]</a>
+    {t(' H denotes trunk states; hₜᵏ is the state at token position t and auxiliary depth k. The DeepSeek panel follows one position; its causal blocks operate over sequences. This shows training dependencies, not sampled-token feedback or measured speed.', ' H는 트렁크 상태들이고, hₜᵏ는 토큰 위치 t·보조 깊이 k의 상태입니다. DeepSeek 그림은 한 위치를 따라가지만 인과적 블록은 시퀀스에 적용됩니다. 학습 중의 의존 관계를 그린 것이며, 생성한 토큰의 되먹임이나 속도 측정 결과가 아닙니다.')}
+  </figcaption>
+</figure>

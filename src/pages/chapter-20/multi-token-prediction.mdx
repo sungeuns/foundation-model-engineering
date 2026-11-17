@@ -5,10 +5,11 @@ lang: en
 ---
 
 import MTPVisualizer from '../../components/chapter-20/MTPVisualizer.tsx';
+import MTPTrainingDiagram from '../../components/chapter-20/MTPTrainingDiagram.astro';
 
 # 20.5 Multi-Token Prediction (MTP)
 
-Multi-token prediction (MTP) adds training losses for several future positions from the same prefix. Next-token prediction (NTP) can already learn long-range dependencies; MTP does not uniquely make planning possible. The practical question is whether extra supervision improves representations and downstream behavior for a particular model, dataset and budget. [[2]](#ref-2)
+Multi-token prediction (MTP) adds training losses for additional future positions. The architectures below differ in which tokens each prediction can use. Next-token prediction (NTP) can already learn long-range dependencies; MTP does not uniquely make planning possible. The practical question is whether extra supervision improves representations and downstream behavior for a particular model, dataset and budget. [[1]](#ref-1) [[2]](#ref-2)
 
 ---
 
@@ -16,13 +17,15 @@ Multi-token prediction (MTP) adds training losses for several future positions f
 
 MTP is a training objective; its future predictions can also supply inference-time drafts. Evaluate these two uses separately. Auxiliary modules can be used during training and removed for ordinary inference.
 
-![mtp_architecture_comparison](../../assets/images/chapter-20/mtp_architecture_comparison.png)
+<MTPTrainingDiagram lang="en" />
 
 ### Meta's Parallel Heads (Gloeckle et al., 2024)
-Meta FAIR reported improvements from multi-token training in the tested settings [[2]](#ref-2). In this architecture, the main Transformer trunk outputs a hidden state $h_t$. Instead of a single LM head, the model features $n$ independent projection blocks. Each block takes $h_t$ and independently predicts $x_{t+1}, x_{t+2}, \dots, x_{t+n}$.
+Meta FAIR's reported architecture uses a shared causal Transformer trunk, $n$ separate Transformer heads, and one shared vocabulary projection [[2]](#ref-2). Each head reads the trunk's prefix representations and predicts its own future offset at position $t$: $x_{t+1}, x_{t+2}, \dots, x_{t+n}$. A later head does not receive an earlier head's sampled token. Here, “parallel” describes the independent prediction paths; the paper schedules head computations sequentially during training to limit peak logit memory.
 
-### DeepSeek-V3's Sequential Heads (Liu et al., 2024)
-DeepSeek-V3 refined this by introducing a sequential, causal MTP module [[1]](#ref-1). Instead of parallel independent heads predicting the future in isolation, DeepSeek's MTP maintains the causal chain. To predict $x_{t+2}$, the module takes the hidden state used to predict $x_{t+1}$ and combines it with the actual embedding of $x_{t+1}$ (which is known during training), passing them through a depth-specific Transformer block (the embedding and output head are shared) [[1]](#ref-1). This ensures that the prediction of token $t+k$ is causally conditioned on the representations of all preceding tokens.
+### DeepSeek-V3's Sequential Auxiliary Modules
+DeepSeek-V3 uses sequential **auxiliary modules**, separate from the main model's stack of decoder layers [[1]](#ref-1). At the first auxiliary depth, it takes the main-model state at position $t$ and the embedding of the ground-truth token $x_{t+1}$. It applies RMSNorm to each input, concatenates them, and uses a depth-specific projection and causal Transformer block. The resulting state predicts $x_{t+2}$ through the same output head as the main model. The token embedding is shared too; the auxiliary projection and Transformer block have their own parameters.
+
+For an illustrative token sequence `[A, B, C, D]`, the parallel heads at `B` predict `C` and `D` from `[A, B]`. DeepSeek's first auxiliary module at that position also receives the observed `C` during training and predicts `D`. Seeing `C` is valid for this later target; the main next-token path must still predict `C` without seeing it. At inference, future ground-truth tokens are unavailable: using auxiliary modules for drafts is a separate choice that requires verification, as discussed below.
 
 ---
 
@@ -32,7 +35,7 @@ Let's formalize the parallel MTP approach. In standard NTP, the cross-entropy lo
 
 $$ \mathcal{L}_{NTP} = -\log P(x_{t+1} | x_{1:t}) $$
 
-In an $n$-token MTP setup, we compute the loss for the next token, plus the auxiliary losses for the $n-1$ future tokens, weighted by a hyperparameter $\lambda_k$ (often set to 1.0 or decayed for distant tokens) [[2]](#ref-2):
+For $n$ predicted offsets, Gloeckle et al. sum the per-offset losses [[2]](#ref-2). We write optional weights $\lambda_k$ to make the educational code's choice explicit; setting every $\lambda_k=1$ gives the unweighted sum at position $t$:
 
 $$ \mathcal{L}_{MTP} = - \sum_{k=1}^{n} \lambda_k \log P(x_{t+k} | x_{1:t}) $$
 
@@ -153,12 +156,12 @@ Additional supervision and native drafting can each be useful; establish trainin
 
 <details>
 <summary>Quiz 1: Why does MTP require shifting the target sequences differently for each projection head during loss computation?</summary>
-*Because each head predicts a token at a different future offset. The base trunk at position $t$ predicts $t+1$, so we shift targets by 1. The first MTP head at position $t$ predicts $t+2$, so we must compare its output against the target sequence shifted by 2. If we do not shift correctly, we would penalize the model for predicting the future correctly.*
+*Because each head predicts a token at a different future offset. The next-token head at position $t$ predicts $t+1$, so we shift targets by 1. The first auxiliary head at position $t$ predicts $t+2$, so we compare its output against targets shifted by 2. A wrong shift trains a different target relationship, even when tensor shapes still match.*
 </details>
 
 <details>
 <summary>Quiz 2: How does DeepSeek-V3's sequential MTP architecture conceptually differ from Meta's parallel MTP architecture?</summary>
-*Meta's parallel MTP uses independent projection heads branching off the same hidden state $h_t$, meaning the prediction of $t+2$ does not condition on the prediction of $t+1$. DeepSeek-V3 uses sequential Transformer blocks that maintain the causal chain; the MTP module for $t+2$ takes the state used to predict $t+1$ and the actual embedding of token $t+1$, ensuring the future prediction is grounded in the full causal context.*
+*Meta's separate Transformer heads read the same prefix representations and share the vocabulary projection. The later-offset head does not receive an earlier head's sampled output. DeepSeek-V3's first auxiliary module also receives the ground-truth token at $t+1$ during training to predict $t+2$; its projection and Transformer block have separate parameters, while embedding and output-head parameters are shared with the main model. Future ground truth is unavailable at inference.*
 </details>
 
 <details>

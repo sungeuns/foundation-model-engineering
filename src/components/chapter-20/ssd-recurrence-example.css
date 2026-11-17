@@ -1,0 +1,26 @@
+.ssd-recurrence-example { margin: 1.5rem 0; padding: 1.2rem; border: 1px solid #94a3b8; border-radius: .6rem; background: #f8fafc; color: #172554; }
+.ssd-recurrence-example h4 { margin: 0 0 .6rem; font-size: 1.12rem; }
+.ssd-recurrence-example p { font-size: .93rem; line-height: 1.7; }
+.ssd-recurrence-example .ssd-example-label { margin-bottom: .65rem; font-weight: 700; }
+.ssd-recurrence-example .ssd-example-steps { list-style: none; padding: 0; margin: .6rem 0 1.4rem; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.3rem; }
+.ssd-example-steps li { position: relative; display: flex; flex-direction: column; gap: .45rem; padding: .8rem; border: 1px solid #93a5bd; border-radius: .35rem; background: #eff6ff; font-size: .9rem; line-height: 1.5; }
+.ssd-example-steps li + li::before { content: '→'; position: absolute; left: -1.1rem; top: 43%; color: #1d4ed8; font-weight: 700; }
+.ssd-example-steps b { color: #1e40af; }
+.ssd-example-matrix { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 1.1rem; align-items: center; }
+.ssd-example-matrix table { width: 100%; border-collapse: collapse; margin: 0; font-size: .92rem; }
+.ssd-example-matrix caption { text-align: left; margin-bottom: .6rem; font-size: .85rem; color: #334155; }
+.ssd-example-matrix th, .ssd-example-matrix td { text-align: center; padding: .5rem .35rem; border: 1px solid #cbd5e1; font-variant-numeric: tabular-nums; }
+.ssd-example-matrix th { color: #172554; background: #e2e8f0; }
+.ssd-example-matrix td { background: #dbeafe; }
+.ssd-example-matrix .ssd-future-zero { background: #fff; color: #475569; }
+.ssd-example-result { display: grid; gap: .4rem; font-size: .9rem; }
+.ssd-example-result strong { font-family: monospace; font-size: 1rem; margin-bottom: .65rem; }
+.ssd-recurrence-example .ssd-example-expansion { padding: .7rem; border-left: 3px solid #2563eb; background: #eff6ff; }
+.ssd-recurrence-example figcaption { font-size: .83rem; line-height: 1.65; color: #475569; }
+:lang(ko) .ssd-recurrence-example { word-break: keep-all; overflow-wrap: anywhere; }
+@media (max-width: 750px) {
+  .ssd-recurrence-example { padding: .9rem; }
+  .ssd-recurrence-example .ssd-example-steps { grid-template-columns: 1fr; gap: 1.5rem; }
+  .ssd-example-steps li + li::before { content: '↓'; top: -1.4rem; left: 50%; }
+  .ssd-example-matrix { grid-template-columns: 1fr; }
+}

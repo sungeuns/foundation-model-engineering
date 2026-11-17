@@ -1,0 +1,106 @@
+{
+  "verified_at": "2026-11-17T17:16:17.171Z",
+  "content_commit": "dee03dca16228c6a0256f54bb69b22f19bb92c35",
+  "workflow_url": "https://github.com/sungeuns/foundation-model-engineering/actions/runs/44132482238",
+  "checks": 14,
+  "results": [
+    {
+      "url": "https://sungeuns.github.io/foundation-model-engineering/",
+      "status": 200,
+      "kind": "page",
+      "language": "en",
+      "passed": true
+    },
+    {
+      "url": "https://sungeuns.github.io/foundation-model-engineering/chapter-7/tiny-decoder-lab/",
+      "status": 200,
+      "kind": "page",
+      "language": "en",
+      "passed": true
+    },
+    {
+      "url": "https://sungeuns.github.io/foundation-model-engineering/chapter-17/experimental-design-and-uncertainty/",
+      "status": 200,
+      "kind": "page",
+      "language": "en",
+      "passed": true
+    },
+    {
+      "url": "https://sungeuns.github.io/foundation-model-engineering/chapter-19/logit-lens-and-attention-visualization/",
+      "status": 200,
+      "kind": "page",
+      "language": "en",
+      "passed": true
+    },
+    {
+      "url": "https://sungeuns.github.io/foundation-model-engineering/labs/tiny-decoder-lab.ipynb",
+      "status": 200,
+      "kind": "asset",
+      "sha256": "ee233f9b70dfd8bfddd238aacf2bf1a4bb0d9d3b59a865f327b85d91b6da345e",
+      "passed": true
+    },
+    {
+      "url": "https://sungeuns.github.io/foundation-model-engineering/social/tiny-decoder-en.png",
+      "status": 200,
+      "kind": "asset",
+      "sha256": "8aa08725959d4f74a2278d5f2dbcb2edbc1d0aa1ed6f04af1700d605bedc35e5",
+      "passed": true
+    },
+    {
+      "url": "https://sungeuns.github.io/foundation-model-engineering/social/paired-evaluation-en.png",
+      "status": 200,
+      "kind": "asset",
+      "sha256": "c20d422438f774047e870adc63e387847f7f37a58885539f7b531b9c979f119a",
+      "passed": true
+    },
+    {
+      "url": "https://sungeuns.github.io/foundation-model-engineering/ko/",
+      "status": 200,
+      "kind": "page",
+      "language": "ko",
+      "passed": true
+    },
+    {
+      "url": "https://sungeuns.github.io/foundation-model-engineering/ko/chapter-7/tiny-decoder-lab/",
+      "status": 200,
+      "kind": "page",
+      "language": "ko",
+      "passed": true
+    },
+    {
+      "url": "https://sungeuns.github.io/foundation-model-engineering/ko/chapter-17/experimental-design-and-uncertainty/",
+      "status": 200,
+      "kind": "page",
+      "language": "ko",
+      "passed": true
+    },
+    {
+      "url": "https://sungeuns.github.io/foundation-model-engineering/ko/chapter-19/logit-lens-and-attention-visualization/",
+      "status": 200,
+      "kind": "page",
+      "language": "ko",
+      "passed": true
+    },
+    {
+      "url": "https://sungeuns.github.io/foundation-model-engineering/labs/tiny-decoder-lab-ko.ipynb",
+      "status": 200,
+      "kind": "asset",
+      "sha256": "ec848e94a019964fd0911f23e4e82e6065c627e2e518099f19d76648c840f230",
+      "passed": true
+    },
+    {
+      "url": "https://sungeuns.github.io/foundation-model-engineering/social/tiny-decoder-ko.png",
+      "status": 200,
+      "kind": "asset",
+      "sha256": "043d2a930a810bf0e187c31750ac236b131280152bba202448c3d0b172f70101",
+      "passed": true
+    },
+    {
+      "url": "https://sungeuns.github.io/foundation-model-engineering/social/paired-evaluation-ko.png",
+      "status": 200,
+      "kind": "asset",
+      "sha256": "a1fb53e8b35667d8a2f7d2039920057e5e97ee875a9cbd86a925329c85782d30",
+      "passed": true
+    }
+  ]
+}

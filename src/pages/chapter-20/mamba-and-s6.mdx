@@ -5,6 +5,7 @@ lang: en
 ---
 
 import SSMDualityVisualizer from '../../components/chapter-20/SSMDualityVisualizer.tsx';
+import SSDRecurrenceExample from '../../components/chapter-20/SSDRecurrenceExample.astro';
 
 # 20.2 Mamba & S6: The Technical Evolution
 
@@ -23,25 +24,32 @@ Associative composition of affine transitions permits parallel scans for trainin
 
 ## 2. Structured State Space Duality (Mamba-2)
 
-In mid-2024, researchers introduced **Mamba-2**, built upon the theoretical framework of **Structured State Space Duality (SSD)** [[2]](#ref-2). SSD provided a profound mathematical revelation: *Selective SSMs and Linear Attention are two sides of the same coin.*
+Mamba-2 uses **Structured State Space Duality (SSD)** to connect a restricted selective SSM with structured masked attention. The transition uses the same scalar across state coordinates within one head. In continuous-time notation, $A=\alpha I$, where $I$ is the identity and $\alpha$ the scalar coefficient. This does not identify every selective SSM with ordinary softmax attention. [[2]](#ref-2)
 
-To bridge this gap, Mamba-2 made a deliberate architectural compromise: it restricted the diagonal matrix $A$ to a **scalar-times-identity** structure ($A = a \cdot I$). By forcing all elements on the diagonal to be identical, the state update becomes uniform across the state dimension $N$.
-
-This slight reduction in expressivity unlocked a massive computational advantage. With a scalar $A$, the sequential SSM update can be perfectly rewritten as a specialized attention mechanism. Specifically, it is equivalent to Linear Attention applied over a sequence, but multiplied by a **semi-separable causal mask** $\mathbf{L}$, where the discount factor between token $i$ and token $j$ is the cumulative product of the state transitions:
+For the corresponding discrete transitions, the causal transition mask from input position $j$ to output position $i$ is the product of the intervening transition factors:
 
 $$ \mathbf{L}_{ij} = \begin{cases} \prod_{k=j+1}^i a_k, & j \le i, \\ 0, & j>i. \end{cases} $$
 
-Here $a_k$ is a discrete scalar transition, distinct from continuous-time $A$; the diagonal uses the empty product, equal to one.
+Here $a_k$ is a discrete scalar transition, distinct from continuous-time $A$; the diagonal uses the empty product, equal to one. The complete input-to-output weight also includes the input and readout factors $B_j$ and $C_i$. The mask $\mathbf L$ alone is not the whole layer.
 
-### The Tensor Core Unlock
+### Work through three steps
+
+Take one scalar state with $h_0=0$, unit input/readout coefficients, and no direct skip term:
+
+$$ h_t=a_t h_{t-1}+x_t,\qquad y_t=h_t. $$
+
+Here $x_t$ is the input at step $t$, $h_t$ the updated state, and $y_t$ the output. Choose $x=(2,4,1)^T$ and $a=(0.75,0.5,0.25)^T$. The first transition multiplies the zero initial state. The later transitions differ, so a single fixed decay raised to token distance would give the wrong matrix.
+
+<SSDRecurrenceExample lang="en" />
+
+Changing $x_3$ cannot change $h_1$ or $h_2$: the corresponding matrix entries are zero. With a nonzero initial state, its propagated contribution must be added. Setting input/readout coefficients to one isolates the transition products; it is not the full input-dependent Mamba-2 computation. [[2]](#ref-2)
+
+### From the identity to efficient execution
 Because SSD reformulates the recurrence as an attention matrix, the computation can be executed using **chunkwise matrix multiplication**. The sequence is divided into blocks (e.g., chunks of 64 tokens).
 1. **Intra-chunk:** Token interactions *within* the chunk are computed using standard MatMul (Linear Attention).
 2. **Inter-chunk:** Propagate state dependencies across chunk boundaries. A scan or structured matrix multiplication can parallelize this computation; the dependency does not require a serial implementation.
 
 The Mamba-2 paper’s 2–8× result concerns the measured **SSM core**, not an identical whole-training speedup or 100% Tensor Core utilization. [[2]](#ref-2) Report sequence/batch/state dimensions, device, precision and kernel version together.
-
-![ssm_duality_matrix](../../assets/images/chapter-20/ssm_duality_matrix.png)
-
 
 <SSMDualityVisualizer client:load />
 
@@ -51,7 +59,7 @@ The Mamba-2 paper’s 2–8× result concerns the measured **SSM core**, not an 
 
 To understand exactly how Mamba-2 transforms a recurrent loop into a matrix multiplication, examine the educational PyTorch implementation below. It demonstrates the chunkwise intra-block attention mechanism derived from the SSD framework.
 
-> **Incomplete educational intra-chunk calculation.** Inter-chunk state propagation is omitted, so this is neither a full Mamba-2 block nor equivalent to recurrence over the whole sequence. Memory resets at each chunk. Scan, caching, masking, numerical stabilization and distributed execution are omitted. Inspect only the intra-chunk matrix operation on small FP32 tensors.
+> **Incomplete educational intra-chunk calculation.** Inter-chunk state propagation is omitted, so this is neither a full Mamba-2 block nor equivalent to recurrence over the whole sequence. Memory resets at each chunk. Parallel scan, caching, variable-length padding/packing semantics, numerical stabilization and distributed execution are omitted; the code does apply a causal mask inside each chunk. Inspect only the intra-chunk matrix operation on small FP32 tensors.
 
 ```python
 import torch
@@ -109,7 +117,7 @@ class SimplifiedSSD(nn.Module):
 
         # 3. Compute the semi-separable distance mask for the chunk
         # L_{i,j} = \prod_{k=j+1}^i dA_k
-        # [NOTE]: In production, this O(C^2) operation is fused natively in Triton.
+        # This teaching version materializes each chunk's quadratic mask.
         mask = torch.ones(B_batch, num_chunks, self.chunk_size, self.chunk_size, D, device=x.device)
         for i in range(self.chunk_size):
             for j in range(i):
@@ -142,7 +150,7 @@ class SimplifiedSSD(nn.Module):
 
 ## 4. Mamba-3 research case
 
-**As of 2026-11-15, referring to the cited 2026 paper.** Mamba-3 combines a discretization-derived recurrence, complex state and MIMO to study state tracking and decode efficiency. [[3]](#ref-3) The reported 1.8 percentage-point gain at 1.5B is over Gated DeltaNet, not Mamba-2. Separate state-size experiments report similar perplexity to Mamba-2 with half its state size.
+**As of 2026-11-18, referring to the cited 2026 paper.** Mamba-3 combines a discretization-derived recurrence, complex state and MIMO to study state tracking and decode efficiency. [[3]](#ref-3) The reported 1.8 percentage-point gain for the MIMO variant at 1.5B is over Gated DeltaNet, not Mamba-2. Separate state-size experiments report similar perplexity to Mamba-2 with half its state size.
 
 Those are distinct comparisons. Complex state and MIMO do not guarantee better quality at unchanged latency for every task. Validate under matched resources, including state precision, memory and kernels.
 
@@ -190,6 +198,11 @@ The common lesson is to design recurrence and hardware execution together. A fix
 <details>
 <summary>Quiz 4: Which state-tracking limitation do Mamba-3 complex transitions address?</summary>
 *They address restrictions from real nonnegative transition eigenvalues. Complex rotations express sign/phase dynamics, evaluated on tasks such as parity and modular arithmetic. The limitation is not caused solely by Mamba-2’s scalar restriction.*
+</details>
+
+<details>
+<summary>Quiz 5: Why is the first input’s weight in the third output 0.125 rather than 0.25?</summary>
+*It crosses two different transitions: 0.5 and 0.25, whose product is 0.125. Squaring 0.5 would incorrectly assume a constant transition. The first transition multiplies the zero initial state, so it is not part of this input’s path.*
 </details>
 
 ---
