@@ -1,0 +1,86 @@
+[
+  {
+    "route": "chapter-5/expert-parallelism/",
+    "status": 200,
+    "marker_found": true,
+    "url": "https://sungeuns.github.io/foundation-model-engineering/chapter-5/expert-parallelism/"
+  },
+  {
+    "route": "ko/chapter-5/expert-parallelism/",
+    "status": 200,
+    "marker_found": true,
+    "url": "https://sungeuns.github.io/foundation-model-engineering/ko/chapter-5/expert-parallelism/"
+  },
+  {
+    "route": "chapter-7/flash-attention/",
+    "status": 200,
+    "marker_found": true,
+    "url": "https://sungeuns.github.io/foundation-model-engineering/chapter-7/flash-attention/"
+  },
+  {
+    "route": "ko/chapter-7/flash-attention/",
+    "status": 200,
+    "marker_found": true,
+    "url": "https://sungeuns.github.io/foundation-model-engineering/ko/chapter-7/flash-attention/"
+  },
+  {
+    "route": "chapter-13/quantization-methods/",
+    "status": 200,
+    "marker_found": true,
+    "url": "https://sungeuns.github.io/foundation-model-engineering/chapter-13/quantization-methods/"
+  },
+  {
+    "route": "ko/chapter-13/quantization-methods/",
+    "status": 200,
+    "marker_found": true,
+    "url": "https://sungeuns.github.io/foundation-model-engineering/ko/chapter-13/quantization-methods/"
+  },
+  {
+    "route": "chapter-13/weight-sparsification/",
+    "status": 200,
+    "marker_found": true,
+    "url": "https://sungeuns.github.io/foundation-model-engineering/chapter-13/weight-sparsification/"
+  },
+  {
+    "route": "ko/chapter-13/weight-sparsification/",
+    "status": 200,
+    "marker_found": true,
+    "url": "https://sungeuns.github.io/foundation-model-engineering/ko/chapter-13/weight-sparsification/"
+  },
+  {
+    "route": "chapter-14/graphrag-and-ontology/",
+    "status": 200,
+    "marker_found": true,
+    "url": "https://sungeuns.github.io/foundation-model-engineering/chapter-14/graphrag-and-ontology/"
+  },
+  {
+    "route": "ko/chapter-14/graphrag-and-ontology/",
+    "status": 200,
+    "marker_found": true,
+    "url": "https://sungeuns.github.io/foundation-model-engineering/ko/chapter-14/graphrag-and-ontology/"
+  },
+  {
+    "route": "chapter-15/chain-of-thought/",
+    "status": 200,
+    "marker_found": true,
+    "url": "https://sungeuns.github.io/foundation-model-engineering/chapter-15/chain-of-thought/"
+  },
+  {
+    "route": "ko/chapter-15/chain-of-thought/",
+    "status": 200,
+    "marker_found": true,
+    "url": "https://sungeuns.github.io/foundation-model-engineering/ko/chapter-15/chain-of-thought/"
+  },
+  {
+    "route": "feed.xml",
+    "status": 200,
+    "marker_found": true,
+    "url": "https://sungeuns.github.io/foundation-model-engineering/feed.xml"
+  },
+  {
+    "route": "ko/feed.xml",
+    "status": 200,
+    "marker_found": true,
+    "url": "https://sungeuns.github.io/foundation-model-engineering/ko/feed.xml"
+  }
+]

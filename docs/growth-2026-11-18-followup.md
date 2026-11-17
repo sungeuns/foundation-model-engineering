@@ -44,3 +44,9 @@ Final local integration evidence:
 - `git diff --check` passed. The homepages already show the content-pass date 2026-11-18; no artificial date bump was needed.
 
 Deployment verification remains separate from these local results.
+
+## Verified publication
+
+Content commit `7aaa75b475aae96b5ba2a98bd1e04d0a6075e817` was pushed to `main`. [GitHub Actions run 44127613884](https://github.com/sungeuns/foundation-model-engineering/actions/runs/44127613884) completed successfully, including build and Pages deployment. All 12 revised public language pages returned HTTP 200 and contained their new example/diagram markers; both RSS feeds returned HTTP 200 and included the content commit identity. The 14 live checks are preserved in `growth-2026-11-18-followup-production.json`.
+
+This publication evidence is a documentation-only follow-up to the tested content commit. It does not claim measured search traffic or star growth. External resource-list submission remains unsuccessful with the recorded 403 response.
