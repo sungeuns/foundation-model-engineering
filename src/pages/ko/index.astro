@@ -1,4 +1,5 @@
 ---
+import FeaturedLessons from '../../components/FeaturedLessons.astro';
 import LearningRoutes from '../../components/LearningRoutes.astro';
 import BookLayout from '../../layouts/BookLayout.astro';
 
@@ -9,38 +10,21 @@ const getPath = (p) => `/ko${p}`;
 ---
 
 <BookLayout title="홈" lang="ko">
-  <div style="text-align: right; color: var(--secondary-color); font-size: 0.9rem; margin-bottom: 1rem;">최근 업데이트: 2026-11-17</div>
-  <p><strong>파운데이션 모델 엔지니어링</strong>은 현대 파운데이션 모델이 실제로 어떻게 동작하는지, 왜 지금의 기술 스택으로 발전했는지, 그리고 그 아이디어들이 실제 시스템과 만날 때 어떤 엔지니어링 트레이드오프가 생기는지를 이해하고 싶은 독자를 위한 기술 교재입니다.</p>
+  <div style="text-align: right; color: var(--secondary-color); font-size: 0.9rem; margin-bottom: 1rem;">최근 업데이트: 2026-11-18</div>
+  <h1>파운데이션 모델 엔지니어링</h1>
+  <p><strong>파운데이션 모델의 원리부터 학습·서빙·평가 과정에서 생기는 문제까지 다룹니다.</strong> 직접 조작하는 시각화, PyTorch 예제, CPU 실습을 담은 무료 오픈소스 교재이며 한국어와 영어로 읽을 수 있습니다.</p>
+  <p>아래에서 궁금한 문제를 골라도 되고, 학습 경로나 전체 목차를 따라 읽어도 됩니다. 기본적인 Python·선형대수·확률 지식을 가정합니다. <a href={withPagePath('/ko/chapter-1/learning-path-and-mastery')}>선수 지식 점검</a>으로 보충할 내용을 찾아보세요.</p>
 
-  <p>이 프로젝트는 주로 <strong>AI 엔지니어</strong>와 <strong>리서치 지향 독자</strong>를 위해 쓰였습니다. 단순히 API를 사용하는 수준을 넘어, 아키텍처, 학습 파이프라인, 추론 시스템, 검색 스택, 평가 체계, 에이전트 워크플로우에 대해 더 깊고 연결된 관점을 갖고 싶은 사람을 대상으로 합니다.</p>
-
-  <p>이 책의 목적은 단편적인 팁이나 용어 설명을 나열하는 데 있지 않습니다. 어텐션, MoE, RLHF, 멀티모달, 롱 컨텍스트 서빙, RAG, 에이전트 같은 주제들이 어떤 역사적 흐름, 수학적 아이디어, 시스템 제약 위에서 서로 이어지는지를 하나의 엔지니어링 서사로 설명하는 데 있습니다.</p>
-
+  <FeaturedLessons lang="ko" />
   <LearningRoutes lang="ko" />
 
-  <h3>왜 이 책을 읽어야 하나</h3>
+  <h2>직접 만들고 검증해보세요</h2>
+  <p><a href={withPagePath('/ko/chapter-7/tiny-decoder-lab')}>작은 디코더 실습</a>은 CPU에서 실행합니다. 인과적 모델을 학습하고, 앞선 토큰을 보지 못하게 바꾸고, 중단 후 재개한 실행이 같은 학습 경로를 따르는지 확인합니다. <a href={withPagePath('/ko/chapter-17/experimental-design-and-uncertainty')}>평가 실습</a>에서는 측정된 개선이 배포를 정당화할 만큼 확실한지 판단합니다.</p>
+  <p>총 {chapters.reduce((total, chapter) => total + chapter.subs.length, 0)}개 절에서 아키텍처·학습·추론·검색·에이전트·평가·안전을 연결합니다. 짧은 퀴즈로 실패 원인을 설명하고 트레이드오프를 선택해보세요. 설명용 계산과 시뮬레이션에는 그 성격을 표시하며, 실제 모델의 측정 결과와 구분합니다.</p>
 
-  <p>RNN에서 Transformer로 왜 넘어왔는지, 어떤 모델은 dense이고 어떤 모델은 sparse인지, 왜 추론 시스템은 KV cache와 batching에 집착하는지, 왜 평가와 정렬이 연구 주제이면서 동시에 제품 문제이기도 한지 궁금했다면 이 책이 그 연결고리를 보여주려고 합니다.</p>
-
-  <p>각 주제를 유행어처럼 따로 떼어 놓고 설명하기보다, 모델링 아이디어와 시스템 제약, 제품 요구사항이 서로를 어떻게 밀어 올리고 제한하는지를 함께 보여주는 것이 목표입니다. 그래서 이 책을 다 읽고 나면 단순히 용어를 더 많이 아는 것이 아니라, 더 나은 엔지니어링 판단을 내릴 수 있게 되기를 기대합니다.</p>
-
-  <h3>이 책이 잘 맞는 독자</h3>
-
-  <p><strong>AI 엔지니어</strong><br />LLM 시스템, 추론 스택, RAG 시스템, 에이전트 제품을 만들거나 평가하는 독자.</p>
-
-  <p><strong>리서치 지향 독자</strong><br />최근 아키텍처와 시스템 트렌드를 포함해 파운데이션 모델 분야 전체를 기술적으로 탄탄하게 이해하고 싶은 독자.</p>
-
-  <h3>무엇을 기대할 수 있나</h3>
-
-  <p>책 전반에 걸쳐 개념 설명, PyTorch 예제, 이해를 점검할 수 있는 짧은 퀴즈, 그리고 직접 조작해 보며 감을 잡을 수 있는 인터랙티브 시각화가 함께 제공됩니다. 단순히 용어를 외우는 것이 아니라 <strong>품질, 메모리, 처리량, 지연 시간, 스케일링, 정렬</strong> 사이의 트레이드오프를 스스로 판단할 수 있도록 돕는 것이 목표입니다.</p>
-
-  <p>다만 이 책은 가벼운 입문서를 지향하지 않습니다. AI를 처음 접하는 독자나 프롬프트 엔지니어링 위주의 실용 가이드를 기대하는 독자에게는 다소 어렵게 느껴질 수 있습니다. 의도적으로 깊이를 우선한 구성입니다.</p>
-
-  <h3>계속 업데이트되는 문서</h3>
-
-  <p>AI 분야는 매우 빠르게 변하기 때문에, 이런 프로젝트에는 업데이트가 필요한 내용이 생길 수밖에 없습니다. 새로운 논문, 시스템, 제품이 나오면서 일부 설명이나 예시는 시간이 지나면 보완이 필요해질 수 있습니다.</p>
-
-  <p>틀린 부분, 어색한 설명, 번역 표현, 더 좋은 참고 자료를 발견하셨다면 언제든지 기여를 환영합니다. 정확성, 설명력, 예제, 한국어 표현, 전반적인 가독성을 개선하는 PR은 항상 반갑습니다. 이 프로젝트를 일회성 스냅샷이 아니라 계속 다듬어 가는 학습 자료로 만들고 싶습니다.</p>
+  <h2>함께 고쳐가는 책</h2>
+  <p>Seongeun So가 AI의 도움을 받아 만드는 독립 프로젝트입니다. 주장에는 근거와 한계가 따라야 합니다. 설명·번역·실험에서 문제가 보이면 해당 페이지와 반례를 적어 <a href="https://github.com/sungeuns/foundation-model-engineering/issues">이슈를 남겨주세요</a>.</p>
+  <p>도움이 된 장은 같은 문제를 풀고 있는 동료에게 공유해주세요. <a href="https://github.com/sungeuns/foundation-model-engineering">GitHub star로 저장</a>하거나 <a href="https://github.com/sungeuns/foundation-model-engineering/blob/main/CONTRIBUTING.md">수정에 참여</a>할 수도 있습니다.</p>
 
   <h2>목차</h2>
   <div class="toc">

@@ -8,11 +8,11 @@ import AttentionVisualizer from '../../components/chapter-3/AttentionVisualizer'
 
 # 3.1 Self-Attention Mathematics
 
-The Transformer architecture, introduced in the seminal paper "Attention Is All You Need" (Vaswani et al., 2017), revolutionized AI by replacing recurrent structures with a mechanism called **Self-Attention**. This allows the model to process all tokens in a sequence simultaneously and model dependencies regardless of their distance.
+A recurrent model passes information through a chain: to connect the first token to the hundredth, the computation traverses the intervening positions. Self-attention gives each position a direct, learned way to read other positions. In the original Transformer, this removed the recurrence that limited parallelism within training examples [[1]](#ref-1).
 
-**Behind-the-Scenes Story:** The title of the paper, 'Attention Is All You Need,' was a bold and provocative claim at the time. It suggested that one could completely discard RNNs and LSTMs, which had dominated sequence modeling for years, and rely *solely* on attention mechanisms. The authors at Google were motivated by the frustration with the slow training speeds of RNNs in machine translation. Their provocative title turned out to be a prophecy that changed the course of AI history.
+Consider “The key to the cabinets is missing.” The representation at “is” can combine information from “key” without first compressing the whole prefix into one recurrent state. That is a capability of the architecture, not proof that a particular head learns this grammatical relationship. A causal decoder can read only earlier positions and itself; parallel training does not make autoregressive generation parallel.
 
-Let's understand the core mechanism through a familiar metaphor.
+The mechanism has three parts: decide what to look for, score what is available, and mix the information found. The filing-cabinet analogy makes those roles concrete.
 
 ---
 
@@ -29,7 +29,7 @@ To find the information you need:
 2.  You calculate a **relevance score** (Attention weight) for each folder.
 3.  You extract the **Values** from the folders, giving more weight to the values from folders with high relevance scores.
 
-In Self-Attention, every word in a sentence acts as a Query, a Key, and a Value to interact with every other word.
+In self-attention, each token position supplies a query, key, and value. The mask determines which other positions it may read; a causal decoder cannot inspect future tokens.
 
 ---
 
@@ -49,7 +49,7 @@ Where the learnable weight matrices are:
 *   $W_V \in \mathbb{R}^{d_{model} \times d_v}$
 
 **Why do we do this?**
-If we used $X$ directly for all three roles, the self-attention operation would be purely based on the static embeddings. By using linear projections, the model can learn to extract different aspects of the same word for different roles. For example, a word might have a certain representation when acting as a Query looking for other words, and a different representation when acting as a Key being looked up. This significantly increases the expressiveness of the model.
+Using $X$ for all three roles would tie “what to look for,” “how to be found,” and “what to return” to the same representation. Separate learned projections let those roles differ. In deeper layers, $X$ already contains contextual information from earlier layers; it is not necessarily a table of static word embeddings.
 
 ---
 
@@ -88,7 +88,9 @@ Where:
 
 ## PyTorch Implementation
 
-Let's implement this operation from scratch in PyTorch. This is the core building block of the Transformer.
+This small implementation exposes the score matrix and weighted sum.
+
+> **Deliberately simplified implementation.** The example uses CPU float32 and materializes the full attention matrix. It omits dropout, mixed-precision accumulation, fused kernels, and cache offsets. A supplied mask uses 1/True for allowed positions and must leave at least one key visible in every query row; otherwise this finite-mask implementation gives a meaningless distribution.
 
 ```python
 import torch
@@ -140,7 +142,7 @@ print("Attention Weights Shape:", weights.shape)
 
 ## Example: Attention Weight Matrix
 
-Visualize how words attend to each other. Click on a word in the sentence to see its attention weights to all other words. (Simulated attention weights).
+Follow one attention row all the way to its output. The example below uses four tokens and explicitly authored two-dimensional Q, K, and V vectors. Select a query, compare the weights with and without a causal mask, and inspect how the weighted values add up. These are exact calculations on toy inputs, not attention measured from a trained model.
 
 <AttentionVisualizer client:load lang="en" />
 
@@ -150,7 +152,7 @@ Visualize how words attend to each other. Click on a word in the sentence to see
 
 <details>
 <summary>Quiz 1: Why is the scaling factor $\sqrt{d_k}$ necessary in the attention formula?</summary>
-*As the dimension $d_k$ grows large, the magnitude of the dot products grows large. This pushes the softmax function into regions where the gradient is extremely small (vanishing gradients). Dividing by $\sqrt{d_k}$ scales the variance of the dot products back to approximately 1, ensuring stable gradients.*
+*If query and key components are independent, zero-mean, and unit-variance, their dot product has variance $d_k$. Dividing by the square root of $d_k$ keeps its variance near one under those assumptions and reduces softmax saturation. Learned vectors need not satisfy them exactly, and this scaling alone does not guarantee stable training.*
 </details>
 
 <details>
@@ -159,13 +161,13 @@ Visualize how words attend to each other. Click on a word in the sentence to see
 </details>
 
 <details>
-<summary>Quiz 3: Does the illustrated attention from "it" to "animal" prove learned coreference?</summary>
-*No. The weights are authored for teaching, not measured from a trained model. Attention alone does not establish causal contribution. A bidirectional encoder may use the later word "tired", but a causal decoder at "it" cannot see it. Test a trained model with controlled interventions before attributing a mechanism.*
+<summary>Quiz 3: In the interactive example, why does the first token's output stop changing with temperature when the causal mask is enabled?</summary>
+*Only the first token is visible to its own query. Its normalized weight is therefore 1 at every allowed temperature, and its output is exactly its value vector V₁ = [1, 0]. The other values cannot contribute because their masked weights are zero. These authored vectors demonstrate the calculation, not learned word meaning.*
 </details>
 
 <details>
 <summary>Quiz 4: Why do we use linear projections to create Q, K, V instead of using the input embeddings directly?</summary>
-*Linear projections allow the model to learn different representations for the same word depending on its role (Query, Key, or Value). This increases the model's capacity to capture complex relationships compared to using static embeddings directly.*
+*They let matching queries, matching keys, and returned values use different learned features. The input $X$ may already be contextual in deeper layers; the distinction is between roles, not between static and contextual representations.*
 </details>
 
 <details>
@@ -174,13 +176,8 @@ Visualize how words attend to each other. Click on a word in the sentence to see
 </details>
 
 <details>
-<summary>Quiz 6: Formally derive the number of parameters and the total floating-point operations (FLOPs) for a single self-attention layer with sequence length $T$, embedding dimension $d_{model}$, and $d_k = d_v = d_{model}$.</summary>
-*Parameters: The layer requires projection matrices $\mathbf{W}_Q, \mathbf{W}_K, \mathbf{W}_V$ of dimension $d_{model} \times d_{model}$. The total number of parameters is $3d_{model}^2$. (Excluding bias for simplicity).
-FLOPs: 1. Linear Projections: $X\mathbf{W}_Q, X\mathbf{W}_K, X\mathbf{W}_V$ each require $2 \times T \times d_{model}^2$ FLOPs (multiply and add). Total: $6Td_{model}^2$. 
-2. Attention Matrix $QK^T$: Multiplying a $T \times d_{model}$ matrix by a $d_{model} \times T$ matrix requires $2T^2d_{model}$ FLOPs. 
-3. Softmax and Scaling: $O(T^2)$ operations. 
-4. Multiplying with $V$: Multiplying a $T \times T$ attention matrix with a $T \times d_{model}$ matrix requires $2T^2d_{model}$ FLOPs. 
-Total dominant FLOPs: $6Td_{model}^2 + 4T^2d_{model}$.*
+<summary>Quiz 6: Count parameters and dominant FLOPs for Q, K, V projections plus the attention core with sequence length $T$ and $d_k = d_v = d_{model}$. How does adding a square output projection change the count?</summary>
+*Excluding biases and the output projection, the three projection matrices contain $3d_{model}^2$ parameters. Counting a multiply and add as two FLOPs, the projections cost $6Td_{model}^2$, while $QK^T$ and the weighted-value product together cost $4T^2d_{model}$. Thus the dominant total is $6Td_{model}^2 + 4T^2d_{model}$; scaling and softmax add $O(T^2)$ work. Adding $W_O \in \mathbb{R}^{d_{model} \times d_{model}}$ raises the parameter count to $4d_{model}^2$ and the dominant FLOPs to $8Td_{model}^2 + 4T^2d_{model}$. These counts exclude normalization and the feed-forward sublayer.*
 </details>
 
 ---

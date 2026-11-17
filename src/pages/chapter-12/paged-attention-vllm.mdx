@@ -8,22 +8,22 @@ import PagedAttentionVisualizer from '../../components/chapter-12/PagedAttention
 
 # 12.2 PagedAttention (vLLM)
 
-As established in the previous section, the KV cache is the primary bottleneck in autoregressive LLM serving. While architectural innovations like Multi-Head Latent Attention (MLA) and quantization reduce the *absolute size* of the cache, they do not solve the fundamental systems-engineering problem: **how that memory is allocated and managed**.
+The previous section counted how much KV state a request needs. This section asks where that growing state lives. Even when the payload fits in aggregate, a serving engine can waste capacity by reserving space that requests never use or by leaving gaps that its allocator cannot reuse.
 
-Prior to 2023, standard inference backends (such as HuggingFace Transformers) allocated KV cache memory contiguously. Because the final length of a user's generated response is unknown at the start of a request, systems were forced to over-allocate memory based on the model's maximum context window. This naive approach resulted in a catastrophic waste of High Bandwidth Memory (HBM), severely limiting the number of concurrent requests a GPU could handle.
+The PagedAttention paper studied these problems in the serving systems it evaluated in 2023 [[1]](#ref-1). A contiguous cache that reserves each request's maximum length is easy to address, but the final output length is unknown at admission. Reserving the maximum is one design choice, not a requirement of every inference backend.
 
-The solution to this bottleneck did not come from a new neural network architecture, but from a classic Operating Systems concept from the 1960s: **Virtual Memory**. The resulting algorithm, **PagedAttention**, forms the core of the **vLLM** engine and fundamentally redefined the economics of LLM serving.
+PagedAttention borrows the separation between logical and physical memory from operating-system paging. A request sees its tokens in sequence order; a block table lets the attention kernel find their KV rows in non-contiguous storage. The gain comes from allocating and reusing blocks as requests grow and finish.
 
 ---
 
-## 1. The Fragmentation Crisis
+## 1. Count Reserved Space and Unusable Gaps
 
-To understand why PagedAttention was revolutionary, we must examine the memory profile of a naive LLM serving system. When contiguous memory allocation is used for dynamic sequence generation, two types of fragmentation occur:
+A contiguous allocation strategy can lose usable capacity in two ways:
 
-1.  **Internal Fragmentation:** A system receives a prompt and must allocate a contiguous chunk of memory for the KV cache. Because it doesn't know if the model will generate 10 tokens or 1,000 tokens, it allocates memory for the maximum possible sequence length (e.g., 2,048 tokens). If the model only generates 20 tokens and stops, the remaining 2,028 tokens' worth of memory is reserved but entirely unused.
-2.  **External Fragmentation:** As requests of varying lengths finish at different times, contiguous chunks of memory are freed, leaving small "holes" in the GPU VRAM. These holes might collectively sum to a large amount of memory, but because they are not contiguous, they cannot be used to allocate a new, large request.
+1. **Unused reservation inside a request:** suppose a request reserves 2,048 token slots, receives a 512-token prompt, and generates 20 tokens. It uses 532 slots and leaves **1,516 slots unused**. Count the prompt as well as the output. Over-reservation for possible future tokens is distinct from padding waste in an allocator's final block.
+2. **External fragmentation:** after requests finish, a contiguous allocator may have several free regions whose total size is sufficient but whose largest individual region cannot hold a new request. Whether this happens depends on the allocator and its compaction strategy.
 
-Studies by the vLLM team revealed that in standard serving systems, **60% to 80% of KV cache memory was wasted** due to fragmentation and over-reservation. Only 20% to 40% was actually storing useful tensor data.
+The original vLLM release reports that 60%–80% of KV-cache memory was wasted in the existing systems it analyzed [[2]](#ref-2). That historical observation motivates the design; it is not a measured waste rate for every current engine or workload.
 
 ---
 
@@ -36,15 +36,13 @@ PagedAttention applies this exact paradigm to the KV cache:
 -   **Physical Blocks:** The GPU VRAM is pre-divided into a massive pool of fixed-size physical blocks.
 -   **Block Table:** A mapping table tracks which physical block corresponds to which logical block for a given request.
 
-![paged_attention_arch](../../assets/images/chapter-12/paged_attention_arch.png)
-
 When a request begins, the engine only allocates enough physical blocks to hold the initial prompt. As the model generates new tokens autoregressively, the system allocates new physical blocks *on demand*.
 
 Within the fixed-size KV block pool, any free block is reusable, avoiding external fragmentation there. This does not describe all GPU allocations. Internal waste in final blocks depends on block size and the request-length distribution.
 
 ### Interactive PagedAttention Simulation
 
-The following interactive component demonstrates how logical blocks are mapped to physical blocks dynamically. Notice how generating tokens only consumes memory when a block boundary is crossed, and how freeing a request leaves non-contiguous gaps that are perfectly usable by new requests.
+The following component starts with two requests. Generate tokens to see when crossing a block boundary requires another physical block. Free one request, then grow the remaining request to observe reuse of the released blocks.
 
 <PagedAttentionVisualizer client:load />
 
@@ -54,7 +52,9 @@ The following interactive component demonstrates how logical blocks are mapped t
 
 In a production environment, PagedAttention is implemented as a highly optimized, fused custom CUDA kernel. The kernel reads the Block Table directly and fetches the non-contiguous Key and Value tensors on the fly during the matrix multiplication.
 
-However, to deeply understand the mechanics, we can construct a functional PyTorch simulation. The following code demonstrates how a central memory pool is managed and how attention is computed over non-contiguous physical blocks.
+The following educational simulation reconstructs contiguous keys and values from a block table so the address mapping is visible.
+
+> **Deliberately simplified implementation.** This CUDA-only example is not a production allocator and has not been GPU-smoke-tested for this revision. It omits KV writers, ownership and double-free checks, reference counting, concurrent requests, copy-on-write, and cache recovery. It copies blocks into contiguous tensors; a real paged kernel avoids that reconstruction. The float16 pool and query must share device and dtype.
 
 ```python
 import torch
@@ -126,22 +126,22 @@ def paged_attention_simulated(query, physical_pool, block_table, context_len):
     return attn_output
 ```
 
-*Note: The actual vLLM CUDA kernel does not concatenate the blocks into a contiguous tensor as shown in step 1 above. Instead, it iterates through the `block_table`, computes the partial attention scores block-by-block, and accumulates the results using the same mathematical identity found in FlashAttention. This ensures the peak memory footprint remains negligible.*
+*The original implementation reads physical blocks through the block table and combines partial attention results without constructing the full contiguous KV tensors shown here [[1]](#ref-1). This removes the simulation's reconstruction buffers; it does not make cache storage or kernel workspace free.*
 
 ---
 
 ## 4. Advanced Memory Management: Copy-on-Write (CoW)
 
-By decoupling logical blocks from physical memory, PagedAttention unlocks advanced memory-sharing capabilities that were previously impossible or highly inefficient.
+Separating logical blocks from physical storage also lets multiple requests reference the same immutable prefix blocks.
 
-Consider **Parallel Sampling** or **Beam Search**, where a single prompt is passed to the model, and the model generates multiple different candidate responses simultaneously. In traditional systems, the KV cache for the shared prompt had to be duplicated in memory for every candidate sequence, wasting massive amounts of VRAM.
+Consider **Parallel Sampling** or **Beam Search**, where a single prompt is passed to the model, and the model generates multiple different candidate responses simultaneously. An implementation that copies the full cache for each candidate duplicates their shared prompt; reference-counted blocks can avoid those copies.
 
 With PagedAttention, vLLM implements **Copy-on-Write (CoW)**:
 1.  All candidate sequences share the exact same logical-to-physical block mapping for the prompt. The physical blocks simply maintain a *reference count*.
 2.  As the sequences begin generating new tokens, they share the physical blocks until a sequence diverges.
 3.  When a sequence needs to write a new token to a shared block, the system detects the reference count is $>1$, allocates a *new* physical block, copies the shared data, and updates that specific sequence's Block Table.
 
-This CoW mechanism reduces memory usage by up to **55%** in complex sampling scenarios, allowing for significantly larger batch sizes during Beam Search.
+The 2023 vLLM release reports up to **55%** lower memory use from sharing in its parallel-sampling and beam-search experiments [[2]](#ref-2). The gain depends on how much prefix remains shared, the number of candidates, and block occupancy.
 
 ---
 
@@ -154,7 +154,7 @@ For adoption, match model, lengths, concurrency, precision and completion count,
 
 ## 6. Summary and Open Questions
 
-PagedAttention transformed LLM inference from a pure machine learning problem into a systems engineering discipline. By applying OS-level virtual memory concepts to GPU VRAM, it eliminated KV cache fragmentation and enabled efficient memory sharing via Copy-on-Write. Today, virtually all modern inference engines (including TensorRT-LLM and SGLang) utilize some form of block-based memory management inspired by vLLM.
+Paged allocation makes free blocks reusable within the KV pool and supports prefix sharing. It still leaves tail-block waste, metadata, kernel workspaces, and finite cache capacity. Evaluate those costs under the actual request-length distribution instead of treating paging as a promise that every allocation or latency problem disappears.
 
 However, as we efficiently pack more requests into a batch, we encounter a new problem: **Scheduling**. If Request A generates 10 tokens and Request B generates 1,000 tokens, how do we efficiently swap requests in and out of the GPU without stalling the entire batch? This leads us directly to the concept of **Continuous Batching**, which we will explore in the next section.
 
@@ -164,7 +164,7 @@ However, as we efficiently pack more requests into a batch, we encounter a new p
 
 <details>
 <summary>Quiz 1: How does PagedAttention specifically resolve the issue of *External Fragmentation* in the KV Cache?</summary>
-*External fragmentation occurs when free memory is split into small, non-contiguous chunks that cannot accommodate a large contiguous allocation. Because PagedAttention allocates memory in fixed-size, non-contiguous physical blocks and maps them logically via a Block Table, any free physical block can be utilized by any request, regardless of where it resides in VRAM. This completely eliminates external fragmentation.*
+*External fragmentation occurs when free memory is split into small, non-contiguous chunks that cannot accommodate a large contiguous allocation. Because PagedAttention allocates memory in fixed-size, non-contiguous physical blocks and maps them logically via a Block Table, any free physical block can be utilized by any request, regardless of where it resides in VRAM. This avoids external fragmentation inside the fixed-size KV block pool; it does not cover unrelated GPU allocations.*
 </details>
 
 <details>
@@ -174,7 +174,7 @@ However, as we efficiently pack more requests into a batch, we encounter a new p
 
 <details>
 <summary>Quiz 3: Why is the Copy-on-Write (CoW) mechanism particularly advantageous for Beam Search decoding?</summary>
-*In Beam Search, multiple candidate sequences share the exact same initial prompt and often share early generated tokens before diverging. CoW allows all these sequences to map to the same physical memory blocks for the shared context. Memory is only allocated when a specific sequence generates a unique token that diverges from the others, drastically reducing the memory footprint compared to duplicating the entire sequence history.*
+*In Beam Search, multiple candidate sequences share the exact same initial prompt and often share early generated tokens before diverging. CoW allows all these sequences to map to the same physical memory blocks for the shared context. A write to a shared partial block requires a private copy; a write past a full block requires a new block. This can save memory compared with copying the entire history for every candidate.*
 </details>
 
 <details>
@@ -184,7 +184,7 @@ However, as we efficiently pack more requests into a batch, we encounter a new p
 
 <details>
 <summary>Quiz 5: Formulate the mathematical internal fragmentation overhead of PagedAttention. Let the block size be $B$ tokens, sequence length of request $i$ be $S_i$, and the memory footprint per token be $M$ bytes. Derive the exact fragmented memory formula for a batch of $N$ requests.</summary>
-*In PagedAttention, memory is allocated in fixed-size blocks of $B$ tokens. Internal fragmentation occurs only in the last allocated block of a sequence if it is not completely filled. The number of wasted token slots for request $i$ is $(B - (S_i \pmod B)) \pmod B$. Therefore, the exact fragmented memory footprint in bytes for request $i$ is: $W_i = M \times ((B - (S_i \pmod B)) \pmod B)$. For a batch of $N$ requests, the total internal fragmentation overhead is $W_{total} = \sum_{i=1}^N W_i$. Assuming $S_i$ is uniformly distributed, the average wasted tokens per request is $(B-1)/2$. Thus, the average total overhead for $N$ requests is approximately $N \times M \times \frac{B-1}{2}$ bytes.*
+*In PagedAttention, memory is allocated in fixed-size blocks of $B$ tokens. Internal fragmentation occurs only in the last allocated block of a sequence if it is not completely filled. The number of wasted token slots for request $i$ is $(B - (S_i \pmod B)) \pmod B$. Therefore, the exact fragmented memory footprint in bytes for request $i$ is: $W_i = M \times ((B - (S_i \pmod B)) \pmod B)$. For a batch of $N$ requests, the total internal fragmentation overhead is $W_{total} = \sum_{i=1}^N W_i$. For independent allocations with no shared or pre-reserved blocks, and assuming the residues $S_i \pmod B$ are uniform over $0,\ldots,B-1$, the average wasted tokens per request is $(B-1)/2$. Thus, the average total overhead for $N$ requests is approximately $N \times M \times \frac{B-1}{2}$ bytes.*
 </details>
 
 ---

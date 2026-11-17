@@ -33,6 +33,38 @@ $$
 
 이는 사실 정확도가 아닙니다. 반복 프롬프트와 관련 후보를 같은 재표집 단위로 유지하며 짝지은 불확실성을 계산합니다. 잘못된 JSON·timeout·거부·재시도 비용·잘린 출력을 정당한 무승부와 구분합니다.
 
+### 계산 예제: “A가 이겼다”가 서로 다른 후보를 뜻할 수 있다
+
+후보가 `new`와 `baseline`이라고 합시다. 첫 호출에서는 A가 `new`, B가 `baseline`입니다. 순서를 바꾼 호출에서는 A가 `baseline`, B가 `new`입니다. 두 호출 모두 “A 승리”를 반환하면 문자열은 같아도 실제로 선택한 후보는 다릅니다. 위치 편향은 MT-Bench 심판 연구가 살펴본 한계 중 하나입니다 [[6]](#ref-6). 순서를 바꾸는 것은 진단 방법이지 편향을 없앤다는 보장은 아닙니다.
+
+아래 예제는 Python만 사용하며 모델을 호출하지 않습니다. 표시 순서는 위와 같다고 가정하고, 형식이 잘못되거나 서로 모순되는 판정은 미해결 상태로 남깁니다. 심판 프롬프트, 재시도, 스키마 강제, 출처 저장, 불확실성 추정은 생략했습니다.
+
+```python
+from collections import Counter
+
+def reconcile(forward, reverse):
+    first = {"A": "new", "B": "baseline", "tie": "tie"}
+    swapped = {"A": "baseline", "B": "new", "tie": "tie"}
+    left, right = first.get(forward), swapped.get(reverse)
+    if left is None or right is None:
+        return "invalid"
+    return left if left == right else "inconsistent"
+
+# Authored fixture: 100 questions, two judgments per question.
+pairs = ([("A", "B")] * 54 + [("B", "A")] * 26
+         + [("tie", "tie")] * 10 + [("A", "A")] * 6
+         + [("timeout", "B")] * 4)
+counts = Counter(reconcile(a, b) for a, b in pairs)
+n = len(pairs)
+unresolved = counts["inconsistent"] + counts["invalid"]
+known_points = counts["new"] + 0.5 * counts["tie"]
+print(counts)
+print("unresolved fraction:", unresolved / n)
+print("preference bounds:", known_points / n, (known_points + unresolved) / n)
+```
+
+결과는 승리 54개, 패배 26개, 무승부 10개, 불일치 6개, 무효 판정 4개입니다. 확인된 선호 점수는 59점입니다. 미해결 질문 10개를 버리면 59/90 ≈ **65.6%** 로 보고하게 되며, 이는 심판이 판정한 질문에 한정한 수치입니다. 각 미해결 질문이 나중에 0점에서 1점 사이를 받을 수 있다고 두고 전체 분모를 유지하면 **59%–69%의 식별 구간** 을 얻습니다. 이 구간은 빠진 판정의 영향을 나타내며, **신뢰구간이 아니고** 사람과의 일치도도 알려 주지 않습니다. 미해결을 무승부로 처리한다는 정책을 미리 정했다면 64%를 보고하되 미해결 10%를 별도로 밝혀야 합니다. 정책마다 답하는 질문이 다르므로 후보에게 유리한 결과를 본 뒤 선택하지 않습니다.
+
 ## 3. 계획과 추론은 올바른 루브릭이 있을 때만 도움이 된다
 
 EvalPlanner는 연구한 설정에서 계획·실행·최종 판정을 분리합니다 [[2]](#ref-2). G-Eval은 기준 중심 모델 평가를 연구합니다 [[4]](#ref-4). 어느 쪽도 긴 설명이 더 정확하다거나 생성된 추론이 충실한 인과 설명이라고 입증하지는 않습니다.
@@ -56,6 +88,8 @@ EvalPlanner는 연구한 설정에서 계획·실행·최종 판정을 분리합
 ## 6. 출시 기준으로 쓰기 전에 심판을 보정한다
 
 평가자 개발과 봉인된 후보 출시 평가셋을 분리합니다. 지적된 사례와 통과한 것처럼 보이는 사례를 모두 검사합니다. 실패 유형별 민감도·특이도, 전문가 라벨과의 동의, 일관성, 판단 보류, 비용, 지연을 보고합니다. 범주 라벨에서 Cohen의 kappa는 $\kappa=(P_o-P_e)/(1-P_e)$입니다. $P_o$는 관측 동의율, $P_e$는 라벨 주변분포에 따른 우연 동의율입니다. 해석은 클래스 비율과 의사결정 비용에 의존하므로 보편적인 통과 임계값은 적절하지 않습니다.
+
+또 다른 교육용 예시로, 검토 표본에 치명적 결함 20개와 허용 가능한 답변 180개가 있다고 합시다. 심판이 모든 답을 허용하면 **전체 일치도는 90%** 이지만 **치명적 결함의 재현율은 0%** 입니다. 실패가 드물기 때문에 평균이 오히려 안심할 만하게 보입니다. 중요한 유형별 혼동 행렬과 불확실성을 보고해야 합니다. 개발 단계에서는 균형 잡힌 표본으로 사각지대를 찾고, 운영에서 생길 검토 업무량을 예측할 때는 실제 발생 비율을 반영한 추정치를 사용합니다.
 
 중요 slice의 미탐률과 검토 부담이 사전 기준을 통과해야 새 심판을 승격합니다. 이전 심판·루브릭을 보관하고 새 측정 파이프라인을 canary로 도입하며 롤백을 연습합니다. 다음 절은 인간 선호를 rating으로 집계하는 방법을 다룹니다. Rating은 정확성과 다른 질문에 답합니다.
 
@@ -93,3 +127,4 @@ EvalPlanner는 연구한 설정에서 계획·실행·최종 판정을 분리합
 3. <a id="ref-3"></a>Li, D., et al. (2025). *Preference Leakage: A Contamination Problem in LLM-as-a-judge*. [Paper](https://arxiv.org/abs/2502.01534).
 4. <a id="ref-4"></a>Liu, Y., et al. (2023). *G-Eval: NLG Evaluation using GPT-4 with Better Human Alignment*. [Paper](https://arxiv.org/abs/2303.16634).
 5. <a id="ref-5"></a>Jo, W., Kim, G., & Hee, M. S. (2026). *Change the Number, Change the Answer: Assessing Rating Scale Sensitivity in LLM-Based Text Scoring*. October 15 preprint. [Paper](https://arxiv.org/abs/2610.22187).
+6. <a id="ref-6"></a>Zheng, L., et al. (2023). *Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena*. [Paper](https://arxiv.org/abs/2306.05685).

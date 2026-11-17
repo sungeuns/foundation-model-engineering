@@ -50,6 +50,7 @@ const toAbsoluteUrl = (pagePath) => {
   return url.toString();
 };
 const githubUrl = 'https://github.com/sungeuns/foundation-model-engineering';
+const feedPath = withBasePath(isKo ? '/ko/feed.xml' : '/feed.xml', basePath);
 const canonicalUrl = toAbsoluteUrl(currentPath);
 const enUrl = toAbsoluteUrl(enTarget);
 const koUrl = toAbsoluteUrl(koTarget);
@@ -153,6 +154,7 @@ if (currentIndex !== -1) {
     <meta name="twitter:image:alt" content={socialImageAlt} />
     <meta name="twitter:title" content={pageTitle} />
     <meta name="twitter:description" content={pageDescription} />
+    <link rel="alternate" type="application/rss+xml" title={isKo ? '최근 수정한 장 (RSS)' : 'Recently edited chapters (RSS)'} href={feedPath} />
     <script type="application/ld+json" set:html={JSON.stringify(structuredData)}></script>
     {!isHomePage && <script type="application/ld+json" set:html={JSON.stringify(breadcrumbData)}></script>}
     <link rel="icon" type="image/svg+xml" href={withBasePath('/favicon.svg', basePath)} />
@@ -170,7 +172,8 @@ if (currentIndex !== -1) {
     <button class="sidebar-backdrop" id="sidebarBackdrop" type="button" tabindex="-1" aria-label={isKo ? '목차 닫기' : 'Close contents'} hidden></button>
 
     <nav class="sidebar" id="sidebar" aria-label={isKo ? '책 목차' : 'Book contents'}>
-      <h1><a href={toHref(homePath)} style="text-decoration: none; color: inherit;">{isKo ? '목차' : 'Table of Contents'}</a></h1>
+      <div data-nosnippet>
+      <div class="sidebar-title"><a href={toHref(homePath)} style="text-decoration: none; color: inherit;">{isKo ? '목차' : 'Table of Contents'}</a></div>
       <label class="chapter-search-label" for="chapterSearch">{isKo ? '주제 찾기' : 'Find a topic'}</label>
       <input id="chapterSearch" type="search" placeholder={isKo ? '예: KV cache, 평가, 12.1' : 'e.g. KV cache, evaluation, 12.1'} autocomplete="off" />
       <p id="searchEmpty" class="search-empty" role="status" hidden>{isKo ? '일치하는 주제가 없습니다. 다른 검색어를 입력하세요.' : 'No matching topics. Try another search.'}</p>
@@ -198,13 +201,14 @@ if (currentIndex !== -1) {
           </ul>
         </div>
       ))}
+      </div>
     </nav>
 
     <div class="content-wrapper">
       <div class="container">
         <header>
           <p class="book-title"><a href={toHref(homePath)} style="text-decoration: none; color: inherit;">{siteTitle}</a></p>
-          <div class="header-actions">
+          <div class="header-actions" data-nosnippet>
             <a class="github-link" href={githubUrl} target="_blank" rel="noopener noreferrer" aria-label={isKo ? 'GitHub 저장소 열기' : 'Open GitHub repository'}>
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M12 2C6.48 2 2 6.58 2 12.26c0 4.53 2.87 8.37 6.84 9.73.5.1.68-.22.68-.49 0-.24-.01-.88-.01-1.73-2.78.62-3.37-1.37-3.37-1.37-.45-1.19-1.11-1.51-1.11-1.51-.91-.64.07-.63.07-.63 1 .07 1.53 1.06 1.53 1.06.9 1.57 2.36 1.12 2.94.85.09-.67.35-1.12.63-1.38-2.22-.26-4.56-1.14-4.56-5.07 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.31.1-2.71 0 0 .84-.28 2.75 1.05A9.34 9.34 0 0 1 12 6.97c.85 0 1.7.12 2.5.35 1.9-1.33 2.74-1.05 2.74-1.05.55 1.4.2 2.45.1 2.71.64.72 1.03 1.63 1.03 2.75 0 3.94-2.34 4.8-4.57 5.06.36.32.68.94.68 1.9 0 1.37-.01 2.47-.01 2.81 0 .27.18.59.69.49A10.15 10.15 0 0 0 22 12.26C22 6.58 17.52 2 12 2Z"></path>
@@ -236,7 +240,7 @@ if (currentIndex !== -1) {
         <main id="main-content" tabindex="-1">
           <slot />
         </main>
-        <div class="navigation-links">
+        <div class="navigation-links" data-nosnippet>
           {prevPage && (
             <a href={toHref(prevPage.path)} class="nav-link prev">
               <span class="nav-label">{isKo ? "← 이전" : "← Previous"}</span>
@@ -252,8 +256,15 @@ if (currentIndex !== -1) {
           )}
         </div>
         <footer class="site-footer">
-          <p>Created by <strong><a href="https://www.linkedin.com/in/sungeuns2" target="_blank">Seongeun So</a></strong></p>
-          <small>Developed with AI assistance</small>
+          <div data-nosnippet>
+            <p>{isKo ? '도움이 된 설명이 있었나요? ' : 'Found a useful explanation? '}
+              <a href={githubUrl}>{isKo ? 'GitHub에서 Star로 책 저장하기' : 'Save the book with a GitHub star'}</a>
+              {' · '}<a href={`${githubUrl}/issues/new`}>{isKo ? '수정 제안하기' : 'Suggest a correction'}</a>
+            </p>
+            <p><a href={feedPath}>{isKo ? '최근 수정한 장 구독하기 (RSS)' : 'Subscribe to chapter edits (RSS)'}</a></p>
+            <p>{isKo ? '저자: ' : 'Created by '}<strong><a href="https://www.linkedin.com/in/sungeuns2" target="_blank" rel="noopener noreferrer">Seongeun So</a></strong></p>
+            <small>{isKo ? 'AI의 도움을 받아 제작했습니다.' : 'Developed with AI assistance'}</small>
+          </div>
         </footer>
       </div>
     </div>

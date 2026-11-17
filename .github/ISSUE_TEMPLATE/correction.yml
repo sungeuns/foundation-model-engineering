@@ -1,0 +1,36 @@
+name: Correct a lesson / 내용 수정
+description: Report an incorrect claim, example, translation, or interaction.
+title: "[Correction] "
+body:
+  - type: input
+    id: page
+    attributes:
+      label: Page URL or source path / 페이지 주소
+      placeholder: https://sungeuns.github.io/foundation-model-engineering/chapter-...
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What needs work? / 수정할 부분
+      options:
+        - Technical claim, math, or reference
+        - Code example
+        - Interactive component or accessibility
+        - English explanation
+        - Korean explanation or translation
+        - Broken link or navigation
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem and proposed correction / 문제와 수정 제안
+      description: Quote the relevant sentence or describe the control state. English or Korean is welcome.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence or reproduction / 근거 또는 재현 방법
+      description: Add a primary source, a small counterexample, or browser and viewport details. Do not include credentials or private data.

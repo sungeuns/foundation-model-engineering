@@ -53,6 +53,14 @@ $$
 
 요청 하나가 아니라 32개 요청의 합계입니다. KV cache가 항상 weight보다 큰 것도 아닙니다. 동시성과 context가 충분히 커지면 더 커질 수 있으므로 capacity plan에는 weight와 최대 live-cache 점유량을 모두 포함해야 합니다.
 
+### 계산 예제: 열 번째 요청은 들어가지 않는다
+
+같은 구조에서 토큰 하나를 캐시하려면 80개 층 전체에 327,680바이트, 즉 320 KiB가 필요합니다. 따라서 8,192토큰인 요청 하나는 **2.5 GiB** 를 차지합니다. 가중치, 활성값, 작업 공간, 할당기 부가 비용, 장애 대비 여유분을 제외하고 서빙 풀에 **KV 데이터용 24 GiB** 가 남았다고 합시다. 요청 9개는 22.5 GiB에 들어가지만 10개는 25 GiB가 필요합니다. 이는 해당 풀의 데이터 용량 상한이며, GPU에서 측정한 동시 처리 한도가 아닙니다. 캐시를 여러 장치로 나눈다면 실제 장치별 배치와 복제되는 헤드를 반영해야 합니다.
+
+이번에는 이미 8,192토큰인 프롬프트 9개를 받고, 요청마다 2,048토큰을 더 생성하도록 허용합시다. 요청당 최대 3.125 GiB, 배치 전체로는 **28.125 GiB** 까지 늘어납니다. 프롬프트는 들어가지만 허용한 출력까지 캐시할 공간은 부족합니다. 이 단순한 예산에서 최종 길이 10,240토큰을 미리 확보하려면 요청 수를 7개로 제한해야 합니다. 동적 할당으로 처음에 더 많이 받을 수도 있지만, 그러려면 대기열·선점·출력 길이 제한 정책이 필요합니다. 공통 접두사가 있다는 이유만으로 공간이 줄어들지는 않으며, 정확히 같은 접두사의 캐시를 재사용할 수 있어야 합니다.
+
+아래 계산기에서 길이 8,192토큰과 캐시 예산 24 GiB를 지정한 뒤, 길이를 10,240으로 늘려 보세요. 입장 시점의 프롬프트 길이뿐 아니라 생성할 토큰까지 포함한 최대 캐시 길이가 중요합니다.
+
 <KVCacheCalculator client:load lang="ko" />
 
 ## 3. KV 폭 줄이기
@@ -75,7 +83,7 @@ DeepSeek-V2 report는 자사의 DeepSeek 67B 비교 시스템 대비 KV cache 93
 
 FP8 storage는 FP16/BF16 대비 dense payload를 절반으로, 4-bit storage는 4분의 1로 줄입니다. 용량 이득은 계산대로지만 latency와 품질 이득은 그렇지 않습니다. Serving engine은 값 변환, scale 계산, metadata 이동에 추가 명령을 쓸 수 있습니다. KV bandwidth가 병목이 아닌 workload는 속도 이득이 작을 수 있습니다.
 
-Scale granularity, calibration data, E4M3/E5M2 같은 format, outlier, accumulation precision을 함께 정해야 합니다. vLLM 문서는 가능하면 calibrated scale을 사용하고 실제 workload에서 정확도를 평가하라고 명시합니다 [[3]](#ref-3).
+Scale granularity, calibration data, E4M3/E5M2 같은 format, outlier, accumulation precision을 함께 정해야 합니다. **2026-11-18 기준** vLLM 문서는 데이터셋으로 scale을 보정하는 방식을 권장합니다 [[3]](#ref-3). 실제 workload의 정확도는 별도로 평가해야 합니다.
 
 건전한 rollout은 다음을 비교합니다.
 
@@ -142,6 +150,35 @@ class CausalGQAAttention(nn.Module):
 
 명시적인 position mask가 중요합니다. Cache가 비어 있지 않은 multi-token chunk에 is_causal=True를 순진하게 적용하면 kernel 계약에 따라 triangular mask 원점이 잘못 정렬될 수 있습니다.
 
+### 전체 재계산과 캐시 결과를 비교한다
+
+캐시 최적화는 출력의 모양만 맞추는 것이 아니라 계산 결과를 보존해야 합니다. 위 클래스 다음에 아래 코드를 실행하세요. 같은 가중치와 입력을 사용해 전체 인과적 계산, 토큰 단위 디코딩, 길이가 다른 청크를 비교합니다. 패딩과 드롭아웃이 없는 CPU float32 검사이며, 교육용 층을 확인할 뿐 GPU 커널 성능이나 완전한 언어 모델을 검증하지는 않습니다.
+
+~~~python
+torch.manual_seed(7)
+layer = CausalGQAAttention(d_model=64, n_heads=4, n_kv_heads=2).eval()
+x = torch.randn(2, 9, 64)  # [batch, tokens, model width], CPU float32
+full, _ = layer(x)
+
+for chunk_sizes in ([1] * 9, [4, 3, 2]):
+    cache, pieces, offset = None, [], 0
+    for size in chunk_sizes:
+        piece, cache = layer(x[:, offset:offset + size], cache)
+        pieces.append(piece)
+        offset += size
+    decoded = torch.cat(pieces, dim=1)
+    torch.testing.assert_close(decoded, full, rtol=1e-5, atol=1e-6)
+    assert cache[0].shape == (2, 2, 9, 16)
+
+changed = x.clone()
+changed[:, 5:] += 10  # Future inputs must not change earlier outputs.
+changed_out, _ = layer(changed)
+torch.testing.assert_close(changed_out[:, :5], full[:, :5])
+print("Full, token-wise, and chunked results agree; causality holds.")
+~~~
+
+이 예제는 PyTorch 2.15.0 CPU에서 스모크 테스트했습니다. **2026-11-18 기준 API 확인:** PyTorch 문서는 불리언 마스크의 의미와 어텐션 행렬이 정사각형이 아닐 때 사용하는 왼쪽 위 기준의 인과적 정렬을 명시합니다 [[7]](#ref-7). 캐시 뒤에 붙는 청크의 전역 쿼리 위치는 `past_tokens`에서 시작하며, 위의 명시적 마스크는 이 오프셋을 반영합니다. 실제 엔진에 적용하기 전에는 패딩, RoPE 위치 오프셋, 캐시 퇴출, 서빙 정밀도별로 검사를 확장해야 합니다.
+
 ## 6. Production Cache 계약
 
 Production engine은 block을 미리 할당하고 새 KV row를 제자리에 기록합니다. PagedAttention은 virtual-memory-style block mapping을 사용해 sequence마다 하나의 연속 공간을 요구하지 않으며, 공통 prefix block을 공유할 수 있습니다 [[4]](#ref-4). 다음 절에서 allocator를 다룹니다.
@@ -200,3 +237,4 @@ KV caching은 중복 연산을 persistent memory traffic으로 바꿉니다. MQA
 4. <a id="ref-4"></a>Kwon, W., et al. (2023). *Efficient Memory Management for Large Language Model Serving with PagedAttention*. [arXiv:2309.06180](https://arxiv.org/abs/2309.06180).
 5. <a id="ref-5"></a>DeepSeek-AI. (2026). DeepSeek-V4.1-Flash technical report. [Source](https://arxiv.org/abs/2609.19969).
 6. <a id="ref-6"></a>Li, F. (2026). Validating Hybrid-State Cache Recovery for GLM-5.3-Flash with vLLM and LMCache. [Source](https://arxiv.org/abs/2609.15030).
+7. <a id="ref-7"></a>PyTorch Contributors. *Scaled Dot Product Attention*, PyTorch 2.15 documentation. [Mask and GQA API contract](https://docs.pytorch.org/docs/2.15/generated/torch.nn.functional.scaled_dot_product_attention.html).

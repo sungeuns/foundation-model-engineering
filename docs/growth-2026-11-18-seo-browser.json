@@ -1,0 +1,30 @@
+[
+  {
+    "lang": "en",
+    "width": 390,
+    "feedURL": "/foundation-model-engineering/feed.xml",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "lang": "ko",
+    "width": 390,
+    "feedURL": "/foundation-model-engineering/ko/feed.xml",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "lang": "en",
+    "width": 1440,
+    "feedURL": "/foundation-model-engineering/feed.xml",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "lang": "ko",
+    "width": 1440,
+    "feedURL": "/foundation-model-engineering/ko/feed.xml",
+    "overflow": false,
+    "errors": []
+  }
+]

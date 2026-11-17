@@ -33,6 +33,38 @@ $$
 
 This is not factual accuracy. Use paired uncertainty, keeping repeated prompts and related candidates in the same resampling unit. Record invalid JSON, timeout, refusal, retry cost, and truncation separately from a legitimate tie.
 
+### Worked Example: “A Wins” Can Mean Two Different Candidates
+
+Suppose the candidates are `new` and `baseline`. On the first call, A is `new` and B is `baseline`. On the swapped call, A is `baseline` and B is `new`. Two verdicts of “A wins” therefore disagree about the candidate, even though the raw strings match. Position bias is one of the limitations examined in the MT-Bench judge study [[6]](#ref-6); swapping is a diagnostic, not a guarantee that bias disappears.
+
+The following Python-only example makes no model calls. It assumes the two display orders above and keeps malformed or inconsistent verdicts unresolved. It omits judge prompting, retries, schema enforcement, provenance storage, and uncertainty estimation.
+
+```python
+from collections import Counter
+
+def reconcile(forward, reverse):
+    first = {"A": "new", "B": "baseline", "tie": "tie"}
+    swapped = {"A": "baseline", "B": "new", "tie": "tie"}
+    left, right = first.get(forward), swapped.get(reverse)
+    if left is None or right is None:
+        return "invalid"
+    return left if left == right else "inconsistent"
+
+# Authored fixture: 100 questions, two judgments per question.
+pairs = ([("A", "B")] * 54 + [("B", "A")] * 26
+         + [("tie", "tie")] * 10 + [("A", "A")] * 6
+         + [("timeout", "B")] * 4)
+counts = Counter(reconcile(a, b) for a, b in pairs)
+n = len(pairs)
+unresolved = counts["inconsistent"] + counts["invalid"]
+known_points = counts["new"] + 0.5 * counts["tie"]
+print(counts)
+print("unresolved fraction:", unresolved / n)
+print("preference bounds:", known_points / n, (known_points + unresolved) / n)
+```
+
+The output is 54 wins, 26 losses, 10 ties, 6 inconsistent pairs, and 4 invalid pairs. The known preference points are 59. Removing the ten unresolved questions would report 59/90 ≈ **65.6%**, conditional on the judge resolving the pair. Keeping the full denominator gives a **59%–69% identification interval** if each unresolved question could eventually contribute anywhere from zero to one point. This interval describes missing verdicts; it is **not a confidence interval** and says nothing about human agreement. A predeclared policy treating unresolved cases as ties would report 64%, while still disclosing the 10% unresolved fraction. Different policies answer different questions—choose one before seeing which favors the candidate.
+
 ## 3. Planning and Reasoning Help Only If the Rubric Is Right
 
 EvalPlanner separates planning, execution, and final judgment in its studied setup [[2]](#ref-2). G-Eval investigates criterion-driven model evaluation [[4]](#ref-4). Neither establishes that a longer rationale is more correct or that generated reasoning is a faithful causal explanation.
@@ -56,6 +88,8 @@ Also test position, verbosity, superficial formatting, and instruction injection
 ## 6. Calibrate the Judge Before Using It as a Release Gate
 
 Separate evaluator development from the sealed candidate release set. Inspect both flagged and apparently passing cases. Report sensitivity/specificity by failure class, agreement with expert labels, consistency, abstention, cost, and latency. For categorical labels, Cohen's kappa is $\kappa=(P_o-P_e)/(1-P_e)$, where $P_o$ is observed agreement and $P_e$ chance agreement from label marginals. Its interpretation depends on class prevalence and the decision cost; a universal kappa threshold is inappropriate.
+
+For a second authored example, an audit contains 20 critical defects and 180 acceptable answers. A judge that labels everything acceptable achieves **90% overall agreement** and **0% critical-defect recall**. The average looks reassuring precisely because failures are rare. Report the confusion matrix and uncertainty for each critical slice; a balanced development set can expose blind spots, while prevalence-weighted estimates are needed to forecast operational workload.
 
 Promote a new judge only after critical-slice miss rates and workload meet predeclared bounds. Retain the previous judge/rubric, canary the new measurement pipeline, and rehearse rollback. The next section examines how human preferences are aggregated into ratings; those ratings answer a different question from correctness.
 
@@ -93,3 +127,4 @@ Promote a new judge only after critical-slice miss rates and workload meet prede
 3. <a id="ref-3"></a>Li, D., et al. (2025). *Preference Leakage: A Contamination Problem in LLM-as-a-judge*. [Paper](https://arxiv.org/abs/2502.01534).
 4. <a id="ref-4"></a>Liu, Y., et al. (2023). *G-Eval: NLG Evaluation using GPT-4 with Better Human Alignment*. [Paper](https://arxiv.org/abs/2303.16634).
 5. <a id="ref-5"></a>Jo, W., Kim, G., & Hee, M. S. (2026). *Change the Number, Change the Answer: Assessing Rating Scale Sensitivity in LLM-Based Text Scoring*. October 15 preprint. [Paper](https://arxiv.org/abs/2610.22187).
+6. <a id="ref-6"></a>Zheng, L., et al. (2023). *Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena*. [Paper](https://arxiv.org/abs/2306.05685).

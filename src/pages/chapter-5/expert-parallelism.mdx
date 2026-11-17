@@ -24,14 +24,13 @@ In a standard Transformer block within an MoE model, the self-attention mechanis
 
 The paradigm shifts when the tokens reach the MoE feed-forward layer. A token residing on GPU 0 might be routed to Expert 42, which physically resides on GPU 1.
 
-To resolve this, Expert Parallelism requires a highly synchronized, two-phase network operation:
+The data path has two network transfers around expert computation:
 
 1.  **The Dispatch Phase (All-to-All):** Every GPU looks at its local tokens, groups them by their target expert, and transmits them across the network to the GPU that owns that expert.
 2.  **The Compute Phase:** Each GPU receives a massive, unpredictable influx of tokens from all other GPUs. It processes these tokens through its locally stored experts.
 3.  **The Combine Phase (All-to-All):** The computed token representations are transmitted *back* across the network to the original GPUs that generated them, allowing the next dense attention layer to proceed.
 
-![Computation-Communication Overlap in Expert Parallelism](../../assets/images/chapter-5/expert-parallelism-overlap.png)
-*Source: AI-generated illustration*
+> **Read the timeline, not just the arrows.** In a simplified window with 4 ms of communication and 3 ms of independent local computation, perfect scheduling can hide at most 3 ms of that communication. At least 1 ms remains exposed even before resource contention. Expert computation that needs the received tokens cannot start before those tokens arrive.
 
 ---
 

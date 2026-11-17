@@ -41,7 +41,7 @@ $$ L(C) = \left(\frac{C_c}{C}\right)^{\alpha_C} + L_{\text{irreducible}} $$
 * $N_c, D_c, C_c$ 는 특성 척도(characteristic scales)를 나타내는 상수입니다.
 * $L_{\text{irreducible}}$ 은 데이터셋에 내재된 **본질적 엔트로피 (inherent entropy)** 입니다.
 
-![scaling_laws_log_log](../../../assets/images/chapter-8/scaling_laws_log_log_1.png)
+> **숫자로 보는 직관.** 하한을 넘는 초과 손실이 $C^{-0.05}$ 에 비례한다면, 연산량을 두 배로 늘릴 때 초과 손실에는 $2^{-0.05} \approx 0.966$ 이 곱해집니다. 약 3.4% 줄어드는 셈입니다. 이는 피팅한 식의 성질을 보여 주는 예이며 특정 모델의 실측 개선량이 아닙니다. 손실 하한이 양수라면 전체 손실의 감소율은 3.4%보다 작습니다.
 
 ### 환원 불가능한 손실의 하한선 (The Irreducible Loss Floor)
 
@@ -55,7 +55,7 @@ Power law 는 Log-Log 그래프(양대수 그래프)에서 가장 명확하게 �
 
 $$ \log L(C) \approx -\alpha_C \log C + \log(C_c^{\alpha_C}) $$
 
-이는 직선의 방정식 ($y = mx + b$)과 동일합니다. 이러한 선형성(linearity)이야말로 엔지니어링 관점에서 스케일링 법칙을 매우 강력하게 만드는 요소입니다. 10M, 100M, 1B 파라미터 모델의 손실을 Log-Log 그래프에 점으로 찍고 그 사이를 관통하는 직선을 그으면, 100B 파라미터 거대 모델의 최종 손실을 놀라울 정도로 정확하게 예측할 수 있습니다.
+이는 직선의 방정식 ($y = mx + b$)과 같습니다. 피팅한 직선은 학습에 쓰지 않은 더 큰 파일럿 실행의 결과를 예측할 수 있을 때 실용적인 의미가 있습니다. 작은 실행들이 직선에 놓인다는 사실만으로 100배 규모의 외삽을 검증한 것은 아닙니다.
 
 <PowerLawVisualizer lang="ko" client:load />
 

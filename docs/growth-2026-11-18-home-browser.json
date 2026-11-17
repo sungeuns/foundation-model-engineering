@@ -1,0 +1,50 @@
+[
+  {
+    "width": 390,
+    "lang": "en",
+    "h1": [
+      "Foundation Model Engineering"
+    ],
+    "mainH1": 1,
+    "overflow": false,
+    "feed": "/foundation-model-engineering/feed.xml",
+    "focus": true,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "lang": "ko",
+    "h1": [
+      "파운데이션 모델 엔지니어링"
+    ],
+    "mainH1": 1,
+    "overflow": false,
+    "feed": "/foundation-model-engineering/ko/feed.xml",
+    "focus": true,
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "lang": "en",
+    "h1": [
+      "Foundation Model Engineering"
+    ],
+    "mainH1": 1,
+    "overflow": false,
+    "feed": "/foundation-model-engineering/feed.xml",
+    "focus": true,
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "lang": "ko",
+    "h1": [
+      "파운데이션 모델 엔지니어링"
+    ],
+    "mainH1": 1,
+    "overflow": false,
+    "feed": "/foundation-model-engineering/ko/feed.xml",
+    "focus": true,
+    "errors": []
+  }
+]

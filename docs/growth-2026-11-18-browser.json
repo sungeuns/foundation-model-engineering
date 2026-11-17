@@ -1,0 +1,242 @@
+[
+  {
+    "width": 390,
+    "route": "/chapter-12/kv-cache-management/",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 390,
+    "route": "/chapter-13/ptq-vs-qat/",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 390,
+    "route": "/chapter-12/paged-attention-vllm/",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 390,
+    "route": "/chapter-17/llm-as-a-judge/",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 390,
+    "route": "/chapter-14/rag-failure-modes-and-operational-design/",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 390,
+    "route": "/chapter-3/self-attention-mathematics/",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 390,
+    "route": "/chapter-5/expert-parallelism/",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 390,
+    "route": "/chapter-8/power-law/",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 390,
+    "route": "/ko/chapter-12/kv-cache-management/",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 390,
+    "route": "/ko/chapter-13/ptq-vs-qat/",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 390,
+    "route": "/ko/chapter-12/paged-attention-vllm/",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 390,
+    "route": "/ko/chapter-14/rag-failure-modes-and-operational-design/",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 390,
+    "route": "/ko/chapter-17/llm-as-a-judge/",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 390,
+    "route": "/ko/chapter-3/self-attention-mathematics/",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 390,
+    "route": "/ko/chapter-5/expert-parallelism/",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 390,
+    "route": "/ko/chapter-8/power-law/",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 390,
+    "route": "/",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 390,
+    "route": "/ko/",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 390,
+    "route": "/chapter-17/academic-benchmarks/",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 390,
+    "route": "/ko/chapter-17/academic-benchmarks/",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 1440,
+    "route": "/chapter-12/kv-cache-management/",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 1440,
+    "route": "/chapter-12/paged-attention-vllm/",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 1440,
+    "route": "/chapter-13/ptq-vs-qat/",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 1440,
+    "route": "/chapter-14/rag-failure-modes-and-operational-design/",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 1440,
+    "route": "/chapter-17/llm-as-a-judge/",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 1440,
+    "route": "/chapter-3/self-attention-mathematics/",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 1440,
+    "route": "/chapter-5/expert-parallelism/",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 1440,
+    "route": "/chapter-8/power-law/",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 1440,
+    "route": "/ko/chapter-12/kv-cache-management/",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 1440,
+    "route": "/ko/chapter-12/paged-attention-vllm/",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 1440,
+    "route": "/ko/chapter-13/ptq-vs-qat/",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 1440,
+    "route": "/ko/chapter-17/llm-as-a-judge/",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 1440,
+    "route": "/ko/chapter-14/rag-failure-modes-and-operational-design/",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 1440,
+    "route": "/ko/chapter-3/self-attention-mathematics/",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 1440,
+    "route": "/ko/chapter-5/expert-parallelism/",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 1440,
+    "route": "/ko/chapter-8/power-law/",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 1440,
+    "route": "/",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 1440,
+    "route": "/chapter-17/academic-benchmarks/",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 1440,
+    "route": "/ko/",
+    "errors": [],
+    "issues": []
+  },
+  {
+    "width": 1440,
+    "route": "/ko/chapter-17/academic-benchmarks/",
+    "errors": [],
+    "issues": []
+  }
+]

@@ -41,7 +41,7 @@ Where:
 *   $N_c, D_c, C_c$ are constants representing characteristic scales.
 *   $L_{\text{irreducible}}$ is the **inherent entropy** of the dataset. 
 
-![scaling_laws_log_log](../../assets/images/chapter-8/scaling_laws_log_log_1.png)
+> **A numerical intuition.** If the excess loss above the floor scales as $C^{-0.05}$, doubling compute multiplies that excess loss by $2^{-0.05} \approx 0.966$: about a 3.4% reduction. This is an illustration of the fitted equation, not a measured improvement for a particular model. The total loss falls by less than 3.4% when the floor is positive.
 
 ### The Irreducible Loss Floor
 
@@ -55,7 +55,7 @@ The power law is most clearly visualized on a log-log plot. If we ignore the irr
 
 $$ \log L(C) \approx -\alpha_C \log C + \log(C_c^{\alpha_C}) $$
 
-This is the equation of a straight line ($y = mx + b$). This linearity is what makes scaling laws so powerful for engineering. You can plot the loss of a 10M, 100M, and 1B parameter model on a log-log graph, draw a straight line through them, and accurately predict the loss of a 100B parameter model.
+This is the equation of a straight line ($y = mx + b$). A fitted line becomes useful when it forecasts a larger, held-out pilot run. Straightness among smaller runs alone does not validate a hundredfold extrapolation.
 
 <PowerLawVisualizer client:load />
 

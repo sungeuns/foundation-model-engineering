@@ -8,11 +8,11 @@ import AttentionVisualizer from '../../../components/chapter-3/AttentionVisualiz
 
 # 3.1 Self-Attention Mathematics
 
-2017년 "Attention Is All You Need" (Vaswani et al.) 논문에서 소개된 트랜스포머 아키텍처는 순환 구조(RNN 등)를 **Self-Attention**이라는 매커니즘으로 대체하여 AI 분야에 혁명을 일으켰습니다. 이를 통해 모델은 시퀀스의 모든 토큰을 동시에 처리하고, 거리에 관계없이 토큰 간의 의존성을 모델링할 수 있게 되었습니다.
+순환 모델은 정보를 순서대로 전달합니다. 첫 번째 토큰과 백 번째 토큰을 연결하려면 중간 위치들을 거치는 계산이 필요합니다. Self-attention은 각 위치가 다른 위치의 정보를 직접 읽는 방법을 학습하게 합니다. 원래 트랜스포머는 이 방식으로 학습 예제 안에서 병렬 처리를 가로막던 순환 연산을 없앴습니다 [[1]](#ref-1).
 
-**비하인드 스토리:** 논문의 제목인 "Attention Is All You Need(필요한 것은 어텐션뿐이다)"는 당시로서는 매우 도발적인 주장이었습니다. 그동안 시퀀스 데이터 처리의 왕좌를 지키고 있던 RNN이나 LSTM을 완전히 배제하고, 오직 어텐션 메커니즘만으로 최고 성능을 낼 수 있다는 뜻이었기 때문입니다. 구글의 저자들은 번역 작업에서 RNN의 느린 속도에 답답함을 느껴 이 모델을 개발했고, 이 도발적인 제목은 결국 AI 역사를 바꾸는 예언이 되었습니다.
+“The key to the cabinets is missing.”이라는 문장을 생각해 봅시다. “is” 위치의 표현은 문장 앞부분 전체를 하나의 순환 상태에 압축하지 않고도 “key”의 정보를 가져올 수 있습니다. 이는 구조가 허용하는 동작이지, 특정 헤드가 이 문법 관계를 실제로 학습했다는 증거는 아닙니다. 인과적 디코더는 현재와 이전 위치만 읽으며, 학습을 병렬로 한다고 자기회귀 생성까지 병렬로 되는 것은 아닙니다.
 
-이 핵심 매커니즘을 친숙한 비유를 통해 이해해 봅시다.
+핵심은 세 단계입니다. 무엇을 찾을지 정하고, 읽을 수 있는 정보에 점수를 매긴 다음, 그 정보를 섞습니다. 파일 서랍장에 비유해 각 역할을 살펴보겠습니다.
 
 ---
 
@@ -25,11 +25,11 @@ import AttentionVisualizer from '../../../components/chapter-3/AttentionVisualiz
 *   **Value ($V$):** 이것은 폴더 안에 들어 있는 실제 내용입니다.
 
 필요한 정보를 찾기 위해:
-1.  당신의 **Query**를 모든 **Key**와 비교하여 어떤 폴더가 관련이 있는지 확인합니다.
-2.  각 폴더에 대한 **관련성 점수 (Attention weight)**를 계산합니다.
-3.  폴더에서 **Value**를 추출하되, 관련성 점수가 높은 폴더의 값에 더 많은 가중치를 부여합니다.
+1.  당신의 **Query** 를 모든 **Key** 와 비교하여 어떤 폴더가 관련이 있는지 확인합니다.
+2.  각 폴더에 대한 **관련성 점수 (Attention weight)** 를 계산합니다.
+3.  폴더에서 **Value** 를 추출하되, 관련성 점수가 높은 폴더의 값에 더 많은 가중치를 부여합니다.
 
-Self-Attention에서는 문장 속의 모든 단어가 Query, Key, Value로 작용하여 다른 모든 단어와 상호작용합니다.
+Self-attention에서는 각 토큰 위치가 query, key, value를 제공합니다. 읽을 수 있는 위치는 마스크가 정하며, 인과적 디코더는 미래 토큰을 볼 수 없습니다.
 
 ---
 
@@ -49,13 +49,13 @@ $$V = XW_V$$
 *   $W_V \in \mathbb{R}^{d_{model} \times d_v}$
 
 **왜 이렇게 할까요?**
-만약 세 가지 역할 모두에 $X$를 직접 사용한다면, self-attention 연산은 정적인 임베딩에만 전적으로 의존하게 될 것입니다. 선형 투영을 사용함으로써 모델은 동일한 단어에서 역할에 따라 다른 측면을 추출하는 방법을 배울 수 있습니다. 예를 들어, 어떤 단어가 다른 단어를 찾는 Query 역할을 할 때의 표현과, 검색 대상이 되는 Key 역할을 할 때의 표현을 다르게 가질 수 있습니다. 이는 모델의 표현력(expressiveness)을 크게 향상시킵니다.
+세 역할에 모두 $X$를 쓰면 “무엇을 찾을지”, “어떻게 검색될지”, “어떤 정보를 반환할지”가 같은 표현에 묶입니다. 서로 다른 투영을 학습하면 각 역할에 필요한 특징을 따로 정할 수 있습니다. 더 깊은 층의 $X$에는 이미 앞선 층에서 얻은 문맥 정보가 들어 있으므로, 항상 정적인 단어 임베딩인 것은 아닙니다.
 
 ---
 
 ## Scaled Dot-Product Attention의 수학적 원리
 
-Self-Attention의 핵심 연산은 **Scaled Dot-Product Attention**입니다. 행렬 $Q, K, V$로 묶인 Query, Key, Value 세트가 주어지면, 연산은 다음과 같이 정의됩니다:
+Self-Attention의 핵심 연산은 **Scaled Dot-Product Attention** 입니다. 행렬 $Q, K, V$로 묶인 Query, Key, Value 세트가 주어지면, 연산은 다음과 같이 정의됩니다:
 
 $$\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V$$
 
@@ -88,7 +88,9 @@ $$\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)
 
 ## PyTorch 구현
 
-이 연산을 PyTorch로 처음부터 구현해 보겠습니다. 이것이 트랜스포머의 핵심 빌딩 블록입니다.
+아래 작은 구현은 점수 행렬과 가중합을 직접 보여줍니다.
+
+> **의도적으로 단순화한 구현입니다.** CPU float32 예제이며 전체 어텐션 행렬을 메모리에 만듭니다. 드롭아웃, 혼합 정밀도 누적, 융합 커널, 캐시 위치 오프셋을 생략했습니다. 마스크에서 1/True는 허용된 위치를 뜻하며 각 쿼리 행에 적어도 하나의 key가 보여야 합니다. 그렇지 않으면 이 유한값 마스크 구현은 의미 없는 분포를 만듭니다.
 
 ```python
 import torch
@@ -140,7 +142,7 @@ print("Attention Weights Shape:", weights.shape)
 
 ## 예제: 어텐션 가중치 행렬
 
-단어들이 서로에게 어떻게 주의(attention)를 기울이는지 시각화해 보세요. 문장 속의 단어를 클릭하면 해당 단어가 다른 모든 단어에 부여하는 Attention weight를 볼 수 있습니다. (시뮬레이션된 데이터입니다).
+주의 가중치 한 행이 출력 벡터가 되기까지를 따라가 봅시다. 아래 예제는 네 토큰과 직접 지정한 2차원 Q, K, V 벡터를 사용합니다. 질의 토큰을 고르고 인과 마스크를 켜고 끄면서 가중치가 어떻게 달라지는지, 가중된 값들이 어떤 출력으로 합쳐지는지 확인하세요. 작은 입력에 대한 정확한 계산이며, 학습된 모델에서 측정한 주의 패턴은 아닙니다.
 
 <AttentionVisualizer client:load lang="ko" />
 
@@ -150,7 +152,7 @@ print("Attention Weights Shape:", weights.shape)
 
 <details>
 <summary>Quiz 1: Attention 공식에서 스케일링 요소 $\sqrt{d_k}$가 필요한 이유는 무엇인가요?</summary>
-*차원 $d_k$가 커짐에 따라 내적(dot product)의 크기도 커집니다. 이는 softmax 함수를 기울기가 매우 작은 영역(그라디언트 소실)으로 밀어 넣습니다. $\sqrt{d_k}$로 나누면 내적의 분산을 다시 대략 1로 스케일링하여 안정적인 그라디언트를 보장합니다.*
+*Query와 key의 성분이 서로 독립이고 평균 0, 분산 1이면 내적의 분산은 $d_k$입니다. $d_k$의 제곱근으로 나누면 이 가정 아래 분산이 1 근처에 유지되어 softmax 포화를 줄입니다. 학습한 벡터가 가정을 정확히 만족할 필요는 없으며 이 스케일링만으로 학습 안정성을 보장하지도 않습니다.*
 </details>
 
 <details>
@@ -159,13 +161,13 @@ print("Attention Weights Shape:", weights.shape)
 </details>
 
 <details>
-<summary>Quiz 3: 그림에서 "it"이 "animal"에 주의를 기울이면 학습한 상호 참조의 증거인가요?</summary>
-*아닙니다. 가중치는 교육을 위해 작성한 값이며 학습 모델의 측정값이 아닙니다. Attention만으로 인과적 기여를 입증할 수 없습니다. 양방향 인코더는 뒤의 "tired"를 볼 수 있지만 인과 디코더의 "it" 위치에서는 볼 수 없습니다. 메커니즘을 주장하려면 학습 모델에 통제된 개입을 해야 합니다.*
+<summary>Quiz 3: 대화형 예제에서 인과 마스크를 켜면, 첫 토큰의 출력이 온도를 바꿔도 달라지지 않는 이유는 무엇인가요?</summary>
+*첫 토큰의 질의에는 자기 자신만 보입니다. 따라서 허용된 모든 온도에서 정규화된 가중치는 1이고, 출력은 자신의 값 벡터 V₁ = [1, 0]입니다. 다른 토큰은 마스크에 의해 가중치가 0이므로 출력에 기여할 수 없습니다. 직접 지정한 이 벡터들은 계산 과정을 보여 줄 뿐, 모델이 학습한 단어 의미를 나타내지 않습니다.*
 </details>
 
 <details>
 <summary>Quiz 4: 입력 임베딩을 직접 사용하지 않고 선형 투영을 통해 Q, K, V를 만드는 이유는 무엇인가요?</summary>
-*선형 투영을 통해 모델은 동일한 단어라도 역할(Query, Key, Value)에 따라 다른 표현을 학습할 수 있습니다. 이는 정적 임베딩을 직접 사용하는 것에 비해 복잡한 관계를 포착하는 모델의 능력을 향상시킵니다.*
+*무엇을 찾을지 정하는 query, 검색될 특징인 key, 반환할 정보인 value에 서로 다른 특징을 학습할 수 있습니다. 깊은 층의 입력 $X$는 이미 문맥을 반영할 수 있습니다. 핵심은 정적 표현과 문맥 표현의 구분이 아니라 역할의 분리입니다.*
 </details>
 
 <details>
@@ -174,13 +176,8 @@ print("Attention Weights Shape:", weights.shape)
 </details>
 
 <details>
-<summary>Quiz 6: 시퀀스 길이 $T$, 임베딩 차원 $d_{model}$이며 $d_k = d_v = d_{model}$인 단일 셀프 어텐션 레이어의 파라미터 수와 총 부동 소수점 연산량(FLOPs)을 공식적으로 유도하시오.</summary>
-*파라미터 수: 레이어는 각각 $d_{model} \times d_{model}$ 차원을 갖는 투영 행렬 $\mathbf{W}_Q, \mathbf{W}_K, \mathbf{W}_V$가 필요합니다. 따라서 총 파라미터 수는 $3d_{model}^2$입니다. (단순화를 위해 편향(Bias)은 제외).
-FLOPs: 1. 선형 투영: $X\mathbf{W}_Q, X\mathbf{W}_K, X\mathbf{W}_V$는 각각 $2 \times T \times d_{model}^2$ FLOPs가 필요합니다. 총합: $6Td_{model}^2$.
-2. 어텐션 행렬 $QK^T$: $T \times d_{model}$ 행렬과 $d_{model} \times T$ 행렬의 곱은 $2T^2d_{model}$ FLOPs가 필요합니다.
-3. 소프트맥스 및 스케일링: $O(T^2)$ 연산이 필요합니다.
-4. $V$와의 곱셈: $T \times T$ 어텐션 행렬과 $T \times d_{model}$ 행렬의 곱은 $2T^2d_{model}$ FLOPs가 필요합니다.
-따라서 지배적인 총 FLOPs는 $6Td_{model}^2 + 4T^2d_{model}$입니다.*
+<summary>Quiz 6: 시퀀스 길이가 $T$, $d_k = d_v = d_{model}$일 때 Q, K, V 투영과 어텐션 핵심 연산의 파라미터 및 지배적인 FLOPs를 구하세요. 정사각형 출력 투영을 더하면 어떻게 달라지나요?</summary>
+*편향과 출력 투영을 제외하면 세 투영 행렬의 파라미터는 $3d_{model}^2$개입니다. 곱셈과 덧셈을 각각 한 FLOP으로 세면 투영에는 $6Td_{model}^2$, $QK^T$와 value 가중합에는 합계 $4T^2d_{model}$가 필요합니다. 지배적인 총량은 $6Td_{model}^2 + 4T^2d_{model}$이며, 스케일링과 softmax에 $O(T^2)$ 연산이 추가됩니다. $W_O \in \mathbb{R}^{d_{model} \times d_{model}}$를 더하면 파라미터는 $4d_{model}^2$, 지배적인 FLOPs는 $8Td_{model}^2 + 4T^2d_{model}$가 됩니다. 정규화와 피드포워드 하위 층은 이 계산에 포함하지 않습니다.*
 </details>
 
 ---

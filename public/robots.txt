@@ -1,3 +1,5 @@
+# Only a robots.txt at the host root controls crawling. On GitHub project
+# Pages, submit the sitemap in Search Console; this subpath file is informational.
 User-agent: *
 Allow: /
 

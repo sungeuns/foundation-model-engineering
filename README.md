@@ -1,43 +1,43 @@
-# 📘 Foundation Model Engineering: From Theory to Production
+# Foundation Model Engineering
 
-This is an open-source learning resource, structured as a textbook, for readers who want to understand the engineering stack behind modern Foundation Models in a serious way. The primary audience is:
+**Understand the model. Measure the trade-offs. Build a system you can test.**
 
-- **AI Engineers** building or evaluating LLM systems, inference stacks, RAG pipelines, and agentic workflows.
-- **Research-Oriented Readers** who want a broad but technically grounded map of the field, from model fundamentals to current architecture and systems trends.
+A free textbook for AI engineers, with interactive explanations, PyTorch examples, and CPU labs. Read in **[English](https://sungeuns.github.io/foundation-model-engineering/)** or **[한국어](https://sungeuns.github.io/foundation-model-engineering/ko/)**. No account required.
 
-If you have ever wondered:
-- *Why did the field evolve from RNNs to Transformers, MoE systems, long-context serving, and agentic architectures?*
-- *How do modern models trade off memory, throughput, latency, quality, and alignment?*
-- *What mathematical and systems ideas actually matter when moving from papers to practical AI systems?*
+[![The book's attention demo calculates token weights and an output vector from explicit Q, K, and V vectors.](public/social/attention-demo.png)](https://sungeuns.github.io/foundation-model-engineering/chapter-3/self-attention-mathematics/)
 
-This resource is for you. It goes beyond surface-level summaries and API usage, combining rigorous conceptual explanations, concept-focused PyTorch implementations, and **interactive web-based visualizers** for difficult topics.
+*Screenshot of the book's calculated toy-attention demo. [Try it](https://sungeuns.github.io/foundation-model-engineering/chapter-3/self-attention-mathematics/): choose a query, mask future tokens, and inspect the weighted output. These are authored vectors, not measurements from a trained model.*
 
-This book is **not** optimized as a beginner-friendly introduction for all software developers. It assumes that the reader is comfortable with technical abstraction and is willing to engage with systems, modeling trade-offs, and some mathematical detail.
+## Start with one question
 
-> **Translation Notice**: The Korean version of this resource has been translated with the assistance of Gemini. As a result, some phrasing might feel unnatural. We actively welcome improvements and corrections! Please refer to our [CONTRIBUTING.md](CONTRIBUTING.md) guide to see how you can contribute to making this resource better.
+You do not need to read the whole book first.
 
-> **A Living Document**: The field of AI and Foundation Models is evolving at a breakneck pace. While we strive to include the latest advancements and models (such as Llama, DeepSeek, Qwen, and Gemma), new breakthroughs happen every day. This project aims to be a living document, and we highly encourage contributions, updates, and corrections from the community to keep this resource current. Please refer to our [CONTRIBUTING.md](CONTRIBUTING.md) guide to see how you can help!
+| Your question | Start here | What you can do |
+| --- | --- | --- |
+| The weights fit. Why does serving run out of memory? | [KV cache management](https://sungeuns.github.io/foundation-model-engineering/chapter-12/kv-cache-management/) | Calculate memory as context, batch size, and KV heads change. |
+| What does an attention weight actually do? | [Self-attention mathematics](https://sungeuns.github.io/foundation-model-engineering/chapter-3/self-attention-mathematics/) | Follow query/key scores through masking, softmax, and a weighted sum. |
+| My RAG answer is wrong. Which stage should I fix? | [RAG failure modes](https://sungeuns.github.io/foundation-model-engineering/chapter-14/rag-failure-modes-and-operational-design/) | Trace retrieval, reranking, context packing, and generation separately. |
+| Does a higher evaluation score justify a release? | [Experimental design and uncertainty](https://sungeuns.github.io/foundation-model-engineering/chapter-17/experimental-design-and-uncertainty/) | Run a paired evaluation and inspect the decision boundary. |
+| Can I train a model, break it, and resume it exactly? | [Tiny decoder lab](https://sungeuns.github.io/foundation-model-engineering/chapter-7/tiny-decoder-lab/) | Run a CPU experiment with a causal check, an ablation, and checkpoint replay. |
 
-## 🌟 Key Features
-- **End-to-End Scope**: Covers model history, architectures, scaling, post-training, inference, RAG, agents, evaluation, safety, interpretability, and emerging directions.
-- **Systems + Modeling Perspective**: Emphasizes why architectural ideas matter for training, serving, memory, throughput, and product design.
-- **Practical Code Examples**: Includes concept-focused PyTorch implementations to ground abstract ideas.
-- **Interactive Visualizations**: Uses web-based visualizers to make difficult mechanics more intuitive.
-- **Living Document**: Includes recent topics, including commercial model benchmark snapshots, and welcomes corrections, updates, and contributions as the field evolves.
+## What is inside
 
-## 🎯 Reader Fit
+20 chapters connect architectures, pre-training, post-training, inference, retrieval, agents, evaluation, safety, and interpretability. Each lesson ends with reasoning questions and references. The [learning paths](https://sungeuns.github.io/foundation-model-engineering/chapter-1/learning-path-and-mastery/) help you check prerequisites and choose a route.
 
-This book is a strong fit if you are:
+Expect Python, linear algebra, and probability. Examples identify their simplifications; teaching simulations are not benchmark results. Time-sensitive comparisons identify their source and snapshot date. A provider's claim is kept separate from independently measured evidence.
 
-- an AI engineer who wants deeper architectural and systems intuition beyond framework usage
-- a researcher or advanced learner who wants a broad conceptual map of the foundation model landscape
-- a developer moving into LLM infrastructure, retrieval, or agentic systems work
+### Try a CPU lab
 
-This book may feel steep if you are:
+The [setup and experiment guide](https://sungeuns.github.io/foundation-model-engineering/chapter-7/tiny-decoder-lab/) explains dependencies, expected outputs, and limitations. Lab source is also in [`public/labs/`](public/labs/). These small experiments teach mechanics, not natural-language model quality.
 
-- looking for a first introduction to machine learning or deep learning
-- primarily interested in prompt engineering or API integration without model/system depth
-- expecting a purely production playbook with minimal theory
+### Follow and contribute
+
+- Bookmark the project with a GitHub star if it is useful. Share a specific lesson with someone facing the same engineering problem.
+- Subscribe to chapter updates: [English RSS](https://sungeuns.github.io/foundation-model-engineering/feed.xml) · [한국어 RSS](https://sungeuns.github.io/foundation-model-engineering/ko/feed.xml).
+- [Report a correction](https://github.com/sungeuns/foundation-model-engineering/issues/new/choose): include the page, the claim or behavior, and a source or reproducible example.
+- [Contribute](CONTRIBUTING.md): technical corrections, clearer examples, Korean phrasing, and accessible interactions are welcome.
+
+This is an independent project by Seongeun So, developed with AI assistance. English and Korean pages are maintained together. Review records describe what was actually inspected; they are not a guarantee that every claim or example is error-free.
 
 ---
 
@@ -49,7 +49,7 @@ This book may feel steep if you are:
 
 ## Getting Started
 
-To run this project locally, you need Node.js v22 or higher.
+To run this project locally, you need Node.js v22.12.0 or higher.
 
 ### Prerequisites
 
@@ -71,7 +71,7 @@ nvm install 22
 Install dependencies:
 
 ```bash
-npm install
+npm ci
 ```
 
 ### Development

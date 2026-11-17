@@ -1,0 +1,16 @@
+{
+  "observed_date": "2026-11-18",
+  "timezone": "Asia/Seoul",
+  "source": "https://api.github.com/repos/sungeuns/foundation-model-engineering",
+  "stars": 25,
+  "forks": 2,
+  "topics": [],
+  "target_stars_exclusive_minimum": 1000,
+  "search_console": {
+    "accessed": false,
+    "clicks": null,
+    "impressions": null,
+    "indexed_pages": null
+  },
+  "external_posts": []
+}

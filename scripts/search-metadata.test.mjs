@@ -35,6 +35,9 @@ test('every built page has canonical, reciprocal language links, and a local soc
     }
     assert.ok(head.includes(`property="og:image" content="${base}/social/cover-${lang}.png"`), route);
     assert.ok(head.includes('name="twitter:card" content="summary_large_image"'), route);
+    const feedPath = `/foundation-model-engineering/${lang === 'ko' ? 'ko/' : ''}feed.xml`;
+    assert.ok(head.includes(`type="application/rss+xml" title="${lang === 'ko' ? '최근 수정한 장 (RSS)' : 'Recently edited chapters (RSS)'}" href="${feedPath}"`), `${route}: feed discovery`);
+    assert.ok(existsSync(`${outputDir}/${lang === 'ko' ? 'ko/' : ''}feed.xml`));
     assert.ok(existsSync(`${outputDir}/social/cover-${lang}.png`));
     const actualDescription = head.match(/name="description" content="([^"]+)"/)?.[1];
     assert.ok(actualDescription, `${route}: missing description`);

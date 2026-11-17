@@ -1,0 +1,24 @@
+name: Explain a missing connection / 설명 보완
+description: Tell us where the explanation stopped making sense or suggest a worked example.
+title: "[Learning gap] "
+body:
+  - type: input
+    id: topic
+    attributes:
+      label: Lesson or topic / 장 또는 주제
+    validations:
+      required: true
+  - type: textarea
+    id: question
+    attributes:
+      label: What were you trying to understand or build? / 이해하거나 만들려던 것
+      description: A concrete question helps more than a request to add more detail. English or Korean is welcome.
+    validations:
+      required: true
+  - type: textarea
+    id: gap
+    attributes:
+      label: Where did you get stuck? / 막힌 지점
+      description: Include what you already understand and which step needs an example, diagram, derivation, or experiment.
+    validations:
+      required: true

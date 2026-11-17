@@ -105,7 +105,7 @@ PTQ has no universal eight- or four-bit accuracy floor. Lower precision can incr
 
 **Quantization-Aware Training (QAT)** changes the optimization process. Instead of quantizing after the fact, QAT inserts "Fake Quantization" nodes into the computational graph *during* training or fine-tuning. The model’s optimizer "sees" the quantization error during the forward pass and adjusts the master weights during the backward pass to compensate. The model actively learns to survive the low-precision constraints.
 
-![Loss Landscape Comparison](../../assets/images/chapter-13/ptq_vs_qat_landscape.png)
+> **Compare exported models, not imagined loss landscapes.** QAT gives weights a chance to adapt to quantization; it does not guarantee a better minimum. Compare PTQ and QAT with the same held-out tasks, precision target, and deployment kernels, including adaptation cost.
 
 ### The Straight-Through Estimator (STE)
 

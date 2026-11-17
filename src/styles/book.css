@@ -383,7 +383,7 @@ html { scroll-padding-top: 1.5rem; }
 :focus-visible { outline: 3px solid #7650a2; outline-offset: 3px; }
 .skip-link { position: fixed; top: -6rem; left: 1rem; z-index: 1100; padding: .75rem 1rem; background: white; color: #542a72; }
 .skip-link:focus { top: .5rem; }
-.sidebar h1 { font-size: 1.2rem; margin: 0 0 1rem; }
+.sidebar-title { font-size: 1.2rem; font-weight: 700; line-height: 1.2; margin: 0 0 1rem; }
 .sidebar h2 { font-size: .95rem; line-height: 1.5; margin-top: 1.5rem; color: #3c4756; }
 .sidebar a { font-size: .9rem; line-height: 1.5; padding: .45rem .55rem; }
 .sidebar ul { padding-left: .25rem; }
