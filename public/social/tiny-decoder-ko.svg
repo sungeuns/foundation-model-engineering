@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" xml:lang="ko" role="img" aria-labelledby="card-title card-description">
+<title id="card-title">작은 디코더를 직접 학습해 보세요</title><desc id="card-description">CPU PyTorch 실습: 작은 디코더로 합성 토큰 복사 과제를 학습하고 인과 마스크, 과거 문맥 제거, 체크포인트 재개를 검증합니다.</desc>
+<rect width="1200" height="630" fill="#f5f2eb"/><rect width="12" height="630" fill="#256257"/>
+<g font-family="Noto Sans CJK KR, DejaVu Sans, sans-serif" fill="#192a30">
+<text x="64" y="61" font-size="19" fill="#256257" font-weight="600" >파운데이션 모델 엔지니어링</text>
+<text x="1136" y="61" font-size="18" fill="#256257" text-anchor="end">7.5 · 실행 실습</text>
+<text x="61" y="163" font-size="52" font-weight="700">작은 디코더를</text>
+<text x="61" y="232" font-size="52" font-weight="700">직접 학습해 보세요</text>
+<text x="64" y="293" font-size="24" fill="#4e5d61">결과를 믿기 전에, 동작부터 확인합니다.</text>
+<rect x="64" y="344" width="215" height="48" rx="8" fill="#e3ece5"/>
+<text x="82" y="375" font-size="21" fill="#256257">CPU + PyTorch</text>
+<rect x="295" y="344" width="324" height="48" rx="8" fill="#ebe9df"/>
+<text x="313" y="375" font-size="21" fill="#4e5d61">합성 토큰 복사 과제</text>
+<text x="64" y="445" font-size="21" fill="#4e5d61">코드와 설명을 읽고, 직접 검증합니다.</text>
+<rect x="716" y="112" width="420" height="390" rx="20" fill="#ffffff" stroke="#c5cec6"/>
+<text x="742" y="150" font-size="19" fill="#256257" font-weight="600">세 가지 동작을 확인하세요</text>
+<text x="742" y="201" font-size="25" font-weight="700">인과 마스크</text><text x="742" y="232" font-size="18" fill="#4e5d61">미래 토큰의 정보가 새어 나올까?</text>
+<path d="M742 267H1110" stroke="#dbe1db"/><text x="742" y="307" font-size="25" font-weight="700">과거 문맥 제거</text><text x="742" y="338" font-size="18" fill="#4e5d61">과거 토큰을 가리면 무엇이 달라질까?</text>
+<path d="M742 373H1110" stroke="#dbe1db"/><text x="742" y="413" font-size="25" font-weight="700">체크포인트 재개</text><text x="742" y="444" font-size="18" fill="#4e5d61">복원한 학습은 같은 경로를 따를까?</text>
+
+<path d="M64 543H1136" stroke="#bbc8c1" stroke-width="2"/>
+<text x="64" y="587" font-size="20" fill="#256257">무료 온라인 교재 · 한국어 / 영어</text>
+<text x="1136" y="587" font-size="20" fill="#4e5d61" text-anchor="end">sungeuns.github.io</text>
+</g></svg>

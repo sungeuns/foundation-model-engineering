@@ -28,7 +28,16 @@ Expect Python, linear algebra, and probability. Examples identify their simplifi
 
 ### Try a CPU lab
 
-The [setup and experiment guide](https://sungeuns.github.io/foundation-model-engineering/chapter-7/tiny-decoder-lab/) explains dependencies, expected outputs, and limitations. Lab source is also in [`public/labs/`](public/labs/). These small experiments teach mechanics, not natural-language model quality.
+**Train, break, and resume a tiny decoder:** open the [English notebook](https://colab.research.google.com/github/sungeuns/foundation-model-engineering/blob/main/public/labs/tiny-decoder-lab.ipynb) or [Korean notebook](https://colab.research.google.com/github/sungeuns/foundation-model-engineering/blob/main/public/labs/tiny-decoder-lab-ko.ipynb) in Colab. Use a CPU runtime. Predict what removing context will do, train the model, and inspect causal and checkpoint-replay checks. Colab execution requires Google sign-in; [download the notebooks](public/labs/) for local Jupyter instead. No model download or API key is needed. The [guide](https://sungeuns.github.io/foundation-model-engineering/chapter-7/tiny-decoder-lab/) explains Python/PyTorch setup and the experiment's limits.
+
+**Test a release decision without extra packages:** from a checkout, run:
+
+```bash
+python public/labs/paired_release.py --scenario gain
+python public/labs/paired_release.py --scenario regression
+```
+
+Then try `uncertain` and `missing`. The [evaluation guide](https://sungeuns.github.io/foundation-model-engineering/chapter-17/experimental-design-and-uncertainty/) explains why a target improvement can still produce Review or Block. This lab uses Python 3.10+ and the standard library. Both labs use synthetic teaching tasks; their results do not measure natural-language model quality.
 
 ### Follow and contribute
 

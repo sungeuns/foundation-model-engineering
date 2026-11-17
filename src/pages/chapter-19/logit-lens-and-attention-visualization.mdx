@@ -5,217 +5,151 @@ lang: en
 ---
 
 import LogitLensVisualizer from '../../components/chapter-19/LogitLensVisualizer.tsx';
+import LogitLensPipeline from '../../components/chapter-19/LogitLensPipeline.astro';
 
 # 19.2 Logit Lens & Attention Visualization
 
-Intermediate readouts help diagnose how output distributions change during a forward pass. A logit lens projects residual states into vocabulary space; attention visualization shows weighting patterns between token positions. These observations can guide experiments, but they do not expose human-like beliefs or establish a causal explanation by themselves. Pin the extraction convention and test hypotheses with interventions.
+Two intermediate states both read out `Paris` as their top token. The largest entry matches, but the rest of the readout can still change. In the worked example below, the top token stays the same while its probability falls from about 67.52% to 54.05%.
 
----
+A **logit lens** applies a model's output decoder to an intermediate residual state. An attention view shows weights between token positions. Both help locate a question worth investigating; neither is a direct transcript of a model's thoughts.
 
-## 1. The Logit Lens: Reading the Residual Stream
+## 1. What a Logit Lens Actually Computes
 
-In a standard decoder-only Transformer, the final prediction is made by taking the residual stream from the very last layer ($h_L$), applying a final Layer Normalization, and projecting it through the unembedding matrix ($W_U$) to yield a probability distribution over the vocabulary:
-
-$$
-P(x_{t+1}) = \text{softmax}(W_U \cdot \text{LN}(h_L))
-$$
-
-In 2020, an independent AI alignment researcher known as *nostalgebraist* proposed a radically simple idea [[1]](#ref-1). Since the residual stream acts as a central communication channel that accumulates information additively, what if we just apply the final unembedding matrix to the *intermediate* layers?
+For a decoder-only model with a linear vocabulary head and no additional logit transformation, let $h_{l,t}\in\mathbb R^d$ be the residual state after block $l$, before the model's final normalization, at input position $t$. A direct readout is
 
 $$
-P_l(x_{t+1}) = \text{softmax}(W_U \cdot \text{LN}(h_l)) \quad \text{for } l < L
+z_{l,t}=W_U\operatorname{Norm}_{final}(h_{l,t})+b_U,
+\qquad p_{l,t}=\operatorname{softmax}(z_{l,t}).
 $$
 
+Here $d$ is hidden width, $W_U\in\mathbb R^{V\times d}$ is the output matrix for vocabulary size $V$, and $b_U\in\mathbb R^V$ is its bias, or zero when absent. Softmax runs over the vocabulary. The state at position $t$ reads out a prediction for **position $t+1$**, not a label for the input token at $t$.
 
+Use the model's actual final normalization, such as LayerNorm or RMSNorm, with its learned parameters. An activation interface may already return the last state after normalization; applying the norm again changes the procedure. If the architecture applies further logit scaling or soft-capping, reproduce those operations as part of the readout. At the final block, a correctly extracted readout using the complete output path should agree with the ordinary model logits within numerical tolerance. At an earlier block, it is a diagnostic projection that skips the remaining computation.
 
-This technique is called the **Logit Lens**. It acts as a decoder ring, translating the dense vector $h_l \in \mathbb{R}^d$ back into the vocabulary space at any arbitrary layer $l$.
+nostalgebraist's original post introduced this lens for inspecting intermediate GPT representations [[1]](#ref-1). The path below makes each operation explicit.
 
-### What to Inspect
+<LogitLensPipeline lang="en" />
 
-1. Compare the full probability distributions, not only top tokens. A stable argmax does not mean later layers pass information unchanged.
-2. Inspect whether entity readouts refine or reverse across layers and prompt variants. A syntax-to-semantics progression is a hypothesis to test, not a universal layer schedule.
-3. Distinguish a projection's decoding ability from the information present in the state. A next-token readout does not prove the input representation was erased.
+## 2. Compute a Small Readout Yourself
 
-![logit_lens_concept](../../assets/images/chapter-19/logit_lens_concept.png)
-*Source: AI-generated illustration*
-
----
-
-## 2. Engineering the Extraction (PyTorch)
-
-To implement the Logit Lens, we must extract intermediate hidden states during the forward pass. Standard HuggingFace APIs usually provide an `output_hidden_states=True` flag, but understanding how to extract these manually using PyTorch hooks is critical for custom architectures or memory-constrained environments where you don't want to store the entire computational graph.
-
-> **Deliberately simplified, not smoke-tested here.** Assumes one BF16-capable CUDA device with enough memory, a compatible LLaMA-like layer/norm/head layout, and a single unpadded prompt. It retains every layer state and full-vocabulary logits; chunking, packed/padded batches, quantized or distributed placement, version-specific hooks, and memory-efficient streaming are omitted. Pin and verify the actual model implementation before adapting it.
-
-```python
-import torch
-import torch.nn as nn
-from transformers import AutoModelForCausalLM, AutoTokenizer
-from typing import List
-
-@torch.inference_mode()
-def compute_logit_lens(model_name: str, prompt: str) -> List[torch.Tensor]:
-    """
-    Extracts vocabulary logits from every intermediate layer of an LLM.
-    """
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForCausalLM.from_pretrained(
-        model_name, torch_dtype=torch.bfloat16
-    ).to("cuda").eval()
-
-    inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
-    hidden_states = []
-
-    # Define a hook to capture the output of each transformer block
-    def hook_fn(module, input, output):
-        # output[0] contains the hidden states of shape (batch, seq_len, hidden_dim)
-        state = output[0] if isinstance(output, tuple) else output
-        hidden_states.append(state.detach())
-
-    # Register hooks on all layers
-    # Note: Architecture paths vary. For LLaMA/Mistral it is `model.model.layers`.
-    # For GPT-2 it would be `model.transformer.h`.
-    hooks = []
-    for layer in model.model.layers:
-        hooks.append(layer.register_forward_hook(hook_fn))
-
-    # Forward pass (no gradients needed)
-    try:
-        with torch.no_grad():
-            _ = model(**inputs)
-    finally:
-        for hook in hooks:
-            hook.remove()
-
-    intermediate_logits = []
-
-    # Project each intermediate state to the vocabulary
-    for h in hidden_states:
-        # Crucial: We must apply the final LayerNorm before the lm_head
-        # For LLaMA: model.model.norm(h)
-        h_norm = model.model.norm(h)
-
-        # Project using the unembedding matrix
-        logits = model.lm_head(h_norm)
-        intermediate_logits.append(logits)
-
-    return intermediate_logits
-
-# Example Usage:
-# logits_per_layer = compute_logit_lens("meta-llama/Llama-2-7b-hf", "The capital of France is")
-# logits_per_layer[10] -> Contains the vocabulary distribution at Layer 10
-```
-
----
-
-## 3. The Tuned Lens: Overcoming Basis Shift
-
-A final output head need not decode intermediate residual states reliably. Basis and distribution shifts can make direct readouts misleading. Tied input/output embeddings do not by themselves guarantee intermediate alignment; compare the readout with final predictions on held-out data.
-
-To solve this, Belrose et al. (2023) introduced the **Tuned Lens** [[2]](#ref-2). Instead of directly applying $W_U$, they train a small affine transformation (a translator) consisting of a matrix $A_l$ and a bias $b_l$ for each layer $l$:
-
-$$
-P_l(x_{t+1}) = \text{softmax}(W_U \cdot \operatorname{Norm}_{final}(A_l h_l + b_l))
-$$
-
-Here $h_l$ is an intermediate residual state, $A_l,b_l$ the learned translator, $\operatorname{Norm}_{final}$ the frozen model’s final normalization, and $W_U$ its output projection. Include an output bias if the model has one.
-
-### The Objective Function
-Crucially, the Tuned Lens is *not* trained to predict the ground-truth next token. It is trained to minimize the KL divergence between its prediction and the **final layer's prediction**:
-
-$$
-\mathcal{L} = D_{KL}(P_L \parallel P_l)
-$$
-
-The target is the frozen model's final distribution, including its mistakes, rather than ground truth. This trains a predictive probe; matching final predictions alone does not establish what a layer believes or its causal role. Use controlled interventions for that stronger claim.
-
----
-
-## 4. Attention Visualization: The "Where" of Information
-
-Logit-lens readouts suggest candidate vocabulary interpretations. Attention visualizations show attention weights; neither directly reveals a model’s thoughts.
-
-Tools like BertViz [[3]](#ref-3) allow researchers to inspect the otherwise opaque $QK^T$ matrix multiplications. Visualizing attention typically happens at three scales:
-
-1. **Neuron View**: Visualizes the dot product between specific Query and Key vectors. This is useful for seeing exactly which features trigger an attention match.
-2. **Head View**: Displays a bipartite graph connecting input tokens to context tokens based on the attention weights $\alpha_{ij}$ of a specific head. This is where we spot Induction Heads or grammatical routing (e.g., pronouns attending to nouns).
-3. **Model View**: A macroscopic grid showing the attention patterns of all heads across all layers simultaneously.
-
-![attention_head_view](../../assets/images/chapter-19/attention_head_view.png)
-*Source: AI-generated illustration*
-
-### The "Attention is Not Explanation" Caveat
-While visualizing attention is powerful, it is a common trap to equate attention weights directly with feature importance. As Jain & Wallace (2019) demonstrated [[4]](#ref-4), **Attention is not Explanation**.
-
-Just because Head $H$ attends heavily to the token `apple`, it does not mean the model is extracting the semantic meaning of "apple".
-* The model might be using `apple` purely as a positional anchor.
-* The attention might be directed to an **Attention Sink** (like the `<s>` or `[BOS]` token). Normalized weights can concentrate on an early token. This pattern alone does not establish what the value/output contribution does or whether the head is harmless.
-
-Attention weights describe part of a routing computation. Inspect value/output contributions and controlled interventions to test what information is transported; lens or SAE labels are diagnostic hypotheses.
-
----
-
-## 5. Interactive: The Logit Lens in Action
-
-To build an intuition for how predictions evolve across layers, explore the interactive Logit Lens table below. It uses authored top-token readouts for 13 indexed states (0–12), without measuring a checkpoint, for the prompt: *"The capital of France is"*.
-
-Notice how the prediction for the final token transitions from generic syntactic guesses to the specific factual answer as depth increases.
-
-
-
-
-
+The interactive example uses three authored vectors, one fixed output matrix and a four-token vocabulary. It contains no trained model. Compare states B and C with normalization enabled, then disable normalization and see which numbers change. The bars show all four probabilities, not a renormalized top-four subset of a larger vocabulary.
 
 <LogitLensVisualizer client:load locale="en" />
 
----
+> **Deliberately simplified, CPU-smoke-tested readout.** Python/PyTorch code below uses FP64, three fixed states and a fixed output head. RMS normalization has unit gain, zero output bias and epsilon $10^{-5}$. This is not model extraction or training: it omits tokenization, attention blocks, learned normalization parameters, hooks, batching/padding, model weights and causal validation of a real checkpoint.
 
-## 6. Use Readouts to Form Testable Hypotheses
+```python
+import torch
 
-Pin checkpoint, prompt/template, token positions, residual-stream location, normalization and output head. For a suspicious RAG answer, compare correct and incorrect entity readouts, source ablations and counterfactual evidence. A change in an intermediate argmax localizes a diagnostic signal; it does not identify the cause as pretraining, instruction tuning or decoding by itself.
+states = torch.tensor([
+    [0.6, 1.2, -0.6],  # A
+    [1.5, 0.3, -0.3],  # B
+    [1.2, 0.6, 0.3],   # C
+], dtype=torch.float64)
+tokens = ["Paris", "London", "city", "other"]
+output_head = torch.tensor([
+    [1.0, 0.0, 0.0],
+    [0.0, 1.0, 0.0],
+    [0.0, 0.0, 1.0],
+    [-0.5, -0.5, -0.5],
+], dtype=torch.float64)
+normalized = states / (states.square().mean(-1, keepdim=True) + 1e-5).sqrt()
+logits = normalized @ output_head.T  # [3 states, 4 vocabulary entries]
+probabilities = logits.softmax(-1)
+assert torch.allclose(probabilities.sum(-1), torch.ones(3, dtype=torch.float64))
+assert probabilities.argmax(-1).tolist() == [1, 0, 0]
+assert not torch.allclose(probabilities[1], probabilities[2])
+for name, row in zip("ABC", probabilities):
+    top = row.argmax().item()
+    print(name, tokens[top], round(100 * row[top].item(), 2))
+# A London 57.71; B Paris 67.52; C Paris 54.05
+```
 
-Inspect attention alongside value/output contributions and controlled interventions. High BOS attention can be consistent with an attention-sink pattern, but weights alone do not prove a head is harmless or unused. Compare the same positions and layers across cases rather than infer causal routing from an attractive heatmap.
+The calculation demonstrates a counterexample to “same argmax means same distribution.” It does not demonstrate that real layers follow A → B → C, or that a probability assigned to `Paris` is calibrated factual confidence. Intermediate predictions can reverse, remain uninformative or inherit a mistaken final answer.
 
-For early exit or verification, measure the complete policy's task quality, calibration, selective risk, latency and cost. Stable top tokens can still be wrong; define critical-slice gates and a known-good full-depth route. The synthetic table is a teaching aid, not evidence for removing layers from a deployed model.
+## 3. Extract the Right Tensor Before Interpreting It
 
----
+For a real checkpoint, record the prompt/template and token IDs, token position, block index, pre/post-normalization location, dtype and output head. “Layer 20 activation” is insufficient: a block input, attention output and post-block residual are different tensors. At a fixed position, compare complete readouts under the same extraction convention.
 
-## 7. Summary and Open Questions
+When using hooks, inspect the actual module contract. Some blocks return a tensor, others a tuple. Taking `[0]` from a tensor removes its batch dimension; taking it from a tuple may select the intended tensor. Remove hooks after the run, including on exceptions. Inference without gradients avoids retaining an autograd graph, but storing detached states still consumes memory.
 
-The Logit Lens and Attention Visualization provide us with the macro-level tools to observe the life cycle of a token prediction. We can watch a model's confidence gradually build in the residual stream, and we can map the attention highways that transport the context required to make that prediction.
+For an authored FP32 budget with 32 captured states, batch one, 512 positions, width 4,096 and vocabulary 50,000:
 
-MLP size and function depend on the architecture. A lens readout alone does not show where a fact is stored or whether a component causally controls the answer. Use targeted interventions to test a hypothesis raised by these visualizations.
+| Retained object | Calculation | Payload |
+| --- | --- | --- |
+| All residual states | $32\times512\times4096\times4$ bytes | 256 MiB |
+| All full-vocabulary readouts | $32\times512\times50000\times4$ bytes | About 3.05 GiB |
+| Readouts at one selected position | $32\times50000\times4$ bytes | About 6.10 MiB |
 
-* How do we read the specific knowledge stored inside an MLP?
-* Can we test if a model "knows" a fact even if it chooses not to output it?
+These are separate allocations, excluding weights, forward activations, temporaries and allocator reserve. If only the final prompt position is relevant, extract and project that position rather than retaining all logits. Streaming states can further reduce retention, but hook timing, model placement and available memory still require an implementation-specific check.
 
-To answer these questions, we must move beyond passive lenses and introduce active interventions, leading us to our next topic: **19.3 Probing Classifiers**.
+Use a small fixture to verify that the final-block readout, including any model-specific post-head transformations, matches normal forward logits and that positions predict the intended next tokens. Then compare several prompts and counterfactual evidence. Do not infer that a readout failure means the state contains no relevant information: the decoder itself may be poorly matched to that state.
+
+## 4. The Tuned Lens Changes the Decoder
+
+The final output head need not decode intermediate states reliably. Retaining the simplified linear-head convention above, Belrose et al. train a layer-specific affine translator before the frozen final decoder [[2]](#ref-2):
+
+$$
+p_{l,t}=\operatorname{softmax}\!\left(W_U\operatorname{Norm}_{final}(A_lh_{l,t}+b_l)+b_U\right).
+$$
+
+Here $A_l\in\mathbb R^{d\times d}$ and $b_l\in\mathbb R^d$ are learned translator parameters. The training target is the frozen model's final distribution $p_{L,t}$, using $D_{KL}(p_{L,t}\parallel p_{l,t})$, rather than the ground-truth next token. Its targets therefore include the base model's errors.
+
+A tuned lens can improve the readout while leaving the base model unchanged. Predictive agreement alone does not establish the causal role of an activation; the paper's causal experiments ask a separate question. For a reproducible fitted lens, retain the base-model identity, activation location, translator parameters, training-data split and objective configuration, and evaluate on held-out prompts. Do not compare different lenses as if only the underlying model changed.
+
+## 5. Attention Weights Need Values and Outputs
+
+BertViz's neuron, head and model views expose different parts of attention [[3]](#ref-3). A neuron view inspects query/key components, a head view shows weights between positions, and a model view compares heads and layers. Label query versus key axes, the selected layer/head, and causal or padding masks. Token positions on both sides are not separate generated input/output sentences.
+
+For one query and two available keys, consider the following authored scalar-value example. The single-head output before any output projection is $o=\alpha_1v_1+\alpha_2v_2$.
+
+| Case | Attention weights $(\alpha_1,\alpha_2)$ | Values $(v_1,v_2)$ | Weighted contributions | Output |
+| --- | --- | --- | --- | --- |
+| A | $(0.9,0.1)$ | $(0.01,10)$ | $(0.009,1)$ | 1.009 |
+| B | $(0.9,0.1)$ | $(10,0.01)$ | $(9,0.001)$ | 9.001 |
+
+The heatmap is identical, but the outputs differ. In case A, the smaller attention weight multiplies the much larger value and contributes more. Real heads add vector directions and an output projection, and other components can reinforce or cancel those contributions.
+
+Jain and Wallace report cases where attention weights are poor explanations in the studied NLP models [[4]](#ref-4). That is evidence against treating a weight map as a complete causal attribution, not a theorem that attention is always useless. High BOS attention can suggest an attention-sink hypothesis; inspect value/output contributions and controlled interventions before concluding that the head is unimportant or harmless.
+
+## 6. Turn a Picture into an Experiment
+
+For a suspicious RAG answer, hold the checkpoint, prompt format, extraction location and readout fixed. Change one source fact, remove one evidence passage, or patch a candidate activation, and measure the effect on the final answer and relevant control cases. An intervention can create an out-of-distribution state, so compare plausible controls rather than treating every output change as proof of a natural mechanism.
+
+For early exit, evaluate the complete stopping policy: task quality, calibration, selective risk, critical slices, latency and cost. Stable top tokens can be wrong. Keep a tested full-depth route and revert if the policy fails its predeclared release gates.
+
+The next section, **19.3 Probing Classifiers**, asks whether a specified property is decodable from a state. A successful probe is another measurement; it also needs a separate argument before becoming a causal explanation.
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: Why can stable top-token readouts fail to justify removing later layers?</summary>
-*Probabilities and representations can change without changing argmax, and a stable prediction can be wrong. Measure end-to-end early-exit quality and error costs.*
+<summary>Quiz 1: What can you not infer from states B and C having the same top token?</summary>
+*They share an argmax but have different complete probability distributions. An argmax discards probability and representation changes. This counterexample does not itself prove that any real later layer is useful; that requires a task-level intervention or early-exit evaluation.*
 </details>
 
 <details>
-<summary>Quiz 2: Does a tuned lens matching final logits prove a causal mechanism?</summary>
-*No. It measures predictive agreement with the final distribution. Controlled interventions and counterfactual tests are needed for causal claims.*
+<summary>Quiz 2: A hidden-state API already returns the final normalized state. Should the lens apply the final norm again?</summary>
+*No. Extract the agreed residual location or bypass the extra norm for an already normalized state. Verify the final readout against ordinary model logits within a suitable numerical tolerance before interpreting intermediate readouts.*
 </details>
 
 <details>
-<summary>Quiz 3: Why must hooks handle both tuple and Tensor outputs?</summary>
-*Different model versions expose different block output contracts. Indexing a Tensor with [0] can silently remove the batch dimension instead of selecting a tuple element.*
+<summary>Quiz 3: Why does retaining full-vocabulary logits cost more than the residual states in the worked memory budget?</summary>
+*Each residual has width 4,096, while each readout has 50,000 vocabulary entries. The 32 × 512 FP32 readouts use about 3.05 GiB, compared with 256 MiB for residual states. Selecting one token position reduces retained readouts to about 6.10 MiB, without accounting for other runtime allocations.*
 </details>
 
 <details>
-<summary>Quiz 4: What should high BOS attention trigger?</summary>
-*A hypothesis about routing or sinks, followed by value/output analysis and controlled interventions. Attention weights alone cannot establish irrelevance or safety.*
+<summary>Quiz 4: Does a tuned lens learn ground truth by matching the final distribution?</summary>
+*No. It learns to predict the frozen base model's distribution, including its mistakes. Agreement measures decoding performance under that objective, not factual correctness or causal fidelity by itself.*
+</details>
+
+<details>
+<summary>Quiz 5: Why does the key with weight 0.1 contribute more in attention case A?</summary>
+*Its scalar value is 10, so its contribution is 1. The other contribution is 0.9 × 0.01 = 0.009. Weights without values and output processing cannot establish total contribution; the authored example is not a measurement of a real head.*
 </details>
 
 ## References
 
-1. <a id="ref-1"></a>nostalgebraist. (2020). *interpreting GPT: the logit lens*. AI Alignment Forum. [Link](https://www.alignmentforum.org/posts/AcKRB8wDpdaN6v6ru/interpreting-gpt-the-logit-lens).
-2. <a id="ref-2"></a>Belrose, N., et al. (2023). *Eliciting Latent Predictions from Transformers with the Tuned Lens*. [arXiv:2303.08112](https://arxiv.org/abs/2303.08112).
+1. <a id="ref-1"></a>nostalgebraist. (2020). *interpreting GPT: the logit lens*. [Original post](https://www.alignmentforum.org/posts/AcKRB8wDpdaN6v6ru/interpreting-gpt-the-logit-lens).
+2. <a id="ref-2"></a>Belrose, N., et al. (2023; revised 2025). *Eliciting Latent Predictions from Transformers with the Tuned Lens*. [arXiv:2303.08112v6](https://arxiv.org/abs/2303.08112v6).
 3. <a id="ref-3"></a>Vig, J. (2019). *A Multiscale Visualization of Attention in the Transformer Model*. [arXiv:1906.05714](https://arxiv.org/abs/1906.05714).
 4. <a id="ref-4"></a>Jain, S., & Wallace, B. C. (2019). *Attention is not Explanation*. [arXiv:1902.10186](https://arxiv.org/abs/1902.10186).

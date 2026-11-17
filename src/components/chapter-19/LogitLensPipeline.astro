@@ -1,0 +1,20 @@
+---
+import './logit-lens.css';
+const { lang = 'en' } = Astro.props;
+const ko = lang === 'ko';
+const stages = ko ? [
+  ['잔차 상태 선택', '같은 토큰 위치 t에서 블록 l의 출력 hₗ,ₜ를 기록합니다.'],
+  ['최종 정규화 적용', '모델의 실제 최종 정규화를 사용합니다. 이미 정규화한 상태에는 중복 적용하지 않습니다.'],
+  ['고정 출력 헤드 적용', 'zₗ,ₜ = Wᵤ Norm(hₗ,ₜ) + bᵤ. 모델에 편향이 없다면 bᵤ = 0입니다.'],
+  ['어휘 전체에서 softmax', '토큰 t+1의 readout 분포를 얻습니다. 다음 블록을 실행한 결과는 아닙니다.'],
+] : [
+  ['Select a residual state', 'Record block l output hₗ,ₜ at the same token position t.'],
+  ['Apply final normalization', 'Use the model’s actual final norm. Do not normalize an already normalized state twice.'],
+  ['Apply the fixed output head', 'zₗ,ₜ = Wᵤ Norm(hₗ,ₜ) + bᵤ. Use bᵤ = 0 when the model has no output bias.'],
+  ['Softmax over the vocabulary', 'Read out a distribution for token t+1. This does not execute the remaining blocks.'],
+];
+---
+<figure class="lens-pipeline">
+  <ol>{stages.map(([title, detail]) => <li><strong>{title}</strong><span>{detail}</span></li>)}</ol>
+  <figcaption>{ko ? 'HTML/CSS로 작성한 단순 선형 헤드의 decoder-only 로짓 렌즈 개념도입니다. 추가 로짓 변환이 있으면 실제 모델의 출력 경로를 따라야 합니다. nostalgebraist의 원문과 Tuned Lens 논문에 근거하며, 측정한 모델 출력이나 어텐션 흐름을 나타내지는 않습니다.' : 'HTML/CSS schematic of a decoder-only logit lens with a simple linear head. Additional logit transforms must follow the actual model’s output path. Based on nostalgebraist’s original post and the Tuned Lens paper. It does not depict measured predictions or attention flow.'}</figcaption>
+</figure>

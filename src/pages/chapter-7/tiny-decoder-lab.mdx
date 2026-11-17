@@ -8,6 +8,14 @@ lang: en
 
 Attention formulas become useful engineering knowledge when you can assemble a model, make it learn, and detect an invalid improvement. This lab connects Chapters 3, 4, and 6 with one downloadable, inspectable program.
 
+## Start with the Notebook
+
+[Open the English notebook in Colab](https://colab.research.google.com/github/sungeuns/foundation-model-engineering/blob/main/public/labs/tiny-decoder-lab.ipynb), or [download it for Jupyter](../../labs/tiny-decoder-lab.ipynb). Use a CPU runtime. The exercise generates its own symbolic data and needs no model download or API key. For local execution, install Python and PyTorch as described below; the notebook contains the same lab source as the script.
+
+Before running, predict two results: will changing future symbols alter earlier predictions, and will removing access to previous symbols hurt copying? Run the cells in order, inspect the measured results, then check whether checkpoint replay reproduces the remaining updates. The notebook explains each result without requiring you to read the whole chapter first. The details below define exactly what the experiment tests.
+
+Colab loads notebooks from GitHub and uses a hosted runtime; Google sign-in is needed to run there. Its resources and session lifetime are limited. The downloaded notebook also works in a local Jupyter environment. Launch guidance checked **as of 2026-11-18**. [[3]](#ref-3)
+
 ## Scope and Input Contract
 
 **Deliberately simplified, smoke-tested educational implementation.** This is a one-layer synthetic copying task, not language pretraining or SFT. It omits distributed execution, mixed precision, chat templates, natural-language data, packed samples, remote checkpoint replication, and serving. It does not establish frontier-model scalability. Reference checkpoint: none. There is no teacher or judge model.
@@ -25,7 +33,7 @@ The setup commands target Linux CPU wheels; for another platform use the [offici
 
 The local generator samples four distinct symbols from IDs 1–16 and repeats that motif to create a 17-token sequence. Rotations belong to the same semantic group; canonicalization happens **before** the 128/16/16 train/validation/test split. No external text, PII, secrets, or third-party dataset rights are involved. The immutable manifest records generator version, seed, grouping rule, mixture, integer-tokenizer version, and every group's symbols. Group IDs can be reconstructed from their hashes. The checkpoint binds the manifest, configuration, code hash, and PyTorch version.
 
-Input tensors are `[B,16]`; output logits are `[B,16,17]`. The first four symbols are the observed prompt. Logits at positions 3–15 predict targets at positions 4–16: **13 supervised targets per sequence**. Initial prompt predictions are masked from the objective. There is no padding, BOS, EOS, chat template, generation prompt, variable length, or cross-sample attention; ID 0 is unused. The response policy is exactly 13 continuation symbols. Do not transfer this tokenizer policy to SFT: Chapter 8's native-template requirements still apply.
+Input tensors are `[B,16]`; output logits are `[B,16,17]`. The first four symbols are the observed prompt. Logits at positions 3–15 predict targets at positions 4–16: **13 supervised targets per sequence**. Initial prompt predictions are masked from the objective. There is no padding, BOS, EOS, chat template, generation prompt, variable length, or cross-sample attention; ID 0 is unused. The response policy is exactly 13 continuation symbols. Do not transfer this tokenizer policy to SFT: the native-template requirements in [9.1 SFT Fundamentals](../../chapter-9/sft-fundamentals/) still apply.
 
 ## Assemble the Mechanism
 
@@ -81,3 +89,4 @@ Submit the manifest, script hash, trace, results, one failed hypothesis, and a p
 
 1. <a id="ref-1"></a>PyTorch. *Reproducibility*. [Documentation](https://docs.pytorch.org/docs/stable/notes/randomness.html).
 2. <a id="ref-2"></a>PyTorch. *Saving and Loading Models*. [Documentation](https://docs.pytorch.org/tutorials/beginner/saving_loading_models.html).
+3. <a id="ref-3"></a>Google. *Colaboratory FAQ*. [GitHub notebooks, runtimes, and resource limits](https://research.google.com/colaboratory/faq.html).

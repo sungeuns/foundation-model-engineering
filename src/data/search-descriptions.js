@@ -1,10 +1,10 @@
 // Keep search snippets separate from chapter prose so editorial work can proceed
 // independently. A chapter's own frontmatter description always takes priority.
 export const searchDescriptions = {
-  '/chapter-1/learning-path-and-mastery': { en: 'Learning Paths and Evidence of Mastery: derive mechanisms, run controlled experiments, and assess reproducible evidence.', ko: '학습 경로와 숙련도 입증: 메커니즘을 유도하고 통제 실험과 재현 가능한 증거로 판단합니다.' },
-  '/chapter-6/optimization-mechanics': { en: 'Optimization Mechanics and Fair Experiments: derive mechanisms, run controlled experiments, and assess reproducible evidence.', ko: '최적화의 원리와 공정한 실험: 메커니즘을 유도하고 통제 실험과 재현 가능한 증거로 판단합니다.' },
-  '/chapter-7/tiny-decoder-lab': { en: 'Build, Break, and Resume a Tiny Decoder: derive mechanisms, run controlled experiments, and assess reproducible evidence.', ko: '작은 디코더 실습과 재개 검증: 메커니즘을 유도하고 통제 실험과 재현 가능한 증거로 판단합니다.' },
-  '/chapter-17/experimental-design-and-uncertainty': { en: 'Experimental Design and Uncertainty: derive mechanisms, run controlled experiments, and assess reproducible evidence.', ko: '실험 설계와 불확실성: 메커니즘을 유도하고 통제 실험과 재현 가능한 증거로 판단합니다.' },
+  '/chapter-1/learning-path-and-mastery': { en: 'Check your prerequisites, choose a foundation-model learning path, and build a portfolio with causal tests, fair comparisons, and release decisions.', ko: '선수 지식을 점검하고 파운데이션 모델 학습 경로를 고르세요. 인과성 검사·공정한 비교·출시 판단을 재현 가능한 포트폴리오로 연결합니다.' },
+  '/chapter-6/optimization-mechanics': { en: 'Derive AdamW updates, fix unequal-token gradient weighting, and compare optimizers with matched data, token budgets, and held-out evaluations.', ko: 'AdamW 갱신과 토큰 수가 다른 배치의 기울기 가중을 계산하고, 데이터·토큰 예산·보류 평가를 맞춰 옵티마이저를 비교합니다.' },
+  '/chapter-7/tiny-decoder-lab': { en: 'Train a tiny PyTorch decoder on CPU, test causal masking, remove context access, and replay a checkpoint. Includes English and Korean notebooks.', ko: 'CPU에서 작은 PyTorch 디코더를 학습하고 인과적 마스킹·문맥 제한·체크포인트 재개를 검증합니다. 영문·한국어 실행 노트북을 제공합니다.' },
+  '/chapter-17/experimental-design-and-uncertainty': { en: 'Run a Python evaluation lab with no extra packages: paired cluster bootstrap, missing outcomes, retention regressions, and Pass/Review/Block decisions.', ko: '추가 패키지 없이 Python 평가 실습을 실행합니다. 대응 집단 부트스트랩·누락 결과·성능 회귀를 확인하고 통과·재검토·차단을 판단합니다.' },
 
   '/chapter-15/chain-of-thought': {
     en: 'Understand chain-of-thought prompting, compare zero-shot and example-based reasoning prompts, and examine when added reasoning helps or hurts.',

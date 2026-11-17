@@ -298,7 +298,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 7.2 | `/chapter-7/zero-redundancy-optimizer` | Inspected 2026-11-15 | b126180d4c8d978f8925ed51d7ace338f8cdf2e7c7ecc1309ef2301714bd4e47 | 27d8e5e67bf17cd5ddd308bffd01bac2f6ed7b1b11bcfea218dd52e9924cd43d |
 | 7.3 | `/chapter-7/model-and-pipeline-parallelism` | Inspected 2026-11-15 | 0832cffc306946b61c817850cb07cdbebf0d06aadfe607b6b7dfe75d14d010bf | b645ef818ecb8e33702468b9dcacf90a130b6c229ed8603d055736e2e62f5db4 |
 | 7.4 | `/chapter-7/flash-attention` | Inspected 2026-11-18 | f305f222c5d296652a665982d6148449b7cebebdd7073ee35ef221b39b750c4c | 4281c70f6433b16e06b9f82fcb6190a5c1d8276ee87e79285ca7ad9cb4b3fcbd |
-| 7.5 | `/chapter-7/tiny-decoder-lab` | Inspected 2026-11-17 | 0369bb0003de17f1da4af7c16bd6fdb4b35c190363c08f7cc1d727ca05233e63 | 22431dab4958ec62f0ed22b73ace9fbae1a4a9b0b71958afab5c3a438747e566 |
+| 7.5 | `/chapter-7/tiny-decoder-lab` | Inspected 2026-11-18 | 7c0ec5cbab69ce2ea38033639f558390b59cf696655ec391c713cac219837a9b | 52c0b757a66b68bda64266a0d6e70ea8a54da10c43007608779eb65d1b9aeeac |
 | 8.1 | `/chapter-8/power-law` | Inspected 2026-11-18 | 4a7985e2e292146826fa76fc39706838e6e5246fcb507f4fec94dc263ef2ba8a | 5d01ec1c25346796843c2fe7b635968a64b28f6333b2925a32884fb9364b884e |
 | 8.2 | `/chapter-8/chinchilla-optimality` | Inspected 2026-11-15 | a5c303a07cd048a5700ec4cf86eeb44387cdcc43775eb4a2c5678f4aed6250d1 | 113d3edaa8047c8e5b5455f712a931429e550d22c1d260be5947dab80f4ef2a6 |
 | 8.3 | `/chapter-8/over-training-vs-optimal-training` | Inspected 2026-11-15 | 0cd59dc676f0efe54f93a85775af740fc13bd689502b3ead940bf61212f2d83c | 21d9ca8bfbe9e711f63a75a24d0760d53ffdd87d8f22954f7ac911f7c0a18248 |
@@ -361,7 +361,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 18.3 | `/chapter-18/hallucination-detection` | Inspected 2026-11-15 | d3a1ee8ab17c7b845363483dd7b3112556523b0df6d833116a334717d79bdea3 | 85d58b77dcac5ff08bbdb13964faff2e93d8223760b0b46f4055337515d5162f |
 | 18.4 | `/chapter-18/scalable-oversight` | Inspected 2026-11-15 | ddc4e57280940d9f2de2d5e5f551b035d60ae4feeb324a2a84256e798feb9c7f | 5536d313417dd89e9909d73ed8762c85d7450129338432d8a05ea21c7ee99f3b |
 | 19.1 | `/chapter-19/mechanistic-interpretability` | Inspected 2026-11-15 | e78ed254abbd08dcc580e5d937948f89757d22138640f21b47a48ef61b6769c4 | fae2f16d1ef936dafbbe54ff2d8896e6110a4a9ecf1d33d5c29e0fd3599aff63 |
-| 19.2 | `/chapter-19/logit-lens-and-attention-visualization` | Inspected 2026-11-15 | b63cdb2fb4c238fb43e9df226ea360340f254b80d5943cf9e97634faa80afa02 | a381e88645d789559ea08839a8ce5cad4ff442f80e4660747151c1c8e190d83e |
+| 19.2 | `/chapter-19/logit-lens-and-attention-visualization` | Inspected 2026-11-18 | 8f6a64cbb90f5881b4fda6b927ecbdb6a9fe1fcf319cb3bdb5c873bce37a80e5 | c0814be5b0d9a6032c38f113c2196e45512fda93d9947d5943b8905809feadf7 |
 | 19.3 | `/chapter-19/probing-classifiers` | Inspected 2026-11-15 | ff555220f028dcfb555ef1730dbcd13126125884b4b81d97723d546b0156ce69 | ed5f87d45843638897fbd4786fd1a16ee25318fb596e7c2b0f31f6f379f5a773 |
 | 19.4 | `/chapter-19/sparse-autoencoders-sae` | Inspected 2026-11-15 | 1c9eeb21d547629108ec41532289a1de144a79897f4e85d20b421ac6603187fd | 4763fcd0d43195c1223ef37565a0b73eddca2e151e840d151b78302339bbab40 |
 | 20.1 | `/chapter-20/state-space-models-ssm` | Inspected 2026-11-15 | 62c29a98f3b7b0a6ec6474bcb6d941c649a324cb4c28be9a9f6c7938f0a939a5 | 21d0a1a63ca16d7a1777695359d7abc310d56a9d594b70b0097af63e11def139 |
@@ -576,3 +576,7 @@ Freshly inspected eight changed EN/KO pairs (3.1, 5.3, 8.1, 12.1, 12.2, 13.1, 14
 ### 2026-11-18 teaching follow-up
 
 Six EN/KO pairs (5.3, 7.4, 13.2, 13.3, 14.5, 15.1) were inspected and revised with concrete numerical examples, source checks and scoped code validation. See `growth-2026-11-18-followup.md` and its companion reports for evidence and limits. The hashes above bind this inspection to the current manuscript; this entry does not newly certify untouched pages.
+
+### 2026-11-18 runnable entry and readout pass
+
+Inspected 7.5 and 19.2 EN/KO pairs after adding self-contained notebook entry points and replacing misleading readout/attention illustrations. Hashes above identify the current inspected source. Independent review corrected source-byte preservation and scoped final-decoder equivalence to the actual output path. See `growth-2026-11-18-lab-entry.md`, notebook execution evidence, and figure/discovery companion reports. Unchanged pages retain their previous inspection dates.

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" xml:lang="ko" role="img" aria-labelledby="card-title card-description">
+<title id="card-title">점수가 올랐다면, 배포해도 될까요?</title><desc id="card-description">Python 평가 실습: 같은 사례의 결과를 대응 비교하고 군집 단위 불확실성을 계산해 합성 오프라인 기준의 통과·재검토·차단을 구분합니다.</desc>
+<rect width="1200" height="630" fill="#f5f2eb"/><rect width="12" height="630" fill="#256257"/>
+<g font-family="Noto Sans CJK KR, DejaVu Sans, sans-serif" fill="#192a30">
+<text x="64" y="61" font-size="19" fill="#256257" font-weight="600" >파운데이션 모델 엔지니어링</text>
+<text x="1136" y="61" font-size="18" fill="#256257" text-anchor="end">17.7 · 실행 실습</text>
+<text x="61" y="163" font-size="52" font-weight="700">점수가 올랐다면,</text>
+<text x="61" y="232" font-size="52" font-weight="700">배포해도 될까요?</text>
+<text x="64" y="293" font-size="24" fill="#4e5d61">같은 사례의 결과와 불확실성을 함께 봅니다.</text>
+<rect x="64" y="344" width="300" height="48" rx="8" fill="#e3ece5"/>
+<text x="82" y="375" font-size="21" fill="#256257">Python 표준 라이브러리</text>
+<rect x="380" y="344" width="225" height="48" rx="8" fill="#ebe9df"/>
+<text x="398" y="375" font-size="21" fill="#4e5d61">모델 API 불필요</text>
+<text x="64" y="445" font-size="21" fill="#4e5d61">직접 실행하는 합성 평가 실습입니다.</text>
+<rect x="716" y="112" width="420" height="390" rx="20" fill="#ffffff" stroke="#c5cec6"/>
+<text x="742" y="150" font-size="19" fill="#256257" font-weight="600">근거에서 판단까지</text>
+<text x="742" y="201" font-size="25" font-weight="700">같은 사례를 대응 비교</text><text x="742" y="232" font-size="18" fill="#4e5d61">기존 모델·후보 모델의 쌍을 유지합니다.</text>
+<path d="M742 267H1110" stroke="#dbe1db"/><text x="742" y="307" font-size="25" font-weight="700">군집 단위 재표집</text><text x="742" y="338" font-size="18" fill="#4e5d61">유사 사례 사이의 의존성을 보존합니다.</text>
+<path d="M742 373H1110" stroke="#dbe1db"/><rect x="742" y="399" width="116" height="46" rx="8" fill="#e3efe5"/><text x="800" y="429" font-size="22" text-anchor="middle" font-weight="600" fill="#245c37">통과</text><rect x="868" y="399" width="116" height="46" rx="8" fill="#f8eed6"/><text x="926" y="429" font-size="22" text-anchor="middle" font-weight="600" fill="#775208">재검토</text><rect x="994" y="399" width="116" height="46" rx="8" fill="#f4e5e3"/><text x="1052" y="429" font-size="22" text-anchor="middle" font-weight="600" fill="#913c34">차단</text><text x="742" y="479" font-size="18" fill="#4e5d61">합성 오프라인 평가 기준</text>
+<path d="M64 543H1136" stroke="#bbc8c1" stroke-width="2"/>
+<text x="64" y="587" font-size="20" fill="#256257">무료 온라인 교재 · 한국어 / 영어</text>
+<text x="1136" y="587" font-size="20" fill="#4e5d61" text-anchor="end">sungeuns.github.io</text>
+</g></svg>

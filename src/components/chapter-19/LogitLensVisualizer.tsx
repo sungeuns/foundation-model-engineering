@@ -1,77 +1,26 @@
-import React, { useState } from 'react';
-import './visualizers.css';
+import React, { useId, useState } from 'react';
+import { lensTokens, lensHead, readToyState } from './logit-lens-calculations.js';
+import './logit-lens.css';
 
-const LogitLensVisualizer = ({ locale = 'en' }: { locale?: 'en' | 'ko' }) => {
+export default function LogitLensVisualizer({ locale = 'en' }: { locale?: 'en' | 'ko' }) {
   const ko = locale === 'ko';
-  const controlId = React.useId();
-  const [activeLayer, setActiveLayer] = useState(12);
-
-  const tokens = ["The", "capital", "of", "France", "is"];
-
-  // Simulated Logit Lens data for 13 layers (0 to 12)
-  const layerData = [
-    { layer: 0, predictions: ["The", "letter", "the", "a", "the"] },
-    { layer: 1, predictions: ["First", "city", "the", "the", "a"] },
-    { layer: 2, predictions: ["A", "city", "a", "the", "a"] },
-    { layer: 3, predictions: ["A", "state", "the", "Paris", "a"] },
-    { layer: 4, predictions: ["A", "state", "the", "Paris", "a"] },
-    { layer: 5, predictions: ["The", "city", "the", "Paris", "city"] },
-    { layer: 6, predictions: ["The", "city", "the", "Paris", "Paris"] },
-    { layer: 7, predictions: ["The", "city", "the", "Paris", "Paris"] },
-    { layer: 8, predictions: ["The", "city", "the", "Paris", "Paris"] },
-    { layer: 9, predictions: ["The", "city", "the", "Paris", "Paris"] },
-    { layer: 10, predictions: ["The", "city", "the", "Paris", "Paris"] },
-    { layer: 11, predictions: ["The", "city", "the", "Paris", "Paris"] },
-    { layer: 12, predictions: ["The", "city", "the", "Paris", "Paris"] },
-  ];
-
-  const currentData = layerData[activeLayer].predictions;
-
-  return (
-    <div className="logit-lens-container">
-      <div className="lens-header">
-        <h4>{ko ? 'Logit lens 교육 예제' : 'Logit lens teaching example'}</h4>
-        <p>{ko ? '슬라이더로 계층을 바꿔 보세요. 토큰은 영어 예문이며 예측은 직접 작성한 값입니다.' : 'Change the layer with the slider. Tokens and predictions are authored English examples.'}</p>
-      </div>
-
-      <div className="slider-container">
-        <label htmlFor={`${controlId}-1`}>{ko ? '계층' : 'Layer'}: {activeLayer}</label>
-        <input id={`${controlId}-1`} type="range"
-          min="0"
-          max="12"
-          value={activeLayer}
-          onChange={(e) => setActiveLayer(parseInt(e.target.value))}
-          className="layer-slider"
-        />
-      </div>
-
-      <div className="tokens-grid">
-        <div className="grid-row label-row">
-          <div className="grid-cell row-label">{ko ? '입력 토큰' : 'Input tokens'}</div>
-          {tokens.map((token, idx) => (
-            <div key={`in-${idx}`} className="grid-cell token-cell">{token}</div>
-          ))}
-        </div>
-
-        <div className="grid-row prediction-row">
-          <div className="grid-cell row-label">{ko ? '최대 예측' : 'Top prediction'}<br/>({ko ? '계층' : 'Layer'} {activeLayer})</div>
-          {currentData.map((pred, idx) => (
-            <div
-              key={`pred-${idx}`}
-              className={`grid-cell pred-cell ${pred === 'Paris' && idx === 4 ? 'highlight-correct' : ''}`}
-            >
-              {pred}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="lens-explanation">
-        <p>{ko ? '이 합성 예제에서는 초기 계층의 출력이 다르고 뒤쪽에서 Paris가 반복됩니다. 실제 체크포인트를 측정하지 않았습니다. 같은 argmax가 반복돼도 분포·표현이 같거나 뒷계층이 불필요하다는 뜻은 아닙니다.' : 'In this synthetic example, early readouts vary and later readouts repeat Paris. No checkpoint was measured. Repeated argmax tokens do not imply equal distributions, equal representations, or unnecessary later layers.'}</p>
-        <p>{ko ? '실제 분석에서는 체크포인트·프롬프트·잔차 지점·정규화·unembedding을 고정하고 전체 분포와 대조 개입을 평가하세요. 최종 출력 헤드를 중간 표현에 적용할 때 생기는 분포 차이도 고려해야 합니다.' : 'For analysis, pin checkpoint, prompt, residual-stream location, normalization and unembedding; inspect full distributions and controlled interventions. Applying a final output head to intermediate states introduces a distribution mismatch.'}</p>
-      </div>
+  const id = useId();
+  const [selected, setSelected] = useState(1);
+  const [normalize, setNormalize] = useState(true);
+  const result = readToyState(selected, normalize);
+  return <section className="lens-calculator" aria-labelledby={`${id}-title`}>
+    <h4 id={`${id}-title`}>{ko ? '같은 최대 토큰, 다른 확률 분포' : 'Same top token, different distribution'}</h4>
+    <p>{ko ? '직접 만든 상태 세 개와 고정 출력 행렬로 매번 계산합니다. 실제 모델의 레이어가 아니며, 네 토큰이 이 예제의 전체 어휘입니다.' : 'Computed from three authored states and a fixed output matrix. These are not model layers; the four tokens are the entire toy vocabulary.'}</p>
+    <div className="lens-state-controls" role="group" aria-label={ko ? '설명용 상태 선택' : 'Select an authored state'}>
+      {['A', 'B', 'C'].map((name, index) => <button key={name} type="button" aria-pressed={selected === index} onClick={() => setSelected(index)}>{ko ? '상태' : 'State'} {name}</button>)}
     </div>
-  );
-};
-
-export default LogitLensVisualizer;
+    <label className="lens-normalization"><input type="checkbox" checked={normalize} onChange={e => setNormalize(e.target.checked)} />{ko ? '고정 RMS 정규화 적용 (gain = 1, ε = 10⁻⁵)' : 'Apply fixed RMS normalization (gain = 1, ε = 10⁻⁵)'}</label>
+    <dl className="lens-vectors"><div><dt>{ko ? '원래 상태 h' : 'Raw state h'}</dt><dd>[{result.raw.map(x => x.toFixed(1)).join(', ')}]</dd></div><div><dt>{normalize ? (ko ? '정규화한 상태' : 'Normalized state') : (ko ? '정규화 생략' : 'Normalization bypassed')}</dt><dd>[{result.state.map(x => x.toFixed(3)).join(', ')}]</dd></div></dl>
+    <p className="lens-result" aria-live="polite">{ko ? '최대 토큰' : 'Top token'}: <strong>{lensTokens[result.top]}</strong> · {(100 * result.probabilities[result.top]).toFixed(2)}%</p>
+    <div className="lens-probabilities" role="list" aria-label={ko ? '전체 설명용 어휘 확률, 0–100%' : 'Full toy vocabulary probabilities, 0–100%'}>
+      {lensTokens.map((token, index) => <div className="lens-probability" role="listitem" key={token}><span>{token}</span><span className="lens-bar-track" aria-hidden="true"><span style={{width: `${result.probabilities[index] * 100}%`}} /></span><span>{(100 * result.probabilities[index]).toFixed(2)}%</span></div>)}
+    </div>
+    <details className="lens-matrix"><summary>{ko ? '출력 행렬과 현재 로짓 확인' : 'Inspect output matrix and current logits'}</summary><div tabIndex={0} role="region" aria-label={ko ? '출력 행렬 표' : 'Output matrix table'}><table><thead><tr><th>{ko ? '토큰' : 'Token'}</th><th>Wᵤ[i, :]</th><th>{ko ? '로짓' : 'Logit'}</th></tr></thead><tbody>{lensTokens.map((token, index) => <tr key={token}><th scope="row">{token}</th><td>[{lensHead[index].join(', ')}]</td><td>{result.logits[index].toFixed(3)}</td></tr>)}</tbody></table></div></details>
+    <p className="lens-note">{ko ? 'B와 C는 모두 Paris를 고르지만 정규화 시 확률은 약 67.52%와 54.05%입니다. 이 값은 사실의 정답 확률이나 실제 모델의 확신을 측정하지 않습니다. 정규화를 끄면 다른 측정 절차가 됩니다.' : 'B and C both select Paris, but normalized probabilities are about 67.52% and 54.05%. These values do not measure factual correctness or confidence in a real model. Bypassing normalization changes the measurement procedure.'}</p>
+  </section>;
+}

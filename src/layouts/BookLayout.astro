@@ -2,6 +2,7 @@
 import { chapters } from '../data/chapters.js';
 import { site } from '../data/site.js';
 import { searchDescriptions } from '../data/search-descriptions.js';
+import { socialCards } from '../data/social-cards.js';
 import { getBasePath, normalizePathname, stripBasePath, withBasePath, withPagePath } from '../utils/paths.js';
 import '../styles/book.css';
 
@@ -63,10 +64,11 @@ const pageDescription = description || searchDescriptions[enTarget]?.[lang] || (
 );
 const ogLocale = isKo ? 'ko_KR' : 'en_US';
 const alternateLocale = isKo ? 'en_US' : 'ko_KR';
-const socialImageUrl = new URL(withBasePath(`/social/cover-${lang}.png`, basePath), Astro.site || site.url).toString();
-const socialImageAlt = isKo
+const socialCard = socialCards[enTarget]?.[lang];
+const socialImageUrl = new URL(withBasePath(socialCard?.image || `/social/cover-${lang}.png`, basePath), Astro.site || site.url).toString();
+const socialImageAlt = socialCard?.alt || (isKo
   ? '파운데이션 모델 엔지니어링 — 이론부터 프로덕션까지, 한국어·영어 온라인 교재'
-  : 'Foundation Model Engineering — From Theory to Production, an English and Korean online textbook';
+  : 'Foundation Model Engineering — From Theory to Production, an English and Korean online textbook');
 const structuredData = {
   '@context': 'https://schema.org',
   '@type': isHomePage ? 'Book' : 'TechArticle',

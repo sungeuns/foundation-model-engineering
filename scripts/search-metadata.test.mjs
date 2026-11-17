@@ -3,6 +3,7 @@ import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import test from 'node:test';
 import { chapters } from '../src/data/chapters.js';
 import { searchDescriptions } from '../src/data/search-descriptions.js';
+import { socialCards } from '../src/data/social-cards.js';
 import { getContentDates } from '../src/utils/content-dates.js';
 
 const base = 'https://sungeuns.github.io/foundation-model-engineering';
@@ -33,12 +34,17 @@ test('every built page has canonical, reciprocal language links, and a local soc
     for (const [locale, target] of [['en', en], ['ko', en === '/' ? '/ko' : `/ko${en}`], ['x-default', en]]) {
       assert.ok(head.includes(`hreflang="${locale}" href="${absolute(target)}"`), `${route}: ${locale}`);
     }
-    assert.ok(head.includes(`property="og:image" content="${base}/social/cover-${lang}.png"`), route);
+    const socialImage = socialCards[en]?.[lang]?.image || `/social/cover-${lang}.png`;
+    assert.ok(head.includes(`property="og:image" content="${base}${socialImage}"`), route);
+    assert.ok(head.includes(`name="twitter:image" content="${base}${socialImage}"`), route);
     assert.ok(head.includes('name="twitter:card" content="summary_large_image"'), route);
     const feedPath = `/foundation-model-engineering/${lang === 'ko' ? 'ko/' : ''}feed.xml`;
     assert.ok(head.includes(`type="application/rss+xml" title="${lang === 'ko' ? '최근 수정한 장 (RSS)' : 'Recently edited chapters (RSS)'}" href="${feedPath}"`), `${route}: feed discovery`);
     assert.ok(existsSync(`${outputDir}/${lang === 'ko' ? 'ko/' : ''}feed.xml`));
-    assert.ok(existsSync(`${outputDir}/social/cover-${lang}.png`));
+    const image = readFileSync(`${outputDir}${socialImage}`);
+    assert.equal(image.subarray(0, 8).toString('hex'), '89504e470d0a1a0a', `${route}: PNG signature`);
+    assert.equal(image.readUInt32BE(16), 1200, `${route}: social image width`);
+    assert.equal(image.readUInt32BE(20), 630, `${route}: social image height`);
     const actualDescription = head.match(/name="description" content="([^"]+)"/)?.[1];
     assert.ok(actualDescription, `${route}: missing description`);
     assert.ok(!seenDescriptions.has(actualDescription), `${route}: duplicate description`);
@@ -46,6 +52,7 @@ test('every built page has canonical, reciprocal language links, and a local soc
     assert.ok(head.includes('max-image-preview:large'), route);
     assert.doesNotMatch(head, /content="[^"]*\bnoindex\b/);
     const schemas = [...head.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/g)].map(m => JSON.parse(m[1]));
+    assert.equal(schemas[0].image, `${base}${socialImage}`, `${route}: structured image parity`);
     const breadcrumb = schemas.find(schema => schema['@type'] === 'BreadcrumbList');
     if (route !== '/' && route !== '/ko') {
       assert.deepEqual(breadcrumb.itemListElement.map(item => item.position), [1, 2], route);

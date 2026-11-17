@@ -1,0 +1,30 @@
+[
+  {
+    "lang": "en",
+    "width": 390,
+    "status": 200,
+    "issues": [],
+    "errors": []
+  },
+  {
+    "lang": "en",
+    "width": 1440,
+    "status": 200,
+    "issues": [],
+    "errors": []
+  },
+  {
+    "lang": "ko",
+    "width": 390,
+    "status": 200,
+    "issues": [],
+    "errors": []
+  },
+  {
+    "lang": "ko",
+    "width": 1440,
+    "status": 200,
+    "issues": [],
+    "errors": []
+  }
+]

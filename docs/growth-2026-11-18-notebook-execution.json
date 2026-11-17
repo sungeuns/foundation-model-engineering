@@ -1,0 +1,99 @@
+{
+  "verified_on": "2026-11-18",
+  "environment": {
+    "python": "3.12.14",
+    "torch": "2.15.0+cpu",
+    "nbformat": "5.11.1",
+    "nbclient": "0.11.0",
+    "ipykernel": "7.4.0",
+    "device": "cpu",
+    "platform": "Linux"
+  },
+  "scope": "Real sequential Jupyter-kernel execution, not hosted Colab or Windows execution; no GPU/model/data/API calls.",
+  "notebooks": [
+    {
+      "path": "public/labs/tiny-decoder-lab.ipynb",
+      "sha256": "ee233f9b70dfd8bfddd238aacf2bf1a4bb0d9d3b59a865f327b85d91b6da345e",
+      "executed_code_cells": 10,
+      "observed_kernel_execution_seconds": 4.402,
+      "test_nats": 0.050811074674129486,
+      "self_only_test_nats": 2.7041945457458496,
+      "greedy_test_token_accuracy": 0.9807692170143127,
+      "greedy_test_sequence_accuracy": 0.9375,
+      "causal_invariance": true,
+      "exact_resume": true,
+      "source_sha256": "d3488b924a81a2cc50a381583903e8756c7b76846d1221cabd63e490bba1ba0c",
+      "unmasked_earlier_logit_max_change": 0.1990128457546234,
+      "corruption_rejected": true,
+      "archive_entries": [
+        "outputs/",
+        "outputs/__pycache__/",
+        "outputs/notebook-observations.json",
+        "outputs/result.json",
+        "outputs/trace.json",
+        "outputs/checkpoint.sha256",
+        "outputs/checkpoint.pt",
+        "outputs/manifest.json",
+        "outputs/causal_lab.py",
+        "outputs/__pycache__/causal_lab.cpython-312.pyc"
+      ]
+    },
+    {
+      "path": "public/labs/tiny-decoder-lab-ko.ipynb",
+      "sha256": "ec848e94a019964fd0911f23e4e82e6065c627e2e518099f19d76648c840f230",
+      "executed_code_cells": 10,
+      "observed_kernel_execution_seconds": 4.394,
+      "test_nats": 0.050811074674129486,
+      "self_only_test_nats": 2.7041945457458496,
+      "greedy_test_token_accuracy": 0.9807692170143127,
+      "greedy_test_sequence_accuracy": 0.9375,
+      "causal_invariance": true,
+      "exact_resume": true,
+      "source_sha256": "d3488b924a81a2cc50a381583903e8756c7b76846d1221cabd63e490bba1ba0c",
+      "unmasked_earlier_logit_max_change": 0.1990128457546234,
+      "corruption_rejected": true,
+      "archive_entries": [
+        "outputs/",
+        "outputs/__pycache__/",
+        "outputs/notebook-observations.json",
+        "outputs/result.json",
+        "outputs/trace.json",
+        "outputs/checkpoint.sha256",
+        "outputs/checkpoint.pt",
+        "outputs/manifest.json",
+        "outputs/causal_lab.py",
+        "outputs/__pycache__/causal_lab.cpython-312.pyc"
+      ]
+    }
+  ],
+  "render_checks": [
+    {
+      "name": "tiny-decoder-lab",
+      "width": 390,
+      "overflow": false,
+      "title": "Train a tiny decoder. Then try to invalidate the result.\u00b6",
+      "missingPlaceholder": false
+    },
+    {
+      "name": "tiny-decoder-lab",
+      "width": 1440,
+      "overflow": false,
+      "title": "Train a tiny decoder. Then try to invalidate the result.\u00b6",
+      "missingPlaceholder": false
+    },
+    {
+      "name": "tiny-decoder-lab-ko",
+      "width": 390,
+      "overflow": false,
+      "title": "\uc791\uc740 \ub514\ucf54\ub354\ub97c \ud559\uc2b5\ud558\uace0, \uacb0\uacfc\uac00 \uc798\ubabb\ub420 \uc870\uac74\uc744 \ucc3e\uc544\ubcf4\uc138\uc694\u00b6",
+      "missingPlaceholder": false
+    },
+    {
+      "name": "tiny-decoder-lab-ko",
+      "width": 1440,
+      "overflow": false,
+      "title": "\uc791\uc740 \ub514\ucf54\ub354\ub97c \ud559\uc2b5\ud558\uace0, \uacb0\uacfc\uac00 \uc798\ubabb\ub420 \uc870\uac74\uc744 \ucc3e\uc544\ubcf4\uc138\uc694\u00b6",
+      "missingPlaceholder": false
+    }
+  ]
+}

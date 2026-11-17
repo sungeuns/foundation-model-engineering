@@ -1,0 +1,34 @@
+.lens-calculator { border: 1px solid #94a3b8; border-radius: .6rem; padding: 1.25rem; margin: 1.8rem 0; background: #f8fafc; color: #172554; }
+.lens-calculator h4 { margin: 0 0 .6rem; font-size: 1.1rem; }
+.lens-calculator p { font-size: .94rem; line-height: 1.65; }
+.lens-state-controls { display: flex; flex-wrap: wrap; gap: .6rem; margin: 1rem 0; }
+.lens-state-controls button { border: 1px solid #475569; border-radius: .35rem; color: #172554; background: #fff; padding: .6rem 1rem; cursor: pointer; font: inherit; }
+.lens-state-controls button[aria-pressed="true"] { background: #1d4ed8; border-color: #1d4ed8; color: #fff; }
+.lens-calculator :focus-visible { outline: 3px solid #7c3aed; outline-offset: 3px; }
+.lens-normalization { display: flex; align-items: flex-start; gap: .6rem; line-height: 1.6; font-size: .9rem; }
+.lens-normalization input { margin-top: .35rem; flex-shrink: 0; width: 1rem; height: 1rem; }
+.lens-vectors { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem; margin: 1rem 0; }
+.lens-vectors div { padding: .7rem; background: #fff; border: 1px solid #cbd5e1; border-radius: .3rem; }
+.lens-vectors dt { font-size: .85rem; color: #475569; }
+.lens-vectors dd { margin: .35rem 0 0; font-family: monospace; font-size: .95rem; overflow-wrap: anywhere; }
+.lens-result { padding: .7rem; background: #dbeafe; border-radius: .3rem; }
+.lens-probabilities { display: grid; gap: .65rem; margin: 1rem 0; }
+.lens-probability { display: grid; grid-template-columns: 4rem minmax(0, 1fr) 4.5rem; align-items: center; gap: .7rem; font-size: .9rem; }
+.lens-probability > span:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+.lens-bar-track { height: 1rem; background: #e2e8f0; border-radius: .15rem; overflow: hidden; }
+.lens-bar-track > span { display: block; height: 100%; background: #1d4ed8; }
+.lens-matrix { margin-top: 1rem; }
+.lens-matrix summary { cursor: pointer; font-size: .9rem; }
+.lens-matrix > div { max-width: 100%; overflow-x: auto; }
+.lens-matrix table { width: 100%; min-width: 280px; font-size: .85rem; border-collapse: collapse; }
+.lens-matrix th, .lens-matrix td { text-align: left; padding: .4rem; border-bottom: 1px solid #cbd5e1; }
+.lens-calculator .lens-note { color: #334155; font-size: .87rem; }
+.lens-pipeline { margin: 1.5rem 0; }
+.lens-pipeline ol { list-style: none; padding: 0; counter-reset: lens-stage; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
+.lens-pipeline li { counter-increment: lens-stage; position: relative; padding: .9rem .9rem .9rem 2.7rem; background: #eff6ff; border: 1px solid #93a5bd; border-radius: .4rem; }
+.lens-pipeline li::before { content: counter(lens-stage); position: absolute; left: 1rem; top: .9rem; color: #1d4ed8; font-weight: 700; }
+.lens-pipeline strong { display: block; color: #172554; font-size: .95rem; }
+.lens-pipeline li span { display: block; margin-top: .4rem; color: #334155; line-height: 1.6; font-size: .9rem; }
+.lens-pipeline figcaption { color: #475569; font-size: .85rem; line-height: 1.6; }
+:lang(ko) .lens-pipeline, :lang(ko) .lens-calculator { word-break: keep-all; overflow-wrap: anywhere; }
+@media (max-width: 600px) { .lens-vectors, .lens-pipeline ol { grid-template-columns: 1fr; } .lens-calculator { padding: .9rem; } .lens-probability { gap: .4rem; } }
