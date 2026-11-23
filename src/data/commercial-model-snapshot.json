@@ -1,5 +1,5 @@
 {
-  "asOf": "2026-11-15",
+  "asOf": "2026-11-24",
   "methodology": "AA Intelligence Index v5.0.1",
   "methodologySource": "https://artificialanalysis.ai/methodology/intelligence-benchmarking",
   "models": [
@@ -19,11 +19,13 @@
       "noteKo": "도구 호출에는 Responses를 사용하며 reasoning none은 지원하지 않습니다. 문맥 길이·최대 출력·추론 예산은 각각 별도 조건입니다.",
       "releaseStatus": "released",
       "accessKo": "API 공개",
-      "verifiedAt": "2026-11-15",
+      "verifiedAt": "2026-11-24",
       "aaIndex": 55,
       "benchmarkCost": 1.27,
       "evaluationProfile": "GPT-6.1 Sol (Max)",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1"
+      "evaluationMethodology": "AA Intelligence Index v5.0.1",
+      "evaluationCheckedAt": "2026-11-24",
+      "evaluationVerifiedAt": "2026-11-24"
     },
     {
       "id": "gpt-6-sol",
@@ -41,11 +43,13 @@
       "releaseStatus": "released",
       "accessKo": "API 공개",
       "evaluation": "https://artificialanalysis.ai/models/gpt-6-sol",
-      "verifiedAt": "2026-11-15",
+      "verifiedAt": "2026-11-24",
       "aaIndex": 44,
       "benchmarkCost": 2.47,
       "evaluationProfile": "GPT-6 Sol (Max)",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1"
+      "evaluationMethodology": "AA Intelligence Index v5.0.1",
+      "evaluationCheckedAt": "2026-11-24",
+      "evaluationVerifiedAt": "2026-11-24"
     },
     {
       "id": "gpt-6-luna",
@@ -63,11 +67,13 @@
       "noteKo": "토큰 단가 외에도 추론 출력량·재시도·도구 사용이 과업 비용을 결정합니다.",
       "releaseStatus": "released",
       "accessKo": "API 공개",
-      "verifiedAt": "2026-11-15",
+      "verifiedAt": "2026-11-24",
       "aaIndex": 28,
       "benchmarkCost": 0.15,
       "evaluationProfile": "GPT-6 Luna (Max)",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1"
+      "evaluationMethodology": "AA Intelligence Index v5.0.1",
+      "evaluationCheckedAt": "2026-11-24",
+      "evaluationVerifiedAt": "2026-11-24"
     },
     {
       "id": "gpt-6-astra",
@@ -83,13 +89,15 @@
       "noteKo": "Astra라는 이름만 비교하지 말고 평가에 사용한 추론 강도와 예산을 함께 확인해야 합니다.",
       "releaseStatus": "released",
       "accessKo": "API 공개",
-      "verifiedAt": "2026-11-15",
+      "verifiedAt": "2026-11-24",
       "aaIndex": 57,
       "benchmarkCost": 6.24,
       "evaluationProfile": "GPT-6 Astra (Max)",
       "evaluationMethodology": "AA Intelligence Index v5.0.1",
       "inputPrice": 10,
-      "outputPrice": 50
+      "outputPrice": 50,
+      "evaluationCheckedAt": "2026-11-24",
+      "evaluationVerifiedAt": "2026-11-24"
     },
     {
       "id": "claude-opus-55",
@@ -107,11 +115,14 @@
       "noteKo": "AA 평가는 기본 fallback을 포함한 시스템입니다. 가중치만의 성능으로 해석할 수 없습니다.",
       "releaseStatus": "released",
       "accessKo": "API 공개",
-      "verifiedAt": "2026-11-15",
+      "verifiedAt": "2026-11-24",
       "aaIndex": 59,
       "benchmarkCost": 10.04,
       "evaluationProfile": "Claude Opus 5.5 (Max, Default Fallback)",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1"
+      "evaluationMethodology": "AA Intelligence Index v5.0.1",
+      "evaluationCheckedAt": "2026-11-24",
+      "evaluationVerifiedAt": "2026-11-24",
+      "specification": "https://platform.claude.com/docs/en/models/overview"
     },
     {
       "id": "claude-sonnet-55",
@@ -130,11 +141,14 @@
       "noteKo": "10월 7일 캐시 읽기 가격이 변경됐습니다. 표시된 3:1 단가에는 캐시 읽기·쓰기와 추론 출력량이 반영되지 않습니다.",
       "releaseStatus": "released",
       "accessKo": "API 공개",
-      "verifiedAt": "2026-11-15",
+      "verifiedAt": "2026-11-24",
       "aaIndex": 55,
       "benchmarkCost": 10.02,
       "evaluationProfile": "Claude Sonnet 5.5 (Max, Default Fallback)",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1"
+      "evaluationMethodology": "AA Intelligence Index v5.0.1",
+      "evaluationCheckedAt": "2026-11-24",
+      "evaluationVerifiedAt": "2026-11-24",
+      "specification": "https://platform.claude.com/docs/en/models/overview"
     },
     {
       "id": "claude-haiku-55",
@@ -150,11 +164,14 @@
       "noteKo": "Haiku도 추론 강도를 조절할 수 있습니다. 제공사는 입력/출력 $0.10/$0.50부터라고 안내하므로 모든 설정에 같은 단가를 가정하지 않습니다.",
       "releaseStatus": "released",
       "accessKo": "API 공개",
-      "verifiedAt": "2026-11-15",
+      "verifiedAt": "2026-11-24",
       "aaIndex": 36,
       "benchmarkCost": 0.41,
       "evaluationProfile": "Claude Haiku 5.5 (Max)",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1"
+      "evaluationMethodology": "AA Intelligence Index v5.0.1",
+      "evaluationCheckedAt": "2026-11-24",
+      "evaluationVerifiedAt": "2026-11-24",
+      "specification": "https://platform.claude.com/docs/en/models/overview"
     },
     {
       "id": "gemini-4-argon",
@@ -165,20 +182,23 @@
       "releaseStatus": "released",
       "source": "https://blog.google/innovation-and-ai/models-and-research/gemini-models/introducing-gemini-4-argon/",
       "evaluation": "https://artificialanalysis.ai/models/gemini-4-argon",
-      "note": "Broader API access began October 13. The 1,048,576-token window is unified input/output. Standard introductory prices run through November 30; default synchronous output is 65,536, with a separate long-decode path.",
+      "note": "The unified window is 1,048,576 tokens. Official Standard introductory rates remain $2/$10 per million input/output tokens through November 30, then $4/$20 from December 1. AA currently calculates its $9.95 weighted task cost with $4/$20 rates; these are different price assumptions. Synchronous and long-decode output limits differ.",
       "access": "released/API-only",
-      "noteKo": "10월 13일 API 접근이 확대됐습니다. 1,048,576토큰은 입출력 통합 한도입니다. 표준 도입 가격은 11월 30일까지이며 기본 동기 출력은 65,536토큰, long decode는 별도 경로입니다.",
+      "noteKo": "1,048,576토큰은 입출력 통합 한도입니다. 공식 Standard 도입 단가는 11월 30일까지 입력/출력 백만 토큰당 $2/$10, 12월 1일부터 $4/$20입니다. AA의 가중 과업 비용 $9.95는 현재 $4/$20을 사용하므로 가격 가정이 다릅니다. 동기 출력과 long decode의 한도도 구분해야 합니다.",
       "accessKo": "API 공개",
       "inputPrice": 2,
       "outputPrice": 10,
       "contextK": 1048.576,
-      "specification": "https://ai.google.dev/gemini-api/docs/models/gemini-4-argon",
-      "noteSource": "https://ai.google.dev/gemini-api/docs/pricing",
-      "verifiedAt": "2026-11-15",
+      "specification": "https://aistudio.google.com/docs/models/gemini-4-argon",
+      "noteSource": "https://aistudio.google.com/docs/pricing#gemini-4-argon",
+      "verifiedAt": "2026-11-24",
       "aaIndex": 50,
-      "benchmarkCost": 4.97,
+      "benchmarkCost": 9.95,
       "evaluationProfile": "Gemini 4 Argon (High)",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1"
+      "evaluationMethodology": "AA Intelligence Index v5.0.1",
+      "evaluationCheckedAt": "2026-11-24",
+      "evaluationVerifiedAt": "2026-11-24",
+      "priceValidThrough": "2026-11-30"
     },
     {
       "id": "deepseek-v41-flash",
@@ -194,9 +214,8 @@
       "access": "released/open-weight",
       "noteKo": "9월의 과거 리비전입니다. 이 프로필의 v5.0.1 평가를 확인하지 못했으며 1017은 별도 평가를 사용합니다. 과거 v4.3.2 점수를 현재 점수와 섞으면 안 됩니다.",
       "accessKo": "가중치 공개",
-      "verifiedAt": "2026-11-15",
-      "evaluationProfile": "DeepSeek V4.1 Flash (Max)",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1"
+      "verifiedAt": "2026-11-24",
+      "evaluationCheckedAt": "2026-11-24"
     },
     {
       "id": "glm-53",
@@ -212,11 +231,13 @@
       "access": "released/open-weight",
       "noteKo": "가중치 공개 완료. 텍스트 입력만 지원하며 추론이 항상 켜져 있어 전환 시 API 조건을 확인해야 합니다.",
       "accessKo": "가중치 공개",
-      "verifiedAt": "2026-11-15",
+      "verifiedAt": "2026-11-24",
       "aaIndex": 32,
       "benchmarkCost": 5.01,
       "evaluationProfile": "GLM-5.3 (Max)",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1"
+      "evaluationMethodology": "AA Intelligence Index v5.0.1",
+      "evaluationCheckedAt": "2026-11-24",
+      "evaluationVerifiedAt": "2026-11-24"
     },
     {
       "id": "mistral-large-4",
@@ -231,7 +252,7 @@
       "access": "released/open-weight + API",
       "noteKo": "가중치가 공개됐으며 10월 6일 프리뷰와는 별도 이정표입니다. Mistral Ecosystem Open-Weight License는 Model-as-a-Service 사업에 별도 계약을 요구합니다. 현재 AA high 평가를 사용하며 프리뷰 기록과 구분합니다.",
       "accessKo": "가중치 공개·API",
-      "verifiedAt": "2026-11-15",
+      "verifiedAt": "2026-11-24",
       "aaIndex": 26,
       "benchmarkCost": 2.06,
       "evaluationProfile": "Mistral Large 4 (High)",
@@ -240,7 +261,9 @@
       "noteSource": "https://huggingface.co/api/models/mistralai/Mistral-Large-4-1T-A52B",
       "contextK": 1000,
       "inputPrice": 0.7,
-      "outputPrice": 2.1
+      "outputPrice": 2.1,
+      "evaluationCheckedAt": "2026-11-24",
+      "evaluationVerifiedAt": "2026-11-24"
     },
     {
       "id": "beam",
@@ -257,11 +280,13 @@
       "contextK": 1000,
       "specification": "https://huggingface.co/reflection/Beam-1.0-501B-A23B",
       "evaluation": "https://artificialanalysis.ai/models/reflection-beam",
-      "verifiedAt": "2026-11-15",
+      "verifiedAt": "2026-11-24",
       "aaIndex": 18,
       "benchmarkCost": 0.28,
       "evaluationProfile": "Beam 1.0",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1"
+      "evaluationMethodology": "AA Intelligence Index v5.0.1",
+      "evaluationCheckedAt": "2026-11-24",
+      "evaluationVerifiedAt": "2026-11-24"
     },
     {
       "id": "muse-wonder",
@@ -276,11 +301,13 @@
       "note": "The launch distinguishes the API model from Wonder Full in Muse Code. Architecture and parameter counts are undisclosed in the announcement; no Full price is inferred from this model.",
       "noteKo": "발표문은 API 모델과 Muse Code의 Wonder Full을 구분합니다. 발표문에서 아키텍처·파라미터 수는 공개하지 않았으며, 이 모델의 가격을 Full에 대입하지 않았습니다.",
       "releaseStatus": "released",
-      "verifiedAt": "2026-11-15",
+      "verifiedAt": "2026-11-24",
       "aaIndex": 44,
       "benchmarkCost": 6.95,
       "evaluationProfile": "Muse Wonder (Max)",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1"
+      "evaluationMethodology": "AA Intelligence Index v5.0.1",
+      "evaluationCheckedAt": "2026-11-24",
+      "evaluationVerifiedAt": "2026-11-24"
     },
     {
       "id": "muse-wonder-full",
@@ -295,10 +322,12 @@
       "note": "Available through Muse Code subscriptions. AA lists no public API or task cost for this profile; missing price does not mean free. Parameter counts and training mixture are undisclosed in the announcement.",
       "noteKo": "Muse Code 구독으로 제공합니다. AA는 이 프로필의 공개 API·과업 비용을 제시하지 않습니다. 가격 누락은 무료라는 뜻이 아닙니다. 발표문에서 파라미터 수·학습 혼합은 공개하지 않았습니다.",
       "releaseStatus": "released",
-      "verifiedAt": "2026-11-15",
+      "verifiedAt": "2026-11-24",
       "aaIndex": 50,
-      "evaluationProfile": "Muse Wonder Full",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1"
+      "evaluationProfile": "Muse Wonder Full (Max)",
+      "evaluationMethodology": "AA Intelligence Index v5.0.1",
+      "evaluationCheckedAt": "2026-11-24",
+      "evaluationVerifiedAt": "2026-11-24"
     },
     {
       "id": "muse-spark-open",
@@ -315,11 +344,13 @@
       "note": "Released weights under the Muse Model License; Hugging Face access is gated. This checkpoint has additional safety post-training and is not the hosted Spark 1.3 revision. Treat license, packed weights, runtime, and state memory separately.",
       "noteKo": "Muse Model License로 가중치를 공개했으며 Hugging Face 다운로드는 승인 절차가 있습니다. 추가 안전 사후 학습이 적용됐고 호스팅 Spark 1.3과 같은 리비전이 아닙니다. 라이선스·패킹 가중치·런타임·상태 메모리를 따로 확인해야 합니다.",
       "releaseStatus": "released",
-      "verifiedAt": "2026-11-15",
+      "verifiedAt": "2026-11-24",
       "aaIndex": 25,
       "benchmarkCost": 2.02,
       "evaluationProfile": "Muse Spark Open (Xhigh)",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1"
+      "evaluationMethodology": "AA Intelligence Index v5.0.1",
+      "evaluationCheckedAt": "2026-11-24",
+      "evaluationVerifiedAt": "2026-11-24"
     },
     {
       "id": "nemotron-35-super-vl",
@@ -335,11 +366,13 @@
       "note": "OpenMDW-1.1. The card discloses a Mamba-2/Transformer MoE vision-language stack and text output. Its serving state includes recurrent state as well as attention KV; AA default reasoning is not an equal-effort comparison.",
       "noteKo": "OpenMDW-1.1 공개입니다. 카드는 Mamba-2/Transformer MoE 비전 언어 스택과 텍스트 출력을 명시합니다. 서빙에는 attention KV뿐 아니라 순환 상태도 필요합니다. AA의 기본 추론 프로필은 동일 추론 예산 비교가 아닙니다.",
       "releaseStatus": "released",
-      "verifiedAt": "2026-11-15",
+      "verifiedAt": "2026-11-24",
       "aaIndex": 14,
-      "benchmarkCost": 0.56,
+      "benchmarkCost": 0.48,
       "evaluationProfile": "Nemotron 3.5 Super VL",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1"
+      "evaluationMethodology": "AA Intelligence Index v5.0.1",
+      "evaluationCheckedAt": "2026-11-24",
+      "evaluationVerifiedAt": "2026-11-24"
     },
     {
       "id": "nemotron-35-bolt",
@@ -355,9 +388,8 @@
       "note": "OpenMDW-1.1. Native IQ2 QAT and a packed-model memory target are documented. Reserve separate memory for attention/recurrent state, vision work, and runtime buffers; no hosted task cost is assumed.",
       "noteKo": "OpenMDW-1.1 공개입니다. Native IQ2 QAT와 패킹 모델 메모리 목표를 명시합니다. Attention·순환 상태, 시각 처리, 런타임 버퍼의 메모리는 별도 확보해야 하며 호스팅 과업 비용은 가정하지 않았습니다.",
       "releaseStatus": "released",
-      "verifiedAt": "2026-11-15",
-      "evaluationProfile": "Nemotron 3.5 Bolt 74B-A9B",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1"
+      "verifiedAt": "2026-11-24",
+      "evaluationCheckedAt": "2026-11-24"
     },
     {
       "id": "step-5-preview",
@@ -369,15 +401,17 @@
       "access": "released/open-weight",
       "accessKo": "가중치 공개",
       "source": "https://huggingface.co/stepfun-ai/Step-5-Preview-BF16",
-      "evaluation": "https://artificialanalysis.ai/models/step-5",
+      "evaluation": "https://artificialanalysis.ai/models/step-5-preview",
       "note": "The date marks the October weight-release milestone, after the September hosted preview. The custom StepFun Model License 1.0 includes additional conditions. The existing hosted AA profile is not a fresh local-checkpoint evaluation.",
       "noteKo": "날짜는 9월 호스팅 프리뷰 이후 10월 가중치 공개 이정표입니다. 별도 조건이 있는 StepFun Model License 1.0을 사용합니다. 기존 호스팅 AA 프로필을 로컬 체크포인트의 새 평가로 해석하면 안 됩니다.",
       "releaseStatus": "released",
-      "verifiedAt": "2026-11-15",
+      "verifiedAt": "2026-11-24",
       "aaIndex": 29,
       "benchmarkCost": 2.35,
       "evaluationProfile": "Step 5 Preview",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1"
+      "evaluationMethodology": "AA Intelligence Index v5.0.1",
+      "evaluationCheckedAt": "2026-11-24",
+      "evaluationVerifiedAt": "2026-11-24"
     },
     {
       "id": "deepseek-v41-flash-1017",
@@ -390,15 +424,17 @@
       "accessKo": "가중치 공개·API 갱신",
       "source": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017",
       "specification": "https://api-docs.deepseek.com/updates",
-      "note": "The mutable deepseek-flash alias routes to this update. A revision-specific AA max-effort profile is now available; its score and observed task cost are distinct from the September record. Pin the encoding toolkit and serving revision.",
-      "noteKo": "가변 별칭 deepseek-flash가 이 리비전으로 연결됩니다. 이제 리비전별 AA max 평가가 있으며 9월 기록과 별도의 점수·관측 과업 비용을 사용합니다. 인코딩 도구와 서빙 리비전을 고정하세요.",
+      "note": "The mutable deepseek-flash alias routes to this update. A revision-specific AA max-effort profile is now available; its score and weighted calculated task cost are distinct from the September record. Pin the encoding toolkit and serving revision.",
+      "noteKo": "가변 별칭 deepseek-flash가 이 리비전으로 연결됩니다. 이제 리비전별 AA max 평가가 있으며 9월 기록과 별도의 점수·가중 계산 과업 비용을 사용합니다. 인코딩 도구와 서빙 리비전을 고정하세요.",
       "releaseStatus": "released",
       "evaluation": "https://artificialanalysis.ai/models/deepseek-v4-1-flash-1017",
-      "verifiedAt": "2026-11-15",
+      "verifiedAt": "2026-11-24",
       "aaIndex": 33,
       "benchmarkCost": 0.6,
       "evaluationProfile": "DeepSeek V4.1 Flash 1017 (Max)",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1"
+      "evaluationMethodology": "AA Intelligence Index v5.0.1",
+      "evaluationCheckedAt": "2026-11-24",
+      "evaluationVerifiedAt": "2026-11-24"
     },
     {
       "id": "minimax-m31-flash",
@@ -419,11 +455,13 @@
       "releaseStatus": "released",
       "artifactRevision": "54e4e69dfc452b1e94a426c24a4fdeeaa8e3ad5e",
       "artifactEvidence": "https://huggingface.co/api/models/MiniMaxAI/MiniMax-M3.1-Flash",
-      "verifiedAt": "2026-11-15",
+      "verifiedAt": "2026-11-24",
       "aaIndex": 29,
       "benchmarkCost": 0.49,
       "evaluationProfile": "MiniMax-M3.1-Flash",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1"
+      "evaluationMethodology": "AA Intelligence Index v5.0.1",
+      "evaluationCheckedAt": "2026-11-24",
+      "evaluationVerifiedAt": "2026-11-24"
     },
     {
       "id": "kimi-k31-pro",
@@ -439,13 +477,15 @@
       "note": "The November weight release now discloses 2.8T total/104B active parameters, KDA plus gated sparse attention and a custom license. QAT formats and runtime support are separate from active compute. Hosted evaluation does not certify a local quantized deployment.",
       "noteKo": "11월 가중치 공개로 전체 2.8T·활성 104B, KDA와 gated sparse attention, 커스텀 라이선스를 확인할 수 있습니다. QAT 형식·런타임 지원은 활성 연산량과 별도입니다. 호스팅 평가는 로컬 양자화 배포를 인증하지 않습니다.",
       "releaseStatus": "released",
-      "verifiedAt": "2026-11-15",
+      "verifiedAt": "2026-11-24",
       "aaIndex": 46,
       "benchmarkCost": 3.68,
       "evaluationProfile": "Kimi K3.1 Pro",
       "evaluationMethodology": "AA Intelligence Index v5.0.1",
       "specification": "https://huggingface.co/api/models/moonshotai/Kimi-K3.1-Pro",
-      "noteSource": "https://www.kimi.ai/blog/kimi-k3-1-pro"
+      "noteSource": "https://www.kimi.ai/blog/kimi-k3-1-pro",
+      "evaluationCheckedAt": "2026-11-24",
+      "evaluationVerifiedAt": "2026-11-24"
     },
     {
       "id": "kimi-k31-pro-highspeed",
@@ -459,7 +499,7 @@
       "note": "Hosted speed-oriented sibling. The provider claims 2–3x speed. No separately verified context limit, public weight artifact, AA score, task cost, token price or architecture is copied from the standard Pro profile.",
       "noteKo": "속도를 지향하는 호스팅 변형으로 제공사는 2~3배 속도를 주장합니다. 별도로 확인한 문맥 한도·공개 가중치 아티팩트가 없으며 표준 Pro의 AA 점수·과업 비용·토큰 가격·아키텍처도 옮겨 넣지 않았습니다.",
       "releaseStatus": "released",
-      "verifiedAt": "2026-11-15"
+      "verifiedAt": "2026-11-24"
     },
     {
       "id": "ling-31-flash",
@@ -477,7 +517,8 @@
       "releaseStatus": "released",
       "artifactRevision": "93e96ab91e800998388563295340a4238ff3e962",
       "artifactEvidence": "https://huggingface.co/api/models/inclusionAI/Ling-3.1-flash",
-      "verifiedAt": "2026-11-15"
+      "verifiedAt": "2026-11-24",
+      "evaluationCheckedAt": "2026-11-24"
     },
     {
       "id": "ling-30-flash-sante",
@@ -485,16 +526,16 @@
       "model": "Ling 3.0 Flash Sante",
       "release": "2026-10-22",
       "setting": "reasoning; effort not reported",
-      "contextK": 256,
+      "contextK": 262.144,
       "source": "https://huggingface.co/inclusionAI/Ling-3.0-flash-Sante",
       "access": "released/open-weight",
       "accessKo": "가중치 공개",
-      "note": "MIT healthcare research checkpoint, 124B total/5.1B active in its card. Date is the October 22 artifact revision. Medical benchmark claims are not clinical validation; no cross-domain AA score is manufactured from provider medical evaluations.",
-      "noteKo": "MIT 의료 연구 체크포인트로 카드의 전체·활성 파라미터는 124B·5.1B입니다. 날짜는 10월 22일 아티팩트 리비전입니다. 의료 벤치마크 주장이 임상 검증은 아니며, 제공사의 의료 평가로 AA 지수를 만들지 않았습니다.",
+      "note": "MIT healthcare research checkpoint, 124B total/5.1B active in its card. Date is the October 22 artifact revision. Medical benchmark claims are not clinical validation; no cross-domain AA score is manufactured from provider medical evaluations. The context value follows the card’s explicit 262,144-token serving example.",
+      "noteKo": "MIT 의료 연구 체크포인트로 카드의 전체·활성 파라미터는 124B·5.1B입니다. 날짜는 10월 22일 아티팩트 리비전입니다. 의료 벤치마크 주장이 임상 검증은 아니며, 제공사의 의료 평가로 AA 지수를 만들지 않았습니다. 문맥 값은 카드의 명시적인 262,144토큰 서빙 예시를 따릅니다.",
       "releaseStatus": "released",
       "artifactRevision": "f74bd27bd26ffc71a50dd847805f8f7666ff0b43",
       "artifactEvidence": "https://huggingface.co/api/models/inclusionAI/Ling-3.0-flash-Sante",
-      "verifiedAt": "2026-11-15"
+      "verifiedAt": "2026-11-24"
     },
     {
       "id": "smaug-nemotron-35-nvfp4",
@@ -512,7 +553,7 @@
       "releaseStatus": "released",
       "artifactRevision": "f5b1cbbc0aa7aa83db2d02b6595420234d1e681e",
       "artifactEvidence": "https://huggingface.co/api/models/abacusai/Smaug-Nemotron-3.5-NVFP4",
-      "verifiedAt": "2026-11-15"
+      "verifiedAt": "2026-11-24"
     },
     {
       "id": "nemotron-35-bolt-e4b",
@@ -530,7 +571,7 @@
       "releaseStatus": "released",
       "artifactRevision": "1db54d5b12533ff1bcaa8e42cf4c667988a1f1be",
       "artifactEvidence": "https://huggingface.co/api/models/nvidia/NVIDIA-Nemotron-3.5-Bolt-E4B-4GB",
-      "verifiedAt": "2026-11-15"
+      "verifiedAt": "2026-11-24"
     },
     {
       "id": "gpt-61-terra",
@@ -544,7 +585,7 @@
       "access": "released/API-only",
       "accessKo": "API 공개",
       "releaseStatus": "released",
-      "verifiedAt": "2026-11-15",
+      "verifiedAt": "2026-11-24",
       "contextK": 1050,
       "inputPrice": 1,
       "outputPrice": 5,
@@ -552,7 +593,9 @@
       "aaIndex": 51,
       "benchmarkCost": 0.96,
       "evaluationProfile": "GPT-6.1 Terra (Max)",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1"
+      "evaluationMethodology": "AA Intelligence Index v5.0.1",
+      "evaluationCheckedAt": "2026-11-24",
+      "evaluationVerifiedAt": "2026-11-24"
     },
     {
       "id": "claude-fable-52",
@@ -566,16 +609,18 @@
       "access": "released/API-only",
       "accessKo": "API 공개",
       "releaseStatus": "released",
-      "verifiedAt": "2026-11-15",
+      "verifiedAt": "2026-11-24",
       "inputPrice": 8,
       "outputPrice": 40,
       "contextK": 1000,
-      "specification": "https://www.anthropic.com/claude/fable",
+      "specification": "https://platform.claude.com/docs/en/models/overview",
       "evaluation": "https://artificialanalysis.ai/models/claude-fable-5-2",
       "aaIndex": 65,
       "benchmarkCost": 26.54,
       "evaluationProfile": "Claude Fable 5.2 (Max, Default Fallback)",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1"
+      "evaluationMethodology": "AA Intelligence Index v5.0.1",
+      "evaluationCheckedAt": "2026-11-24",
+      "evaluationVerifiedAt": "2026-11-24"
     },
     {
       "id": "claude-mythos-52",
@@ -589,9 +634,11 @@
       "access": "restricted/API-only",
       "accessKo": "검증 프로그램 제한 공개",
       "releaseStatus": "restricted",
-      "verifiedAt": "2026-11-15",
+      "verifiedAt": "2026-11-24",
       "inputPrice": 8,
-      "outputPrice": 40
+      "outputPrice": 40,
+      "contextK": 1000,
+      "specification": "https://platform.claude.com/docs/en/models/overview"
     },
     {
       "id": "inkling-2-small",
@@ -605,7 +652,7 @@
       "access": "released/open-weight",
       "accessKo": "가중치 공개",
       "releaseStatus": "released",
-      "verifiedAt": "2026-11-15",
+      "verifiedAt": "2026-11-24",
       "contextK": 1000,
       "specification": "https://huggingface.co/api/models/thinkingmachines/Inkling-2-Small",
       "evaluation": "https://artificialanalysis.ai/models/inkling-2-small",
@@ -613,7 +660,9 @@
       "benchmarkCost": 1.18,
       "evaluationProfile": "Inkling 2 Small",
       "evaluationMethodology": "AA Intelligence Index v5.0.1",
-      "noteSource": "https://vllm-project.github.io/2026/11/12/inkling2-small.html"
+      "noteSource": "https://vllm-project.github.io/2026/11/12/inkling2-small.html",
+      "evaluationCheckedAt": "2026-11-24",
+      "evaluationVerifiedAt": "2026-11-24"
     },
     {
       "id": "qwen38-flash-next",
@@ -627,14 +676,16 @@
       "access": "released/open-weight",
       "accessKo": "가중치 공개",
       "releaseStatus": "released",
-      "verifiedAt": "2026-11-15",
+      "verifiedAt": "2026-11-24",
       "contextK": 262.144,
       "specification": "https://huggingface.co/api/models/Qwen/Qwen3.8-Flash-Next",
       "evaluation": "https://artificialanalysis.ai/models/qwen3-8-flash-next",
       "aaIndex": 29,
       "benchmarkCost": 0.57,
       "evaluationProfile": "Qwen3.8-Flash-Next",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1"
+      "evaluationMethodology": "AA Intelligence Index v5.0.1",
+      "evaluationCheckedAt": "2026-11-24",
+      "evaluationVerifiedAt": "2026-11-24"
     },
     {
       "id": "glm-53-flash",
@@ -648,13 +699,266 @@
       "access": "released/open-weight",
       "accessKo": "가중치 공개",
       "releaseStatus": "released",
-      "verifiedAt": "2026-11-15",
+      "verifiedAt": "2026-11-24",
       "specification": "https://huggingface.co/api/models/zai-org/GLM-5.3-Flash",
       "evaluation": "https://artificialanalysis.ai/models/glm-5-3-flash",
       "aaIndex": 28,
       "benchmarkCost": 0.58,
       "evaluationProfile": "GLM-5.3-Flash",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1"
+      "evaluationMethodology": "AA Intelligence Index v5.0.1",
+      "evaluationCheckedAt": "2026-11-24",
+      "evaluationVerifiedAt": "2026-11-24"
+    },
+    {
+      "id": "gpt-62-astra",
+      "company": "OpenAI",
+      "model": "GPT-6.2 Astra",
+      "release": "2026-11-17",
+      "source": "https://developers.openai.com/api/docs/models/gpt-6.2-astra",
+      "note": "Text/image input and text output. Tool calling requires Responses; reasoning none is unsupported. Standard rates apply through 272K input tokens; above that threshold the entire request has 2x input/cache rates and 1.5x output rates. Context is 1,050,000, with separate 922,000 input and 128,000 output limits. Architecture and training mixture are undisclosed.",
+      "noteKo": "텍스트·이미지 입력과 텍스트 출력을 지원합니다. 도구 호출에는 Responses가 필요하며 reasoning none은 지원하지 않습니다. Standard 단가는 입력 272K토큰까지 적용되며 이를 넘으면 요청 전체에 입력·캐시 2배, 출력 1.5배가 적용됩니다. 문맥 1,050,000토큰과 입력 922,000·출력 128,000 한도는 별개입니다. 아키텍처·학습 혼합은 미공개입니다.",
+      "setting": "max",
+      "access": "released/API-only",
+      "accessKo": "API 공개",
+      "releaseStatus": "released",
+      "verifiedAt": "2026-11-24",
+      "contextK": 1050,
+      "inputPrice": 8,
+      "outputPrice": 40,
+      "aaIndex": 62,
+      "benchmarkCost": 4.0,
+      "specification": "https://openai.com/index/introducing-gpt-6-2-astra-sol/",
+      "evaluation": "https://artificialanalysis.ai/models/gpt-6-2-astra",
+      "evaluationCheckedAt": "2026-11-24",
+      "evaluationProfile": "GPT-6.2 Astra (Max)",
+      "evaluationMethodology": "AA Intelligence Index v5.0.1",
+      "evaluationVerifiedAt": "2026-11-24"
+    },
+    {
+      "id": "gpt-62-sol",
+      "company": "OpenAI",
+      "model": "GPT-6.2 Sol",
+      "release": "2026-11-17",
+      "source": "https://developers.openai.com/api/docs/models/gpt-6.2-sol",
+      "note": "Text/image input and text output. Tool calling requires Responses; reasoning none is unsupported. Standard rates apply through 272K input tokens; above that threshold the entire request has 2x input/cache rates and 1.5x output rates. Context is 1,050,000, with separate 922,000 input and 128,000 output limits. Architecture and training mixture are undisclosed.",
+      "noteKo": "텍스트·이미지 입력과 텍스트 출력을 지원합니다. 도구 호출에는 Responses가 필요하며 reasoning none은 지원하지 않습니다. Standard 단가는 입력 272K토큰까지 적용되며 이를 넘으면 요청 전체에 입력·캐시 2배, 출력 1.5배가 적용됩니다. 문맥 1,050,000토큰과 입력 922,000·출력 128,000 한도는 별개입니다. 아키텍처·학습 혼합은 미공개입니다.",
+      "setting": "max",
+      "access": "released/API-only",
+      "accessKo": "API 공개",
+      "releaseStatus": "released",
+      "verifiedAt": "2026-11-24",
+      "contextK": 1050,
+      "inputPrice": 2,
+      "outputPrice": 10,
+      "aaIndex": 57,
+      "benchmarkCost": 1.01,
+      "specification": "https://openai.com/index/introducing-gpt-6-2-astra-sol/",
+      "evaluation": "https://artificialanalysis.ai/models/gpt-6-2-sol",
+      "evaluationCheckedAt": "2026-11-24",
+      "evaluationProfile": "GPT-6.2 Sol (Max)",
+      "evaluationMethodology": "AA Intelligence Index v5.0.1",
+      "evaluationVerifiedAt": "2026-11-24"
+    },
+    {
+      "id": "glm-54",
+      "company": "Z AI",
+      "model": "GLM-5.4",
+      "release": "2026-11-23",
+      "source": "https://z.ai/blog/glm-5.4",
+      "note": "Hosted access is live through GLM Coding Plan, ZCode and Z.ai Chat. Pay-as-you-go API access is coming soon; weights are planned after further safety work. Subscription-credit multipliers are not per-token API prices. The plan documents a 1,000,000-token [1m] option. No independently mapped AA profile is verified; exact total/active parameters and future weight license remain undisclosed.",
+      "noteKo": "GLM Coding Plan·ZCode·Z.ai Chat에서 사용할 수 있습니다. 종량제 API는 출시 예정이며 가중치는 추가 안전 작업 뒤 공개할 계획입니다. 구독 크레딧 배율은 API 토큰 단가가 아닙니다. 플랜 문서는 1,000,000토큰 [1m] 옵션을 명시합니다. 대응하는 독립 AA 평가는 확인하지 못했으며 정확한 전체·활성 파라미터와 향후 가중치 라이선스는 미공개입니다.",
+      "setting": "not reported",
+      "access": "released/hosted plans; pay-as-you-go API and weights planned",
+      "accessKo": "호스팅 플랜 공개·종량제 API와 가중치 예정",
+      "releaseStatus": "released",
+      "verifiedAt": "2026-11-24",
+      "contextK": 1000,
+      "specification": "https://docs.z.ai/devpack/latest-model",
+      "noteSource": "https://docs.z.ai/guides/overview/pricing"
+    },
+    {
+      "id": "gemini-4-carbon",
+      "company": "Google",
+      "model": "Gemini 4 Carbon",
+      "release": "2026-11-10",
+      "source": "https://aistudio.google.com/docs/models/gemini-4-carbon",
+      "note": "The date is general API availability, not an earlier preview. The 1,048,576-token context is unified input/output; 65,536 default synchronous output and the separate long-decode path are different contracts. Implicit caching only. Architecture and parameter counts are undisclosed. Official Standard rates are $2/$10 through November 30 and $4/$20 from December 1. AA currently uses $4/$20 for its $7.76 weighted task cost, a different price assumption.",
+      "noteKo": "날짜는 이전 프리뷰가 아니라 일반 API 공개 시점입니다. 1,048,576토큰은 입출력 통합 한도이며 기본 동기 출력 65,536과 별도 long decode 경로를 구분해야 합니다. 묵시적 캐시만 지원하며 아키텍처·파라미터 수는 미공개입니다. 공식 Standard 단가는 11월 30일까지 $2/$10, 12월 1일부터 $4/$20입니다. AA의 가중 과업 비용 $7.76는 현재 $4/$20을 사용하므로 가격 가정이 다릅니다.",
+      "setting": "high",
+      "access": "released/API-only",
+      "accessKo": "API 공개",
+      "releaseStatus": "released",
+      "verifiedAt": "2026-11-24",
+      "contextK": 1048.576,
+      "inputPrice": 2,
+      "outputPrice": 10,
+      "aaIndex": 60,
+      "benchmarkCost": 7.76,
+      "specification": "https://aistudio.google.com/docs/changelog",
+      "noteSource": "https://aistudio.google.com/docs/pricing#gemini-4-carbon",
+      "evaluation": "https://artificialanalysis.ai/models/gemini-4-carbon",
+      "evaluationCheckedAt": "2026-11-24",
+      "evaluationProfile": "Gemini 4 Carbon (High)",
+      "evaluationMethodology": "AA Intelligence Index v5.0.1",
+      "evaluationVerifiedAt": "2026-11-24",
+      "priceValidThrough": "2026-11-30"
+    },
+    {
+      "id": "gemini-4-neon",
+      "company": "Google",
+      "model": "Gemini 4 Neon",
+      "release": "2026-11-18",
+      "source": "https://aistudio.google.com/docs/models/gemini-4-neon",
+      "note": "The date is general API availability, not an earlier preview. The 1,048,576-token context is unified input/output; 65,536 default synchronous output and the separate long-decode path are different contracts. Implicit caching only. Architecture and parameter counts are undisclosed.",
+      "noteKo": "날짜는 이전 프리뷰가 아니라 일반 API 공개 시점입니다. 1,048,576토큰은 입출력 통합 한도이며 기본 동기 출력 65,536과 별도 long decode 경로를 구분해야 합니다. 묵시적 캐시만 지원하며 아키텍처·파라미터 수는 미공개입니다.",
+      "setting": "xhigh",
+      "access": "released/API-only",
+      "accessKo": "API 공개",
+      "releaseStatus": "released",
+      "verifiedAt": "2026-11-24",
+      "contextK": 1048.576,
+      "inputPrice": 3,
+      "outputPrice": 15,
+      "aaIndex": 61,
+      "benchmarkCost": 6.44,
+      "specification": "https://aistudio.google.com/docs/changelog",
+      "noteSource": "https://aistudio.google.com/docs/pricing#gemini-4-neon",
+      "evaluation": "https://artificialanalysis.ai/models/gemini-4-neon",
+      "evaluationCheckedAt": "2026-11-24",
+      "evaluationProfile": "Gemini 4 Neon (Xhigh)",
+      "evaluationMethodology": "AA Intelligence Index v5.0.1",
+      "evaluationVerifiedAt": "2026-11-24"
+    },
+    {
+      "id": "gemini-4-hydrogen",
+      "company": "Google",
+      "model": "Gemini 4 Hydrogen",
+      "release": "2026-11-12",
+      "source": "https://aistudio.google.com/docs/models/gemini-4-hydrogen",
+      "note": "The date is general API availability, not an earlier preview. The 1,048,576-token context is unified input/output; 65,536 default synchronous output and the separate long-decode path are different contracts. Implicit caching only. Architecture and parameter counts are undisclosed.",
+      "noteKo": "날짜는 이전 프리뷰가 아니라 일반 API 공개 시점입니다. 1,048,576토큰은 입출력 통합 한도이며 기본 동기 출력 65,536과 별도 long decode 경로를 구분해야 합니다. 묵시적 캐시만 지원하며 아키텍처·파라미터 수는 미공개입니다.",
+      "setting": "xhigh",
+      "access": "released/API-only",
+      "accessKo": "API 공개",
+      "releaseStatus": "released",
+      "verifiedAt": "2026-11-24",
+      "contextK": 1048.576,
+      "inputPrice": 1.5,
+      "outputPrice": 7.5,
+      "aaIndex": 54,
+      "benchmarkCost": 3.16,
+      "specification": "https://aistudio.google.com/docs/changelog",
+      "noteSource": "https://aistudio.google.com/docs/pricing#gemini-4-hydrogen",
+      "evaluation": "https://artificialanalysis.ai/models/gemini-4-hydrogen",
+      "evaluationCheckedAt": "2026-11-24",
+      "evaluationProfile": "Gemini 4 Hydrogen (Xhigh)",
+      "evaluationMethodology": "AA Intelligence Index v5.0.1",
+      "evaluationVerifiedAt": "2026-11-24"
+    },
+    {
+      "id": "qwen4-max",
+      "company": "Alibaba",
+      "model": "Qwen4-Max",
+      "release": "2026-11-16",
+      "source": "https://docs.qwencloud.com/changelog/models",
+      "note": "General API release follows the November 11 Token Plan preview. Image/video input, explicit caching and preserved reasoning history have distinct protocol contracts. Prices depend on deployment region, so no universal rate is plotted. AA identifies one reasoning profile without an effort suffix; its listed default is xhigh. Public Max weights are not established by these sources.",
+      "noteKo": "11월 11일 Token Plan 프리뷰 뒤 일반 API를 공개했습니다. 이미지·영상 입력, 명시적 캐시와 추론 이력 보존은 각각 별도 프로토콜 조건입니다. 배포 지역별로 가격이 달라 단일 단가를 그래프에 넣지 않았습니다. AA는 강도 접미사가 없는 추론 프로필 하나를 제시하며 기본값은 xhigh로 안내합니다. 이 출처에서 Max 가중치 공개는 확인하지 못했습니다.",
+      "setting": "reasoning; effort not reported",
+      "access": "released/API-only",
+      "accessKo": "API 공개",
+      "releaseStatus": "released",
+      "verifiedAt": "2026-11-24",
+      "contextK": 1000,
+      "aaIndex": 43,
+      "benchmarkCost": 3.27,
+      "specification": "https://docs.qwencloud.com/developer-guides/getting-started/latest-model",
+      "evaluation": "https://artificialanalysis.ai/models/qwen4-max",
+      "evaluationCheckedAt": "2026-11-24",
+      "evaluationProfile": "Qwen4 Max",
+      "evaluationMethodology": "AA Intelligence Index v5.0.1",
+      "evaluationVerifiedAt": "2026-11-24"
+    },
+    {
+      "id": "longcat-25",
+      "company": "Meituan",
+      "model": "LongCat-2.5",
+      "release": "2026-11-10",
+      "source": "https://tech.meituan.com/2026/11/10/Meituan-LongCat-2.5-Open-Source.html",
+      "note": "MIT weights are public. The card reports 1.6T total and approximately 48B activated parameters; do not merge that scope with repository tensor counters. Provider charts use multiple harnesses and are not AA Index measurements. No exact context contract or matched current AA profile was verified here.",
+      "noteKo": "MIT 가중치가 공개됐습니다. 카드는 전체 1.6T와 활성 약 48B를 제시하며 저장소 텐서 집계와 범위를 섞으면 안 됩니다. 제공사 표는 여러 실행 구성을 사용하며 AA 지수 측정이 아닙니다. 여기서는 정확한 문맥 조건이나 대응하는 현재 AA 평가를 확인하지 못했습니다.",
+      "setting": "reasoning; effort not reported",
+      "access": "released/open-weight",
+      "accessKo": "가중치 공개",
+      "releaseStatus": "released",
+      "verifiedAt": "2026-11-24",
+      "specification": "https://huggingface.co/meituan-longcat/LongCat-2.5"
+    },
+    {
+      "id": "agnes-25-pro-theta",
+      "company": "Agnes AI",
+      "model": "Agnes 2.5 Pro Theta",
+      "release": "2026-11-15",
+      "source": "https://huggingface.co/Agnes-AI/Agnes-2.5-Pro-Theta",
+      "note": "Date is the checked artifact revision, not initial launch. Apache 2.0 weights; the card specifies 262,144 configured tokens and approximately 187.8B parameters. The AA hosted profile lists a different context limit and its equivalence to this checkpoint is unverified, so no score or task cost is transferred. Provider benchmark settings are incomplete.",
+      "noteKo": "날짜는 확인한 아티팩트 리비전이며 최초 출시일이 아닙니다. Apache 2.0 가중치로 카드는 설정상 262,144토큰과 약 187.8B 파라미터를 명시합니다. AA 호스팅 프로필은 다른 문맥 한도를 제시하며 이 체크포인트와의 동등성을 확인하지 못해 점수·과업 비용을 옮기지 않았습니다. 제공사 벤치마크 설정도 불완전합니다.",
+      "setting": "reasoning; effort not reported",
+      "access": "released/open-weight",
+      "accessKo": "가중치 공개",
+      "releaseStatus": "released",
+      "verifiedAt": "2026-11-24",
+      "contextK": 262.144,
+      "artifactRevision": "6c06a374dd7f0b0ce254544aebadcf0a4f992b7c",
+      "artifactEvidence": "https://huggingface.co/api/models/Agnes-AI/Agnes-2.5-Pro-Theta",
+      "evaluation": "https://artificialanalysis.ai/models/agnes-2-5-pro-theta",
+      "evaluationCheckedAt": "2026-11-24"
+    },
+    {
+      "id": "inkling-2-mini",
+      "company": "Thinking Machines",
+      "model": "Inkling 2 Mini",
+      "release": "2026-11-20",
+      "source": "https://huggingface.co/thinkingmachines/Inkling-2-Mini",
+      "note": "Apache 2.0 text/image model. The card separates 26.4B stored parameters, 3.4B physical active parameters and 5.4B effective active compute with three shared-layer passes. A roughly 20GB packed checkpoint is not total runtime memory. The independently checked AA v5.0.1 profile is distinct from the card’s older v5.0 table.",
+      "noteKo": "Apache 2.0 텍스트·이미지 모델입니다. 카드는 저장 파라미터 26.4B, 물리적 활성 3.4B, 공유 계층 3회 실행의 유효 활성 연산량 5.4B를 구분합니다. 약 20GB 패킹 체크포인트가 전체 실행 메모리는 아닙니다. 독립적으로 확인한 AA v5.0.1 프로필은 카드의 과거 v5.0 표와 구분합니다.",
+      "setting": "reasoning; effort not reported",
+      "access": "released/open-weight",
+      "accessKo": "가중치 공개",
+      "releaseStatus": "released",
+      "verifiedAt": "2026-11-24",
+      "contextK": 1000,
+      "aaIndex": 20,
+      "benchmarkCost": 0.59,
+      "evaluation": "https://artificialanalysis.ai/models/inkling-2-mini",
+      "evaluationCheckedAt": "2026-11-24",
+      "evaluationProfile": "Inkling 2 Mini",
+      "evaluationMethodology": "AA Intelligence Index v5.0.1",
+      "evaluationVerifiedAt": "2026-11-24"
+    },
+    {
+      "id": "muse-ember",
+      "company": "Meta",
+      "model": "Muse Ember",
+      "release": "2026-11-09",
+      "source": "https://research.meta.ai/blog/muse-ember",
+      "note": "API model muse-ember-1.0 supports text, image, audio and video inputs with text output. Prices shown apply through 200K prompt tokens; longer prompts use $0.30/$1.50 input/output per million. Parameter counts and detailed architecture are undisclosed. Provider best-harness coding results are separate from this AA model profile.",
+      "noteKo": "API 모델 muse-ember-1.0은 텍스트·이미지·오디오·영상 입력과 텍스트 출력을 지원합니다. 표시 단가는 프롬프트 200K토큰까지이며 더 긴 입력은 백만 토큰당 입력/출력 $0.30/$1.50입니다. 파라미터 수와 상세 아키텍처는 미공개입니다. 제공사의 최적 실행 구성 코딩 결과는 이 AA 모델 프로필과 별개입니다.",
+      "setting": "max",
+      "access": "released/API-only",
+      "accessKo": "API 공개",
+      "releaseStatus": "released",
+      "verifiedAt": "2026-11-24",
+      "contextK": 1000,
+      "inputPrice": 0.1,
+      "outputPrice": 0.5,
+      "aaIndex": 36,
+      "benchmarkCost": 0.14,
+      "evaluation": "https://artificialanalysis.ai/models/muse-ember",
+      "evaluationCheckedAt": "2026-11-24",
+      "evaluationProfile": "Muse Ember (Max)",
+      "evaluationMethodology": "AA Intelligence Index v5.0.1",
+      "evaluationVerifiedAt": "2026-11-24"
     }
-  ]
+  ],
+  "costUnit": "USD per Intelligence Index task, weighted by evaluation",
+  "contextUnit": "1000 tokens"
 }

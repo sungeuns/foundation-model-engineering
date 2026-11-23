@@ -71,7 +71,11 @@ This view applies beyond robotics. A support agent has a state consisting of tic
 
 ## 5. Evidence Boundaries: Genie and Other Frontier Claims
 
-Google DeepMind describes Genie 3 as a general-purpose world model that generates interactive environments from text and runs them in real time [[4]](#ref-4). The same official page reports important limits: restricted action spaces, imperfect multi-agent interaction, consistency failures, and interaction horizons measured in minutes. DeepMind's statement that this could be a stepping stone toward AGI is a **provider research claim**, not evidence that AGI has been achieved or that this is the only path.
+**Genie 4 case, as of 2026-11-24.** Google began its eligible consumer rollout on November 18 and opened the paid developer API on November 19. The later API release establishes **released/API-only** access, even though the November 18 research card retains preview wording. [[4]](#ref-4) [[6]](#ref-6) [[7]](#ref-7) Access state and scientific validation answer different questions.
+
+The card discloses a Transformer-based system built on Gemini Omni Flash, with Gemini reasoning for steering. It does not disclose parameter counts or the complete training mixture. The API streams action-conditioned 720p video at 24 fps with audio for sessions up to 120 seconds; its documentation describes coherence and object permanence as strongest during the first 45–90 seconds. These are provider specifications and limitations, not a guarantee of correct state transitions. [[4]](#ref-4) [[8]](#ref-8)
+
+The research card acknowledges physical, spatial and long-term consistency failures. Its proposed role in robot training or progress toward AGI is a **provider research claim**. [[4]](#ref-4) To test usefulness for planning, hide an object, change the camera, then return and compare its identity, location and interactions with a known state. Repeat across time horizons and control sequences, and test transfer in an independently validated environment. A visually smooth response is insufficient evidence that a policy trained there will work outside it. [Section 11.6](/chapter-11/commercial-video-models/) covers the serving and session-termination contract.
 
 OpenAI's earlier Sora research used the “world simulators” framing for video generation [[5]](#ref-5). That work is evidence that scaled video models can show useful simulated behaviors; it does not establish a reliable causal model, persistent state, or action-conditioned planning in every generated scene.
 
@@ -138,8 +142,8 @@ World models sharpen an engineering problem: predict how actions change state, e
 </details>
 
 <details>
-<summary>Quiz 4: Why should Genie 3's AGI framing be labeled a provider claim?</summary>
-*The official page presents both a research direction and significant limitations. It does not prove that the system is AGI, that the approach is sufficient, or that alternatives cannot work.*
+<summary>Quiz 4: Does Genie 4's API release or session duration establish a validated world model for planning?</summary>
+*No. Availability and duration are serving facts. Planning requires tests of action-conditioned transitions, state persistence, error accumulation and transfer; provider AGI framing does not establish those results.*
 </details>
 
 <details>
@@ -152,5 +156,8 @@ World models sharpen an engineering problem: predict how actions change state, e
 1. <a id="ref-1"></a>Ha, D., & Schmidhuber, J. (2018). *World Models*. [arXiv:1803.10122](https://arxiv.org/abs/1803.10122).
 2. <a id="ref-2"></a>Hafner, D., et al. (2020). *Dream to Control: Learning Behaviors by Latent Imagination*. [arXiv:1912.01603](https://arxiv.org/abs/1912.01603).
 3. <a id="ref-3"></a>LeCun, Y. (2022). *A Path Towards Autonomous Machine Intelligence*. [OpenReview](https://openreview.net/forum?id=BZ5a1r-kVsf).
-4. <a id="ref-4"></a>Google DeepMind. (2026). *Genie*. [Official model page](https://deepmind.google/models/genie/).
+4. <a id="ref-4"></a>Google DeepMind. *Genie 4 model card*, published 2026-11-18. Verified 2026-11-24. [Card](https://deepmind.google/models/model-cards/genie-4/).
 5. <a id="ref-5"></a>OpenAI. (2024). *Video generation models as world simulators*. [OpenAI](https://openai.com/index/video-generation-models-as-world-simulators/).
+6. <a id="ref-6"></a>Google. (2026-11-18). *Genie 4 is now available in Project Genie*. Verified 2026-11-24. [Release](https://blog.google/innovation-and-ai/models-and-research/google-deepmind/genie-4-now-available-project-genie/).
+7. <a id="ref-7"></a>Google. (2026-11-19). *Genie 4 is now available on the Gemini API*. Verified 2026-11-24. [Release](https://blog.google/innovation-and-ai/technology/developers-tools/genie-4-in-gemini-api/).
+8. <a id="ref-8"></a>Google. *Genie 4 API model documentation*. Verified 2026-11-24. [Model](https://aistudio.google.com/docs/models/genie-4).

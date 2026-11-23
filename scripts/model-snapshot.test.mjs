@@ -14,11 +14,22 @@ test('model profiles preserve dates, provenance, and finite optional measurement
       assert.ok(typeof row[key] === 'string' && row[key].length > 0, `${row.model}: missing ${key}`);
     }
     assert.ok(new URL(row.source).protocol === 'https:');
+    assert.equal(row.verifiedAt, snapshot.asOf, `${row.model}: primary facts not checked for this snapshot`);
+    if (row.priceValidThrough) {
+      assert.ok(row.priceValidThrough >= snapshot.asOf, `${row.model}: expired token-price assumption`);
+    }
     for (const key of ['aaIndex', 'benchmarkCost', 'contextK', 'inputPrice', 'outputPrice']) {
       if (row[key] !== undefined) assert.ok(Number.isFinite(row[key]) && row[key] >= 0, `${row.model}: invalid ${key}`);
     }
     if (row.aaIndex !== undefined || row.benchmarkCost !== undefined) {
       assert.ok(row.evaluation?.startsWith('https://artificialanalysis.ai/'), `${row.model}: evaluation provenance`);
+      assert.equal(row.evaluationMethodology, snapshot.methodology, `${row.model}: mixed evaluation versions`);
+      assert.equal(row.evaluationVerifiedAt, snapshot.asOf, `${row.model}: stale evaluation snapshot`);
+      assert.ok(row.evaluationProfile?.length > 0, `${row.model}: exact evaluated profile missing`);
+      assert.ok(Number.isFinite(row.aaIndex), `${row.model}: task cost without a matched index`);
+    } else {
+      assert.equal(row.evaluationMethodology, undefined, `${row.model}: unverified profile claims a methodology`);
+      assert.equal(row.evaluationVerifiedAt, undefined, `${row.model}: missing result marked verified`);
     }
     assert.equal(row.inputPrice === undefined, row.outputPrice === undefined, `${row.model}: incomplete price mix`);
   }

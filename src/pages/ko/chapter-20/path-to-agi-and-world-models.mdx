@@ -71,7 +71,11 @@ world model은 통제된 시스템의 구성요소로 보는 것이 좋습니다
 
 ## 5. Genie와 frontier 주장에 대한 근거 경계
 
-Google DeepMind는 Genie 3를 텍스트로 interactive environment를 생성하고 실시간으로 실행하는 general-purpose world model로 설명합니다 [[4]](#ref-4). 같은 공식 페이지는 제한된 행동 공간, 불완전한 multi-agent interaction, 일관성 실패, 수 분 규모의 상호작용 범위라는 중요한 한계도 공개합니다. 이것이 AGI로 가는 디딤돌이 될 수 있다는 DeepMind의 표현은 **공급자의 연구 주장** 이며, AGI가 달성됐거나 이것이 유일한 경로라는 증거가 아닙니다.
+**Genie 4 사례, 2026-11-24 기준.** Google은 11월 18일 이용 자격을 갖춘 소비자 대상 배포를 시작했고, 11월 19일 유료 개발자 API를 공개했습니다. 11월 18일 연구 카드에 프리뷰 표현이 남아 있어도 이후 API 출시는 **출시됨/API 전용** 접근 상태를 입증합니다. [[4]](#ref-4) [[6]](#ref-6) [[7]](#ref-7) 접근 가능 여부와 과학적 검증은 서로 다른 질문입니다.
+
+카드는 Gemini Omni Flash를 기반으로 Gemini 추론이 제어를 맡는 Transformer 시스템이라고 공개합니다. 파라미터 수와 전체 학습 데이터 혼합은 공개하지 않습니다. API는 행동에 따라 오디오와 720p, 초당 24프레임 영상을 최대 120초 세션으로 전송하며, 문서는 첫 45–90초에 일관성과 객체 영속성이 가장 강하다고 설명합니다. 이는 제공사의 사양과 한계이며, 올바른 상태 전이를 보장하지는 않습니다. [[4]](#ref-4) [[8]](#ref-8)
+
+연구 카드는 물리·공간·장기 일관성의 실패를 인정합니다. 로봇 학습이나 AGI 진전에 도움이 된다는 전망은 **제공사의 연구 주장** 입니다. [[4]](#ref-4) 계획에 유용한지 보려면 객체를 가리고 카메라를 돌린 뒤 돌아와, 정체성·위치·상호작용을 알려진 상태와 비교합니다. 시간 범위와 제어 순서를 바꿔 반복하고 독립적으로 검증된 환경으로의 전이도 시험해야 합니다. 화면이 매끄럽게 이어진다는 사실만으로 그 안에서 학습한 정책이 외부에서도 작동한다고 볼 수는 없습니다. [11.6절](/chapter-11/commercial-video-models/)은 서빙과 세션 종료 계약을 다룹니다.
 
 OpenAI의 초기 Sora 연구는 비디오 생성을 “world simulators”라는 표현으로 설명했습니다 [[5]](#ref-5). 이 연구는 scale한 비디오 모델이 유용한 시뮬레이션 행동을 보일 수 있다는 근거이지만, 모든 생성 장면에서 신뢰할 수 있는 인과 모델, 지속 상태, 행동 조건부 계획을 확립하지는 않습니다.
 
@@ -138,8 +142,8 @@ world model은 행동이 상태를 어떻게 바꾸는지 예측하고, 불확�
 </details>
 
 <details>
-<summary>Quiz 4: Genie 3의 AGI 프레이밍을 공급자 주장으로 표시해야 하는 이유는 무엇인가요?</summary>
-*공식 페이지가 연구 방향과 중요한 한계를 함께 제시하기 때문입니다. 이 시스템이 AGI이거나, 접근법이 충분하거나, 다른 경로가 불가능하다는 증거는 아닙니다.*
+<summary>Quiz 4: Genie 4의 API 출시나 세션 길이만으로 계획에 쓸 세계 모델이 검증됐다고 할 수 있나요?</summary>
+*아닙니다. 가용성과 길이는 서빙 사실입니다. 계획에는 행동 조건부 전이·상태 지속성·오차 누적·전이 평가가 필요하며, 제공사의 AGI 설명은 그 결과를 입증하지 않습니다.*
 </details>
 
 <details>
@@ -152,5 +156,8 @@ world model은 행동이 상태를 어떻게 바꾸는지 예측하고, 불확�
 1. <a id="ref-1"></a>Ha, D., & Schmidhuber, J. (2018). *World Models*. [arXiv:1803.10122](https://arxiv.org/abs/1803.10122).
 2. <a id="ref-2"></a>Hafner, D., et al. (2020). *Dream to Control: Learning Behaviors by Latent Imagination*. [arXiv:1912.01603](https://arxiv.org/abs/1912.01603).
 3. <a id="ref-3"></a>LeCun, Y. (2022). *A Path Towards Autonomous Machine Intelligence*. [OpenReview](https://openreview.net/forum?id=BZ5a1r-kVsf).
-4. <a id="ref-4"></a>Google DeepMind. (2026). *Genie*. [Official model page](https://deepmind.google/models/genie/).
+4. <a id="ref-4"></a>Google DeepMind. *Genie 4 model card*, published 2026-11-18. Verified 2026-11-24. [Card](https://deepmind.google/models/model-cards/genie-4/).
 5. <a id="ref-5"></a>OpenAI. (2024). *Video generation models as world simulators*. [OpenAI](https://openai.com/index/video-generation-models-as-world-simulators/).
+6. <a id="ref-6"></a>Google. (2026-11-18). *Genie 4 is now available in Project Genie*. Verified 2026-11-24. [Release](https://blog.google/innovation-and-ai/models-and-research/google-deepmind/genie-4-now-available-project-genie/).
+7. <a id="ref-7"></a>Google. (2026-11-19). *Genie 4 is now available on the Gemini API*. Verified 2026-11-24. [Release](https://blog.google/innovation-and-ai/technology/developers-tools/genie-4-in-gemini-api/).
+8. <a id="ref-8"></a>Google. *Genie 4 API model documentation*. Verified 2026-11-24. [Model](https://aistudio.google.com/docs/models/genie-4).

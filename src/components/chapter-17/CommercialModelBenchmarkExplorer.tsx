@@ -22,7 +22,9 @@ type CompanyKey =
   | 'StepFun'
   | 'InclusionAI'
   | 'Abacus AI'
-  | 'Thinking Machines';
+  | 'Thinking Machines'
+  | 'Meituan'
+  | 'Agnes AI';
 type MetricKey = 'aaIndex' | 'contextK';
 type AxisMode = 'timeline' | 'price' | 'context' | 'taskCost';
 type ReleaseStatus = 'released' | 'preview' | 'announced' | 'restricted';
@@ -49,9 +51,16 @@ type ModelSnapshot = {
   setting: string;
   evaluationProfile?: string;
   evaluationMethodology?: string;
+  verifiedAt: string;
+  evaluationVerifiedAt?: string;
 };
 
 const MODEL_SNAPSHOTS = snapshot.models as ModelSnapshot[];
+const milestoneDates = MODEL_SNAPSHOTS.map(row => row.release).sort();
+const milestoneRange = (locale: Locale) => {
+  const formatter = new Intl.DateTimeFormat(locale === 'ko' ? 'ko-KR' : 'en-US', { year: 'numeric', month: 'long', timeZone: 'UTC' });
+  return `${formatter.format(new Date(milestoneDates[0]))}–${formatter.format(new Date(milestoneDates[milestoneDates.length - 1]))}`;
+};
 
 const metricLabels: Record<Locale, Record<MetricKey, string>> = {
   en: {
@@ -85,13 +94,13 @@ const labels = {
     selected: 'Selected model',
     releaseTimeline: 'Release timeline',
     releaseTimelineHelp:
-      'Selected releases and announcements in August–November 2026. Read changes in reasoning, agents, long-context handling, and cost efficiency alongside each source and its evaluation conditions.',
+      `Selected releases and announcements in ${milestoneRange('en')}. Read changes in reasoning, agents, long-context handling, and cost efficiency alongside each source and its evaluation conditions.`,
     blendedPrice: 'blended $/1M',
     outputSpeed: 'tok/s',
     detailContext: 'context',
     priceAxis: 'Lower is cheaper',
     source:
-      'Snapshot as of 2026-11-15. Scores use AA Intelligence Index v5.0.1 with the effort/fallback configuration shown. Configurations without a numeric effort are marked not reported; no equal-effort ranking is implied. Costs are observed AA workload costs, not token-price estimates. Local checkpoints require their own evaluations. Speed is omitted. A missing score means not reported under the mapped methodology, not zero. Promotional or long-context prices may have thresholds and expiry dates.',
+      `Snapshot as of ${snapshot.asOf}. Scores use ${snapshot.methodology} with the effort/fallback configuration shown, not an equal-effort ranking. AA task costs are weighted calculations using benchmark token use, current prices and typical cache-hit assumptions, not observed invoices. Provider token prices have separate conditions; Argon and Carbon introductory rates differ from AA's current assumptions. Local checkpoints require their own evaluations. Missing scores mean not reported, not zero.`,
   },
   ko: {
     title: '상용 모델 비교 지도',
@@ -113,13 +122,13 @@ const labels = {
     selected: '선택한 모델',
     releaseTimeline: '공개 일정',
     releaseTimelineHelp:
-      '2026년 8~11월의 주요 공개·발표 사례입니다. 추론, 에이전트, 장문 처리와 비용 효율의 변화는 각 사례의 출처와 평가 조건을 함께 읽어야 합니다.',
+      `${milestoneRange('ko')}의 주요 공개·발표 사례입니다. 추론, 에이전트, 장문 처리와 비용 효율의 변화는 각 사례의 출처와 평가 조건을 함께 읽어야 합니다.`,
     blendedPrice: '혼합 가격 $/1M',
     outputSpeed: 'tok/s',
     detailContext: '문맥 길이',
     priceAxis: '왼쪽일수록 저렴',
     source:
-      '2026-11-15 기준입니다. 점수는 표시된 추론·fallback 조건의 AA v5.0.1 시스템 프로필입니다. 세부 추론 강도가 없으면 미공개로 표시하며 동일 예산의 순위를 뜻하지 않습니다. 비용은 AA 과업의 관측값입니다. 로컬 체크포인트는 별도 평가가 필요하며 속도는 표시하지 않습니다. 값이 없다는 것은 0점이 아니라 해당 methodology에서 미공개라는 뜻입니다. 프로모션 가격과 장문 입력 가격에는 만료일이나 별도 임계값이 있을 수 있습니다.',
+      `${snapshot.asOf} 기준입니다. 점수는 표시된 추론·fallback 조건의 ${snapshot.methodology}이며 동일 예산의 순위가 아닙니다. AA 과업 비용은 벤치마크 토큰 사용량·현재 단가·통상적 캐시 적중 가정으로 계산한 가중값이며 실제 청구서가 아닙니다. 제공사 토큰 단가는 조건이 별도이며 Argon·Carbon의 도입 단가는 AA의 현재 가정과 다릅니다. 로컬 체크포인트는 별도 평가가 필요합니다. 점수 누락은 0점이 아니라 미공개를 뜻합니다.`,
   },
 };
 
@@ -180,7 +189,7 @@ function niceRange(values: number[], padRatio = 0.08, constantPad?: number) {
 function formatX(value: number, axisMode: AxisMode) {
   if (axisMode === 'timeline') return new Date(value * 86_400_000).toISOString().slice(0, 10);
   if (axisMode === 'price' || axisMode === 'taskCost') return `$${value.toFixed(2)}`;
-  return formatContext(value, 'not reported');
+  return formatContext(value, 'not reported', true);
 }
 
 function formatMetric(value: number | undefined, metric: MetricKey, missing: string) {
@@ -190,31 +199,38 @@ function formatMetric(value: number | undefined, metric: MetricKey, missing: str
   return missing;
 }
 
-function formatContext(value: number | undefined, missing: string) {
+function formatContext(value: number | undefined, missing: string, compact = false) {
   if (typeof value !== 'number') return missing;
   if (value >= 1000) {
     const millions = value / 1000;
-    return `${millions.toFixed(Number.isInteger(millions) ? 0 : 2)}M`;
+    return `${Number(millions.toFixed(compact ? 2 : 6))}M`;
   }
-  return `${value}K`;
+  return `${Number(value.toFixed(compact ? 2 : 3))}K`;
 }
 
 function companyClass(company: string) {
   return company.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 }
 
+function formatSetting(setting: string, locale: Locale) {
+  if (setting === 'not reported') return labels[locale].noScore;
+  if (locale === 'ko' && setting === 'reasoning; effort not reported') return '추론 모드·강도 미공개';
+  if (locale === 'ko' && setting === 'max with fallback') return 'max·기본 fallback';
+  return setting;
+}
+
 export default function CommercialModelBenchmarkExplorer({ locale = 'en' }: { locale?: Locale }) {
   const [metric, setMetric] = useState<MetricKey>('aaIndex');
   const [axisMode, setAxisMode] = useState<AxisMode>('taskCost');
   const [company, setCompany] = useState<CompanyKey>('All');
-  const [selectedId, setSelectedId] = useState('gpt-61-sol');
+  const [selectedId, setSelectedId] = useState('gpt-62-sol');
   const text = labels[locale];
 
   const plottedRows = useMemo(() => {
     return MODEL_SNAPSHOTS.filter((row) => company === 'All' || row.company === company)
       .map((row) => ({ row, x: xValue(row, axisMode), y: yValue(row, metric) }))
       .filter((point): point is { row: ModelSnapshot; x: number; y: number } => {
-        return typeof point.x === 'number' && typeof point.y === 'number';
+        return typeof point.x === 'number' && Number.isFinite(point.x) && typeof point.y === 'number' && Number.isFinite(point.y);
       });
   }, [axisMode, company, metric]);
 
@@ -259,7 +275,7 @@ export default function CommercialModelBenchmarkExplorer({ locale = 'en' }: { lo
       <div className="commercial-benchmark-header">
         <div>
           <h3>{text.title}</h3>
-          <p>{locale === 'ko' ? '2026-11-15 기준 · AA v5.0.1' : 'as of 2026-11-15 · AA v5.0.1'}</p>
+          <p>{locale === 'ko' ? `${snapshot.asOf} 기준` : `as of ${snapshot.asOf}`} · {snapshot.methodology}</p>
           <p>{text.subtitle}</p>
         </div>
         <div className="commercial-benchmark-controls" aria-label={text.controlAria}>
@@ -318,7 +334,7 @@ export default function CommercialModelBenchmarkExplorer({ locale = 'en' }: { lo
               <g key={`y-${tick}`}>
                 <line x1={chart.left} x2={chart.width - chart.right} y1={sy(tick)} y2={sy(tick)} className="plot-grid" />
                 <text x={chart.left - 12} y={sy(tick) + 4} textAnchor="end" className="plot-tick">
-                  {metric === 'contextK' ? formatContext(tick, text.noScore) : tick.toFixed(0)}
+                  {metric === 'contextK' ? formatContext(tick, text.noScore, true) : tick.toFixed(0)}
                 </text>
               </g>
             ))}
@@ -381,9 +397,11 @@ export default function CommercialModelBenchmarkExplorer({ locale = 'en' }: { lo
           <span className={`provider-chip provider-${companyClass(selected.company)}`}>{selected.company}</span>
           <h4>{selected.model}</h4>
           <p className="commercial-detail-meta">
-            {selected.release} · AA v5.0.1 · {selected.setting === 'not reported' ? text.noScore : selected.setting === 'reasoning; effort not reported' && locale === 'ko' ? '추론 모드·강도 미공개' : selected.setting}
+            {selected.release}
+            {selected.evaluationMethodology && <> · {selected.evaluationMethodology} · {formatSetting(selected.setting, locale)}</>}
             {selected.releaseStatus ? ` · ${releaseStatusLabels[locale][selected.releaseStatus]}` : ''}
           </p>
+          {!selected.evaluationMethodology && <p className="commercial-note">{locale === 'ko' ? '이 항목에 대응하는 AA 평가값을 확인하지 못했습니다.' : 'No matched AA evaluation is verified for this entry.'}</p>}
           <p className="commercial-note">{locale === 'ko' ? selected.accessKo : selected.access}</p>
           <div className="commercial-detail-grid">
             <div>
@@ -407,8 +425,9 @@ export default function CommercialModelBenchmarkExplorer({ locale = 'en' }: { lo
             <a href={selected.source}>{locale === 'ko' ? '공식 출처' : 'Primary source'}</a>
             {selected.specification && <> · <a href={selected.specification}>{locale === 'ko' ? '모델·API 규격' : 'Model/API specification'}</a></>}
             {selected.evaluation && <> · <a href={selected.evaluation}>{locale === 'ko' ? '평가 조건·출처' : 'Evaluation source'}</a></>}
-            {selected.noteSource && <> · <a href={selected.noteSource}>{locale === 'ko' ? '단가 변경 출처' : 'Pricing update'}</a></>}
-            {locale === 'ko' ? ' · 2026-11-15 기준' : ' · as of 2026-11-15'}
+            {selected.noteSource && <> · <a href={selected.noteSource}>{locale === 'ko' ? '추가 출처' : 'Additional source'}</a></>}
+            {locale === 'ko' ? ` · 공식 정보 확인 ${selected.verifiedAt}` : ` · primary information checked ${selected.verifiedAt}`}
+            {selected.evaluationVerifiedAt && (locale === 'ko' ? ` · AA 확인 ${selected.evaluationVerifiedAt}` : ` · AA checked ${selected.evaluationVerifiedAt}`)}
           </p>
           <p className="commercial-note">{locale === 'ko' ? selected.noteKo : selected.note}</p>
           {!plottedRows.some((point) => point.row.id === selected.id) && <p className="commercial-note">{locale === 'ko' ? '선택한 모델은 이 축·지표에 필요한 값이 없어 그래프에서 제외됩니다.' : 'The selected model lacks a value required by this axis or metric and is omitted from the plot.'}</p>}
@@ -441,7 +460,7 @@ export default function CommercialModelBenchmarkExplorer({ locale = 'en' }: { lo
             >
               <span>{row.release}</span>
               <strong>{row.model}</strong>
-              <em>{row.setting === 'not reported' ? text.noScore : row.setting === 'reasoning; effort not reported' && locale === 'ko' ? '추론 모드·강도 미공개' : row.setting}</em>
+              <em>{row.evaluationMethodology ? formatSetting(row.setting, locale) : (locale === 'ko' ? 'AA 평가 미확인' : 'AA evaluation not verified')}</em>
             </button>
           ))}
         </div>

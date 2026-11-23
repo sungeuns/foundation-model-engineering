@@ -8,7 +8,7 @@ lang: "en"
 
 Commercial video generation is an integration problem, not a beauty contest. A team must evaluate temporal consistency, prompt and reference adherence, audio timing, editability, latency, price, content rights, safety controls, and the stability of the serving interface. A polished demo establishes possibility; it does not establish a dependable production system.
 
-**As of 2026-10-13**, the products and access paths in this section are a dated snapshot. Recheck official documentation before procurement or release because names, limits, prices, and availability change quickly.
+Historical clip-generation snapshot: **As of 2026-10-13**. The November clip update and Genie 4 case are checked **as of 2026-11-24**. Recheck official documentation before procurement or release because names, limits, prices, and availability change quickly.
 
 ---
 
@@ -33,6 +33,12 @@ The current official page describes joint audio-video generation, up to 30-secon
 | Production implication | Verify the exact Google surface and quota [[1]](#ref-1) | API removed on 2026-09-24; historical example [[3]](#ref-3) | Verify hosted/API revision, region, and terms [[4]](#ref-4) |
 
 This table deliberately does not declare a universal winner. Provider demos, prompt sets, editing tools, and graders are not interchangeable.
+
+### November clip update: Gemini Omni 1.2 Flash
+
+**As of 2026-11-24.** Google's November 5 changelog marks `gemini-omni-1.2-flash` **released/API-only, generally available**. Its documented workflow generates or conversationally edits fixed-duration video with audio. Standard output is 3–15 seconds; first/last-frame interpolation and each extension are 3–10 seconds, with extension capped at 30 seconds total. These mode-specific limits must not be replaced with one undifferentiated “maximum duration.” [[6]](#ref-6) [[10]](#ref-10)
+
+Evaluate edit preservation, reference adherence and temporal consistency across extensions separately from interactive steering. The same family name does not make this fixed-clip API interchangeable with the Genie 4 session below.
 
 ---
 
@@ -73,11 +79,13 @@ These tests measure behavior without claiming an undisclosed mechanism.
 
 ---
 
-## 4. Future Direction: From Clips to Interactive Environments
+## 4. From Clips to Interactive Environments: Genie 4
 
-Interactive world models add actions and persistent state to generation. Google DeepMind describes Genie 3 as producing interactive environments in real time, while also documenting limited action spaces, consistency errors, and interaction horizons of minutes rather than indefinite simulations [[5]](#ref-5). That makes it a useful research direction, not evidence that current video products already implement reliable physical simulation.
+**As of 2026-11-24.** Genie 4 moved from its October research preview to a rollout for eligible Google AI Ultra subscribers on November 18, then a paid developer API on November 19. The API changelog labels the model generally available through the Interactions API (`v1beta`): **released/API-only**, without public weights established by these sources. The research model card still uses preview wording; that describes the card's publication state rather than overturning the later API release. [[5]](#ref-5) [[6]](#ref-6) [[7]](#ref-7)
 
-For an AI engineer, the near-term design question is concrete: does the system maintain state under user actions, expose uncertainty and failure, and support evaluation and rollback? Chapter 20 develops that system view without treating any one architecture as a settled route to AGI.
+The API accepts text, a reference image and live controls, and streams 720p video at 24 fps with synchronized audio. Its documented session ceiling is **120 seconds**; visual coherence and object permanence are described as strongest during the first **45–90 seconds**, not guaranteed throughout that interval. The model card identifies a Transformer-based system using Gemini Omni Flash and Gemini reasoning, while leaving parameter counts and the complete training mixture undisclosed. It also reports drift, imperfect physical interactions, and text/spatial errors. [[7]](#ref-7) [[8]](#ref-8)
+
+Test repeated camera turns, occlusion and contradictory mid-session edits at multiple elapsed times. Log control timestamps, received frames, audio synchronization, network delay and the first state inconsistency. A 120-second connection limit is not a validated planning horizon. The integration guide also warns that disconnecting does not immediately stop server generation; explicitly complete the session and verify termination. [[9]](#ref-9) [Section 20.7](/chapter-20/path-to-agi-and-world-models/) separates these observable behaviors from claims about general world modeling or AGI.
 
 ---
 
@@ -103,10 +111,20 @@ For an AI engineer, the near-term design question is concrete: does the system m
 *It must test action-conditioned state changes, persistence, controllability, and error accumulation across an interaction horizon, not only the visual quality of one generated clip.*
 </details>
 
+<details>
+<summary>Quiz 5: Why does Genie 4's 120-second session limit not establish a 120-second reliable simulation?</summary>
+*The serving limit bounds connection duration. State coherence can fail earlier, so test object persistence and action-conditioned transitions across elapsed time; terminate the server session explicitly when finished.*
+</details>
+
 ## References
 
 1. <a id="ref-1"></a>Google. (2026). *Veo 3.1 Ingredients to Video: More consistency, creativity and control*. [Google Blog](https://blog.google/innovation-and-ai/technology/ai/veo-3-1-ingredients-to-video/).
 2. <a id="ref-2"></a>OpenAI. (2026). *Sora 2 System Card*. [OpenAI](https://openai.com/index/sora-2-system-card/).
 3. <a id="ref-3"></a>OpenAI. (2026). *Deprecations: Sora 2 video generation models and Videos API*. [OpenAI Developers](https://developers.openai.com/api/docs/deprecations).
 4. <a id="ref-4"></a>ByteDance Seed. (2026). *Seedance 2.5*. [Official model page](https://seed.bytedance.com/en/seedance2_5).
-5. <a id="ref-5"></a>Google DeepMind. (2026). *Genie*. [Official model page](https://deepmind.google/models/genie/).
+5. <a id="ref-5"></a>Google. (2026-11-18). *Genie 4 is now available in Project Genie*. Verified 2026-11-24. [Release](https://blog.google/innovation-and-ai/models-and-research/google-deepmind/genie-4-now-available-project-genie/).
+6. <a id="ref-6"></a>Google. *Gemini API release notes: November 5 and 19, 2026*. Verified 2026-11-24. [Changelog](https://aistudio.google.com/docs/changelog).
+7. <a id="ref-7"></a>Google DeepMind. *Genie 4 model card*, published 2026-11-18. Verified 2026-11-24. [Card](https://deepmind.google/models/model-cards/genie-4/).
+8. <a id="ref-8"></a>Google. *Genie 4 API model documentation*. Verified 2026-11-24. [Model](https://aistudio.google.com/docs/models/genie-4).
+9. <a id="ref-9"></a>Google. *Interactive world generation with Genie 4*. Verified 2026-11-24. [Guide](https://aistudio.google.com/docs/genie).
+10. <a id="ref-10"></a>Google. *Gemini Omni 1.2 Flash API model documentation*. Verified 2026-11-24. [Model](https://aistudio.google.com/docs/models/gemini-omni-flash).

@@ -8,7 +8,7 @@ lang: "ko"
 
 상용 비디오 생성은 미인 대회가 아니라 통합 문제입니다. 팀은 시간적 일관성, 프롬프트와 참조 이미지 준수, 오디오 타이밍, 편집 가능성, 지연 시간, 가격, 콘텐츠 권리, 안전 제어, 서빙 인터페이스의 안정성을 함께 평가해야 합니다. 멋진 데모는 가능성을 보여 주지만 신뢰할 수 있는 운영 시스템을 증명하지는 않습니다.
 
-**2026-10-13 기준** 으로 이 절의 제품과 접근 경로는 날짜가 고정된 스냅샷입니다. 이름, 한도, 가격, 가용성은 빠르게 바뀌므로 구매나 출시 전에 공식 문서를 다시 확인해야 합니다.
+아래 클립 생성 비교는 **2026-10-13 기준의 과거 스냅샷** 입니다. 11월 클립 생성 업데이트와 Genie 4 사례는 **2026-11-24 기준** 으로 확인했습니다. 이름, 한도, 가격, 가용성은 빠르게 바뀌므로 구매나 출시 전에 공식 문서를 다시 확인해야 합니다.
 
 ---
 
@@ -33,6 +33,12 @@ Sora 2 system card는 동기화된 음성·영상 생성과 안전 평가·완�
 | 운영상 의미 | Google 제품과 quota를 정확히 검증 [[1]](#ref-1) | 2026-09-24 API 제거; 과거 사례 [[3]](#ref-3) | 호스팅/API 리비전·지역·약관 검증 [[4]](#ref-4) |
 
 이 표는 보편적인 승자를 선언하지 않습니다. 공급자 데모의 프롬프트, 편집 도구, 평가자는 서로 호환되지 않습니다.
+
+### 11월 클립 생성 업데이트: Gemini Omni 1.2 Flash
+
+**2026-11-24 기준.** Google의 11월 5일 변경 기록은 `gemini-omni-1.2-flash`를 **출시됨/API 전용, 정식 제공** 으로 명시합니다. 문서화된 작업 흐름은 오디오가 포함된 고정 길이 영상을 생성하거나 대화로 편집합니다. 일반 출력은 3–15초이며, 첫·마지막 프레임 보간과 한 번의 연장은 3–10초입니다. 연장한 전체 영상의 한도는 30초입니다. 모드별 제약을 하나의 “최대 길이”로 뭉뚱그리면 안 됩니다. [[6]](#ref-6) [[10]](#ref-10)
+
+편집 보존·참조 준수·연장 구간의 시간적 일관성은 실시간 제어와 따로 평가합니다. 같은 계열이라는 이유로 이 고정 클립 API와 아래 Genie 4 세션을 서로 바꿔 쓸 수는 없습니다.
 
 ---
 
@@ -73,11 +79,13 @@ Sora 2 system card는 동기화된 음성·영상 생성과 안전 평가·완�
 
 ---
 
-## 4. 향후 방향: 영상에서 상호작용 환경으로
+## 4. 영상에서 상호작용 환경으로: Genie 4
 
-interactive world model은 생성에 행동과 지속 상태를 더합니다. Google DeepMind는 Genie 3가 실시간 interactive environment를 생성한다고 설명하면서도, 제한된 행동 공간, 일관성 오류, 무기한이 아닌 수 분 규모의 상호작용 한계를 함께 공개합니다 [[5]](#ref-5). 따라서 이는 유용한 연구 방향이지만, 현재의 비디오 제품이 이미 신뢰할 수 있는 물리 시뮬레이션을 구현했다는 증거는 아닙니다.
+**2026-11-24 기준.** Genie 4는 10월 연구 프리뷰를 거쳐 11월 18일 이용 자격을 갖춘 Google AI Ultra 구독자에게 배포되기 시작했고, 11월 19일에는 유료 개발자 API로 제공됐습니다. API 변경 기록은 Interactions API(`v1beta`)를 통한 정식 제공을 명시합니다. 따라서 상태는 **출시됨/API 전용** 이며, 이 출처가 공개 가중치를 입증하지는 않습니다. 연구 모델 카드에는 프리뷰 표현이 남아 있지만, 이는 카드 발행 당시의 표현이며 이후 API 출시 사실을 뒤집지 않습니다. [[5]](#ref-5) [[6]](#ref-6) [[7]](#ref-7)
 
-AI 엔지니어에게 가까운 설계 질문은 구체적입니다. 시스템이 사용자 행동 아래에서 상태를 유지하는가, 불확실성과 실패를 노출하는가, 평가와 rollback을 지원하는가? 20장에서는 특정 아키텍처를 AGI의 확정된 경로로 취급하지 않고 이 시스템 관점을 확장합니다.
+API는 텍스트·참조 이미지·실시간 제어를 받아 동기화된 오디오와 720p, 초당 24프레임 영상을 전송합니다. 문서의 세션 상한은 **120초** 이며, 시각적 일관성과 객체 영속성은 첫 **45–90초** 에 가장 강하다고 설명합니다. 그 구간 내 정확성을 보장한다는 뜻은 아닙니다. 모델 카드는 Gemini Omni Flash와 Gemini 추론을 이용하는 Transformer 기반 시스템이라고 공개하지만, 파라미터 수와 전체 학습 데이터 혼합은 공개하지 않습니다. 장면 변화, 불완전한 물리 상호작용, 글자·공간 오류도 보고합니다. [[7]](#ref-7) [[8]](#ref-8)
+
+여러 경과 시점에서 반복적인 카메라 회전, 가림, 서로 모순되는 중간 지시를 시험합니다. 제어 입력 시각·수신 프레임·오디오 동기화·네트워크 지연·최초 상태 오류를 기록하세요. 120초 연결 한도는 검증된 계획 범위가 아닙니다. 통합 가이드는 연결을 끊어도 서버 생성이 즉시 멈추지는 않는다고 경고하므로, 세션 완료를 명시적으로 요청하고 종료를 확인해야 합니다. [[9]](#ref-9) [20.7절](/chapter-20/path-to-agi-and-world-models/)은 이러한 관찰 가능한 행동을 일반적인 세계 모델링이나 AGI 주장과 구분합니다.
 
 ---
 
@@ -103,10 +111,20 @@ AI 엔지니어에게 가까운 설계 질문은 구체적입니다. 시스템�
 *한 영상의 시각 품질뿐 아니라 행동에 따른 상태 변화, 지속성, 제어 가능성, 상호작용 시간이 늘어날 때의 오류 누적을 시험해야 합니다.*
 </details>
 
+<details>
+<summary>Quiz 5: Genie 4의 120초 세션 한도가 120초 동안 신뢰할 수 있는 시뮬레이션을 뜻하지 않는 이유는 무엇인가요?</summary>
+*서빙 한도는 연결 시간을 제한합니다. 상태 일관성은 더 일찍 무너질 수 있으므로 경과 시간에 따른 객체 지속성과 행동 조건부 전이를 시험해야 합니다. 사용을 마치면 서버 세션도 명시적으로 종료합니다.*
+</details>
+
 ## References
 
 1. <a id="ref-1"></a>Google. (2026). *Veo 3.1 Ingredients to Video: More consistency, creativity and control*. [Google Blog](https://blog.google/innovation-and-ai/technology/ai/veo-3-1-ingredients-to-video/).
 2. <a id="ref-2"></a>OpenAI. (2026). *Sora 2 System Card*. [OpenAI](https://openai.com/index/sora-2-system-card/).
 3. <a id="ref-3"></a>OpenAI. (2026). *Deprecations: Sora 2 video generation models and Videos API*. [OpenAI Developers](https://developers.openai.com/api/docs/deprecations).
 4. <a id="ref-4"></a>ByteDance Seed. (2026). *Seedance 2.5*. [Official model page](https://seed.bytedance.com/en/seedance2_5).
-5. <a id="ref-5"></a>Google DeepMind. (2026). *Genie*. [Official model page](https://deepmind.google/models/genie/).
+5. <a id="ref-5"></a>Google. (2026-11-18). *Genie 4 is now available in Project Genie*. Verified 2026-11-24. [Release](https://blog.google/innovation-and-ai/models-and-research/google-deepmind/genie-4-now-available-project-genie/).
+6. <a id="ref-6"></a>Google. *Gemini API release notes: November 5 and 19, 2026*. Verified 2026-11-24. [Changelog](https://aistudio.google.com/docs/changelog).
+7. <a id="ref-7"></a>Google DeepMind. *Genie 4 model card*, published 2026-11-18. Verified 2026-11-24. [Card](https://deepmind.google/models/model-cards/genie-4/).
+8. <a id="ref-8"></a>Google. *Genie 4 API model documentation*. Verified 2026-11-24. [Model](https://aistudio.google.com/docs/models/genie-4).
+9. <a id="ref-9"></a>Google. *Interactive world generation with Genie 4*. Verified 2026-11-24. [Guide](https://aistudio.google.com/docs/genie).
+10. <a id="ref-10"></a>Google. *Gemini Omni 1.2 Flash API model documentation*. Verified 2026-11-24. [Model](https://aistudio.google.com/docs/models/gemini-omni-flash).

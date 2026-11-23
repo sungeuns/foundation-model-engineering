@@ -111,14 +111,6 @@ CALM은 consistency 기반 다음 프레임 생성기와 자기회귀 연속 오
 
 실무적으로는 목소리 식별자·오디오 세션·행동 정책을 따로 버전 관리해야 합니다. 전사 prefix는 수정·중단·취소될 수 있습니다. “오십—아니 십오를 이체해”에서 초기 판단이 금액과 권한 확정 전에 취소 불가능한 이체로 이어지면 안 됩니다. 잠정 판단, 취소 ID, 중복 억제, 독립 실행 검사를 사용합니다. 목소리가 바뀌어도 행동의 권한 경계는 달라지지 않아야 합니다.
 
-## 5. 스트리밍 평가와 핵심 정리
-
-처음 들리는 출력까지의 시간, 청크 간 공백, 전체 응답 지연, 중단 감지·정지 시간, 전사 수정 안정성, 도구 행동 정확성, 완료한 대화당 비용을 측정합니다. 잡음·억양·언어 전환·겹치는 화자·무음·연결 해제와 재연결을 평가합니다. 단어 오류율뿐 아니라 명료도와 사람의 청취 검사도 사용합니다. 전사가 맞아도 음성 상호작용은 나쁠 수 있습니다.
-
-모델·endpoint 리비전, 공개된 코덱·전처리, 샘플링 주파수·채널 규약, voice ID, 템플릿, 생성 설정, 도구 스키마, 안전·행동 정책을 불변 묶음으로 유지합니다. 시험 오디오와 화자는 적응 학습 데이터에서 격리합니다. 새 목소리·스트리밍 설정은 같은 대화로 canary 평가하고, 중요 행동 오류와 지원 언어 slice를 출시 기준으로 삼으며, 세션 상태와 대기 중인 행동의 롤백을 연습합니다.
-
-오디오 통합은 표현과 상태 관리의 결합 문제입니다. 다음 절은 하나의 공유 인코더나 제한 없는 출력을 가정하지 않고 이를 여러 모달리티로 확장합니다.
-
 **2026-10-25 기준**, 10월 22일 변경 기록은 GPT-6 Luna Decisions의 정식 제공과 요청당 최대 400개 질문·프롬프트 캐싱·JSON 입력을 명시합니다 [[5]](#ref-5). Native 음성 통합은 기능 계약이며 부분 전사로 행동해도 안전하다는 보장은 아닙니다. 전사 수정·중복 트리거·판단 지연·권한을 평가하세요. [16.7절](/chapter-16/decision-models-and-selective-prediction)과 연결됩니다.
 
 ### Voxtral 3: 음성 모델과 에이전트 조율 구분
@@ -126,6 +118,27 @@ CALM은 consistency 기반 다음 프레임 생성기와 자기회귀 연속 오
 **2026-10-25 기준**, Mistral의 10월 20일 변경 기록은 Voxtral 3의 Mini TTS·Mini Transcribe·Mini Transcribe Realtime·Small Transcribe 네 모델을 **공개 API 프리뷰** 로 명시하고 Voice Agents SDK/파이프라인도 소개합니다 [[7]](#ref-7). 발표문은 자체 배포를 제공하지만 그것만으로 누구나 내려받을 수 있는 공개 가중치 체크포인트가 입증되지는 않습니다 [[8]](#ref-8).
 
 오프라인 전사·스트리밍 전사·음성 합성·조율된 에이전트는 다른 계약이며 벤치마크도 교환할 수 없습니다. TTS 카드와 출시 페이지의 지원 언어 범위가 다르므로 정확한 SKU·엔드포인트를 확인한 뒤 지원을 약속하세요 [[8]](#ref-8) [[9]](#ref-9). 전사는 WER/CER·화자 분리, TTS는 발음·첫 오디오 지연, 전체 음성 에이전트는 발화 전환·끼어들기·전사 수정·도구 권한·완료 과업당 비용을 평가합니다. 제공사의 출시 그래프는 이 시스템들의 동일 조건 전체 비교가 아닙니다.
+
+## 5. 11월 음성 모델: 대화와 작업의 수명 주기는 다르다
+
+**2026-11-24 기준.** 11월 19일 출시된 GPT-Live-1.1과 11월 23일 출시된 Qwen-Audio-3.1-Live는 인용한 문서상 **출시됨/API 전용** 음성 서비스입니다. 이 발표가 내려받을 수 있는 가중치를 입증하지는 않습니다. 두 서비스 모두 작업을 위임한 뒤에도 음성 대화를 이어 갈 수 있습니다. 이는 인터페이스 기능이며 코덱·파라미터 수·학습 데이터 혼합을 공개한 것은 아닙니다. [[5]](#ref-5) [[10]](#ref-10) [[12]](#ref-12) [[13]](#ref-13)
+
+| 서비스 | 문서화된 계약 | 검증할 항목 |
+|---|---|---|
+| GPT-Live-1.1 | 텍스트·오디오 입출력. OpenAI는 다국어 전사와 억양 일관성이 개선됐다고 보고합니다. WebRTC 대기 모드는 비활동 중 추론을 멈추고 발화가 들어오면 재개합니다. [[10]](#ref-10) [[11]](#ref-11) | 언어별 발음·전사, 대기 후 첫 응답, 재생 중단과 미완료 백엔드 작업의 구분 |
+| Qwen-Audio-3.1-Live | 전이중 텍스트·오디오. Client 모드는 애플리케이션에 위임하고 Responses 모드는 선택한 백엔드 모델을 호출합니다. 무음을 포함한 음성 세션 시간과 백엔드 토큰 사용량은 별도 과금됩니다. [[13]](#ref-13) | 작업·결과 식별자, 요청 수정, 늦게 도착한 결과, 대화 전체 비용 |
+
+“파란 우산 재고를 확인해 줘—아니, 검은 우산으로”라는 요청을 생각해 보세요. 작업마다 버전을 부여하고 가장 최근에 확정한 요청을 보관합니다. 파란 우산의 조회 결과를 검은 우산에 대한 확정 답변처럼 읽어 주면 안 됩니다. 지원되는 경우 불필요해진 작업을 취소하고, 오래된 결과를 억제하며, 실제 변경을 일으키는 도구는 현재 인자·권한·멱등성을 다시 검사해야 합니다. OpenAI는 음성 프런트엔드에 새 지시를 주어도 실행 중인 백엔드 작업이 취소되지는 않는다고 명시합니다. Qwen 문서 역시 위임 식별자와 개별 함수 호출 식별자를 구분합니다. [[14]](#ref-14) [[15]](#ref-15)
+
+대기 모드도 세션 종료나 작업 취소와 다릅니다. 추론 일시정지·재개, 실제로 재생한 음성, 작업 생성·취소·완료, 사용자 정정을 같은 시간축에 기록합니다. 음성이 자연스러워도 오래된 결과를 안내하거나 취소 후 행동했다면 실패로 집계합니다.
+
+## 6. 스트리밍 평가와 핵심 정리
+
+처음 들리는 출력까지의 시간, 청크 간 공백, 전체 응답 지연, 중단 감지·정지 시간, 전사 수정 안정성, 도구 행동 정확성, 완료한 대화당 비용을 측정합니다. 잡음·억양·언어 전환·겹치는 화자·무음·연결 해제와 재연결을 평가합니다. 단어 오류율뿐 아니라 명료도와 사람의 청취 검사도 사용합니다. 전사가 맞아도 음성 상호작용은 나쁠 수 있습니다.
+
+모델·endpoint 리비전, 공개된 코덱·전처리, 샘플링 주파수·채널 규약, voice ID, 템플릿, 생성 설정, 도구 스키마, 안전·행동 정책을 불변 묶음으로 유지합니다. 시험 오디오와 화자는 적응 학습 데이터에서 격리합니다. 새 목소리·스트리밍 설정은 같은 대화로 canary 평가하고, 중요 행동 오류와 지원 언어 slice를 출시 기준으로 삼으며, 세션 상태와 대기 중인 행동의 롤백을 연습합니다.
+
+오디오 통합은 표현과 상태 관리의 결합 문제입니다. 다음 절은 하나의 공유 인코더나 제한 없는 출력을 가정하지 않고 이를 여러 모달리티로 확장합니다.
 
 ## Quizzes
 
@@ -154,14 +167,25 @@ CALM은 consistency 기반 다음 프레임 생성기와 자기회귀 연속 오
 *아닙니다. 코덱 비트율은 입력 표현을 정하고, KV 저장량은 유지한 위치·KV 헤드·차원·층·dtype·캐시 정책에 달려 있습니다. 서로 다른 예산입니다.*
 </details>
 
+<details>
+<summary>Quiz 6: 음성 중단만으로 위임한 작업도 취소됐다고 볼 수 없는 이유는 무엇인가요?</summary>
+*음성 재생, 프런트엔드 추론, 백엔드 작업은 수명 주기가 다릅니다. 작업 시스템에서 취소·완료 여부를 확인하고, 오래된 결과를 억제하며, 행동하거나 결과를 읽기 전에 현재 요청을 다시 검증해야 합니다.*
+</details>
+
 ## References
 
 1. <a id="ref-1"></a>Borsos, Z., et al. (2022). *AudioLM: a Language Modeling Approach to Audio Generation*. [Paper](https://arxiv.org/abs/2209.03143).
 2. <a id="ref-2"></a>Wang, C., et al. (2023). *Neural Codec Language Models are Zero-Shot Text to Speech Synthesizers (VALL-E)*. [Paper](https://arxiv.org/abs/2301.02111).
 3. <a id="ref-3"></a>Rubenstein, P. K., et al. (2023). *AudioPaLM: A Large Language Model That Can Speak and Listen*. [Paper](https://arxiv.org/abs/2306.12925).
 4. <a id="ref-4"></a>Rouard, S., et al. (2025). *Continuous Audio Language Models*. [Paper](https://arxiv.org/abs/2509.06926).
-5. <a id="ref-5"></a>OpenAI. (2026). *API changelog: October 15–22 voice and Decisions updates*. As of 2026-10-25. [Official documentation](https://developers.openai.com/api/docs/changelog).
+5. <a id="ref-5"></a>OpenAI. (2026). *API changelog: October voice/Decisions updates and November 19 GPT-Live-1.1 release*. Verified 2026-11-24. [Official documentation](https://developers.openai.com/api/docs/changelog).
 6. <a id="ref-6"></a>OpenAI. (2026). *Connect voice to Decisions*. As of 2026-10-18. [Official documentation](https://developers.openai.com/api/docs/guides/decisions-voice).
 7. <a id="ref-7"></a>Mistral. *Changelog: October 20 Voxtral 3 and Voice Agents preview*. Verified 2026-10-25. [Documentation](https://docs.mistral.ai/resources/changelogs).
 8. <a id="ref-8"></a>Mistral. (2026-10-20). *Voxtral 3*. [Release](https://mistral.ai/news/voxtral-3/).
 9. <a id="ref-9"></a>Mistral. *Voxtral TTS 3 model/API card*. Verified 2026-10-25. [Card](https://docs.mistral.ai/models/voxtral-mini-tts-3-0).
+10. <a id="ref-10"></a>OpenAI. *GPT-Live-1.1 model documentation*. Verified 2026-11-24. [Model](https://developers.openai.com/api/docs/models/gpt-live-1.1).
+11. <a id="ref-11"></a>OpenAI. *Managing GPT-Live sessions: idle sessions*. Verified 2026-11-24. [Guide](https://developers.openai.com/api/docs/guides/live-conversations).
+12. <a id="ref-12"></a>QwenCloud. *Model releases: November 23, 2026*. Verified 2026-11-24. [Changelog](https://docs.qwencloud.com/changelog/models).
+13. <a id="ref-13"></a>QwenCloud. *qwen-audio-3.1-live*. Verified 2026-11-24. [Model](https://docs.qwencloud.com/models/qwen-audio-3-1-live).
+14. <a id="ref-14"></a>OpenAI. *Delegation and tools in GPT-Live*. Verified 2026-11-24. [Guide](https://developers.openai.com/api/docs/guides/live-delegation).
+15. <a id="ref-15"></a>QwenCloud. *Qwen-Audio-Live: task delegation and tools*. Verified 2026-11-24. [Guide](https://docs.qwencloud.com/developer-guides/speech/qwen-audio-live).

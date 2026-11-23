@@ -14,6 +14,8 @@ import AttentionMaskVisualizer from '../../../components/chapter-4/AttentionMask
 
 이 절에서는 최신 모델 이름을 외우는 대신, 어떤 압력이 어떤 설계를 낳았는지를 먼저 보겠습니다.
 
+[11월 24일 업데이트](#glm-54-레이어-재사용으로-깊이와-용량을-구분하기)에서는 GLM-5.4의 레이어 반복 구조와 GPT-6.2의 공개된 인터페이스를 추가합니다. 앞선 날짜가 붙은 표는 당시의 기록입니다.
+
 ---
 
 ## 아키텍처가 계속 갈라지는 이유
@@ -155,6 +157,7 @@ Engram은 토큰 조건의 lookup을 MoE 연산과 함께 사용하는 방향을
 | 긴 컨텍스트 | hybrid linear attention, local attention, sparse attention | 낮은 attention 비용 | 레이어별 동작이 덜 균일해지고 custom kernel 의존성이 커짐 |
 | KV cache 증가 | GQA, MQA, MLA, sliding windows | 서빙 메모리와 대역폭 절감 | 구현이 더 특수해짐 |
 | 거대한 파라미터 수 | MoE 레이어 | 추론 비용 대비 더 큰 용량 | routing과 load balancing 복잡도 |
+| 레이어 블록을 복제하지 않고 연산 확대 | 같은 가중치를 쓰는 반복 구조 | 같은 블록 가중치로 더 많은 변환 수행 | 반복 연산, 상태 관리, 안정성 검증 |
 | 디코딩 처리량 | MTP, speculative-friendly objective | 더 빠른 생성 경로 | 학습/서빙 협업 설계 필요 |
 | 입력 컨텍스트 토큰 증가 | optical 2D mapping, vision-token compression | 큰 문서를 더 적은 context token으로 표현 | OCR 오류, layout 의존성, 검증 부담 |
 | 장문 학습 안정성 | QK-Norm, RoPE 변형, windowing | 더 안정적인 최적화 | 추가 튜닝과 검증 필요 |
@@ -278,6 +281,40 @@ GPT-6.1 Terra와 Claude Fable/Mythos 5.2는 새로운 hosted 선택지를 제공
 
 공학적 해석: 활성 매개변수만으로 상주 가중치 메모리나 조회 트래픽을 추정할 수 없습니다. 순환 상태 압축, 희소 검색, 어휘 조회를 따로 평가하고 ablation 없이 시스템 개선을 한 구성요소의 효과로 돌리지 마세요. 5·12·13장이 다루는 연산량, 저장 용량, 복원 가능한 문맥은 서로 다른 예산입니다.
 
+## GLM-5.4: 레이어 재사용으로 깊이와 용량을 구분하기
+
+**As of 2026-11-24.** Z.ai의 11월 23일 발표는 사전 학습된 GLM-5 기반 모델을 변환한 **750B 규모** 의 Loop Transformer를 설명합니다. **공유 레이어 28개를 두 번 실행** 합니다 [[37]](#ref-37). 정확한 전체·활성 매개변수 수, 전체 학습 데이터 혼합, 향후 공개할 가중치의 라이선스는 미공개입니다.
+
+수정한 초고에 같은 편집 절차를 다시 적용한다고 생각해 봅시다. 절차는 재사용하지만 두 번째 적용은 달라진 표현을 입력으로 받으며, 여전히 작업이 필요합니다. 간단한 실행 횟수 식으로 이 차이를 구분할 수 있습니다. 원래 레이어 수를 $L$, 공유 블록의 레이어 수를 $k$, 반복 횟수를 $r$이라고 하겠습니다. 나머지 레이어를 한 번씩 실행한다면, 한 번의 순전파에서 실행하는 레이어의 총횟수는 다음과 같습니다.
+
+$$
+D = (L-k) + rk = L + (r-1)k.
+$$
+
+$D$는 별도로 저장하는 레이어 가중치 수가 아니라 실행 횟수입니다. 공개된 $k=28$, $r=2$를 대입하면 $L+28$이지만, 이것으로 모델의 전체 레이어 수가 밝혀지는 것은 아닙니다. FLOP 배수도 바로 계산할 수 없습니다. 어텐션, 전문가 라우팅, 게이트, 캐시 읽기, 커널 실행의 비용이 서로 다르기 때문입니다. 행렬 재사용은 그 행렬의 중복 저장을 줄이지만, 다시 적용하는 연산까지 없애지는 않습니다.
+
+발표가 설명하는 지원 장치는 세 가지입니다 [[37]](#ref-37).
+
+| 장치 | 공개된 동작 |
+|---|---|
+| 반복별·토큰별 게이트 | 잔차 갱신량을 제어해 반복 연산을 안정화 |
+| 전역 KV 공유와 지역 윈도 | 두 번째 실행은 첫 실행의 희소 KV를 재사용하고 자체 슬라이딩 윈도 KV도 유지 |
+| 희소 인덱스 재사용 | 두 번째 실행은 첫 실행에서 고른 검색 위치를 재사용 |
+
+공학적 함의는 가중치 저장량, 지속적으로 보관하는 캐시, 임시 버퍼, 실행 시간을 따로 측정해야 한다는 것입니다. 인덱스를 재사용해 선택 비용을 줄여도 선택한 값에 대한 어텐션 연산은 남습니다. 캐시나 복구 구현은 공유 상태와 반복별 상태를 구분해야 합니다. 텍스트 접두사가 같다는 사실만으로 이어서 생성하는 동작도 같다고 판단할 수 없습니다.
+
+공개된 통제 실험은 **30B 모델** 에서 **학습 연산을 약 10% 더 사용** 한 비교이며, **200K 문맥 SFT** 후 추론 모드를 켜서 평가했습니다. 플래그십의 벤치마크 결과가 아닙니다. 반복 횟수를 적응적으로 조절하는 방식은 향후 연구로 남아 있습니다 [[37]](#ref-37). 자체 평가에서는 도구 접근, 추론 강도, 문맥, 중단 규칙을 고정하고 과업 성공률, 전체 생성 토큰, 꼬리 지연 시간, 예산 소진을 측정하세요. 출력 토큰이 줄어도 내부 연산이 감소했다고 단정할 수 없습니다.
+
+**접근 범위:** Coding Plan·ZCode·Z.ai Chat은 사용 가능하며, 일반 종량제 API와 가중치는 공개 예정입니다 [[37]](#ref-37). Coding Plan 통합 문서는 **1M 문맥**, 이미지 입력, low/high/max 추론 강도를 명시하며, 추론을 끄는 설정도 low로 변환합니다 [[38]](#ref-38). 이는 다운로드 가능한 구성 파일이 아니라 호스팅 서비스의 사용 조건입니다. [17.6절](/ko/chapter-17/commercial-model-benchmarks)에서 공개 상태와 평가 근거를 따로 추적합니다.
+
+## GPT-6.2: 공개된 인터페이스와 미공개 내부 구조
+
+**As of 2026-11-24.** OpenAI의 11월 17일 API 변경 기록은 **GPT-6.2 Astra** 와 **GPT-6.2 Sol** 의 API 출시를 알립니다. 둘 다 Responses와 Chat Completions를 지원하지만 도구 호출에는 Responses가 필요합니다 [[41]](#ref-41). 텍스트·이미지 입력과 텍스트 출력을 지원한다는 문서만으로 내부 어텐션 구성, 전문가 라우팅, 매개변수 수, 학습 데이터 혼합을 알 수는 없습니다 [[39]](#ref-39) [[40]](#ref-40).
+
+두 모델의 문서는 **1,050,000토큰 문맥 창**, **최대 입력 922,000토큰**, **최대 출력 128,000토큰** 을 구분하며, 추론 강도 `none`을 거부합니다 [[39]](#ref-39) [[40]](#ref-40). 서비스 통합에 필요한 제약이지만, 서비스 외부에서 아키텍처를 판별할 근거는 아닙니다. 마찬가지로 하위 에이전트에 작업을 위임하는 기능은 문서화된 Responses 기능이지, 모델 내부 전문가의 구성에 관한 증거가 아닙니다.
+
+에이전트 비교에서는 단일 모델 호출인지 여러 호출을 조율한 시스템인지 먼저 기록하고, 모델 ID, 추론 강도, 도구, 실행 프레임워크, 문맥 관리, 재시도, 채점기를 고정하세요. 이 조건을 통제하지 않은 시스템 점수로 기반 모델의 개선 효과만 분리할 수는 없습니다. GLM-5.4와 비교할 때도 근거의 종류가 중요합니다. 제공자가 실제로 공개한 메커니즘을 활용하고, 내부가 미공개인 부분은 배포 시스템 전체를 평가해야 합니다.
+
 ## Quizzes
 
 <details>
@@ -298,6 +335,16 @@ GPT-6.1 Terra와 Claude Fable/Mythos 5.2는 새로운 hosted 선택지를 제공
 <details>
 <summary>Quiz 4: Optical context compression은 단순히 모델의 text context window를 늘리는 것과 왜 다를까요?</summary>
 *Text context window를 늘리는 방식은 입력을 discrete text token으로 보존한 채 attention과 KV cache 시스템이 더 많은 위치를 처리하도록 만듭니다. Optical compression은 모델이 입력을 보기 전에 표현 자체를 바꿉니다. text와 layout을 vision token으로 인코딩하여 token 수를 줄일 수 있지만, 그 대신 lossy reconstruction 문제, layout sensitivity, 정확한 symbol 검증 필요성이 생깁니다.*
+</details>
+
+<details>
+<summary>Quiz 5: 28개 레이어 블록을 같은 가중치로 두 번 실행하면 파라미터 저장량이 두 배가 되거나 추가 연산이 공짜가 될까요?</summary>
+*어느 쪽도 아닙니다. 블록의 주 가중치는 한 번 저장해도 변환은 두 번 실행하며, 추가 게이트와 상태도 따로 계산해야 합니다. 설명한 가정에서 실행 횟수는 28만큼 늘지만, 전체 FLOPs·메모리·지연 시간은 실제 구현을 확인해야 알 수 있습니다.*
+</details>
+
+<details>
+<summary>Quiz 6: 30B 반복 구조의 ablation이나 호스팅 에이전트 점수로 어느 플래그십 기반 모델이 더 나은지 판단할 수 있을까요?</summary>
+*Ablation의 결론은 시험한 모델 규모·학습 연산·평가 설정에 한정됩니다. 호스팅 에이전트 점수는 모델과 추론 강도·도구·작업 조율을 함께 측정합니다. 어느 쪽도 통제되지 않은 모델 간 비교나 미공개 내부 구조의 근거가 될 수 없습니다. 조건을 맞춘 시스템 평가를 수행하고 근거의 범위를 명확히 유지해야 합니다.*
 </details>
 
 ---
@@ -354,3 +401,13 @@ GPT-6.1 Terra와 Claude Fable/Mythos 5.2는 새로운 hosted 선택지를 제공
 35. <a id="ref-35"></a>GLM-5.3 Flash. Model card, verified 2026-11-15. [Source](https://huggingface.co/zai-org/GLM-5.3-Flash).
 
 36. <a id="ref-36"></a>Qwen Team. Qwen4-Max: Your New Teammate Has Arrived. Verified 2026-11-17. [Source](https://qwen.ai/blog?id=qwen4-max).
+
+37. <a id="ref-37"></a>Z.ai. (2026-11-23). *GLM-5.4: Toward Generalized Coding with Our First Loop Transformer*. 확인일 2026-11-24. [Source](https://z.ai/blog/glm-5.4).
+
+38. <a id="ref-38"></a>Z.ai. *How to Switch Models: GLM-5.4 Coding Plan integration*. 확인일 2026-11-24. [Source](https://docs.z.ai/devpack/latest-model).
+
+39. <a id="ref-39"></a>OpenAI. *GPT-6.2 Astra model documentation*. 확인일 2026-11-24. [Source](https://developers.openai.com/api/docs/models/gpt-6.2-astra).
+
+40. <a id="ref-40"></a>OpenAI. *GPT-6.2 Sol model documentation*. 확인일 2026-11-24. [Source](https://developers.openai.com/api/docs/models/gpt-6.2-sol).
+
+41. <a id="ref-41"></a>OpenAI. *API changelog, November 17, 2026: GPT-6.2*. 확인일 2026-11-24. [Source](https://developers.openai.com/api/docs/changelog).

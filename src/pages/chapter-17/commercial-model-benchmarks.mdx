@@ -8,222 +8,287 @@ import CommercialModelBenchmarkExplorer from '../../components/chapter-17/Commer
 
 # 17.6 Commercial and Open-weight Model Benchmarks
 
-A new release changes more than a name on a leaderboard. It may change the downloadable artifact, license, prompt encoding, reasoning budget, price tier, or revision behind an API alias. Start with those contracts, then measure the complete workflow.
+Suppose a model is cheaper per token but takes twice as many tool turns to finish your task. Has your system become cheaper? A leaderboard cannot answer that by itself. You need the evaluated configuration, the billing rules and a definition of a successful task.
 
-**As of 2026-11-15.** This static snapshot covers 32 selected profiles, not every release. Dates identify an explicit launch, weight-publication milestone or checked artifact revision; they are not uniformly first-launch dates. A public repository's creation date alone does not establish when its weights became available. Reverify the linked sources before a later publication or deployment.
+**As of 2026-11-24.** This static snapshot covers 43 selected profiles, including GLM-5.4, GPT-6.2 Astra/Sol and Gemini 4 Neon/Carbon. It is a checked selection, not a complete release feed. Dates in the table identify a launch, weight-publication milestone or checked artifact revision; they do not all mean first launch. Release evidence and independently measured results are separate records. Reverify the linked sources before a later publication or deployment.
 
-New release checks for Qwen4-Max, Gemini 4 Hydrogen, LongCat-2.5 and Agnes 2.5 Pro Theta appear in the [November 17 supplement](#release-supplement-november-17).
+## 1. Know What the Number Measures
 
-## 1. A New Benchmark Version Is a New Measurement
+The numerical comparison uses **Artificial Analysis Intelligence Index v5.0.1**. Its nine evaluations cover knowledge work, coding, science and general tasks [[1]](#ref-1). The methodology is unchanged from this book's November 15 snapshot. Older v4.3.2 values are a different measurement: subtracting them from v5.0.1 values does not measure model improvement.
 
-Artificial Analysis now reports **Intelligence Index v5.0.1**, with nine evaluations spanning knowledge work, coding, science and general tasks [[1]](#ref-1). This chapter replaces its October v4.3.2 values throughout. A score that changes between those versions is not evidence that the same weights improved or deteriorated. Do not subtract the old score from the new score as a performance trend.
+Each point represents a model **plus** an effort setting and evaluation system. Fallback, tools, scaffold, token budgets, sampling and grader can all affect the result. These are not equal-compute experiments. An index is not an accuracy percentage, and a context limit is not retrieval accuracy. “Not reported” means that this record has no verified value for the mapped revision and methodology; it never means zero.
 
-The evaluated system includes effort, fallback, scaffold, tool access, token/context budgets, sampling and grader. These profiles are not equal-compute experiments. An index is not an accuracy percentage; a context limit is not retrieval accuracy. Missing values mean **not reported under this mapped revision and methodology**, never zero.
+## 2. Release and Evaluation Record
 
-## 2. Reverified Release and Evaluation Record
-
-| Model | Release / revision milestone | Access as of 2026-11-15 | AA reasoning configuration | Index | $/AA task | Sources |
+| Model | Release / revision milestone | Access as of 2026-11-24 | AA reasoning configuration | Index | $/AA task | Sources |
 |---|---|---|---|---:|---:|---|
-| GPT-6.1 Sol | 2026-09-29 | released/API-only | max | 55 | 1.27 | [[2]](#ref-2) [[3]](#ref-3) |
-| GPT-6 Sol | 2026-09-22 | released/API-only | max | 44 | 2.47 | [[4]](#ref-4) [[5]](#ref-5) |
-| GPT-6 Luna | 2026-09-22 | released/API-only | max | 28 | 0.15 | [[6]](#ref-6) [[7]](#ref-7) |
-| GPT-6 Astra | 2026-09-03 | released/API-only | max | 57 | 6.24 | [[8]](#ref-8) [[9]](#ref-9) |
-| Claude Opus 5.5 | 2026-09-22 | released/API-only | max with fallback | 59 | 10.04 | [[10]](#ref-10) [[11]](#ref-11) |
-| Claude Sonnet 5.5 | 2026-09-28 | released/API-only | max with fallback | 55 | 10.02 | [[12]](#ref-12) [[13]](#ref-13) [[14]](#ref-14) |
-| Claude Haiku 5.5 | 2026-10-07 | released/API-only | max | 36 | 0.41 | [[13]](#ref-13) [[15]](#ref-15) |
-| Gemini 4 Argon | 2026-10-13 | released/API-only | high | 50 | 4.97 | [[16]](#ref-16) [[17]](#ref-17) [[18]](#ref-18) [[19]](#ref-19) |
-| DeepSeek V4.1 Flash (September profile) | 2026-09-10 | released/open-weight | max | not reported | not reported | [[20]](#ref-20) [[21]](#ref-21) |
-| GLM-5.3 | 2026-08-14 | released/open-weight | max | 32 | 5.01 | [[22]](#ref-22) [[23]](#ref-23) |
-| Mistral Large 4 | 2026-10-29 | released/open-weight + API | high | 26 | 2.06 | [[24]](#ref-24) [[25]](#ref-25) [[26]](#ref-26) [[27]](#ref-27) |
-| Beam 1.0 | 2026-10-16 | released/open-weight | reasoning; effort not reported | 18 | 0.28 | [[28]](#ref-28) [[29]](#ref-29) [[30]](#ref-30) |
-| Muse Wonder | 2026-10-12 | released/API-only | max | 44 | 6.95 | [[31]](#ref-31) [[32]](#ref-32) |
-| Muse Wonder Full | 2026-10-12 | released/subscription-only | max | 50 | not reported | [[31]](#ref-31) [[33]](#ref-33) |
-| Muse Spark Open | 2026-10-15 | released/open-weight; gated download | xhigh | 25 | 2.02 | [[34]](#ref-34) [[35]](#ref-35) [[36]](#ref-36) |
-| Nemotron 3.5 Super VL | 2026-10-15 | released/open-weight | high | 14 | 0.56 | [[37]](#ref-37) [[38]](#ref-38) |
-| Nemotron 3.5 Bolt 74B-A9B 24GB | 2026-10-15 | released/open-weight | reasoning; effort not reported | not reported | not reported | [[39]](#ref-39) [[40]](#ref-40) |
-| Step 5 Preview | 2026-10-15 | released/open-weight | reasoning; effort not reported | 29 | 2.35 | [[41]](#ref-41) [[42]](#ref-42) |
-| DeepSeek V4.1 Flash 1017 | 2026-10-17 | released/open-weight + API update | max | 33 | 0.60 | [[43]](#ref-43) [[44]](#ref-44) [[45]](#ref-45) |
-| MiniMax M3.1 Flash | 2026-10-23 | released/open-weight + API | max | 29 | 0.49 | [[46]](#ref-46) [[47]](#ref-47) [[48]](#ref-48) |
-| Kimi K3.1 Pro | 2026-11-05 | released/open-weight + API | max | 46 | 3.68 | [[49]](#ref-49) [[50]](#ref-50) [[51]](#ref-51) [[52]](#ref-52) |
-| Kimi K3.1 Pro Highspeed | 2026-10-24 | released/API-only | not reported | not reported | not reported | [[51]](#ref-51) |
-| Ling 3.1 Flash | 2026-10-20 | released/open-weight | reasoning; effort not reported | not reported | not reported | [[53]](#ref-53) [[54]](#ref-54) |
-| Ling 3.0 Flash Sante | 2026-10-22 | released/open-weight | reasoning; effort not reported | not reported | not reported | [[55]](#ref-55) |
-| Smaug Nemotron 3.5 NVFP4 | 2026-10-22 | released/open-weight | not reported | not reported | not reported | [[56]](#ref-56) [[57]](#ref-57) |
-| Nemotron 3.5 Bolt E4B 4GB | 2026-10-23 | released/open-weight | not reported | not reported | not reported | [[58]](#ref-58) [[59]](#ref-59) |
-| GPT-6.1 Terra | 2026-10-26 | released/API-only | max | 51 | 0.96 | [[60]](#ref-60) [[61]](#ref-61) |
-| Claude Fable 5.2 | 2026-11-09 | released/API-only | max with fallback | 65 | 26.54 | [[62]](#ref-62) [[63]](#ref-63) [[64]](#ref-64) |
-| Claude Mythos 5.2 | 2026-11-09 | restricted/API-only | not reported | not reported | not reported | [[62]](#ref-62) |
-| Inkling 2 Small | 2026-11-12 | released/open-weight | reasoning; effort not reported | 31 | 1.18 | [[65]](#ref-65) [[66]](#ref-66) [[67]](#ref-67) [[68]](#ref-68) |
-| Qwen3.8 Flash Next | 2026-11-07 | released/open-weight | reasoning; effort not reported | 29 | 0.57 | [[69]](#ref-69) [[70]](#ref-70) [[71]](#ref-71) |
-| GLM-5.3 Flash | 2026-10-15 | released/open-weight | max | 28 | 0.58 | [[72]](#ref-72) [[73]](#ref-73) [[74]](#ref-74) |
+| GLM-5.4 | 2026-11-23 | released/hosted plans; pay-as-you-go API and weights planned | not reported | not reported | not reported | [[5]](#ref-5) [[6]](#ref-6) [[7]](#ref-7) |
+| Inkling 2 Mini | 2026-11-20 | released/open-weight | reasoning; effort not reported | 20 | 0.59 | [[108]](#ref-108) [[109]](#ref-109) |
+| Gemini 4 Neon | 2026-11-18 | released/API-only | xhigh | 61 | 6.44 | [[11]](#ref-11) [[12]](#ref-12) [[99]](#ref-99) [[100]](#ref-100) |
+| GPT-6.2 Astra | 2026-11-17 | released/API-only | max | 62 | 4.00 | [[9]](#ref-9) [[94]](#ref-94) [[95]](#ref-95) |
+| GPT-6.2 Sol | 2026-11-17 | released/API-only | max | 57 | 1.01 | [[10]](#ref-10) [[94]](#ref-94) [[96]](#ref-96) |
+| Qwen4-Max | 2026-11-16 | released/API-only | reasoning; effort not reported | 43 | 3.27 | [[14]](#ref-14) [[15]](#ref-15) [[104]](#ref-104) |
+| Agnes 2.5 Pro Theta | 2026-11-15 | released/open-weight | reasoning; effort not reported | not reported | not reported | [[17]](#ref-17) [[106]](#ref-106) [[107]](#ref-107) |
+| Inkling 2 Small | 2026-11-12 | released/open-weight | reasoning; effort not reported | 31 | 1.18 | [[84]](#ref-84) [[85]](#ref-85) [[86]](#ref-86) [[87]](#ref-87) |
+| Gemini 4 Hydrogen | 2026-11-12 | released/API-only | xhigh | 54 | 3.16 | [[101]](#ref-101) [[12]](#ref-12) [[102]](#ref-102) [[103]](#ref-103) |
+| Gemini 4 Carbon | 2026-11-10 | released/API-only | high | 60 | 7.76 | [[97]](#ref-97) [[12]](#ref-12) [[98]](#ref-98) [[4]](#ref-4) |
+| LongCat-2.5 | 2026-11-10 | released/open-weight | reasoning; effort not reported | not reported | not reported | [[105]](#ref-105) [[16]](#ref-16) |
+| Claude Fable 5.2 | 2026-11-09 | released/API-only | max with fallback | 65 | 26.54 | [[82]](#ref-82) [[29]](#ref-29) [[83]](#ref-83) |
+| Claude Mythos 5.2 | 2026-11-09 | restricted/API-only | not reported | not reported | not reported | [[82]](#ref-82) [[29]](#ref-29) |
+| Muse Ember | 2026-11-09 | released/API-only | max | 36 | 0.14 | [[110]](#ref-110) [[111]](#ref-111) |
+| Qwen3.8 Flash Next | 2026-11-07 | released/open-weight | reasoning; effort not reported | 29 | 0.57 | [[88]](#ref-88) [[89]](#ref-89) [[90]](#ref-90) |
+| Kimi K3.1 Pro | 2026-11-05 | released/open-weight + API | max | 46 | 3.68 | [[65]](#ref-65) [[66]](#ref-66) [[67]](#ref-67) [[68]](#ref-68) |
+| Mistral Large 4 | 2026-10-29 | released/open-weight + API | high | 26 | 2.06 | [[18]](#ref-18) [[40]](#ref-40) [[41]](#ref-41) [[42]](#ref-42) |
+| GPT-6.1 Terra | 2026-10-26 | released/API-only | max | 51 | 0.96 | [[80]](#ref-80) [[81]](#ref-81) |
+| Kimi K3.1 Pro Highspeed | 2026-10-24 | released/API-only | not reported | not reported | not reported | [[68]](#ref-68) |
+| MiniMax M3.1 Flash | 2026-10-23 | released/open-weight + API | max | 29 | 0.49 | [[61]](#ref-61) [[62]](#ref-62) [[63]](#ref-63) [[64]](#ref-64) |
+| Nemotron 3.5 Bolt E4B 4GB | 2026-10-23 | released/open-weight | not reported | not reported | not reported | [[77]](#ref-77) [[78]](#ref-78) [[79]](#ref-79) |
+| Ling 3.0 Flash Sante | 2026-10-22 | released/open-weight | reasoning; effort not reported | not reported | not reported | [[72]](#ref-72) [[73]](#ref-73) |
+| Smaug Nemotron 3.5 NVFP4 | 2026-10-22 | released/open-weight | not reported | not reported | not reported | [[74]](#ref-74) [[75]](#ref-75) [[76]](#ref-76) |
+| Ling 3.1 Flash | 2026-10-20 | released/open-weight | reasoning; effort not reported | not reported | not reported | [[69]](#ref-69) [[70]](#ref-70) [[71]](#ref-71) |
+| DeepSeek V4.1 Flash 1017 | 2026-10-17 | released/open-weight + API update | max | 33 | 0.60 | [[58]](#ref-58) [[59]](#ref-59) [[60]](#ref-60) |
+| Beam 1.0 | 2026-10-16 | released/open-weight | reasoning; effort not reported | 18 | 0.28 | [[43]](#ref-43) [[44]](#ref-44) [[45]](#ref-45) |
+| Muse Spark Open | 2026-10-15 | released/open-weight; gated download | xhigh | 25 | 2.02 | [[49]](#ref-49) [[50]](#ref-50) [[51]](#ref-51) |
+| Nemotron 3.5 Super VL | 2026-10-15 | released/open-weight | high | 14 | 0.48 | [[52]](#ref-52) [[53]](#ref-53) |
+| Nemotron 3.5 Bolt 74B-A9B 24GB | 2026-10-15 | released/open-weight | reasoning; effort not reported | not reported | not reported | [[54]](#ref-54) [[55]](#ref-55) |
+| Step 5 Preview | 2026-10-15 | released/open-weight | reasoning; effort not reported | 29 | 2.35 | [[56]](#ref-56) [[57]](#ref-57) |
+| GLM-5.3 Flash | 2026-10-15 | released/open-weight | max | 28 | 0.58 | [[91]](#ref-91) [[92]](#ref-92) [[93]](#ref-93) |
+| Gemini 4 Argon | 2026-10-13 | released/API-only | high | 50 | 9.95 | [[34]](#ref-34) [[3]](#ref-3) [[35]](#ref-35) [[2]](#ref-2) |
+| Muse Wonder | 2026-10-12 | released/API-only | max | 44 | 6.95 | [[46]](#ref-46) [[47]](#ref-47) |
+| Muse Wonder Full | 2026-10-12 | released/subscription-only | max | 50 | not reported | [[46]](#ref-46) [[48]](#ref-48) |
+| Claude Haiku 5.5 | 2026-10-07 | released/API-only | max | 36 | 0.41 | [[32]](#ref-32) [[33]](#ref-33) [[29]](#ref-29) |
+| GPT-6.1 Sol | 2026-09-29 | released/API-only | max | 55 | 1.27 | [[19]](#ref-19) [[20]](#ref-20) |
+| Claude Sonnet 5.5 | 2026-09-28 | released/API-only | max with fallback | 55 | 10.02 | [[30]](#ref-30) [[31]](#ref-31) [[32]](#ref-32) [[29]](#ref-29) |
+| GPT-6 Sol | 2026-09-22 | released/API-only | max | 44 | 2.47 | [[21]](#ref-21) [[22]](#ref-22) |
+| GPT-6 Luna | 2026-09-22 | released/API-only | max | 28 | 0.15 | [[23]](#ref-23) [[24]](#ref-24) |
+| Claude Opus 5.5 | 2026-09-22 | released/API-only | max with fallback | 59 | 10.04 | [[27]](#ref-27) [[28]](#ref-28) [[29]](#ref-29) |
+| DeepSeek V4.1 Flash (September profile) | 2026-09-10 | released/open-weight | max | not reported | not reported | [[36]](#ref-36) [[37]](#ref-37) |
+| GPT-6 Astra | 2026-09-03 | released/API-only | max | 57 | 6.24 | [[25]](#ref-25) [[26]](#ref-26) |
+| GLM-5.3 | 2026-08-14 | released/open-weight | max | 32 | 5.01 | [[38]](#ref-38) [[39]](#ref-39) |
 
-Task costs are rounded observed v5.0.1 workload costs, including the benchmark's token mix and caching behavior; they are not guaranteed invoice prices. The September DeepSeek record and Bolt 74B have no verified current index here. Ling's current profile identifies a 1019 variant, whose equivalence to the listed public checkpoint remains unverified. Wonder Full has an index but no verified public API task cost. Those gaps remain visible.
+**Read the cost column carefully.** AA computes a weighted cost per task using its workload, provider prices and typical cache-hit assumptions. It is not a captured invoice for your deployment. Prices can change without changing the model's score. On this snapshot, AA's Argon and Carbon profiles use \$4/\$20 per million input/output tokens, while Google's official introductory rates are \$2/\$10 through November 30, with \$4/\$20 scheduled from December 1. The table preserves AA's published calculation; the token-price explorer uses the dated provider rates. Do not silently mix them [[2]](#ref-2) [[3]](#ref-3) [[4]](#ref-4).
 
-## 3. What the New Releases Teach
+Several gaps are deliberate. The September DeepSeek entry and Bolt 74B lack a verified current index here. Ling's evaluated 1019 variant is not established as the listed checkpoint. Agnes's public configuration specifies 262,144 tokens, while the hosted AA profile advertises a different context contract; that score is not transferred to the local artifact. GLM-5.4 has no verified matching AA measurement in this snapshot. Wonder Full has an index but no verified public API task cost.
 
-### Hosted access and downloadable weights are separate milestones
+## 3. What the Latest Releases Change
 
-**Kimi K3.1 Pro** now has public weight files. Its card discloses 2.8T total and 104B active parameters, a KDA/gated-sparse-attention hybrid, and quantization-aware formats. The table uses the checked November 5 artifact revision. Those disclosures replace the earlier “weights planned” boundary; they do not reveal the complete training mixture or prove hosted/local equivalence. Highspeed remains a separate hosted profile without borrowed specifications [[49]](#ref-49) [[50]](#ref-50) [[51]](#ref-51) [[52]](#ref-52).
+### GLM-5.4: usable service, pending weights
 
-**Mistral Large 4** has public weights after its October preview. Its model card and current documentation establish a granular multimodal MoE; the custom Mistral Ecosystem Open-Weight License places an additional agreement requirement on Model-as-a-Service businesses. Open weight therefore does not mean unrestricted hosting. The current AA high-effort profile is distinct from the old preview result [[24]](#ref-24) [[25]](#ref-25) [[26]](#ref-26) [[27]](#ref-27).
+Z.ai's November 23 release makes **GLM-5.4** available through Coding Plan, ZCode and Z.ai Chat. Its standard pay-as-you-go API is still marked coming soon; downloadable weights are planned after further safety work. Coding Plan already has subscription API access, so “no API” would also be wrong. Do not inherit GLM-5.3 Flash's MIT license or translate subscription-credit multipliers into USD token prices [[5]](#ref-5) [[6]](#ref-6) [[7]](#ref-7).
 
-**Inkling 2 Small** followed its hosted launch with public Apache 2.0 weights. The card reports 594B total/17B active parameters and mixed MXFP8/NVFP4 artifacts. The vLLM integration describes a native draft head and hardware-specific optimizations. Active compute and packed payload do not include all resident weights, KV state, vision work or temporary buffers; draft-head speed must be measured on the actual deployment [[65]](#ref-65) [[66]](#ref-66) [[67]](#ref-67) [[68]](#ref-68).
+The disclosed design reuses a 28-layer block twice in a 750B-scale model, with gated updates and a combination of shared global KV and local attention. This is a useful example of separating stored parameters from executed computation; [Section 4.5](/chapter-4/various-llm-architectures) works through that distinction. Exact total/active counts, the full training mixture and the eventual weight license remain undisclosed. Its 30B architecture ablation is not a controlled evaluation of the full deployed model [[5]](#ref-5).
 
-### General-purpose and restricted configurations need different evaluations
+### GPT-6.2 Astra and Sol: measure the operating point
 
-**GPT-6.1 Terra** adds another text/image-to-text operating point. The official documentation separates its 1,050,000-token context window, 128,000-token output limit and supported reasoning levels; tool calling requires Responses. Its standard rates are \$1 input/\$5 output per million tokens, with separate cache, long-context and service-tier conditions. Architecture, parameters and training mixture remain undisclosed [[60]](#ref-60) [[61]](#ref-61).
+OpenAI released **GPT-6.2 Astra and Sol** on November 17. Both are hosted text/image-to-text models; public weights and architectural details are not supplied. The API separates a 1,050,000-token context window, 922,000 maximum input tokens and 128,000 maximum output tokens. Tool calling uses Responses, and reasoning effort `none` is rejected. Those contracts matter when migrating an existing agent [[8]](#ref-8) [[9]](#ref-9) [[10]](#ref-10).
 
-**Claude Fable 5.2** and **Mythos 5.2** share an underlying model according to Anthropic, with different safeguards and access. Mythos requires verification-program access. This table does not transfer Fable's measured score to Mythos. Fable's standard \$8/\$40 input/output rates differ from its \$16/\$80 fast mode; task cost also depends on reasoning length and fallback. Provider demonstrations of long tasks are evidence about those tested systems, not general reliability guarantees [[62]](#ref-62) [[63]](#ref-63) [[64]](#ref-64).
+The chart's Max-effort profiles do not tell you the best effort for a latency-sensitive application. Compare at the effort and service tier you intend to operate. The cost example below shows why even a correctly copied base token price is insufficient.
 
-### Read the parameter accounting, not just the family label
+### Gemini 4: shared context and dated prices
 
-The **Qwen3.8 Flash Next** card separates the 125B main model/6B active parameters from 51B n-gram embeddings and 4B MTP parameters. It combines Gated DeltaNet, block-sparse QSA and gated residual streams. Its native 262,144 context is distinct from an extended configuration and the hosted Flash service. The November 7 date is a checked revision, not a new-launch claim [[69]](#ref-69) [[70]](#ref-70) [[71]](#ref-71).
+**Gemini 4 Neon** reached general availability on November 18; **Carbon** reached API general availability on November 10. Neon's 1,048,576-token budget is shared by input and output. Its default synchronous output cap is 65,536 tokens; a background long-decode path can use more of the shared budget. “One million input plus one million output” is therefore an incorrect interpretation. Neon supports implicit caching rather than an explicit-cache API; do not assume identical cache controls across a family [[11]](#ref-11) [[12]](#ref-12).
 
-**GLM-5.3 Flash** is a separately trained multimodal base, not merely GLM-5.3 with a faster serving setting. The card reports 320B total/18B active parameters and MIT weights. Its October 15 revision is included for architectural coverage, not presented as a November launch [[72]](#ref-72) [[73]](#ref-73) [[74]](#ref-74). Smaller or domain-specific entries elsewhere in the table likewise cannot inherit another family member's benchmark or architecture.
+**Hydrogen** adds another operating point, including a role in provider-tested multi-model systems. An orchestration result measures the coordinator, workers and execution policy together, not the isolated causal contribution of one model [[13]](#ref-13).
 
-## 4. Explore the Tradeoffs Without Filling Gaps
+### Public weights do not settle serving equivalence
 
-Choose a metric, axis and provider. Only models with both plotted values appear; selection and detail panels follow the filtered set. An empty plot is a valid result. The alphabetical selector is not a ranking.
+**Qwen4-Max** is API-only in the checked sources. Its November 16 general release is distinct from its earlier preview. The protocol distinguishes readable reasoning summaries from encrypted reasoning history required by later tool turns; a summary is not a substitute for that history [[14]](#ref-14) [[15]](#ref-15).
 
-The token-price axis uses the explicitly illustrative uncached mix $(3p_{in}+p_{out})/4$, with rates per million tokens. It excludes cache writes/hits, tools, modality charges, long-context tiers and output-length differences. It is different from AA's own blended-price convention and from measured task cost. Google's Argon introductory prices currently expire on November 30; recheck them before costing a later workload [[16]](#ref-16) [[17]](#ref-17) [[18]](#ref-18) [[19]](#ref-19).
+**LongCat-2.5, Agnes 2.5 Pro Theta and Inkling 2 Mini** broaden the public-weight options in the table. Downloadability permits inspection, but a local run still depends on the exact template, quantization, runtime, memory and license. Pin these artifacts before comparing them with a hosted profile. The same applies to Kimi K3.1 Pro and Mistral Large 4: public weights do not establish hosted/local equivalence, and Mistral's custom license includes conditions for Model-as-a-Service businesses [[16]](#ref-16) [[17]](#ref-17) [[18]](#ref-18).
+
+Text-agent indices also cannot rank the new speech, image or interactive-world systems. See [speech integration](/chapter-11/audio-and-speech-integration), [image generation](/chapter-11/image-diffusion-models) and [video/world models](/chapter-11/commercial-video-models) for their distinct interfaces and evaluation limits.
+
+## 4. A Worked Cost Example: Crossing 272K Input Tokens
+
+**Rates checked 2026-11-24.** At Standard short-context rates, GPT-6.2 Astra costs \$8 input/\$40 output per million tokens; Sol costs \$2/\$10. Above **272,000 input tokens**, the input rate doubles and the output rate becomes 1.5 times the base rate **for the whole request** [[9]](#ref-9) [[10]](#ref-10).
+
+Imagine a repository review with 300,000 uncached input tokens and 10,000 billed output tokens. Using Sol's base rates gives \$0.70. Applying the long-context rule gives **\$1.35**. Astra's corresponding amount is **\$5.40**. Reducing the input can affect both token count and the applicable rate; whether it preserves quality needs a separate evaluation.
+
+**Scope of this example:** executable Python standard-library arithmetic for one uncached, Standard-tier text request. `billed_output_tokens` must include billed reasoning tokens, not just visible text. This is not a billing engine: it excludes caching, images, tools, other processing tiers and taxes. Use actual usage records for a real workload.
+
+```python
+from decimal import Decimal as D
+
+RATES = {
+    "gpt-6.2-astra": (D("8"), D("40")),
+    "gpt-6.2-sol": (D("2"), D("10")),
+}
+
+def text_request_usd(model, input_tokens, billed_output_tokens):
+    if any(type(n) is not int or n < 0
+           for n in (input_tokens, billed_output_tokens)):
+        raise ValueError("Token counts must be nonnegative integers")
+    if input_tokens > 922_000 or billed_output_tokens > 128_000:
+        raise ValueError("Exceeds this example's documented model limits")
+    pin, pout = RATES[model]
+    if input_tokens > 272_000:
+        pin *= 2
+        pout *= D("1.5")
+    return (input_tokens * pin + billed_output_tokens * pout) / D("1000000")
+
+assert text_request_usd("gpt-6.2-sol", 300_000, 10_000) == D("1.35")
+assert text_request_usd("gpt-6.2-astra", 300_000, 10_000) == D("5.40")
+print(text_request_usd("gpt-6.2-sol", 300_000, 10_000))  # 1.35
+```
+
+For an agent, sum every request, including failed attempts and retries. Then divide by the number of successfully completed tasks. A lower price per request can still produce a higher cost per successful task.
+
+## 5. Explore the Tradeoffs
+
+Choose a metric, axis and provider. Only models with both plotted values appear; the selection follows the filtered set. An empty plot is valid, and the alphabetical selector is not a ranking.
+
+The token-price axis uses an **illustrative uncached mix** $(3p_{in}+p_{out})/4$, where $p_{in}$ and $p_{out}$ are USD per million input and output tokens. It excludes cache, tools, modality fees, long-context tiers and differences in output length. This is neither AA's blended-price convention nor the cost of a completed workflow. Context is shown in thousands of tokens; provider-specific input/output limits still apply.
 
 <CommercialModelBenchmarkExplorer client:load locale="en" />
 
-## 5. Turn a Shortlist into a Release Decision
+## 6. Turn a Shortlist into a Release Decision
 
-Use the quality/cost/latency/context/openness/safety Pareto surface rather than choosing one universal winner. Evaluate the same private tasks with pinned tools, permissions, scaffold, effort, retries, input/output limits and grader. Report paired uncertainty, language/domain slices, base-capability retention, format/tool correctness, safety, tail latency, error rate and cost per successful workflow. A critical slice failure blocks release even if the mean improves.
+Use the quality/cost/latency/context/openness/safety Pareto surface to choose candidates. Evaluate the same private tasks with pinned tools, permissions, scaffold, effort, retries, limits and grader. Report paired uncertainty, language/domain slices, base-capability retention, format/tool correctness, safety, tail latency, error rate and cost per successful workflow. A critical slice failure blocks release even if the mean improves.
 
-Keep weights/API revision, tokenizer/template, quantization, runtime, generation configuration, tool schema and safety policy in one immutable artifact bundle. Test hosted and local versions separately. Canary with bounded permissions, retain a known-good route and rehearse rollback of cached state and pending effects. Typed decision models need a separate calibration/selective-risk evaluation; see [Section 16.7](/chapter-16/decision-models-and-selective-prediction).
-
-## Release Supplement: November 17
-
-**As of 2026-11-17.** The 32-profile chart above remains a **2026-11-15 evaluation snapshot**. The following primary-source release checks extend coverage; they are not additional equal-methodology benchmark points. A launch does not establish its place on the existing Pareto chart.
-
-| Model | Verified access/status | What to verify in a private evaluation | Primary evidence |
-|---|---|---|---|
-| Qwen4-Max | released/API-only on November 16; distinct from November 11 preview | Native image/video understanding, 1M context, tool execution and reasoning budget; no released Max weights established by these sources | [[75]](#ref-75) [[76]](#ref-76) |
-| Gemini 4 Hydrogen | released/API-only, November 12 | Four thinking levels and model-routing overhead; assess the whole coordinator/worker system | [[77]](#ref-77) |
-| LongCat-2.5 | released/open-weight; MIT publication November 10 | Multimodal long-horizon execution; total resident weights, expert routing and KV memory | [[78]](#ref-78) [[79]](#ref-79) |
-| Agnes 2.5 Pro Theta | released/open-weight; repository checked November 17, Apache 2.0 | Custom implementation, 262,144 configured context, actual runtime memory and template behavior | [[80]](#ref-80) |
-
-Qwen4-Max's docs distinguish explicit caching from best-effort implicit hits and reasoning summaries from encrypted reasoning history. A readable summary is not a substitute for the history required by later tool turns [[76]](#ref-76). Pin these protocol choices in an agent evaluation.
-
-Google's Hydrogen announcement positions it for fast execution and reports multi-model orchestration gains. Those are provider system evaluations, not an isolated causal effect of Hydrogen weights [[77]](#ref-77). LongCat's model card reports 1.6T total and approximately 48B active parameters; the repository's automatic tensor total is different, so retain the publisher's scope rather than silently merging counters [[79]](#ref-79). Agnes's card reports about 187.8B total parameters and 375.5 GB of BF16 tensor payload, and explicitly notes that its supplied benchmark chart lacks complete evaluation settings [[80]](#ref-80). Public weights permit inspection; they do not establish reproducible scores or affordable local deployment.
-
-Before comparing these additions numerically, record the evaluator version, exact model ID, effort, scaffold, sampling, tool access and cost accounting. Unverified comparable scores stay out of the chart; do not substitute provider charts for the existing independent index.
+Keep weights or API revision, tokenizer/template, quantization, runtime, generation configuration, tool schema and safety policy in one immutable artifact bundle. Evaluate hosted and local versions separately. Canary with bounded permissions, retain a known-good route and rehearse rollback of cached state and pending effects. Typed decision models need separate calibration and selective-risk evaluation; see [Section 16.7](/chapter-16/decision-models-and-selective-prediction).
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: Why can an unchanged model receive a lower index after this update?</summary>
-*The evaluation changed from v4.3.2 to v5.0.1. Different tasks and aggregation define a different measurement; the difference is not a controlled estimate of model regression.*
+<summary>Quiz 1: Can an unchanged model have different v4.3.2 and v5.0.1 scores?</summary>
+*Yes. The tasks and aggregation define the measurement. Their difference is not a controlled estimate of improvement or regression. This November 24 snapshot uses v5.0.1 throughout.*
 </details>
 
 <details>
-<summary>Quiz 2: What changed the Kimi and Mistral weight-status labels?</summary>
-*Verified public weight artifacts, rather than a promised date, moved the claim boundary. Their licenses, revisions and local serving conditions still require separate checks.*
+<summary>Quiz 2: Why is GLM-5.4 neither “fully open-weight” nor “unavailable” here?</summary>
+*Its hosted subscription services are usable, including subscription API access, but standard pay-as-you-go access and weight publication are separate pending milestones. A license from an earlier model cannot establish the eventual weight license.*
 </details>
 
 <details>
-<summary>Quiz 3: Why does Mythos not inherit the Fable score?</summary>
-*Access, safeguards and evaluated serving configuration are part of the system. Shared underlying weights do not make two evaluated systems interchangeable.*
+<summary>Quiz 3: Why not copy an AA score onto every checkpoint with a similar name?</summary>
+*Model revision, context contract, safeguards and serving configuration identify the evaluated system. The Ling and Agnes gaps illustrate why a family-name match alone is insufficient.*
 </details>
 
 <details>
-<summary>Quiz 4: Why is the public Ling checkpoint left without a current index?</summary>
-*The current profile identifies a 1019 variant whose equivalence is unverified. A similarly named result cannot fill a revision-specific gap.*
+<summary>Quiz 4: Why can the Google token-price axis and AA task-cost column use different rates?</summary>
+*The provider has a dated introductory rate, while the captured evaluator profile uses another stated rate. Preserve both source conventions and explain the mismatch instead of claiming either is the reader's invoice.*
 </details>
 
 <details>
-<summary>Quiz 5: Why can a cheap token rate produce a costly completed task?</summary>
-*Reasoning length, retries, caching, tool calls, latency and failure rates all contribute. Compare matched complete workflows, not token rates alone.*
+<summary>Quiz 5: Why does the 300K-input Sol example cost \$1.35 rather than \$0.70?</summary>
+*Crossing 272K input tokens applies doubled input and 1.5-times output rates to the whole request: 0.3 × \$4 + 0.01 × \$15 = \$1.35. The output count includes billed reasoning tokens.*
+</details>
+
+<details>
+<summary>Quiz 6: Does Neon's 1,048,576-token context permit that much input plus the same amount of output?</summary>
+*No. It is a shared budget, with additional output-mode limits. Check the remaining budget and the chosen execution mode; advertised context size is also not a guarantee of retrieval quality.*
 </details>
 
 ## References
 
-1. <a id="ref-1"></a>Artificial Analysis. Intelligence Index v5.0.1 methodology. Verified 2026-11-15. [Source](https://artificialanalysis.ai/methodology/intelligence-benchmarking).
-2. <a id="ref-2"></a>GPT-6.1 Sol: primary documentation / artifact evidence. Verified 2026-11-15. [Source](https://developers.openai.com/api/docs/models/gpt-6.1-sol).
-3. <a id="ref-3"></a>GPT-6.1 Sol: evaluated system profile. Verified 2026-11-15. [Source](https://artificialanalysis.ai/models/gpt-6-1-sol).
-4. <a id="ref-4"></a>GPT-6 Sol: primary documentation / artifact evidence. Verified 2026-11-15. [Source](https://developers.openai.com/api/docs/models/gpt-6-sol).
-5. <a id="ref-5"></a>GPT-6 Sol: evaluated system profile. Verified 2026-11-15. [Source](https://artificialanalysis.ai/models/gpt-6-sol).
-6. <a id="ref-6"></a>GPT-6 Luna: primary documentation / artifact evidence. Verified 2026-11-15. [Source](https://developers.openai.com/api/docs/models/gpt-6-luna).
-7. <a id="ref-7"></a>GPT-6 Luna: evaluated system profile. Verified 2026-11-15. [Source](https://artificialanalysis.ai/models/gpt-6-luna).
-8. <a id="ref-8"></a>GPT-6 Astra: primary documentation / artifact evidence. Verified 2026-11-15. [Source](https://developers.openai.com/api/docs/models/gpt-6-astra).
-9. <a id="ref-9"></a>GPT-6 Astra: evaluated system profile. Verified 2026-11-15. [Source](https://artificialanalysis.ai/models/gpt-6-astra).
-10. <a id="ref-10"></a>Claude Opus 5.5: primary documentation / artifact evidence. Verified 2026-11-15. [Source](https://www.anthropic.com/claude-opus-5-5).
-11. <a id="ref-11"></a>Claude Opus 5.5: evaluated system profile. Verified 2026-11-15. [Source](https://artificialanalysis.ai/models/claude-opus-5-5).
-12. <a id="ref-12"></a>Claude Sonnet 5.5: primary documentation / artifact evidence. Verified 2026-11-15. [Source](https://www.anthropic.com/claude-sonnet-5-5).
-13. <a id="ref-13"></a>Claude Sonnet 5.5: primary documentation / artifact evidence. Verified 2026-11-15. [Source](https://www.anthropic.com/claude-haiku-5-5).
-14. <a id="ref-14"></a>Claude Sonnet 5.5: evaluated system profile. Verified 2026-11-15. [Source](https://artificialanalysis.ai/models/claude-sonnet-5-5).
-15. <a id="ref-15"></a>Claude Haiku 5.5: evaluated system profile. Verified 2026-11-15. [Source](https://artificialanalysis.ai/models/claude-haiku-5-5).
-16. <a id="ref-16"></a>Gemini 4 Argon: primary documentation / artifact evidence. Verified 2026-11-15. [Source](https://blog.google/innovation-and-ai/models-and-research/gemini-models/introducing-gemini-4-argon/).
-17. <a id="ref-17"></a>Gemini 4 Argon: primary documentation / artifact evidence. Verified 2026-11-15. [Source](https://ai.google.dev/gemini-api/docs/models/gemini-4-argon).
-18. <a id="ref-18"></a>Gemini 4 Argon: primary documentation / artifact evidence. Verified 2026-11-15. [Source](https://ai.google.dev/gemini-api/docs/pricing).
-19. <a id="ref-19"></a>Gemini 4 Argon: evaluated system profile. Verified 2026-11-15. [Source](https://artificialanalysis.ai/models/gemini-4-argon).
-20. <a id="ref-20"></a>DeepSeek V4.1 Flash (September profile): primary documentation / artifact evidence. Verified 2026-11-15. [Source](https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash).
-21. <a id="ref-21"></a>DeepSeek V4.1 Flash (September profile): evaluated system profile. Verified 2026-11-15. [Source](https://artificialanalysis.ai/models/deepseek-v4-1-flash).
-22. <a id="ref-22"></a>GLM-5.3: primary documentation / artifact evidence. Verified 2026-11-15. [Source](https://huggingface.co/zai-org/GLM-5.3).
-23. <a id="ref-23"></a>GLM-5.3: evaluated system profile. Verified 2026-11-15. [Source](https://artificialanalysis.ai/models/glm-5-3).
-24. <a id="ref-24"></a>Mistral Large 4: primary documentation / artifact evidence. Verified 2026-11-15. [Source](https://huggingface.co/mistralai/Mistral-Large-4-1T-A52B).
-25. <a id="ref-25"></a>Mistral Large 4: primary documentation / artifact evidence. Verified 2026-11-15. [Source](https://docs.mistral.ai/models/mistral-large-4-0).
-26. <a id="ref-26"></a>Mistral Large 4: primary documentation / artifact evidence. Verified 2026-11-15. [Source](https://huggingface.co/api/models/mistralai/Mistral-Large-4-1T-A52B).
-27. <a id="ref-27"></a>Mistral Large 4: evaluated system profile. Verified 2026-11-15. [Source](https://artificialanalysis.ai/models/mistral-large-4).
-28. <a id="ref-28"></a>Beam 1.0: primary documentation / artifact evidence. Verified 2026-11-15. [Source](https://reflection.ai/blog/beam-is-available).
-29. <a id="ref-29"></a>Beam 1.0: primary documentation / artifact evidence. Verified 2026-11-15. [Source](https://huggingface.co/reflection/Beam-1.0-501B-A23B).
-30. <a id="ref-30"></a>Beam 1.0: evaluated system profile. Verified 2026-11-15. [Source](https://artificialanalysis.ai/models/reflection-beam).
-31. <a id="ref-31"></a>Muse Wonder: primary documentation / artifact evidence. Verified 2026-11-15. [Source](https://research.meta.ai/blog/muse-wonder).
-32. <a id="ref-32"></a>Muse Wonder: evaluated system profile. Verified 2026-11-15. [Source](https://artificialanalysis.ai/models/muse-wonder).
-33. <a id="ref-33"></a>Muse Wonder Full: evaluated system profile. Verified 2026-11-15. [Source](https://artificialanalysis.ai/models/muse-wonder-full).
-34. <a id="ref-34"></a>Muse Spark Open: primary documentation / artifact evidence. Verified 2026-11-15. [Source](https://research.meta.ai/blog/muse-spark-open).
-35. <a id="ref-35"></a>Muse Spark Open: primary documentation / artifact evidence. Verified 2026-11-15. [Source](https://huggingface.co/meta-models/Muse-Spark-Open-816B-A42B).
-36. <a id="ref-36"></a>Muse Spark Open: evaluated system profile. Verified 2026-11-15. [Source](https://artificialanalysis.ai/models/muse-spark-open).
-37. <a id="ref-37"></a>Nemotron 3.5 Super VL: primary documentation / artifact evidence. Verified 2026-11-15. [Source](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-BF16).
-38. <a id="ref-38"></a>Nemotron 3.5 Super VL: evaluated system profile. Verified 2026-11-15. [Source](https://artificialanalysis.ai/models/nemotron-3-5-super-vl).
-39. <a id="ref-39"></a>Nemotron 3.5 Bolt 74B-A9B 24GB: primary documentation / artifact evidence. Verified 2026-11-15. [Source](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Bolt-74B-A9B-24GB).
-40. <a id="ref-40"></a>Nemotron 3.5 Bolt 74B-A9B 24GB: evaluated system profile. Verified 2026-11-15. [Source](https://artificialanalysis.ai/models/nemotron-3-5-bolt-74b-a9b).
-41. <a id="ref-41"></a>Step 5 Preview: primary documentation / artifact evidence. Verified 2026-11-15. [Source](https://huggingface.co/stepfun-ai/Step-5-Preview-BF16).
-42. <a id="ref-42"></a>Step 5 Preview: evaluated system profile. Verified 2026-11-15. [Source](https://artificialanalysis.ai/models/step-5).
-43. <a id="ref-43"></a>DeepSeek V4.1 Flash 1017: primary documentation / artifact evidence. Verified 2026-11-15. [Source](https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017).
-44. <a id="ref-44"></a>DeepSeek V4.1 Flash 1017: primary documentation / artifact evidence. Verified 2026-11-15. [Source](https://api-docs.deepseek.com/updates).
-45. <a id="ref-45"></a>DeepSeek V4.1 Flash 1017: evaluated system profile. Verified 2026-11-15. [Source](https://artificialanalysis.ai/models/deepseek-v4-1-flash-1017).
-46. <a id="ref-46"></a>MiniMax M3.1 Flash: primary documentation / artifact evidence. Verified 2026-11-15. [Source](https://huggingface.co/MiniMaxAI/MiniMax-M3.1-Flash).
-47. <a id="ref-47"></a>MiniMax M3.1 Flash: primary documentation / artifact evidence. Verified 2026-11-15. [Source](https://www.minimax.io/blog/minimax-m31f).
-48. <a id="ref-48"></a>MiniMax M3.1 Flash: evaluated system profile. Verified 2026-11-15. [Source](https://artificialanalysis.ai/models/minimax-m3-1-flash).
-49. <a id="ref-49"></a>Kimi K3.1 Pro: primary documentation / artifact evidence. Verified 2026-11-15. [Source](https://huggingface.co/moonshotai/Kimi-K3.1-Pro).
-50. <a id="ref-50"></a>Kimi K3.1 Pro: primary documentation / artifact evidence. Verified 2026-11-15. [Source](https://huggingface.co/api/models/moonshotai/Kimi-K3.1-Pro).
-51. <a id="ref-51"></a>Kimi K3.1 Pro: primary documentation / artifact evidence. Verified 2026-11-15. [Source](https://www.kimi.ai/blog/kimi-k3-1-pro).
-52. <a id="ref-52"></a>Kimi K3.1 Pro: evaluated system profile. Verified 2026-11-15. [Source](https://artificialanalysis.ai/models/kimi-k3-1-pro).
-53. <a id="ref-53"></a>Ling 3.1 Flash: primary documentation / artifact evidence. Verified 2026-11-15. [Source](https://huggingface.co/inclusionAI/Ling-3.1-flash).
-54. <a id="ref-54"></a>Ling 3.1 Flash: evaluated system profile. Verified 2026-11-15. [Source](https://artificialanalysis.ai/models/ling-3-1-flash).
-55. <a id="ref-55"></a>Ling 3.0 Flash Sante: primary documentation / artifact evidence. Verified 2026-11-15. [Source](https://huggingface.co/inclusionAI/Ling-3.0-flash-Sante).
-56. <a id="ref-56"></a>Smaug Nemotron 3.5 NVFP4: primary documentation / artifact evidence. Verified 2026-11-15. [Source](https://huggingface.co/abacusai/Smaug-Nemotron-3.5-NVFP4).
-57. <a id="ref-57"></a>Smaug Nemotron 3.5 NVFP4: primary documentation / artifact evidence. Verified 2026-11-15. [Source](https://blog.abacus.ai/blog/2026/10/22/smaug-nemotron-3-5-nvfp4-an-agentic-fine-tune-that-lives-in-4-bits/).
-58. <a id="ref-58"></a>Nemotron 3.5 Bolt E4B 4GB: primary documentation / artifact evidence. Verified 2026-11-15. [Source](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Bolt-E4B-4GB).
-59. <a id="ref-59"></a>Nemotron 3.5 Bolt E4B 4GB: primary documentation / artifact evidence. Verified 2026-11-15. [Source](https://research.nvidia.com/labs/nemotron/NVIDIA-Nemotron-3.5-Bolt-E4B-4GB/).
-60. <a id="ref-60"></a>GPT-6.1 Terra: primary documentation / artifact evidence. Verified 2026-11-15. [Source](https://developers.openai.com/api/docs/models/gpt-6.1-terra).
-61. <a id="ref-61"></a>GPT-6.1 Terra: evaluated system profile. Verified 2026-11-15. [Source](https://artificialanalysis.ai/models/gpt-6-1-terra).
-62. <a id="ref-62"></a>Claude Fable 5.2: primary documentation / artifact evidence. Verified 2026-11-15. [Source](https://www.anthropic.com/claude-fable-and-mythos-5-2).
-63. <a id="ref-63"></a>Claude Fable 5.2: primary documentation / artifact evidence. Verified 2026-11-15. [Source](https://www.anthropic.com/claude/fable).
-64. <a id="ref-64"></a>Claude Fable 5.2: evaluated system profile. Verified 2026-11-15. [Source](https://artificialanalysis.ai/models/claude-fable-5-2).
-65. <a id="ref-65"></a>Inkling 2 Small: primary documentation / artifact evidence. Verified 2026-11-15. [Source](https://huggingface.co/thinkingmachines/Inkling-2-Small).
-66. <a id="ref-66"></a>Inkling 2 Small: primary documentation / artifact evidence. Verified 2026-11-15. [Source](https://huggingface.co/api/models/thinkingmachines/Inkling-2-Small).
-67. <a id="ref-67"></a>Inkling 2 Small: primary documentation / artifact evidence. Verified 2026-11-15. [Source](https://vllm-project.github.io/2026/11/12/inkling2-small.html).
-68. <a id="ref-68"></a>Inkling 2 Small: evaluated system profile. Verified 2026-11-15. [Source](https://artificialanalysis.ai/models/inkling-2-small).
-69. <a id="ref-69"></a>Qwen3.8 Flash Next: primary documentation / artifact evidence. Verified 2026-11-15. [Source](https://huggingface.co/Qwen/Qwen3.8-Flash-Next).
-70. <a id="ref-70"></a>Qwen3.8 Flash Next: primary documentation / artifact evidence. Verified 2026-11-15. [Source](https://huggingface.co/api/models/Qwen/Qwen3.8-Flash-Next).
-71. <a id="ref-71"></a>Qwen3.8 Flash Next: evaluated system profile. Verified 2026-11-15. [Source](https://artificialanalysis.ai/models/qwen3-8-flash-next).
-72. <a id="ref-72"></a>GLM-5.3 Flash: primary documentation / artifact evidence. Verified 2026-11-15. [Source](https://huggingface.co/zai-org/GLM-5.3-Flash).
-73. <a id="ref-73"></a>GLM-5.3 Flash: primary documentation / artifact evidence. Verified 2026-11-15. [Source](https://huggingface.co/api/models/zai-org/GLM-5.3-Flash).
-74. <a id="ref-74"></a>GLM-5.3 Flash: evaluated system profile. Verified 2026-11-15. [Source](https://artificialanalysis.ai/models/glm-5-3-flash).
-
-75. <a id="ref-75"></a>QwenCloud. Model releases. Verified 2026-11-17. [Source](https://docs.qwencloud.com/changelog/models).
-
-76. <a id="ref-76"></a>QwenCloud. Qwen4-Max specifications and protocol notes. Verified 2026-11-17. [Source](https://docs.qwencloud.com/developer-guides/getting-started/latest-model).
-
-77. <a id="ref-77"></a>Google. Introducing Gemini 4 Hydrogen. Verified 2026-11-17. [Source](https://blog.google/innovation-and-ai/models-and-research/gemini-models/introducing-gemini-4-hydrogen/).
-
-78. <a id="ref-78"></a>Meituan. LongCat-2.5 open-weight release. Verified 2026-11-17. [Source](https://tech.meituan.com/2026/11/10/Meituan-LongCat-2.5-Open-Source.html).
-
-79. <a id="ref-79"></a>Meituan. LongCat-2.5 model card and downloadable files. Verified 2026-11-17. [Source](https://huggingface.co/meituan-longcat/LongCat-2.5).
-
-80. <a id="ref-80"></a>Agnes AI. Agnes 2.5 Pro Theta model card and weights. Verified 2026-11-17. [Source](https://huggingface.co/Agnes-AI/Agnes-2.5-Pro-Theta).
+1. <a id="ref-1"></a>artificialanalysis.ai — intelligence benchmarking. [Source](https://artificialanalysis.ai/methodology/intelligence-benchmarking).
+2. <a id="ref-2"></a>aistudio.google.com — pricing. [Source](https://aistudio.google.com/docs/pricing#gemini-4-argon).
+3. <a id="ref-3"></a>artificialanalysis.ai — gemini 4 argon. [Source](https://artificialanalysis.ai/models/gemini-4-argon).
+4. <a id="ref-4"></a>artificialanalysis.ai — gemini 4 carbon. [Source](https://artificialanalysis.ai/models/gemini-4-carbon).
+5. <a id="ref-5"></a>z.ai — glm 5.4. [Source](https://z.ai/blog/glm-5.4).
+6. <a id="ref-6"></a>docs.z.ai — latest model. [Source](https://docs.z.ai/devpack/latest-model).
+7. <a id="ref-7"></a>docs.z.ai — pricing. [Source](https://docs.z.ai/guides/overview/pricing).
+8. <a id="ref-8"></a>developers.openai.com — changelog. [Source](https://developers.openai.com/api/docs/changelog).
+9. <a id="ref-9"></a>developers.openai.com — gpt 6.2 astra. [Source](https://developers.openai.com/api/docs/models/gpt-6.2-astra).
+10. <a id="ref-10"></a>developers.openai.com — gpt 6.2 sol. [Source](https://developers.openai.com/api/docs/models/gpt-6.2-sol).
+11. <a id="ref-11"></a>aistudio.google.com — gemini 4 neon. [Source](https://aistudio.google.com/docs/models/gemini-4-neon).
+12. <a id="ref-12"></a>aistudio.google.com — changelog. [Source](https://aistudio.google.com/docs/changelog).
+13. <a id="ref-13"></a>blog.google — introducing gemini 4 hydrogen. [Source](https://blog.google/innovation-and-ai/models-and-research/gemini-models/introducing-gemini-4-hydrogen/).
+14. <a id="ref-14"></a>docs.qwencloud.com — models. [Source](https://docs.qwencloud.com/changelog/models).
+15. <a id="ref-15"></a>docs.qwencloud.com — latest model. [Source](https://docs.qwencloud.com/developer-guides/getting-started/latest-model).
+16. <a id="ref-16"></a>huggingface.co — LongCat 2.5. [Source](https://huggingface.co/meituan-longcat/LongCat-2.5).
+17. <a id="ref-17"></a>huggingface.co — Agnes 2.5 Pro Theta. [Source](https://huggingface.co/Agnes-AI/Agnes-2.5-Pro-Theta).
+18. <a id="ref-18"></a>huggingface.co — Mistral Large 4 1T A52B. [Source](https://huggingface.co/mistralai/Mistral-Large-4-1T-A52B).
+19. <a id="ref-19"></a>GPT-6.1 Sol: primary documentation / artifact evidence. [Source](https://developers.openai.com/api/docs/models/gpt-6.1-sol).
+20. <a id="ref-20"></a>GPT-6.1 Sol: evaluated system profile. [Source](https://artificialanalysis.ai/models/gpt-6-1-sol).
+21. <a id="ref-21"></a>GPT-6 Sol: primary documentation / artifact evidence. [Source](https://developers.openai.com/api/docs/models/gpt-6-sol).
+22. <a id="ref-22"></a>GPT-6 Sol: evaluated system profile. [Source](https://artificialanalysis.ai/models/gpt-6-sol).
+23. <a id="ref-23"></a>GPT-6 Luna: primary documentation / artifact evidence. [Source](https://developers.openai.com/api/docs/models/gpt-6-luna).
+24. <a id="ref-24"></a>GPT-6 Luna: evaluated system profile. [Source](https://artificialanalysis.ai/models/gpt-6-luna).
+25. <a id="ref-25"></a>GPT-6 Astra: primary documentation / artifact evidence. [Source](https://developers.openai.com/api/docs/models/gpt-6-astra).
+26. <a id="ref-26"></a>GPT-6 Astra: evaluated system profile. [Source](https://artificialanalysis.ai/models/gpt-6-astra).
+27. <a id="ref-27"></a>Claude Opus 5.5: primary documentation / artifact evidence. [Source](https://www.anthropic.com/claude-opus-5-5).
+28. <a id="ref-28"></a>Claude Opus 5.5: evaluated system profile. [Source](https://artificialanalysis.ai/models/claude-opus-5-5).
+29. <a id="ref-29"></a>Claude Opus 5.5: primary documentation / artifact evidence. [Source](https://platform.claude.com/docs/en/models/overview).
+30. <a id="ref-30"></a>Claude Sonnet 5.5: primary documentation / artifact evidence. [Source](https://www.anthropic.com/claude-sonnet-5-5).
+31. <a id="ref-31"></a>Claude Sonnet 5.5: evaluated system profile. [Source](https://artificialanalysis.ai/models/claude-sonnet-5-5).
+32. <a id="ref-32"></a>Claude Sonnet 5.5: primary documentation / artifact evidence. [Source](https://www.anthropic.com/claude-haiku-5-5).
+33. <a id="ref-33"></a>Claude Haiku 5.5: evaluated system profile. [Source](https://artificialanalysis.ai/models/claude-haiku-5-5).
+34. <a id="ref-34"></a>Gemini 4 Argon: primary documentation / artifact evidence. [Source](https://blog.google/innovation-and-ai/models-and-research/gemini-models/introducing-gemini-4-argon/).
+35. <a id="ref-35"></a>Gemini 4 Argon: primary documentation / artifact evidence. [Source](https://aistudio.google.com/docs/models/gemini-4-argon).
+36. <a id="ref-36"></a>DeepSeek V4.1 Flash (September profile): primary documentation / artifact evidence. [Source](https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash).
+37. <a id="ref-37"></a>DeepSeek V4.1 Flash (September profile): evaluation profile (mapping limitations noted in text). [Source](https://artificialanalysis.ai/models/deepseek-v4-1-flash).
+38. <a id="ref-38"></a>GLM-5.3: primary documentation / artifact evidence. [Source](https://huggingface.co/zai-org/GLM-5.3).
+39. <a id="ref-39"></a>GLM-5.3: evaluated system profile. [Source](https://artificialanalysis.ai/models/glm-5-3).
+40. <a id="ref-40"></a>Mistral Large 4: evaluated system profile. [Source](https://artificialanalysis.ai/models/mistral-large-4).
+41. <a id="ref-41"></a>Mistral Large 4: primary documentation / artifact evidence. [Source](https://docs.mistral.ai/models/mistral-large-4-0).
+42. <a id="ref-42"></a>Mistral Large 4: primary documentation / artifact evidence. [Source](https://huggingface.co/api/models/mistralai/Mistral-Large-4-1T-A52B).
+43. <a id="ref-43"></a>Beam 1.0: primary documentation / artifact evidence. [Source](https://reflection.ai/blog/beam-is-available).
+44. <a id="ref-44"></a>Beam 1.0: primary documentation / artifact evidence. [Source](https://huggingface.co/reflection/Beam-1.0-501B-A23B).
+45. <a id="ref-45"></a>Beam 1.0: evaluated system profile. [Source](https://artificialanalysis.ai/models/reflection-beam).
+46. <a id="ref-46"></a>Muse Wonder: primary documentation / artifact evidence. [Source](https://research.meta.ai/blog/muse-wonder).
+47. <a id="ref-47"></a>Muse Wonder: evaluated system profile. [Source](https://artificialanalysis.ai/models/muse-wonder).
+48. <a id="ref-48"></a>Muse Wonder Full: evaluated system profile. [Source](https://artificialanalysis.ai/models/muse-wonder-full).
+49. <a id="ref-49"></a>Muse Spark Open: primary documentation / artifact evidence. [Source](https://research.meta.ai/blog/muse-spark-open).
+50. <a id="ref-50"></a>Muse Spark Open: primary documentation / artifact evidence. [Source](https://huggingface.co/meta-models/Muse-Spark-Open-816B-A42B).
+51. <a id="ref-51"></a>Muse Spark Open: evaluated system profile. [Source](https://artificialanalysis.ai/models/muse-spark-open).
+52. <a id="ref-52"></a>Nemotron 3.5 Super VL: primary documentation / artifact evidence. [Source](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-BF16).
+53. <a id="ref-53"></a>Nemotron 3.5 Super VL: evaluated system profile. [Source](https://artificialanalysis.ai/models/nemotron-3-5-super-vl).
+54. <a id="ref-54"></a>Nemotron 3.5 Bolt 74B-A9B 24GB: primary documentation / artifact evidence. [Source](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Bolt-74B-A9B-24GB).
+55. <a id="ref-55"></a>Nemotron 3.5 Bolt 74B-A9B 24GB: evaluation profile (mapping limitations noted in text). [Source](https://artificialanalysis.ai/models/nemotron-3-5-bolt-74b-a9b).
+56. <a id="ref-56"></a>Step 5 Preview: primary documentation / artifact evidence. [Source](https://huggingface.co/stepfun-ai/Step-5-Preview-BF16).
+57. <a id="ref-57"></a>Step 5 Preview: evaluated system profile. [Source](https://artificialanalysis.ai/models/step-5-preview).
+58. <a id="ref-58"></a>DeepSeek V4.1 Flash 1017: primary documentation / artifact evidence. [Source](https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017).
+59. <a id="ref-59"></a>DeepSeek V4.1 Flash 1017: primary documentation / artifact evidence. [Source](https://api-docs.deepseek.com/updates).
+60. <a id="ref-60"></a>DeepSeek V4.1 Flash 1017: evaluated system profile. [Source](https://artificialanalysis.ai/models/deepseek-v4-1-flash-1017).
+61. <a id="ref-61"></a>MiniMax M3.1 Flash: primary documentation / artifact evidence. [Source](https://huggingface.co/MiniMaxAI/MiniMax-M3.1-Flash).
+62. <a id="ref-62"></a>MiniMax M3.1 Flash: primary documentation / artifact evidence. [Source](https://www.minimax.io/blog/minimax-m31f).
+63. <a id="ref-63"></a>MiniMax M3.1 Flash: evaluated system profile. [Source](https://artificialanalysis.ai/models/minimax-m3-1-flash).
+64. <a id="ref-64"></a>MiniMax M3.1 Flash: primary documentation / artifact evidence. [Source](https://huggingface.co/api/models/MiniMaxAI/MiniMax-M3.1-Flash).
+65. <a id="ref-65"></a>Kimi K3.1 Pro: primary documentation / artifact evidence. [Source](https://huggingface.co/moonshotai/Kimi-K3.1-Pro).
+66. <a id="ref-66"></a>Kimi K3.1 Pro: evaluated system profile. [Source](https://artificialanalysis.ai/models/kimi-k3-1-pro).
+67. <a id="ref-67"></a>Kimi K3.1 Pro: primary documentation / artifact evidence. [Source](https://huggingface.co/api/models/moonshotai/Kimi-K3.1-Pro).
+68. <a id="ref-68"></a>Kimi K3.1 Pro: primary documentation / artifact evidence. [Source](https://www.kimi.ai/blog/kimi-k3-1-pro).
+69. <a id="ref-69"></a>Ling 3.1 Flash: primary documentation / artifact evidence. [Source](https://huggingface.co/inclusionAI/Ling-3.1-flash).
+70. <a id="ref-70"></a>Ling 3.1 Flash: evaluation profile (mapping limitations noted in text). [Source](https://artificialanalysis.ai/models/ling-3-1-flash).
+71. <a id="ref-71"></a>Ling 3.1 Flash: primary documentation / artifact evidence. [Source](https://huggingface.co/api/models/inclusionAI/Ling-3.1-flash).
+72. <a id="ref-72"></a>Ling 3.0 Flash Sante: primary documentation / artifact evidence. [Source](https://huggingface.co/inclusionAI/Ling-3.0-flash-Sante).
+73. <a id="ref-73"></a>Ling 3.0 Flash Sante: primary documentation / artifact evidence. [Source](https://huggingface.co/api/models/inclusionAI/Ling-3.0-flash-Sante).
+74. <a id="ref-74"></a>Smaug Nemotron 3.5 NVFP4: primary documentation / artifact evidence. [Source](https://huggingface.co/abacusai/Smaug-Nemotron-3.5-NVFP4).
+75. <a id="ref-75"></a>Smaug Nemotron 3.5 NVFP4: primary documentation / artifact evidence. [Source](https://blog.abacus.ai/blog/2026/10/22/smaug-nemotron-3-5-nvfp4-an-agentic-fine-tune-that-lives-in-4-bits/).
+76. <a id="ref-76"></a>Smaug Nemotron 3.5 NVFP4: primary documentation / artifact evidence. [Source](https://huggingface.co/api/models/abacusai/Smaug-Nemotron-3.5-NVFP4).
+77. <a id="ref-77"></a>Nemotron 3.5 Bolt E4B 4GB: primary documentation / artifact evidence. [Source](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Bolt-E4B-4GB).
+78. <a id="ref-78"></a>Nemotron 3.5 Bolt E4B 4GB: primary documentation / artifact evidence. [Source](https://research.nvidia.com/labs/nemotron/NVIDIA-Nemotron-3.5-Bolt-E4B-4GB/).
+79. <a id="ref-79"></a>Nemotron 3.5 Bolt E4B 4GB: primary documentation / artifact evidence. [Source](https://huggingface.co/api/models/nvidia/NVIDIA-Nemotron-3.5-Bolt-E4B-4GB).
+80. <a id="ref-80"></a>GPT-6.1 Terra: primary documentation / artifact evidence. [Source](https://developers.openai.com/api/docs/models/gpt-6.1-terra).
+81. <a id="ref-81"></a>GPT-6.1 Terra: evaluated system profile. [Source](https://artificialanalysis.ai/models/gpt-6-1-terra).
+82. <a id="ref-82"></a>Claude Fable 5.2: primary documentation / artifact evidence. [Source](https://www.anthropic.com/claude-fable-and-mythos-5-2).
+83. <a id="ref-83"></a>Claude Fable 5.2: evaluated system profile. [Source](https://artificialanalysis.ai/models/claude-fable-5-2).
+84. <a id="ref-84"></a>Inkling 2 Small: primary documentation / artifact evidence. [Source](https://huggingface.co/thinkingmachines/Inkling-2-Small).
+85. <a id="ref-85"></a>Inkling 2 Small: primary documentation / artifact evidence. [Source](https://huggingface.co/api/models/thinkingmachines/Inkling-2-Small).
+86. <a id="ref-86"></a>Inkling 2 Small: evaluated system profile. [Source](https://artificialanalysis.ai/models/inkling-2-small).
+87. <a id="ref-87"></a>Inkling 2 Small: primary documentation / artifact evidence. [Source](https://vllm-project.github.io/2026/11/12/inkling2-small.html).
+88. <a id="ref-88"></a>Qwen3.8 Flash Next: primary documentation / artifact evidence. [Source](https://huggingface.co/Qwen/Qwen3.8-Flash-Next).
+89. <a id="ref-89"></a>Qwen3.8 Flash Next: primary documentation / artifact evidence. [Source](https://huggingface.co/api/models/Qwen/Qwen3.8-Flash-Next).
+90. <a id="ref-90"></a>Qwen3.8 Flash Next: evaluated system profile. [Source](https://artificialanalysis.ai/models/qwen3-8-flash-next).
+91. <a id="ref-91"></a>GLM-5.3 Flash: primary documentation / artifact evidence. [Source](https://huggingface.co/zai-org/GLM-5.3-Flash).
+92. <a id="ref-92"></a>GLM-5.3 Flash: primary documentation / artifact evidence. [Source](https://huggingface.co/api/models/zai-org/GLM-5.3-Flash).
+93. <a id="ref-93"></a>GLM-5.3 Flash: evaluated system profile. [Source](https://artificialanalysis.ai/models/glm-5-3-flash).
+94. <a id="ref-94"></a>GPT-6.2 Astra: primary documentation / artifact evidence. [Source](https://openai.com/index/introducing-gpt-6-2-astra-sol/).
+95. <a id="ref-95"></a>GPT-6.2 Astra: evaluated system profile. [Source](https://artificialanalysis.ai/models/gpt-6-2-astra).
+96. <a id="ref-96"></a>GPT-6.2 Sol: evaluated system profile. [Source](https://artificialanalysis.ai/models/gpt-6-2-sol).
+97. <a id="ref-97"></a>Gemini 4 Carbon: primary documentation / artifact evidence. [Source](https://aistudio.google.com/docs/models/gemini-4-carbon).
+98. <a id="ref-98"></a>Gemini 4 Carbon: primary documentation / artifact evidence. [Source](https://aistudio.google.com/docs/pricing#gemini-4-carbon).
+99. <a id="ref-99"></a>Gemini 4 Neon: primary documentation / artifact evidence. [Source](https://aistudio.google.com/docs/pricing#gemini-4-neon).
+100. <a id="ref-100"></a>Gemini 4 Neon: evaluated system profile. [Source](https://artificialanalysis.ai/models/gemini-4-neon).
+101. <a id="ref-101"></a>Gemini 4 Hydrogen: primary documentation / artifact evidence. [Source](https://aistudio.google.com/docs/models/gemini-4-hydrogen).
+102. <a id="ref-102"></a>Gemini 4 Hydrogen: primary documentation / artifact evidence. [Source](https://aistudio.google.com/docs/pricing#gemini-4-hydrogen).
+103. <a id="ref-103"></a>Gemini 4 Hydrogen: evaluated system profile. [Source](https://artificialanalysis.ai/models/gemini-4-hydrogen).
+104. <a id="ref-104"></a>Qwen4-Max: evaluated system profile. [Source](https://artificialanalysis.ai/models/qwen4-max).
+105. <a id="ref-105"></a>LongCat-2.5: primary documentation / artifact evidence. [Source](https://tech.meituan.com/2026/11/10/Meituan-LongCat-2.5-Open-Source.html).
+106. <a id="ref-106"></a>Agnes 2.5 Pro Theta: primary documentation / artifact evidence. [Source](https://huggingface.co/api/models/Agnes-AI/Agnes-2.5-Pro-Theta).
+107. <a id="ref-107"></a>Agnes 2.5 Pro Theta: evaluation profile (mapping limitations noted in text). [Source](https://artificialanalysis.ai/models/agnes-2-5-pro-theta).
+108. <a id="ref-108"></a>Inkling 2 Mini: primary documentation / artifact evidence. [Source](https://huggingface.co/thinkingmachines/Inkling-2-Mini).
+109. <a id="ref-109"></a>Inkling 2 Mini: evaluated system profile. [Source](https://artificialanalysis.ai/models/inkling-2-mini).
+110. <a id="ref-110"></a>Muse Ember: primary documentation / artifact evidence. [Source](https://research.meta.ai/blog/muse-ember).
+111. <a id="ref-111"></a>Muse Ember: evaluated system profile. [Source](https://artificialanalysis.ai/models/muse-ember).

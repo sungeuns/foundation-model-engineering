@@ -17,6 +17,7 @@ You do not need to read the whole book first.
 | The weights fit. Why does serving run out of memory? | [KV cache management](https://sungeuns.github.io/foundation-model-engineering/chapter-12/kv-cache-management/) | Calculate memory as context, batch size, and KV heads change. |
 | What does an attention weight actually do? | [Self-attention mathematics](https://sungeuns.github.io/foundation-model-engineering/chapter-3/self-attention-mathematics/) | Follow query/key scores through masking, softmax, and a weighted sum. |
 | My RAG answer is wrong. Which stage should I fix? | [RAG failure modes](https://sungeuns.github.io/foundation-model-engineering/chapter-14/rag-failure-modes-and-operational-design/) | Trace retrieval, reranking, context packing, and generation separately. |
+| Which newly released models should I evaluate? | [Model comparison, November 24](https://sungeuns.github.io/foundation-model-engineering/chapter-17/commercial-model-benchmarks/) | Compare 43 profiles, inspect missing evidence, and calculate long-context costs for GPT-6.2. |
 | Does a higher evaluation score justify a release? | [Experimental design and uncertainty](https://sungeuns.github.io/foundation-model-engineering/chapter-17/experimental-design-and-uncertainty/) | Run a paired evaluation and inspect the decision boundary. |
 | Can I train a model, break it, and resume it exactly? | [Tiny decoder lab](https://sungeuns.github.io/foundation-model-engineering/chapter-7/tiny-decoder-lab/) | Run a CPU experiment with a causal check, an ablation, and checkpoint replay. |
 
@@ -25,6 +26,8 @@ You do not need to read the whole book first.
 20 chapters connect architectures, pre-training, post-training, inference, retrieval, agents, evaluation, safety, and interpretability. Each lesson ends with reasoning questions and references. The [learning paths](https://sungeuns.github.io/foundation-model-engineering/chapter-1/learning-path-and-mastery/) help you check prerequisites and choose a route.
 
 Expect Python, linear algebra, and probability. Examples identify their simplifications; teaching simulations are not benchmark results. Time-sensitive comparisons identify their source and snapshot date. A provider's claim is kept separate from independently measured evidence.
+
+**Updated November 24, 2026:** [GLM-5.4's shared-depth design and GPT-6.2's interface](https://sungeuns.github.io/foundation-model-engineering/chapter-4/various-llm-architectures/), the [43-profile model comparison](https://sungeuns.github.io/foundation-model-engineering/chapter-17/commercial-model-benchmarks/), and the speech, image and interactive-world chapters now incorporate the checked November releases. Hosted access, downloadable weights and independently measured results are distinguished throughout.
 
 ### Try a CPU lab
 

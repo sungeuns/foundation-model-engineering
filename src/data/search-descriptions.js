@@ -71,8 +71,8 @@ export const searchDescriptions = {
     ko: '데이터 계보, 여러 표현 수준의 중복 탐지, 오염 제거 파이프라인과 비공개 평가셋으로 벤치마크 오염을 탐지하고 방지합니다.',
   },
   '/chapter-17/commercial-model-benchmarks': {
-    en: 'Compare model quality, cost and evaluation methods, including the November 17 Qwen4-Max, Gemini 4 Hydrogen, LongCat-2.5 and Agnes release supplement.',
-    ko: '모델 품질·비용·평가 방법을 비교하고 11월 17일 Qwen4-Max·Gemini 4 Hydrogen·LongCat-2.5·Agnes 출시 보충을 확인합니다.',
+    en: 'Compare 43 model profiles, including GLM-5.4, GPT-6.2 and Gemini 4. Explore dated benchmarks, release status and a Python cost example. Checked November 24, 2026.',
+    ko: 'GLM-5.4·GPT-6.2·Gemini 4를 포함한 43개 모델의 평가·비용·공개 상태를 비교하고 Python 비용 예제를 실행합니다. 2026년 11월 24일 확인 자료입니다.',
   },
   '/chapter-18/red-teaming': {
     en: 'Explore LLM red teaming through threat taxonomies, automated testing, multi-turn attacks, and the gap between refusal behavior and robust safety.',

@@ -14,6 +14,8 @@ A useful analogy is transportation. Cargo ships, racing cars, and commuter train
 
 This section looks at those design pressures first, then the architectural ideas they produced.
 
+The [November 24 update](#glm-54-reusing-layers-separates-depth-from-capacity) adds GLM-5.4's shared-depth design and GPT-6.2's documented interface. Earlier dated tables remain historical snapshots.
+
 ---
 
 ## Why Architectures Keep Diverging
@@ -155,6 +157,7 @@ Rather than memorizing product names, it is more useful to compare architectures
 | Long contexts | Hybrid linear attention, local attention, sparse attention | Lower asymptotic attention cost | Less uniform behavior across layers and more custom kernels |
 | KV-cache growth | GQA, MQA, MLA, sliding windows | Lower memory traffic during serving | More specialized implementation details |
 | Massive parameter counts | MoE layers | Higher capacity per unit inference compute | Routing and load-balancing complexity |
+| More computation without duplicating a layer block | Shared-depth loops | More transformations using the same block weights | Repeated computation, state management, and stability checks |
 | Throughput during decoding | MTP, speculative-friendly objectives | Faster generation paths | More training and serving coordination |
 | Input context token growth | Optical 2D mapping, vision-token compression | Large documents fit into fewer context tokens | OCR errors, layout dependence, and verification burden |
 | Long-context stability | QK-Norm, RoPE variants, windowing | Better optimization at scale | Extra design tuning and validation |
@@ -278,6 +281,40 @@ GPT-6.1 Terra and Claude Fable/Mythos 5.2 add hosted operating points, but their
 
 Engineering inference: active parameters estimate neither resident weight memory nor lookup traffic. Benchmark recurrent-state compression, sparse retrieval and lexical lookup separately; do not attribute a system-level gain to one component without ablations. This connects Chapters 5, 12 and 13: compute, stored capacity and recoverable context are different budgets.
 
+## GLM-5.4: Reusing Layers Separates Depth from Capacity
+
+**As of 2026-11-24.** Z.ai's November 23 announcement describes a **750B-scale** Loop Transformer adapted from a pretrained GLM-5 base, with **28 shared layers executed twice** [[37]](#ref-37). Exact total/active parameter counts, the complete training mixture and a future weight license remain undisclosed.
+
+Think of applying the same editing procedure to a revised draft. The procedure is reused, but its second application sees a changed representation and still takes work. A simple execution count makes this distinction concrete. Let $L$ be the original number of layers, $k$ the size of the shared block, and $r$ its iteration count. If all other layers execute once, the number of layer executions per forward pass is
+
+$$
+D = (L-k) + rk = L + (r-1)k.
+$$
+
+Here $D$ counts executions, not separately stored layer weights. With the disclosed $k=28$ and $r=2$, the count is $L+28$; this does not establish the model's full layer count. It also does not give a FLOP multiplier: attention, expert routing, gates, cache reads and kernel execution have different costs. Reusing a matrix saves duplication of that matrix, not the arithmetic needed to apply it again.
+
+The announcement identifies three supporting mechanisms [[37]](#ref-37):
+
+| Mechanism | Disclosed operation |
+|---|---|
+| Per-iteration, per-token gates | Control residual updates to stabilize repeated computation |
+| Shared global KV plus a local window | The second pass reuses first-pass sparse KV and retains its own sliding-window KV |
+| Sparse index reuse | The second pass reuses first-pass retrieval indices |
+
+Engineering implication: measure weight storage, persistent cache, temporary buffers and execution time separately. Index reuse saves selection work while the selected values still need attention computation. A cache or recovery implementation must distinguish shared state from iteration-specific state; matching the text prefix alone is insufficient evidence of equivalent continuation.
+
+The reported controlled ablation uses a **30B model**, with about **10% more training compute**, after **200K-context SFT** with thinking enabled. It is not a flagship benchmark result. Adaptive iteration counts remain future work [[37]](#ref-37). For a private evaluation, hold tool access, effort, context and stopping rules fixed; measure task success, total generated tokens, tail latency and budget exhaustion. Fewer output tokens need not mean less internal computation.
+
+**Access boundary:** Coding Plan, ZCode and Z.ai Chat are live; the standard pay-as-you-go API and weights remain planned [[37]](#ref-37). Coding Plan integration documents **1M context**, image input and low/high/max effort; disabling thinking maps to low [[38]](#ref-38). This is a hosted serving contract, not a downloadable configuration. [Section 17.6](/chapter-17/commercial-model-benchmarks) tracks release and evaluation evidence separately.
+
+## GPT-6.2: Documented Interfaces and Undisclosed Internals
+
+**As of 2026-11-24.** OpenAI's November 17 API changelog lists **GPT-6.2 Astra** and **GPT-6.2 Sol** as released/API-only models. Both support Responses and Chat Completions; tool calling requires Responses [[41]](#ref-41). Their documented text/image input and text output do not disclose the internal attention stack, expert routing, parameter counts or training mixture [[39]](#ref-39) [[40]](#ref-40).
+
+Both model pages distinguish a **1,050,000-token context window**, **922,000 maximum input tokens** and **128,000 maximum output tokens**. Both reject reasoning effort `none` [[39]](#ref-39) [[40]](#ref-40). These are useful integration constraints, but they cannot identify an architecture from outside the service. Similarly, subagent delegation is a documented Responses capability, not evidence for a particular arrangement of experts inside the model.
+
+For an agent comparison, record whether a result used a single model call or orchestration, then pin the model ID, reasoning effort, tools, scaffold, context management, retries and grader. A system result cannot isolate a backbone improvement unless those factors are controlled. The practical comparison with GLM-5.4 is therefore about evidence: use the architectural mechanisms a provider actually discloses, and evaluate the complete deployed system where internals remain undisclosed.
+
 ## Quizzes
 
 <details>
@@ -298,6 +335,16 @@ Engineering inference: active parameters estimate neither resident weight memory
 <details>
 <summary>Quiz 4: Why is optical context compression not equivalent to simply increasing a model's text context window?</summary>
 *Increasing the text context window preserves the input as discrete text tokens and asks attention and KV-cache systems to handle more positions. Optical compression changes the representation before the model sees it: text and layout are encoded as vision tokens. This can reduce token count, but it introduces a lossy reconstruction problem, layout sensitivity, and the need to verify exact symbols when precision matters.*
+</details>
+
+<details>
+<summary>Quiz 5: A block of 28 layers runs twice with shared weights. Does that double parameter storage or make the extra computation free?</summary>
+*Neither follows. The block's main weights can be stored once, while its transformations execute twice; additional gates and state also require accounting. The execution count grows by 28 under the stated assumptions, but full FLOPs, memory and latency require the actual implementation.*
+</details>
+
+<details>
+<summary>Quiz 6: Can a 30B loop ablation or a hosted agent score establish which flagship backbone is better?</summary>
+*The ablation supports a conclusion about its tested model scale, training compute and evaluation setup. A hosted agent score measures the model together with effort, tools and orchestration. Neither supplies an uncontrolled model-to-model comparison or reveals undisclosed internals; use matched system evaluations and keep the evidence boundaries explicit.*
 </details>
 
 ---
@@ -354,3 +401,13 @@ Engineering inference: active parameters estimate neither resident weight memory
 35. <a id="ref-35"></a>GLM-5.3 Flash. Model card, verified 2026-11-15. [Source](https://huggingface.co/zai-org/GLM-5.3-Flash).
 
 36. <a id="ref-36"></a>Qwen Team. Qwen4-Max: Your New Teammate Has Arrived. Verified 2026-11-17. [Source](https://qwen.ai/blog?id=qwen4-max).
+
+37. <a id="ref-37"></a>Z.ai. (2026-11-23). *GLM-5.4: Toward Generalized Coding with Our First Loop Transformer*. Verified 2026-11-24. [Source](https://z.ai/blog/glm-5.4).
+
+38. <a id="ref-38"></a>Z.ai. *How to Switch Models: GLM-5.4 Coding Plan integration*. Verified 2026-11-24. [Source](https://docs.z.ai/devpack/latest-model).
+
+39. <a id="ref-39"></a>OpenAI. *GPT-6.2 Astra model documentation*. Verified 2026-11-24. [Source](https://developers.openai.com/api/docs/models/gpt-6.2-astra).
+
+40. <a id="ref-40"></a>OpenAI. *GPT-6.2 Sol model documentation*. Verified 2026-11-24. [Source](https://developers.openai.com/api/docs/models/gpt-6.2-sol).
+
+41. <a id="ref-41"></a>OpenAI. *API changelog, November 17, 2026: GPT-6.2*. Verified 2026-11-24. [Source](https://developers.openai.com/api/docs/changelog).

@@ -282,7 +282,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 4.2 | `/chapter-4/decoder-only` | Inspected 2026-11-15 | c0c4d6a6c3109423997c9d58d65f923f6e2375445577a79054e871947dd2a372 | 61354f7957d28e3c4f40faa53d541b7c03b3e48206976b5f84834ce814f89d83 |
 | 4.3 | `/chapter-4/encoder-decoder` | Inspected 2026-11-15 | c0372544843683d2e7b80936ba33fd4c343a4b6850c40844ae59ccc34362f918 | d1c77e9b87235b6e7d00b7350a01d5d813567221ce8ca91edf14e5241f400905 |
 | 4.4 | `/chapter-4/hybrid-prefix-lm` | Inspected 2026-11-15 | ebe7194bc50255772200359bc604906d56494def1f09ca586850109416062cec | 69e056f6690ea2345e02be5001a87a64f7bcfe902add9d9ae759071d38bb7ae1 |
-| 4.5 | `/chapter-4/various-llm-architectures` | Inspected 2026-11-17 | c5b6dad94e44b5064be40007e7c2cb70924022228bc0921ed4d50e8f6bbc52a1 | cd5a3f20afe20d3daceba7ef2b20df43b10688857eab4510e68e60233938b177 |
+| 4.5 | `/chapter-4/various-llm-architectures` | Inspected 2026-11-24 | 028ebccee02c3a1b30297a6c43b9ed91806975ff737f33e8a5ccd5ea26f26a30 | 5d9fb05bb56198c702831691a20832099bac533ece95857c22101dfb884863a8 |
 | 5.1 | `/chapter-5/sparse-vs-dense-models` | Inspected 2026-11-15 | 34f083166e4d9b6677c4c18ddc372048f6f252450ca7265cfa555d03c11deb09 | 890d84a1b6c8fc59a601463209724beb86d21ef4fdf31eb5d5620831522a2117 |
 | 5.2 | `/chapter-5/routing-algorithms` | Inspected 2026-11-15 | 3b83671dec53a4a69ee8c357d810ac48b3b2b069f1b54fdb76a8e567ae6ed3e7 | 436d75fa19297b28084c3bf55cb2e92e341e86d33370e1843de1c263a8f9d356 |
 | 5.3 | `/chapter-5/expert-parallelism` | Inspected 2026-11-18 | b068ad369a94f058c7e7c63ac3072bb7be023481ba3566cec292cb0da234f210 | 29dfe7ecd4340bf4c209b4985b485765dd7af91bca8ad96be8a9712dc22e2fa4 |
@@ -315,11 +315,11 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 10.4 | `/chapter-10/kto-and-ipo` | Inspected 2026-11-15 | 61ac741df320db7fb3031414fdacaf5770fa28200d3f91f8d69cec83c273c046 | a4efc7610bf213a07fe5fcabf60033b2ab28a12d8fb257270bd9900a69e5a4e3 |
 | 10.5 | `/chapter-10/alignment-tax` | Inspected 2026-11-15 | e630460ac1b1a8620d753362e400c3bea18d69cff7a6265b3820b6ce7230c6f6 | 5041f746d84764553aecee5b114599a703cc2206889aa57838d5b2719b0bec7e |
 | 11.1 | `/chapter-11/vision-language-bridges` | Inspected 2026-11-17 | 821e9cc5083e4bedc7315993ab1d841eb4b0864e52633036bbe175fd885cf6b5 | 85884e1add65d8a5e7b357a601d60929e0bc4e7c2a27835517a497c0712b6d29 |
-| 11.2 | `/chapter-11/audio-and-speech-integration` | Inspected 2026-11-15 | fa7776b0ab0b37009a782b6a3a287422cadbca98042f32aeb96d15128840cbe4 | 7b5ea4a0872f18019dd5c3e2717a5f86cf91542503a80b389373ca856e2207da |
+| 11.2 | `/chapter-11/audio-and-speech-integration` | Inspected 2026-11-24 | 3c8de54d3316183f25505eea48298dc784a4b0a61b55390f944bbc0a60ffef91 | 150f266fee7ca8b40ccdc495d9f7898048b2d7d54991e2d51bbd40978ff03629 |
 | 11.3 | `/chapter-11/unified-multimodal-any-to-any` | Inspected 2026-11-15 | 63b49653980ac69e7662b92d1423aad27976789545651d8f21bb97c04a0993a2 | 05b4775ea2e63d295a8def6928b0a7280187755f1e95669da1a9db2ad9134158 |
-| 11.4 | `/chapter-11/image-diffusion-models` | Inspected 2026-11-15 | 5265db10626a4d18d63acdb1e293291a7f01d1dcc268653fc6652d3f8fa0763a | 1f2ab29ac2ec01c17264d955839890dc9c71e349b82a087520d2291799a3d8c1 |
+| 11.4 | `/chapter-11/image-diffusion-models` | Inspected 2026-11-24 | 5bb8bc33ff8adf86105e24018b03423e9f19e0d29739f64b843c0cbeadea05e8 | 308de426fdbc7b1c845a4d63be36b83988abe2eb36026affba1dd101194816b7 |
 | 11.5 | `/chapter-11/video-generation-foundations` | Inspected 2026-11-15 | b34544d0352be5feafdfc0d30ac23092d50edf3a3af5f3e4d37cc62531230c20 | 55c0488a07c962041cdbb0cdb945d18c8e136b23dba2aed6f6970f1c33cb4b4b |
-| 11.6 | `/chapter-11/commercial-video-models` | Inspected 2026-11-15 | 2299a2e11e39d98825c1b46c9dd4068a6eed9d912bfbd367b62dc12499aafd98 | 175c65c83a630767c82eeacb3063df93fa0d660981e712d60776554a95a69366 |
+| 11.6 | `/chapter-11/commercial-video-models` | Inspected 2026-11-24 | 12216aad67ffc900bcfe437f20a7fcf9be618ccc5d617f698f4466ef15ff33cb | 482a6137c8a368e2d9bab31367b349357ab6f294e86318a2aee303bc9c120f57 |
 | 12.1 | `/chapter-12/kv-cache-management` | Inspected 2026-11-18 | 4be195f202603d7c05c414a25c20bb5f69a3b1d7c46512d364edbfdf14d0e047 | 383de00ff5bc97cb8a33ebe6d951bfe3c3fa2217dd78a50501bf9c71ce237913 |
 | 12.2 | `/chapter-12/paged-attention-vllm` | Inspected 2026-11-18 | 75d76b30c45ca44edbb56072df6f91209343c7d8ad5c69270cd6b6c4e9700dba | e824df912502a5ce75dde4c69fc80d44259c9e9229b55374ba32eb06ba5e0b6a |
 | 12.3 | `/chapter-12/continuous-batching` | Inspected 2026-11-15 | 74904410d90bc4a540c69f408cc3be12c46b2a7560cd831370c05415e2172f8d | e23a378bc1d7f50dfe25e87241187cfcdb1da4df458dc08a375ea87de53d19d1 |
@@ -354,7 +354,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 17.3 | `/chapter-17/elo-rating-and-leaderboards` | Inspected 2026-11-15 | 14f931df5e4641c576c1763d446b2c663d1f282abf438767e5a330d49b31a9b9 | 1e78f5819e5452372109f72327dad0f7831b3b9ce66750000c9378a906744c30 |
 | 17.4 | `/chapter-17/contamination-issues` | Inspected 2026-11-17 | 38a0cad52c7504804a57a8cc2deed94a3ac2fe68f7648809261abad1cf6b4fa5 | c84e9e5b241d9c3cc9b97275c090011f12a10ebef18b8a7e4e0ff71e7d263cf4 |
 | 17.5 | `/chapter-17/production-evaluation-and-release-gates` | Inspected 2026-11-17 | 60ddb6057d61fb19bdcbbed9bdb165b892e506e549dbe2b985e976bab1ef60f4 | f3d34678eed1bb32eb0eb28f1c7537c781107e7beada12aa3d5ddba8092b30e0 |
-| 17.6 | `/chapter-17/commercial-model-benchmarks` | Inspected 2026-11-17 | 99bc9919a5892b1c462ffac49ce1b7d1396d3182a616955a4434db8d59642824 | 94c7a9b9a9aaad4771236e73895c1aa0d36f5f6536279d7ca359f4d3ab2ed7ca |
+| 17.6 | `/chapter-17/commercial-model-benchmarks` | Inspected 2026-11-24 | d9dfa9bab4ea15acdd3a92c9583a9c85941f747645ba416eae03bbdca5a219fc | 905f94e8ac091a88c92d5437ca3636d326d037aec199af7898d488b569873e5f |
 | 17.7 | `/chapter-17/experimental-design-and-uncertainty` | Inspected 2026-11-17 | b8241e7e59234233d48eacbeca4f64fb54e373948678b8ff0be37dc9310b97c0 | 5303b225c521c059de6c42ee72522f513763a2c093f87178eae753f1f2c94ac1 |
 | 18.1 | `/chapter-18/red-teaming` | Inspected 2026-11-15 | fa815b07490b4a1039a2e91d2c98e9f1f212d6479f534afa5f09020cc8f93598 | fb6f4167f16906d882401b58a001a0ff0e3a4912cd5142852c7c26b84d547b0b |
 | 18.2 | `/chapter-18/jailbreaking-and-defense` | Inspected 2026-11-15 | caff93966e1d1a925120d696bf37a09fa46cc63cd9378c818ac9f1d489348afd | 520c11ef550bc2ca4ca9675449ce923a1b0ef2968b59cab0ba1dbdd85597f6be |
@@ -370,7 +370,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 20.4 | `/chapter-20/neural-networks-as-programs` | Inspected 2026-11-15 | 55b5f77c413bfd3de7fa682467ff500d07887f4dabafbb79903beccf9b5c4759 | e88b792d77ef04624e0dee7e78480fadde710c80d0f3c1cdc729c60f56e765bf |
 | 20.5 | `/chapter-20/multi-token-prediction` | Inspected 2026-11-18 | e6f6d2d7bcefe3b290e7c0d81c7612e000d2bcfe5dc3593a29a285e27416f560 | d407bab93f7b3b6e03c5ec9d36bced5d4df7e538fe6083aadd5d636b14fe80a9 |
 | 20.6 | `/chapter-20/diffusion-based-llms` | Inspected 2026-11-15 | f2236899fbf327ac90e1c1edae9c77a4173fb6721102a7364fbf85542541d836 | 0d5a117e60a90c1f8d746e5b29f01a13cc4929aa7a0e729e93fc003611ef22ed |
-| 20.7 | `/chapter-20/path-to-agi-and-world-models` | Inspected 2026-11-15 | a3dcc811e9933684e8904932a324182ed97b068f922990872e19b57c4769f0cb | da5b3f4df663983e5d69936df8fe16315b453860a786ecdf54f0a32b419c3ea5 |
+| 20.7 | `/chapter-20/path-to-agi-and-world-models` | Inspected 2026-11-24 | 8183cc17179d853f3eeb28ec3a79304d0f964353738881a14598a24d9cb35450 | 6d9ae7eb1e161417e7b1d05c8cba110761108178d73e9fbc5da2ed1694dc14e4 |
 
 ### Verification for the October 13 pass
 
@@ -584,3 +584,7 @@ Inspected 7.5 and 19.2 EN/KO pairs after adding self-contained notebook entry po
 ### 2026-11-18 causal-diagram follow-up
 
 Inspected 20.2 and 20.5 EN/KO pairs after replacing misleading generated figures with source-grounded HTML/CSS diagrams. The SSD example was checked numerically against recurrence; MTP diagrams distinguish shared parameters, auxiliary depth and training context. A fresh independent source review corrected quiz head numbering and found no remaining actionable issue in this scope. See `growth-2026-11-18-reader-feedback.md` and its SSD/MTP companion reports. Unchanged pages retain their earlier inspection evidence.
+
+### 2026-11-24 model and multimodal update
+
+Six EN/KO pairs (4.5, 11.2, 11.4, 11.6, 17.6, 20.7) were inspected in this pass; the current inventory hashes above bind that evidence to the text. The November 24 comparison replaces the November 15 chart and November 17 supplement with 43 selected profiles, separating primary-source verification from matched evaluation evidence. Architecture, speech, image, video and world-model changes preserve their disclosure boundaries. An independent read-only reviewer checked the comparison and sampled primary claims, and reported no unresolved significant findings after the GLM API wording correction. See `review-2026-11-24.md` and its architecture, multimodal and benchmark companion reports for scope and final validation. This is a focused update, not a new exhaustive review of all 107 pairs.
