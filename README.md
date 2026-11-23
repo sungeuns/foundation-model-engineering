@@ -27,7 +27,7 @@ You do not need to read the whole book first.
 
 Expect Python, linear algebra, and probability. Examples identify their simplifications; teaching simulations are not benchmark results. Time-sensitive comparisons identify their source and snapshot date. A provider's claim is kept separate from independently measured evidence.
 
-**Updated November 24, 2026:** [GLM-5.4's shared-depth design and GPT-6.2's interface](https://sungeuns.github.io/foundation-model-engineering/chapter-4/various-llm-architectures/), the [43-profile model comparison](https://sungeuns.github.io/foundation-model-engineering/chapter-17/commercial-model-benchmarks/), and the speech, image and interactive-world chapters now incorporate the checked November releases. Hosted access, downloadable weights and independently measured results are distinguished throughout.
+The November 24 comparison includes direct links to each profile. Check [GLM-5.4’s release status](https://sungeuns.github.io/foundation-model-engineering/chapter-17/commercial-model-benchmarks/#model-glm-54), inspect the evaluation for [GPT-6.2 Sol](https://sungeuns.github.io/foundation-model-engineering/chapter-17/commercial-model-benchmarks/#model-gpt-62-sol), or read how [GLM-5.4 reuses its layers](https://sungeuns.github.io/foundation-model-engineering/chapter-4/various-llm-architectures/#glm-54-reusing-layers-separates-depth-from-capacity).
 
 ### Try a CPU lab
 

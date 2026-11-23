@@ -422,6 +422,8 @@ export default function CommercialModelBenchmarkExplorer({ locale = 'en' }: { lo
             </div>
           </div>
           <p className="commercial-source-note">
+            <a href={`#model-${selected.id}`}>{locale === 'ko' ? `${selected.model} 프로필 고유 링크` : `Permalink to ${selected.model}`}</a>
+            {' · '}
             <a href={selected.source}>{locale === 'ko' ? '공식 출처' : 'Primary source'}</a>
             {selected.specification && <> · <a href={selected.specification}>{locale === 'ko' ? '모델·API 규격' : 'Model/API specification'}</a></>}
             {selected.evaluation && <> · <a href={selected.evaluation}>{locale === 'ko' ? '평가 조건·출처' : 'Evaluation source'}</a></>}

@@ -421,8 +421,7 @@ pre code { overflow-wrap: normal; }
   .container { padding: 1.25rem; }
   header { min-height: 3rem; padding-left: 6rem; align-items: flex-start; gap: .5rem; }
   header .book-title { font-size: 1rem; line-height: 1.4; }
-  .header-actions { gap: .4rem; }
-  .github-link { display: none; }
+  .header-actions { gap: .4rem; flex-shrink: 0; }
   main { font-size: 1.05rem; }
   pre, .astro-code { padding: 1rem !important; }
   pre code, .astro-code code { font-size: .875rem; }

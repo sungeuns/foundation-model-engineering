@@ -354,7 +354,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 17.3 | `/chapter-17/elo-rating-and-leaderboards` | Inspected 2026-11-15 | 14f931df5e4641c576c1763d446b2c663d1f282abf438767e5a330d49b31a9b9 | 1e78f5819e5452372109f72327dad0f7831b3b9ce66750000c9378a906744c30 |
 | 17.4 | `/chapter-17/contamination-issues` | Inspected 2026-11-17 | 38a0cad52c7504804a57a8cc2deed94a3ac2fe68f7648809261abad1cf6b4fa5 | c84e9e5b241d9c3cc9b97275c090011f12a10ebef18b8a7e4e0ff71e7d263cf4 |
 | 17.5 | `/chapter-17/production-evaluation-and-release-gates` | Inspected 2026-11-17 | 60ddb6057d61fb19bdcbbed9bdb165b892e506e549dbe2b985e976bab1ef60f4 | f3d34678eed1bb32eb0eb28f1c7537c781107e7beada12aa3d5ddba8092b30e0 |
-| 17.6 | `/chapter-17/commercial-model-benchmarks` | Inspected 2026-11-24 | d9dfa9bab4ea15acdd3a92c9583a9c85941f747645ba416eae03bbdca5a219fc | 905f94e8ac091a88c92d5437ca3636d326d037aec199af7898d488b569873e5f |
+| 17.6 | `/chapter-17/commercial-model-benchmarks` | Inspected 2026-11-24 | 777c06399dd9850b2bd4b0df45c1da42c461b17cd7707cae7d618e687c981af0 | b4b88a0d2c08b27251afdbadca2d3cd84e3748373b54a034964e3a724a7ed0f4 |
 | 17.7 | `/chapter-17/experimental-design-and-uncertainty` | Inspected 2026-11-17 | b8241e7e59234233d48eacbeca4f64fb54e373948678b8ff0be37dc9310b97c0 | 5303b225c521c059de6c42ee72522f513763a2c093f87178eae753f1f2c94ac1 |
 | 18.1 | `/chapter-18/red-teaming` | Inspected 2026-11-15 | fa815b07490b4a1039a2e91d2c98e9f1f212d6479f534afa5f09020cc8f93598 | fb6f4167f16906d882401b58a001a0ff0e3a4912cd5142852c7c26b84d547b0b |
 | 18.2 | `/chapter-18/jailbreaking-and-defense` | Inspected 2026-11-15 | caff93966e1d1a925120d696bf37a09fa46cc63cd9378c818ac9f1d489348afd | 520c11ef550bc2ca4ca9675449ce923a1b0ef2968b59cab0ba1dbdd85597f6be |
@@ -588,3 +588,5 @@ Inspected 20.2 and 20.5 EN/KO pairs after replacing misleading generated figures
 ### 2026-11-24 model and multimodal update
 
 Six EN/KO pairs (4.5, 11.2, 11.4, 11.6, 17.6, 20.7) were inspected in this pass; the current inventory hashes above bind that evidence to the text. The November 24 comparison replaces the November 15 chart and November 17 supplement with 43 selected profiles, separating primary-source verification from matched evaluation evidence. Architecture, speech, image, video and world-model changes preserve their disclosure boundaries. An independent read-only reviewer checked the comparison and sampled primary claims, and reported no unresolved significant findings after the GLM API wording correction. See `review-2026-11-24.md` and its architecture, multimodal and benchmark companion reports for scope and final validation. This is a focused update, not a new exhaustive review of all 107 pairs.
+
+The November 24 follow-up added native fragment links to all 43 model rows in both editions of 17.6. Each link identifies the same source record as the chart. The current 17.6 hashes include these links.

@@ -17,6 +17,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      indexnow_routes: ${{ steps.indexnow.outputs.routes }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -41,6 +43,22 @@ jobs:
       - name: Verify textbook and rendered-site tests
         run: node --test scripts/*.test.mjs
 
+      - name: Restore the public IndexNow verification file
+        if: github.repository == 'sungeuns/foundation-model-engineering' && github.ref == 'refs/heads/main'
+        continue-on-error: true
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/indexnow-proof
+          key: pages-indexnow-proof-v1
+
+      - name: Prepare IndexNow verification and changed page list
+        id: indexnow
+        if: github.repository == 'sungeuns/foundation-model-engineering' && github.ref == 'refs/heads/main'
+        continue-on-error: true
+        env:
+          PUSH_BEFORE: ${{ github.event.before }}
+        run: node scripts/indexnow.mjs prepare
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
@@ -56,3 +74,29 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+    outputs:
+      page_url: ${{ steps.deployment.outputs.page_url }}
+
+  notify:
+    name: Notify IndexNow
+    needs: [build, deploy]
+    # A rerun after an ambiguous POST could duplicate the original notification.
+    if: github.event_name == 'push' && github.run_attempt == 1 && needs.build.outputs.indexnow_routes != ''
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/indexnow-proof
+          key: pages-indexnow-proof-v1
+          fail-on-cache-miss: true
+      - name: Verify the published proof and submit changed URLs
+        env:
+          PAGES_URL: ${{ needs.deploy.outputs.page_url }}
+          CHANGED_ROUTES: ${{ needs.build.outputs.indexnow_routes }}
+        run: node scripts/indexnow.mjs notify

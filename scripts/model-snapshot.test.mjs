@@ -42,7 +42,8 @@ test('both language tables match the plotted source record without filling missi
     assert.ok(source.includes(snapshot.asOf));
     const rows = source.split('\n').filter(line => line.startsWith('| ')).map(line => line.split('|').slice(1, -1).map(x => x.trim()));
     for (const model of snapshot.models) {
-      const matches = rows.filter(row => row[0] === model.model);
+      const anchor = `model-${model.id}`;
+      const matches = rows.filter(row => row[0] === `<a id="${anchor}" href="#${anchor}">${model.model}</a>`);
       assert.equal(matches.length, 1, `${lang}: ${model.model}`);
       const row = matches[0];
       const missing = lang === 'en' ? 'not reported' : '미공개';

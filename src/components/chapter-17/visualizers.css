@@ -518,6 +518,22 @@
   border-top: 1px dashed #334155;
 }
 
+td:has(> a[id^="model-"]) {
+  min-width: 8rem;
+}
+
+td > a[id^="model-"] {
+  overflow-wrap: normal;
+}
+
+tr:has(a[id^="model-"]:target) > td {
+  background: #f3eef6;
+}
+
+a[id^="model-"]:target {
+  text-decoration-thickness: 0.16em;
+}
+
 .commercial-benchmark-explorer {
   margin: 2rem 0;
   padding: 1.25rem;
