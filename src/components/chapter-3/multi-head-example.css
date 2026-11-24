@@ -1,0 +1,22 @@
+.multi-head-example .mha-inputs { margin: 1rem 0; padding: 0; border: 0; }
+.multi-head-example .mha-inputs legend { padding: 0; font-weight: 650; }
+.multi-head-example .demo-controls { margin: .35rem 0; }
+.multi-head-example .demo-controls button { min-height: 44px; }
+.multi-head-example .demo-card p { font-variant-numeric: tabular-nums; }
+.multi-head-example .demo-card ul { margin: .8rem 0; padding: 0; list-style: none; }
+.multi-head-example .demo-card li {
+  display: grid;
+  grid-template-columns: 1.25rem minmax(1.5rem, 1fr) 4rem;
+  align-items: center;
+  column-gap: .5rem;
+  margin: .3rem 0;
+  font-variant-numeric: tabular-nums;
+}
+.multi-head-example .demo-card li > :last-child { text-align: right; }
+.multi-head-example .mha-weight { display: block; height: .7rem; border-radius: .2rem; background: #e2e8f0; overflow: hidden; }
+.multi-head-example .mha-weight span { display: block; height: 100%; background: #215a79; }
+.multi-head-example .demo-card:nth-child(2) .mha-weight span { background: #96502e; }
+.multi-head-example .mha-ablation { flex-wrap: nowrap; cursor: pointer; }
+.multi-head-example .mha-ablation input { flex: none; width: 1.1rem; height: 1.1rem; }
+.multi-head-example .demo-output span { display: block; }
+.multi-head-example .demo-output b { font-variant-numeric: tabular-nums; }

@@ -265,7 +265,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | Number | Route | October review evidence | EN SHA-256 | KO SHA-256 |
 |---|---|---|---|---|
 | 1.1 | `/chapter-1/symbolism-vs-connectionism` | Inspected 2026-11-15 | 19edbaf2e43d8b24c55efaf3223deb73b85a88a1cd4b2fb5833658311331f991 | db6c3d195dc45b38d3c92d60d574c59f3f54cc11f8d6dfac02c1373887f1635d |
-| 1.2 | `/chapter-1/power-of-representation` | Inspected 2026-11-15 | 02953c0fa37f1cf79992015776672e8e8e1c4b4346803513bc4edb1b17c8892f | b67091f78be5e17ef78e1a5816bdb71b2eed0fd8444ab78f4b7893c468dda9fa |
+| 1.2 | `/chapter-1/power-of-representation` | Inspected 2026-11-25 | 594cb7c0c43d5e5ed15a129a3d067bb6076a8a51c9a325fba642f5b85fcbb9d0 | 8142f89a39bbbd517c8f3e365992d9a46b4a4dbf6846f5847df297d61b4c8203 |
 | 1.3 | `/chapter-1/deep-learning-paradigms` | Inspected 2026-11-15 | f373b59e6d5782c6150b3b363f1d61ba9d3a4ecab555ade160773d88a2489ff5 | 942a6ebe78204301a370fab8741dfd51ef3a63c274cfba57ca39a9ba18852aea |
 | 1.4 | `/chapter-1/bitter-lesson` | Inspected 2026-11-15 | f69188e38bc792ee461c83466da32354065ebdff52e5a7197d8a2d81743e92e3 | 6aa556b9971b28ccd3103e40dc174142ffe1fdf73673b64467fd0ef8dbd0baf1 |
 | 1.5 | `/chapter-1/learning-path-and-mastery` | Inspected 2026-11-17 | 0f8f04bb12ad70521b3c701fae89e83133b936a5d28d74a07b17d6a0f9d55c12 | 7afd35142e5986833e81c484c1c3d7fe0b717d7d728be32693fb4ec93a0ff029 |
@@ -273,8 +273,8 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 2.2 | `/chapter-2/vanishing-exploding-gradients` | Inspected 2026-11-15 | f883974659fb302e235151e51e0cffb5a6f9418089342fa6be149d94c207ffac | 7a4baf6b5be2bf9ff72621f15581483e6595c47296cb169d5d1c03395b882385 |
 | 2.3 | `/chapter-2/dawn-of-attention` | Inspected 2026-11-15 | e3df7fbeb285121402336d5a6a0c154e791da8c420e0e19716aa9a78ed478b16 | f8ca565f4756b8e2138133b67002a29e007ed381cbd24be6cf79b518888600c0 |
 | 2.4 | `/chapter-2/cnns-for-nlp` | Inspected 2026-11-15 | 37f7b031323ada4d1eb80b89d4ba1a7a33eb6ec127580aaed5e31500107e5ca2 | 4ffc530cb6c1a5483ef59e35462a49712c19200a70593fd408e5698050ec53c5 |
-| 3.1 | `/chapter-3/self-attention-mathematics` | Inspected 2026-11-18 | 5b7f732d14809df154a84ffe7c45f4f34e1b8825769f69fc7d83a107888b76b9 | 7b3c74c9eb256f6b5717ca37192f89da2906d4326b1acb931b23dd968612a321 |
-| 3.2 | `/chapter-3/multi-head-attention` | Inspected 2026-11-17 | dee853ce0966bb3f16f917320d63510b5d75e8cba877cfaa59a8aed045b46ed6 | e7d1daa0d332ef06e7cc5328bf97d782c318ef6a2b9ad88096325d2bb3fd491e |
+| 3.1 | `/chapter-3/self-attention-mathematics` | Inspected 2026-11-25 | 8aa11277dc690bf9bf3f07518f910a0b7300cf856519ae4ad567d1165b935eb7 | 7165e5c0e473875ec9e4f84c297b9fc8b9a08d4a1552bceda83616c1674eeb8e |
+| 3.2 | `/chapter-3/multi-head-attention` | Inspected 2026-11-25 | bc5026a7ec1b9aa4d5bc4589f7f6011630bc877efcb8d179954ee0560d8a705f | 4316a26ed2c414ccdb0c4f4ad6642d98286b9350748fd362920a1d183cac8b68 |
 | 3.3 | `/chapter-3/position-encoding-strategy` | Inspected 2026-11-15 | 63c3645268727e12760f56b1748a44bbac8afd1c7f66f9d49329e76e39130fb8 | 17d34127b63e936f20ca9f2440fa2aed52e5291548cf18a9dcf8b4f3fdf7463e |
 | 3.4 | `/chapter-3/layer-normalization-residuals` | Inspected 2026-11-15 | d9c2b8dbee0ba9d5c365d0395014e3e9d6fe06e7f58387401fd6ae625584825f | 7571b6552563c1bc6c771e9a1cb3acc1163645b179e7bb7e6a3dc2769e2cfe5e |
 | 3.5 | `/chapter-3/complexity-analysis` | Inspected 2026-11-15 | 528f765af0e658c5d7116b5d3651be5a3ec6496b5651970285143831e0344b2c | d5da6dea75982e92dc97033508aacd582e677911caa2afbfb61f1356fbf12537 |

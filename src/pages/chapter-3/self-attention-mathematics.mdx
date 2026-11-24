@@ -4,6 +4,7 @@ title: "3.1 Self-Attention Mathematics"
 lang: "en"
 ---
 
+import AttentionExampleCode from '../../components/chapter-3/AttentionExampleCode.astro';
 import AttentionVisualizer from '../../components/chapter-3/AttentionVisualizer';
 
 # 3.1 Self-Attention Mathematics
@@ -18,18 +19,11 @@ The mechanism has three parts: decide what to look for, score what is available,
 
 ### **The Metaphor: The Filing Cabinet System**
 
-Imagine you are doing research in a library with a highly efficient filing system.
+Suppose you want to know what a library’s bird collection says about flight. Your search phrase plays the role of a **query**. The label on each folder is its **key**. The pages inside are its **value**.
 
-*   **Query ($Q$):** This is what you are looking for. You have a topic in mind (e.g., "How do birds fly?").
-*   **Key ($K$):** These are the labels or tags on the filing folders. Each folder has a summary of what's inside.
-*   **Value ($V$):** This is the actual content inside the folder.
+Attention assigns a raw score to each visible key by comparing it with the query. Softmax converts those scores into weights. If two folders receive weights 0.7 and 0.3, their values contribute in those proportions. A folder with a perfect label can still contain an unhelpful page. The score tells you how the weights were assigned, while the value determines what reaches the output.
 
-To find the information you need:
-1.  You compare your **Query** against all the **Keys** to see which folders are relevant.
-2.  You calculate a **relevance score** (Attention weight) for each folder.
-3.  You extract the **Values** from the folders, giving more weight to the values from folders with high relevance scores.
-
-In self-attention, each token position supplies a query, key, and value. The mask determines which other positions it may read; a causal decoder cannot inspect future tokens.
+In self-attention every position supplies all three vectors. A causal mask limits which positions a query can read.
 
 ---
 
@@ -62,7 +56,7 @@ $$\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)
 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', margin: '20px 0' }}>
 
 <div style={{ maxWidth: '600px', width: '100%' }}>
-![Self-Attention Matrix Calculation](../../assets/images/chapter-3/self-attention-matrix-calculation.png)
+![Query–key matrix multiplication, scaling and softmax produce the weights used to mix the value vectors.](../../assets/images/chapter-3/self-attention-matrix-calculation.png)
 </div>
 
 <em style={{ marginTop: '10px', color: '#7f8c8d' }}>Source: [The Illustrated Transformer by Jay Alammar](https://jalammar.github.io/illustrated-transformer/)</em>
@@ -80,7 +74,7 @@ Where:
 ### Step-by-Step Breakdown
 
 1.  **Dot Product ($QK^T$):** Measures the raw similarity between each query and all keys.
-2.  **Scaling ($\frac{1}{\sqrt{d_k}}$):** Prevents the dot products from growing too large in magnitude, which would push the softmax function into regions with extremely small gradients.
+2.  **Scaling ($\frac{1}{\sqrt{d_k}}$):** Dividing by the square root of the key width reduces the tendency of softmax to concentrate on one key as width increases. The variance argument in Quiz 1 explains the assumptions.
 3.  **Softmax:** Converts the scaled scores into probabilities (attention weights) that sum to 1.
 4.  **Weighted Sum ($V$):** Multiplies the attention weights by the values to get the final output.
 
@@ -88,63 +82,25 @@ Where:
 
 ## PyTorch Implementation
 
-This small implementation exposes the score matrix and weighted sum.
+For the query at “cat,” the four raw dot products are 1, 2, 1 and −1. After scaling by $1/\sqrt{2}$ and masking future keys, only “The” and “cat” compete. Their weights are about 0.3302 and 0.6698. Multiplying by their values, $[1,0]$ and $[0,2]$, gives $[0.3302,1.3395]$. Open the mask to all four keys and the output becomes about $[0.6455,1.2407]$. You can reproduce both rows with the controls below at temperature 1.
 
-> **Deliberately simplified implementation.** The example uses CPU float32 and materializes the full attention matrix. It omits dropout, mixed-precision accumulation, fused kernels, and cache offsets. A supplied mask uses 1/True for allowed positions and must leave at least one key visible in every query row; otherwise this finite-mask implementation gives a meaningless distribution.
+**Runnable CPU example.** Run `python self_attention.py` in an environment with PyTorch installed. The example uses float32 and the four fixed input vectors per role shown in the interactive. It materializes the score matrix and checks all four outputs against PyTorch SDPA with dropout disabled. Changing the last two value vectors then tests whether either of the first two causal outputs changes. The example leaves out training, fused-kernel optimization and KV-cache offsets. [[2]](#ref-2)
 
-```python
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
+<AttentionExampleCode lang="en" />
 
-def scaled_dot_product_attention(query, key, value, mask=None):
-    """
-    Compute Scaled Dot-Product Attention.
-    """
-    d_k = query.size(-1)
-    
-    # Step 1 & 2: Dot product and scaling
-    # query shape: (batch, heads, seq_len, d_k)
-    # key.transpose(-2, -1) shape: (batch, heads, d_k, seq_len)
-    # scores shape: (batch, heads, seq_len, seq_len)
-    scores = torch.matmul(query, key.transpose(-2, -1)) / (d_k ** 0.5)
-    
-    # Optional: Apply mask (e.g., for causal autoregressive decoding)
-    if mask is not None:
-        scores = scores.masked_fill(mask == 0, -1e9)
-    
-    # Step 3: Softmax to get attention weights
-    attention_weights = F.softmax(scores, dim=-1)
-    
-    # Step 4: Weighted sum of values
-    # output shape: (batch, heads, seq_len, d_v)
-    output = torch.matmul(attention_weights, value)
-    
-    return output, attention_weights
-
-# Example usage
-batch_size = 1
-seq_len = 4
-d_k = 8
-d_v = 8
-
-# Random Tensors
-Q = torch.randn(batch_size, 1, seq_len, d_k)
-K = torch.randn(batch_size, 1, seq_len, d_k)
-V = torch.randn(batch_size, 1, seq_len, d_v)
-
-output, weights = scaled_dot_product_attention(Q, K, V)
-print("Output Shape:", output.shape)
-print("Attention Weights Shape:", weights.shape)
-```
+A boolean `True` allows a key in this example and in PyTorch’s functional SDPA. An entirely blocked query has no distribution over valid keys. Replacing every score in that row with the same finite number makes softmax assign equal weights to *all* keys. This function rejects that input explicitly. [[2]](#ref-2)
 
 ---
+
+<a id="attention-weight-example"></a>
 
 ## Example: Attention Weight Matrix
 
 Follow one attention row all the way to its output. The example below uses four tokens and explicitly authored two-dimensional Q, K, and V vectors. Select a query, compare the weights with and without a causal mask, and inspect how the weighted values add up. These are exact calculations on toy inputs, not attention measured from a trained model.
 
 <AttentionVisualizer client:load lang="en" />
+
+Here each query used one set of weights for both value coordinates. In the [two-head calculation](../multi-head-attention/#two-head-calculation), two heads compute separate weights from the same input. If one head contributes zero, which output coordinates change?
 
 ---
 
@@ -156,8 +112,8 @@ Follow one attention row all the way to its output. The example below uses four 
 </details>
 
 <details>
-<summary>Quiz 2: What is the difference between Self-Attention and standard Attention (like Bahdanau Attention)?</summary>
-*Standard attention typically aligns a decoder state with encoder states (cross-attention). Self-attention relates different positions of a single sequence to compute a representation of the same sequence (e.g., words in a sentence attending to other words in the same sentence).*
+<summary>Quiz 2: In encoder–decoder cross-attention, which states supply the queries, keys and values?</summary>
+*Decoder states supply queries, while encoder states supply keys and values. In self-attention all three projections begin with states from the same sequence. Either arrangement still has to specify a scoring rule and which positions are visible.*
 </details>
 
 <details>
@@ -171,8 +127,8 @@ Follow one attention row all the way to its output. The example below uses four 
 </details>
 
 <details>
-<summary>Quiz 5: How does Self-Attention handle variable-length sequences?</summary>
-*Self-attention handles variable-length sequences naturally because the attention operation (weighted sum) does not depend on a fixed sequence length. The output dimension is determined by the input sequence length, and the same parameters (projection matrices) are used regardless of length.*
+<summary>Quiz 5: You pad a two-token sequence to four tokens for batching. Which axis grows, and how do you keep padding out of the result?</summary>
+*The output has one row per query, with $d_v$ features per row. Padding adds rows, while the feature width stays fixed. Mask padded keys before normalizing each real query, and discard padded query outputs before loss or pooling. A causal mask alone does not identify padding.*
 </details>
 
 <details>
@@ -185,3 +141,4 @@ Follow one attention row all the way to its output. The example below uses four 
 ## References
 
 1. <a id="ref-1"></a>Vaswani, A., et al. (2017). *Attention is all you need*. In Advances in neural information processing systems (pp. 5998-6008). [arXiv:1706.03762](https://arxiv.org/abs/1706.03762).
+2. <a id="ref-2"></a>PyTorch. [Scaled dot product attention, PyTorch 2.15](https://docs.pytorch.org/docs/2.15/generated/torch.nn.functional.scaled_dot_product_attention.html).

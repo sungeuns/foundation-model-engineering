@@ -4,55 +4,41 @@ title: "3.2 Multi-head Attention (MHA)"
 lang: "en"
 ---
 
-import MhaVisualizer from '../../components/chapter-3/MhaVisualizer';
+import MhaVisualizer from '../../components/chapter-3/MhaVisualizer.tsx';
 
 # 3.2 Multi-head Attention (MHA)
 
-While Self-Attention is powerful, applying it once (Single-Head) limits the model's ability to focus on different types of relationships simultaneously. **Multi-Head Attention (MHA)** solves this by running multiple attention mechanisms in parallel.
-
-Let's understand this through a metaphor.
+For a given query, one attention head assigns each source position a weight. Every coordinate of its value vector uses that same set of weights. Suppose one part of the output needs a number from the first token while another needs a feature from the last. Two heads can give those reads separate distributions and then mix the two results. [[1]](#ref-1)
 
 ---
 
 ### **The Metaphor: The Committee of Experts**
 
-Imagine you are analyzing a complex legal document.
-
-*   **Single-Head Attention** is like having **one general researcher** read the document. They might do a good job, but they can only focus on one aspect at a time (e.g., the general meaning).
-*   **Multi-Head Attention** is like hiring a **committee of experts**:
-    *   **Expert 1** focuses on the *legal terminology*.
-    *   **Expert 2** focuses on the *financial implications*.
-    *   **Expert 3** focuses on the *historical context*.
-
-They all read the same document simultaneously but attend to different aspects. In the end, they combine their findings to give a much richer analysis.
-
-In MHA, each "head" learns to attend to different types of relationships (e.g., grammar, coreference, factual links).
+Give two reviewers the same report. Each can point to a different passage and return a short note. An editor combines the notes. In multi-head attention, the projections determine which queries, keys and values each head sees. Training determines whether two heads learn different patterns. The architecture assigns neither reviewer a subject area.
 
 ---
 
 ## Why Multi-Head? (Representation Subspaces)
 
-To understand the benefit of Multi-Head Attention, consider the word "bank". It can mean a financial institution or the side of a river.
-*   In a single-head attention mechanism, the model must create a single attention distribution for "bank". If it needs to capture both the financial context (relating to "money") and the syntactic context (relating to the preceding article "the"), it has to compromise.
-*   With Multi-Head Attention, one head can focus on the **semantic relationship** (bank $\to$ money), while another head can focus on the **syntactic relationship** (bank $\to$ the).
+Consider a sequence with three input vectors, $A=(1,0)$, $B=(0,1)$ and $C=(1,1)$. Let the first head read the first coordinate for both its query and key, and let the second head read the second coordinate. Take C as the query. Both query coordinates are 1. The first head therefore gives A and C equal scores, while the second gives B and C equal scores. Both read all three inputs in this unmasked example.
 
-By projecting the $d_{model}$-dimensional embeddings into $h$ smaller subspaces of dimension $d_k$, heads can represent different patterns, but specialization is not guaranteed and their outputs interact through the output projection and shared residual stream. This is analogous to how CNNs use multiple filters to detect different visual features (e.g., edges, textures).
+Values decide what gets carried forward. For a token with coordinates $(x,y)$, let head 1 return the value $x-y$ and head 2 return $2y$. Head 1 reads the values $[1,-1,0]$, so two attended tokens can partially cancel. A high weight alone does not tell you the head's output. The [two-head calculation](#two-head-calculation) lets you trace these weights into the final vector.
 
 ---
 
 ## The Mathematics of Multi-Head Attention
 
-Instead of performing a single attention function with $d_{model}$-dimensional keys, values, and queries, MHA linearly projects the queries, keys, and values $h$ times with different, learned linear projections to $d_k, d_k,$ and $d_v$ dimensions, respectively.
+Here $Q$, $K$ and $V$ denote the inputs to the three projections. In self-attention they can all be the same sequence matrix $X$. Each head has its own query and key width $d_k$ and value width $d_v$ in the equations below. Concatenation joins the $h$ results along the feature axis at each query position.
 
 $$\text{MultiHead}(Q, K, V) = \text{Concat}(\text{head}_1, \dots, \text{head}_h)W^O$$
 
 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', margin: '20px 0' }}>
 
 <div style={{ maxWidth: '600px', width: '100%' }}>
-![Multi-Head Attention](../../assets/images/chapter-3/multi-head-attention.png)
+![Three input projections feed each head; concatenated head outputs pass through a final linear projection.](../../assets/images/chapter-3/multi-head-attention.png)
 </div>
 
-<em style={{ marginTop: '10px', color: '#7f8c8d' }}>Source: [Lilian Weng's Blog](https://lilianweng.github.io/posts/2018-06-24-attention/)</em>
+<em style={{ marginTop: '10px', color: '#7f8c8d' }}>Vaswani et al., Figure 2 (right), reproduced in [Lilian Weng’s attention overview](https://lilianweng.github.io/posts/2018-06-24-attention/). [[1]](#ref-1)</em>
 
 </div>
 
@@ -65,83 +51,74 @@ And the projections are parameter matrices:
 *   $W_i^V \in \mathbb{R}^{d_{model} \times d_v}$
 *   $W^O \in \mathbb{R}^{hd_v \times d_{model}}$
 
-Typically, we use $h = 8$ parallel attention heads. For each of these we use $d_k = d_v = d_{model}/h$.
+The original base Transformer used $h=8$ with $d_{model}=512$, giving $d_k=d_v=64$ per head [[1]](#ref-1). More generally, an implementation can choose $h$ to divide the model width evenly. At fixed width and sequence length, the leading score-matrix multiply count stays roughly constant as $h$ grows. A naive implementation that saves every attention weight still stores one sequence-by-sequence matrix per head.
 
 ---
 
 ## PyTorch Implementation
 
-Here is how you implement Multi-Head Attention in PyTorch. This involves projecting the inputs, splitting them into multiple heads, applying attention, and then concatenating the results.
+This CPU example exposes the intermediate weights. It takes batched float32 queries, keys and values of the same feature width. Keys and values have the same sequence length. The optional mask is one boolean query-by-key matrix shared across batches and heads. `True` allows the connection. The code rejects fully blocked rows, whose softmax would have no visible positions. It omits dropout, per-example padding masks, caching and fused kernels.
 
 ```python
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
+from torch import nn
+
 
 class MultiHeadAttention(nn.Module):
-    def __init__(self, d_model, num_heads):
-        super(MultiHeadAttention, self).__init__()
-        assert d_model % num_heads == 0
+    def __init__(self, width, heads):
+        super().__init__()
+        if width < 1 or heads < 1 or width % heads:
+            raise ValueError("width and heads must be positive, with width divisible by heads")
+        self.heads = heads
+        self.head_width = width // heads
+        self.w_q = nn.Linear(width, width, bias=False)
+        self.w_k = nn.Linear(width, width, bias=False)
+        self.w_v = nn.Linear(width, width, bias=False)
+        self.w_o = nn.Linear(width, width, bias=False)
 
-        self.d_model = d_model
-        self.num_heads = num_heads
-        self.d_k = d_model // num_heads
+    def split(self, x):
+        batch, length, _ = x.shape
+        return x.reshape(batch, length, self.heads, self.head_width).transpose(1, 2)
 
-        # Linear projections for Q, K, V
-        self.w_q = nn.Linear(d_model, d_model)
-        self.w_k = nn.Linear(d_model, d_model)
-        self.w_v = nn.Linear(d_model, d_model)
+    def forward(self, q, k, v, allowed=None):
+        queries = self.split(self.w_q(q))
+        keys = self.split(self.w_k(k))
+        values = self.split(self.w_v(v))
+        scores = (queries @ keys.transpose(-2, -1)) / self.head_width**0.5
+        if allowed is not None:
+            if allowed.dtype != torch.bool or allowed.shape != scores.shape[-2:]:
+                raise ValueError("expected a shared boolean [query, key] mask")
+            if not allowed.any(dim=-1).all():
+                raise ValueError("each query must have a visible key")
+            scores = scores.masked_fill(~allowed, -torch.inf)
+        weights = scores.softmax(dim=-1)
+        context = weights @ values
+        joined = context.transpose(1, 2).reshape(q.shape)
+        return self.w_o(joined), weights
 
-        # Output projection
-        self.w_o = nn.Linear(d_model, d_model)
 
-    def forward(self, q, k, v, mask=None):
-        batch_size = q.size(0)
-
-        # 1. Linear projections
-        Q = self.w_q(q)
-        K = self.w_k(k)
-        V = self.w_v(v)
-
-        # 2. Split into heads
-        # Shape change: (batch, seq_len, d_model) -> (batch, seq_len, num_heads, d_k) -> (batch, num_heads, seq_len, d_k)
-        Q = Q.view(batch_size, -1, self.num_heads, self.d_k).transpose(1, 2)
-        K = K.view(batch_size, -1, self.num_heads, self.d_k).transpose(1, 2)
-        V = V.view(batch_size, -1, self.num_heads, self.d_k).transpose(1, 2)
-
-        # 3. Apply Scaled Dot-Product Attention
-        scores = torch.matmul(Q, K.transpose(-2, -1)) / (self.d_k ** 0.5)
-        if mask is not None:
-            scores = scores.masked_fill(mask == 0, -1e9)
-        weights = F.softmax(scores, dim=-1)
-        attention_output = torch.matmul(weights, V)
-
-        # 4. Concatenate heads
-        # Shape change: (batch, num_heads, seq_len, d_k) -> (batch, seq_len, num_heads, d_k) -> (batch, seq_len, d_model)
-        concat_output = attention_output.transpose(1, 2).contiguous().view(batch_size, -1, self.d_model)
-
-        # 5. Output projection
-        output = self.w_o(concat_output)
-
-        return output, weights
-
-# Example usage
-mha = MultiHeadAttention(d_model=64, num_heads=8)
-x = torch.randn(2, 10, 64) # Batch of 2, sequence length 10, d_model 64
-output, weights = mha(x, x, x)
-print("Output Shape:", output.shape)
-print("Attention Weights Shape:", weights.shape)
+layer = MultiHeadAttention(width=2, heads=2)
+x = torch.tensor([[[1., 0.], [0., 1.], [1., 1.]]])
+with torch.no_grad():
+    layer.w_q.weight.copy_(torch.eye(2))
+    layer.w_k.weight.copy_(torch.eye(2))
+    layer.w_v.weight.copy_(torch.tensor([[1., -1.], [0., 2.]]))
+    layer.w_o.weight.copy_(torch.tensor([[1., 1.], [1., -1.]]))
+    output, weights = layer(x, x, x)
+    torch.testing.assert_close(output[0, 2], torch.tensor([1.956232, -1.422319]))
+    visible = torch.ones(3, 3, dtype=torch.bool).tril()
+    _, causal_weights = layer(x, x, x, visible)
+    assert torch.count_nonzero(causal_weights.triu(1)) == 0
+    torch.testing.assert_close(causal_weights.sum(-1), torch.ones(1, 2, 3))
 ```
+
+The unmasked call reproduces the worked example at query C. The second call applies a causal mask. Its assertions check that future positions receive zero weight and the visible weights sum to one.
 
 ---
 
 ## Example: Diverse Perspectives
 
-Visualize how two different heads might attend to the sentence "The bank was full of money."
-*   **Head 1** might learn to associate "bank" with "money" (financial context).
-*   **Head 2** illustrates a different distribution emphasizing nearby syntactic links. These are authored patterns, not verified head functions.
-
-Select a head to see its simulated attention pattern for the word **"bank"**.
+At C, the two heads return approximately $0.267$ and $1.689$. The output projection maps their concatenation $(u,v)$ to $(u+v,u-v)$, giving $(1.956,-1.422)$ after rounding. Predict which coordinates change if the second head's contribution is set to zero immediately before this projection. Then change the query from C to A and explain why only one head's weights change.
 
 <MhaVisualizer client:load lang="en" />
 
@@ -150,33 +127,28 @@ Select a head to see its simulated attention pattern for the word **"bank"**.
 ## Quizzes
 
 <details>
-<summary>Quiz 1: Why not just use one large attention head instead of multiple small ones?</summary>
-*Multiple heads allow the model to attend to information from different representation subspaces at different positions. A single large head can only compute one set of attention weights, forcing it to average out different types of relationships, which can be less expressive.*
+<summary>Quiz 1: When the query changes from C to A, why does head 2 give each token the same weight?</summary>
+*Head 2 reads the query's second coordinate. At A it is zero, so all three scalar dot products are zero. Their softmax is uniform. Head 1 still reads 1 at both C and A.*
 </details>
 
 <details>
-<summary>Quiz 2: What is the purpose of the output projection $W^O$ in MHA?</summary>
-*After concatenating the outputs from all heads, the result has the dimension $hd_v$ (which is typically equal to $d_{model}$). The output projection $W^O$ is a learned linear transformation that mixes the information from all heads and projects it back to the $d_{model}$ space, allowing the network to use the combined information effectively.*
+<summary>Quiz 2: What does muting head 2 at query C change?</summary>
+*Its attention weights and raw weighted value stay the same. Its contribution to the concatenation becomes zero, so the output changes from about (1.956, −1.422) to (0.267, 0.267). Both output coordinates use the second head.*
 </details>
 
 <details>
-<summary>Quiz 3: If $d_{model} = 512$ and we have $8$ heads, what is the dimension of $Q, K, V$ for each head?</summary>
-*Typically, we set $d_k = d_v = d_{model} / h$. So for each head, the dimension would be $512 / 8 = 64$.*
+<summary>Quiz 3: A layer has width 512 and eight equal-width heads. How many features are joined at one query position?</summary>
+*Each head supplies 64 value coordinates. Concatenation supplies 8 × 64 = 512 features to the output projection.*
 </details>
 
 <details>
-<summary>Quiz 4: How does the computational cost of Multi-Head Attention compare to Single-Head Attention with the same total dimension?</summary>
-*Due to the reduced dimension of each head ($d_k = d_{model}/h$), the total computational cost of Multi-Head Attention is similar to that of Single-Head Attention with full dimensionality. The operations can be effectively batched and parallelized on GPUs.*
+<summary>Quiz 4: Why can increasing the number of heads at fixed model width still increase memory use?</summary>
+*Each dot product gets narrower, but a naive implementation stores a full query-by-key weight matrix per head. With a fixed batch and sequence length, doubling the head count doubles the number of stored weights. Kernels that avoid materializing those matrices have a different memory profile.*
 </details>
 
 <details>
-<summary>Quiz 5: What would happen if we didn't use the output projection $W^O$ after concatenating the heads?</summary>
-*Without the output projection $W^O$, the model would just be concatenating independent features from different heads without learning how to combine or mix them. $W^O$ allows the model to learn interactions across different heads.*
-</details>
-
-<details>
-<summary>Quiz 6: Formally prove why the dot product $q \cdot k$ in self-attention has a variance of $d_k$ under the assumption that the components of $q$ and $k$ are independent random variables with mean 0 and variance 1, and explain how the $\frac{1}{\sqrt{d_k}}$ scaling factor restores the variance to 1.</summary>
-*Let $q, k \in \mathbb{R}^{d_k}$ be vectors whose components are independent random variables with $\mathbb{E}[q_i] = \mathbb{E}[k_i] = 0$ and $\text{Var}(q_i) = \text{Var}(k_i) = 1$. The dot product is $q \cdot k = \sum_{i=1}^{d_k} q_i k_i$. Since $q_i$ and $k_i$ are independent, $\mathbb{E}[q_i k_i] = \mathbb{E}[q_i]\mathbb{E}[k_i] = 0$. The variance of the product of independent variables is $\text{Var}(q_i k_i) = \mathbb{E}[q_i^2 k_i^2] - (\mathbb{E}[q_i k_i])^2 = \mathbb{E}[q_i^2]\mathbb{E}[k_i^2] - 0 = 1 \times 1 = 1$. Since the components are independent, the variance of the sum is the sum of the variances: $\text{Var}(q \cdot k) = \sum_{i=1}^{d_k} \text{Var}(q_i k_i) = d_k \times 1 = d_k$. By dividing by $\sqrt{d_k}$, the variance becomes $\text{Var}\left(\frac{q \cdot k}{\sqrt{d_k}}\right) = \frac{1}{d_k} \text{Var}(q \cdot k) = \frac{d_k}{d_k} = 1$. This scaling prevents the softmax from saturating into regions with extremely small gradients for large dimensions.*
+<summary>Quiz 5: Why does this example reject a query whose entire mask row is false?</summary>
+*Every key is blocked, leaving no distribution over visible keys. Filling every score with the same large finite negative value would silently give every blocked key the same weight.*
 </details>
 
 ---

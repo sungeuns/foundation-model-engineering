@@ -1,6 +1,8 @@
 // These IDs name the same authored exercise in both translations. Do not infer
 // counterparts from heading order, translated slugs, or reference numbers.
 const lessonFragments = {
+  '/chapter-3/self-attention-mathematics': ['attention-weight-example'],
+  '/chapter-3/multi-head-attention': ['two-head-calculation'],
   '/chapter-5/sparse-vs-dense-models': ['moe-routing-lab'],
   '/chapter-10/dpo': ['reference-relative-example'],
   '/chapter-11/vision-language-bridges': ['visual-token-budget'],

@@ -1,107 +1,53 @@
-import React, { useState } from 'react';
+import React, { useEffect, useId, useState } from 'react';
+import { calculateHeads, inputs, tokens } from './multi-head-example.mjs';
+import '../teaching-demo.css';
+import './multi-head-example.css';
 
-interface MhaVisualizerProps {
-  lang?: 'en' | 'ko';
-}
+const decimal = (value: number) => value.toFixed(3);
+const vector = (values: number[]) => `[${values.map(decimal).join(', ')}]`;
 
-export default function MhaVisualizer({ lang = 'en' }: MhaVisualizerProps) {
-  const mhaSentence = "The bank was full of money".split(" ");
-  const [selectedHead, setSelectedHead] = useState(1);
+export default function MhaVisualizer({ lang = 'en' }: { lang?: 'en' | 'ko' }) {
+  const ko = lang === 'ko';
+  const id = useId();
+  const [ready, setReady] = useState(false);
+  const [query, setQuery] = useState(2);
+  const [mute, setMute] = useState(false);
+  useEffect(() => setReady(true), []);
+  const { heads, concat, output } = calculateHeads(query, mute);
 
-  const headData: { [key: number]: { [key: string]: number } } = {
-    1: { "The": 0.05, "bank": 0.20, "was": 0.05, "full": 0.10, "of": 0.05, "money": 0.55 },
-    2: { "The": 0.40, "bank": 0.30, "was": 0.20, "full": 0.05, "of": 0.03, "money": 0.02 }
-  };
-
-  const data = headData[selectedHead];
-
-  const labels = {
-    en: {
-      title: "Sentence: \"The bank was full of money.\"",
-      head1: "Head 1: Financial Context",
-      head2: "Head 2: Syntactic Links"
-    },
-    ko: {
-      title: "문장: \"The bank was full of money.\"",
-      head1: "헤드 1: 금융 문맥",
-      head2: "헤드 2: 구문 연결"
-    }
-  };
-
-  const t = labels[lang] || labels.en;
-
-  return (
-    <div style={{
-      padding: '20px',
-      marginTop: '2rem',
-      marginBottom: '2rem',
-      background: 'rgba(255, 255, 255, 0.7)',
-      backdropFilter: 'blur(10px)',
-      WebkitBackdropFilter: 'blur(10px)',
-      border: '1px solid rgba(255, 255, 255, 0.3)',
-      boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.1)',
-      borderRadius: '12px'
-    }}>
-      <div style={{ textAlign: 'center', fontWeight: 'bold', marginBottom: '20px', color: '#1e293b' }}>
-        {t.title}
-        <p style={{fontSize: "0.85rem", fontWeight: 400}}>{lang === "ko" ? "직접 작성한 헤드 패턴이며 실측 어텐션이나 헤드 역할의 증거가 아닙니다." : "Authored head patterns, not measured attention or proof of a head’s semantic role."}</p>
-      </div>
-
-      <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginBottom: '20px' }}>
-        <button
-          onClick={() => setSelectedHead(1)}
-          style={{
-            padding: '10px 20px',
-            borderRadius: '4px',
-            border: 'none',
-            backgroundColor: selectedHead === 1 ? '#8e44ad' : '#ccc',
-            color: selectedHead === 1 ? 'white' : 'black',
-            cursor: 'pointer',
-            fontWeight: selectedHead === 1 ? 'bold' : 'normal',
-            transition: 'all 0.2s ease'
-          }}
-        >
-          {t.head1}
-        </button>
-        <button
-          onClick={() => setSelectedHead(2)}
-          style={{
-            padding: '10px 20px',
-            borderRadius: '4px',
-            border: 'none',
-            backgroundColor: selectedHead === 2 ? '#8e44ad' : '#ccc',
-            color: selectedHead === 2 ? 'white' : 'black',
-            cursor: 'pointer',
-            fontWeight: selectedHead === 2 ? 'bold' : 'normal',
-            transition: 'all 0.2s ease'
-          }}
-        >
-          {t.head2}
-        </button>
-      </div>
-
-      <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '15px', minHeight: '120px', alignItems: 'flex-end' }}>
-        {mhaSentence.map((w, idx) => {
-          const weight = data[w] || 0;
-          return (
-            <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.8rem', color: '#7f8c8d' }}>{(weight * 100).toFixed(0)}%</span>
-              <div
-                style={{
-                  width: '30px',
-                  height: `${weight * 100}px`,
-                  backgroundColor: '#8e44ad',
-                  borderRadius: '2px',
-                  marginTop: '5px',
-                  transition: 'height 0.3s ease',
-                  opacity: 0.7 + weight * 0.3
-                }}
-              />
-              <span style={{ fontSize: '0.9rem', marginTop: '5px', color: '#1e293b' }}>{w}</span>
-            </div>
-          );
-        })}
-      </div>
+  return <section id="two-head-calculation" className="teaching-demo multi-head-example" aria-labelledby={`${id}-title`}>
+    <h3 id={`${id}-title`}>{ko ? '두 헤드의 출력은 어떻게 섞일까?' : 'How do two head outputs combine?'}</h3>
+    <p>{ko ? 'A, B, C가 모두 보이는 셀프 어텐션입니다. 각 헤드는 같은 입력의 서로 다른 좌표로 어텐션 점수를 계산합니다.' : 'Every query can see A, B and C. Each head uses a different coordinate of the same input to calculate its scores.'}</p>
+    <fieldset className="mha-inputs" disabled={!ready}>
+      <legend>{ko ? '질의 토큰' : 'Query token'}</legend>
+      <div className="demo-controls">{tokens.map((token, index) => <button
+        key={token} type="button" aria-pressed={query === index} onClick={() => setQuery(index)}>
+        {token} [{inputs[index].join(', ')}]
+      </button>)}</div>
+    </fieldset>
+    <div className="demo-grid">
+      {heads.map((head, h) => <div key={h} className="demo-card">
+        <h4>{ko ? '헤드' : 'Head'} {h + 1}</h4>
+        <p>q = {head.query} · K = [{head.keys.join(', ')}]<br/>V = [{head.values.join(', ')}]</p>
+        <ul aria-label={ko ? '토큰별 어텐션 가중치' : 'Attention weights by token'}>
+          {head.weights.map((weight, i) => <li key={tokens[i]}>
+            <span>{tokens[i]}</span>
+            <span className="mha-weight" aria-hidden="true"><span style={{ width: `${weight * 100}%` }} /></span>
+            <span>{(weight * 100).toFixed(1)}%</span>
+          </li>)}
+        </ul>
+        <p>{ko ? '값의 가중합' : 'Weighted value'} <strong>{decimal(head.output)}</strong></p>
+      </div>)}
     </div>
-  );
+    <label className="mha-ablation">
+      <input type="checkbox" disabled={!ready} checked={mute} onChange={e => setMute(e.target.checked)} />
+      {ko ? '출력 투영 직전에 헤드 2의 값을 0으로 바꾸기' : 'Set head 2’s value to zero just before the output projection'}
+    </label>
+    <div className="demo-output" aria-live="polite" aria-atomic="true">
+      <span>{ko ? '연결한 두 값' : 'Concatenated values'} <b>{vector(concat)}</b></span>
+      <span>{ko ? '투영 결과' : 'Projected output'} <b>{vector(output)}</b></span>
+    </div>
+    <small>{ko ? '직접 정한 입력과 투영으로 계산한 예제입니다. 출력의 첫 좌표는 두 값의 합, 둘째는 첫 값에서 둘째 값을 뺀 차입니다. 가중합과 출력은 소수 셋째 자리까지 표시합니다. 계산에는 반올림 전 가중치를 사용합니다.' : 'Authored inputs and projections. The first output coordinate sums the two values. The second takes their difference. Calculations use the unrounded weights.'}</small>
+    <noscript><p>{ko ? '위에는 C의 계산 결과가 표시됩니다. 질의와 출력 투영을 바꾸려면 JavaScript를 켜세요.' : 'The calculation above uses C. Enable JavaScript to change the query or mute a head.'}</p></noscript>
+  </section>;
 }

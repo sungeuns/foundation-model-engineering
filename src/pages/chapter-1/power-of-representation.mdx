@@ -9,37 +9,38 @@ import { NlpRepresentationVisualizer } from '../../components/chapter-1/NlpRepre
 
 # 1.2 The Power of Representation
 
-The true breakthrough of Deep Learning, which enables modern foundation models, is not just that networks are bigger, but that they solve the problem of **Representation**.
+A film review calls the acting vivid and the plot flat. A second review uses the same words for the opposite roles. If we keep only word counts, the two reviews look identical. A reader asking about the acting needs information that those counts discarded.
+
+A **representation** is the information a model passes to its next computation. Its usefulness depends on the question that computation has to answer. [[1]](#ref-1)
 
 ---
 
-### **Motivation: Why Representation is Everything**
-In AI, how you represent data determines what the model can learn.
-*   **Breaking the Curse of Dimensionality:** Raw data (like a 4K image) has too many dimensions for traditional algorithms. Good representations reduce this to a small, manageable set of features.
-*   **Generalization:** A good representation captures the *essence* of the data (e.g., the concept of a "dog" rather than specific pixel values), allowing the model to perform well on new, unseen data.
-*   **Foundation Models:** Modern models like GPT-4 or Gemini are essentially massive representation learners. They learn a universal representation of language and the world, which can then be used for thousands of different tasks.
+<a id="motivation-why-representation-is-everything"></a>
+
+### What does the next task need?
+*   **Size.** Compression can save memory and computation. Some useful representations expand the input into more coordinates so that a later layer can separate cases.
+*   **Generalization.** A face representation that is stable under a change in lighting can help identify the same person. If the task is to estimate lighting, that same invariance discards the answer.
+*   **Transfer.** Pretraining can produce features that help several downstream tasks. Held-out examples from the intended use reveal which distinctions the representation retained. [[1]](#ref-1)
 
 ---
 
-### **The Metaphor: Describing a Face vs. Recognizing a Face**
+<a id="the-metaphor-describing-a-face-vs-recognizing-a-face"></a>
 
-Imagine you need to identify a person in a crowd.
+### Recognizing the same face in two photos
 
-*   **Feature Engineering (The Old Way) is like trying to describe the person over the phone.** You might say: "They have a nose that is 2 inches long, eyes that are 1.5 inches apart, and a round chin." You are manually extracting specific features. If you measure the wrong thing, or if the person turns their head, the description fails.
-*   **Representation Learning (Deep Learning) is like looking at the person's photo.** Your brain doesn't measure nose length. It processes the whole image and extracts a high-level, abstract representation of "that person's face." It works even if the lighting changes or they wear glasses.
+In one photo, a person faces the camera. In the next, the same person turns slightly. A classifier given only the distance between the eyes in pixels sees a different number. A designer could correct for the angle or add a second measurement.
 
-Deep Learning succeeded because it stopped asking humans to describe the features and let the system discover the best representation on its own.
+A learned encoder offers another route. Train it on pairs of photos labeled “same person” or “different people,” then check whether its distances preserve that distinction for people held out of training. Contrast this with the film review. A useful face representation can discard the camera angle. A useful review representation may have to keep the target of each adjective.
 
 ---
 
-## The Paradigm Shift: Statistics vs. Machine Learning
+<a id="the-paradigm-shift-statistics-vs-machine-learning"></a>
 
-To understand why AI moved from hand-crafted rules (Symbolism) to learning representations (Deep Learning), we must understand the shift in philosophy from traditional statistics to machine learning. This is what Leo Breiman famously called the "Two Cultures" of statistical modeling [[3]](#ref-3).
+## Choosing between a model of the data and a predictor
 
-*   **The Statistical Culture (Inference):** Traditional statistics focuses on understanding the relationship between variables. It assumes a stochastic data model (like linear regression) and focuses on parameters, p-values, and confidence intervals. It works well with small data and prioritizes **interpretability** and **causality**.
-*   **The Machine Learning Culture (Prediction):** Machine learning treats the data mechanism as unknown and focuses on finding an algorithm that can accurately predict output $y$ from input $x$. It prioritizes **prediction accuracy** and **generalization** on unseen data, often using complex, non-linear models (like neural networks) that operate as "black boxes."
+Breiman described two ways to approach a prediction problem. One specifies a probabilistic account of how inputs and outputs relate, then checks its assumptions against the data. The other learns a mapping and tests it on new cases. Both approaches can use statistics and both need validation. [[3]](#ref-3)
 
-Deep Learning and Foundation Models are the ultimate evolution of the Machine Learning culture. They prioritize empirical performance on massive scale over traditional statistical interpretability. Understanding this shift helps explain why LLMs are incredibly capable yet hard to explain mathematically in terms of exact rules.
+Consider a low score for acting. To predict that score on a new review, we can compare encoders using held-out reviews. To claim that mentioning the plot *causes* a lower acting score, we would need evidence about what happens when that mention changes and the other relevant conditions stay comparable. A low prediction error answers the first question.
 
 ---
 
@@ -47,33 +48,19 @@ Deep Learning and Foundation Models are the ultimate evolution of the Machine Le
 
 The history of machine learning can be viewed as an evolution in how we represent data.
 
-1.  **The Hand-Crafted Era (Pre-2012):** For decades, domain experts designed features manually. In computer vision, we used SIFT or HOG. In NLP, we used TF-IDF or carefully constructed dictionaries. This was slow, brittle, and required extreme domain expertise.
-2.  **The Deep Learning Breakthrough (2012):** AlexNet won the ImageNet competition by a huge margin. It didn't use hand-crafted features; it learned them directly from pixels using a deep convolutional neural network. This proved that automated representation learning outperforms human design.
-3.  **The Self-Supervised Era (2018-Present):** Models like BERT and GPT showed that by predicting missing words in massive amounts of text, models can learn incredibly rich representations of language without human labels.
-
----
-
-<div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', margin: '20px 0' }}>
-
-<div style={{ maxWidth: '600px', width: '100%' }}>
-![Feature Engineering vs Representation Learning](../../assets/images/chapter-1/feature_engineering_vs_representation_learning.png)
-</div>
-
-<em style={{ marginTop: '10px', color: '#7f8c8d' }}>Source: AI-generated illustration</em>
-
-</div>
+1.  Image descriptors such as SIFT and text features such as TF-IDF encode a designer’s choices about what to preserve. A classifier can still learn weights for those features.
+2.  In the 2012 ImageNet competition, a convolutional network learned filters from labeled images and substantially reduced classification error on that benchmark. The training objective rewarded distinctions among ImageNet classes. [[5]](#ref-5)
+3.  A self-supervised objective can derive targets from the text itself. BERT’s masked-token task uses surrounding text to predict selected tokens. A causal language model predicts the next token from its prefix. The information available at each prediction differs. [[6]](#ref-6)
 
 ---
 
 ## Feature Engineering vs. Representation Learning
 
-| Feature | Feature Engineering (Traditional ML) | Representation Learning (Deep Learning) |
-| :--- | :--- | :--- |
-| **Who designs features?** | Human experts | The algorithm (Neural Network) |
-| **Domain Specificity** | High (Needs experts for every field) | Low (Same architecture works for many fields) |
-| **Scalability** | Low (Labor intensive) | **High** (Scales with data and compute) |
-| **Interpretability** | **High** (We know exactly what features are) | Low (Black box representations) |
-| **Performance** | Limited by human intuition | Strong on many learned tasks; depends on data and evaluation |
+| Design question | Engineered example | Learned example |
+| --- | --- | --- |
+| How is a word represented? | The designer assigns a fixed lexicon score. | Fit a score to labeled uses, or a vector to a prediction objective. |
+| What does a review keep? | Word counts discard the order and the aspect each word describes. A designer can add aspect-specific features. | A sequence encoder can use order and context. Whether it retains an aspect depends on its architecture and objective. |
+| How can we check? | Swap which aspect each adjective describes and inspect the counts. | Make the same swap on held-out reviews and inspect the outputs for acting and plot separately. |
 
 ---
 
@@ -83,86 +70,63 @@ Stacked layers can compose features into more abstract representations. In a vis
 
 ## The Manifold Hypothesis
 
-A key theoretical concept in representation learning is the **Manifold Hypothesis**.
+A camera records millions of pixel values. If you photograph a stationary object while changing only the camera angle, nearby angles produce related images. The **manifold hypothesis** proposes that, for some data distributions, observations concentrate near a surface with far fewer local degrees of freedom than the number of measurements. Noise can push individual observations off the surface. [[1]](#ref-1)
 
-It posits that real-world high-dimensional data (like all possible $256 \times 256$ images) actually lies on a much lower-dimensional, non-linear subspace (a manifold) embedded within the high-dimensional space.
-
-Think of a crumpled piece of paper. It exists in 3D space, but the paper itself is a 2D surface. The goal of representation learning is to "uncrumple" the paper to understand the data better, finding the true underlying factors of variation.
+A sheet of paper illustrates the difference. It takes two coordinates to locate a point on the sheet even when the sheet bends through three-dimensional space. The bends can still make it difficult to map a spatial measurement back to coordinates on the sheet.
 
 ---
 
 ## Learning a Latent Space
 
-Let's see this in code. One of the simplest ways to see representation learning is through an **Autoencoder**. An autoencoder compresses input data into a lower-dimensional "latent space" (representation) and then tries to reconstruct the original input.
+Suppose ten sensor channels record different mixtures of the same two signals, plus independent noise. Each row in the example is one reading. A linear encoder maps its ten values to two coordinates. A linear decoder uses those coordinates to reconstruct all ten values. Training minimizes the mean squared error (MSE) across rows and channels.
 
-Here is a PyTorch implementation of a simple Autoencoder learning a representation of data.
+The CPU example uses 256 synthetic training readings and a fixed budget of 300 full-batch updates. After training, it scores 128 fresh readings from the same generator. For comparison, a constant predictor returns each channel’s training mean for every reading. Both predictors are scored on the same held-out rows.
 
 ```python
 import torch
-import torch.nn as nn
-import torch.optim as optim
-
-# Generate dummy high-dimensional data (e.g., 10-dimensional)
-# But let's make it actually depend on just 2 underlying factors
-N = 1000
-latent_dim = 2
-data_dim = 10
+from torch import nn
 
 torch.manual_seed(42)
-true_latent = torch.randn(N, latent_dim)
-# Project to high dimension with some non-linearity
-projection = nn.Linear(latent_dim, data_dim)
-with torch.no_grad():
-    X = torch.sin(projection(true_latent)) + torch.randn(N, data_dim) * 0.1
+torch.set_num_threads(1)
+mixing = torch.randn(2, 10)
 
-# Autoencoder Model
-class Autoencoder(nn.Module):
-    def __init__(self):
-        super(Autoencoder, self).__init__()
-        # Encoder: compresses to 2D
-        self.encoder = nn.Sequential(
-            nn.Linear(data_dim, 5),
-            nn.ReLU(),
-            nn.Linear(5, latent_dim)
-        )
-        # Decoder: reconstructs back to 10D
-        self.decoder = nn.Sequential(
-            nn.Linear(latent_dim, 5),
-            nn.ReLU(),
-            nn.Linear(5, data_dim)
-        )
+def sample(n):
+    factors = torch.randn(n, 2)
+    noise = 0.05 * torch.randn(n, 10)
+    return factors @ mixing + noise
 
-    def forward(self, x):
-        latent = self.encoder(x)
-        reconstructed = self.decoder(latent)
-        return reconstructed, latent
+train = sample(256)
+test = sample(128)
+model = nn.Sequential(nn.Linear(10, 2), nn.Linear(2, 10))
+mse = nn.MSELoss()
+optimizer = torch.optim.Adam(model.parameters(), lr=0.02)
 
-model = Autoencoder()
-criterion = nn.MSELoss()
-optimizer = optim.Adam(model.parameters(), lr=0.01)
-
-# Training
-for epoch in range(1000):
-    reconstructed, latent = model(X)
-    loss = criterion(reconstructed, X)
-
+for step in range(300):
     optimizer.zero_grad()
+    loss = mse(model(train), train)
     loss.backward()
     optimizer.step()
 
-    if (epoch + 1) % 200 == 0:
-        print(f'Epoch [{epoch+1}/1000], Loss: {loss.item():.4f}')
-
-print("Model learned to compress 10D data into a 2D representation!")
+model.eval()
+with torch.no_grad():
+    constant = train.mean(dim=0).expand_as(test)
+    print(f"baseline MSE:    {mse(constant, test).item():.4f}")
+    print(f"autoencoder MSE: {mse(model(test), test).item():.4f}")
 ```
+
+With the seed shown, a CPU run gave a held-out MSE of 1.6488 for the constant predictor and 0.0021 for the autoencoder. Two coordinates preserved much of the variation across these readings. A different basis for the same plane can reconstruct them equally well, so the error alone cannot tell us which learned coordinate corresponds to either original signal. Try changing the bottleneck width to one in both layers and compare the held-out errors again.
 
 ---
 
 ## Example: Feature Engineering vs. Representation Learning in NLP
 
-Compare how Traditional ML (Lexicon-based Feature Engineering) and Deep Learning (Representation Learning) handle context and sentiment in natural language.
+Use four authored ratings for *vivid* and four for *flat*. Each rating $y_i$ is +1 or −1. Fit one number $e(w)$ for each rated word $w$ by minimizing the sum of squared errors $\sum_i(e(w)-y_i)^2$ over its ratings. The minimizing value is their mean. Here the fitted scores are +0.5 and −0.5. The third word, *spare*, has no training ratings.
 
-<NlpRepresentationVisualizer client:load />
+The controls supply the acting and plot fields directly. Both representations use the same fitted word scores. One stores a single mean for the review. The other keeps an ordered pair, with acting first and plot second. Which representation lets you recover the reviewer's assessment of the acting after you swap the adjectives?
+
+<NlpRepresentationVisualizer client:load lang="en" />
+
+For *vivid acting, flat plot*, the pair is $(+0.5,-0.5)$. After the swap it is $(-0.5,+0.5)$. Both averages are zero, so any classifier given only that average must give the same answer to both reviews. Supplying the aspect labels makes the pair useful here. A system reading free-form reviews would also need to infer which words describe each aspect.
 
 
 ---
@@ -170,23 +134,23 @@ Compare how Traditional ML (Lexicon-based Feature Engineering) and Deep Learning
 ## Quizzes
 
 <details>
-<summary>Quiz 1: What is the main difference between Feature Engineering and Representation Learning?</summary>
-*In Feature Engineering, human experts manually design and extract relevant features from raw data before feeding them into a model. In Representation Learning, the model automatically learns to extract these features directly from the raw data during training, typically through multiple layers of abstraction in a deep network.*
+<summary>Quiz 1: In the review example, which pieces were designed and which were learned?</summary>
+*We chose the acting and plot fields, the positive and negative rating scale, and the rule for combining word scores. The numerical score for each rated word was fitted to its examples. A mean is enough to learn this one-dimensional representation.*
 </details>
 
 <details>
-<summary>Quiz 2: How does the Manifold Hypothesis explain why high-dimensional data can be processed by smaller networks?</summary>
-*The Manifold Hypothesis suggests that although data may exist in a high-dimensional space (e.g., millions of pixels), the actual meaningful variation in the data lies on a much lower-dimensional manifold. By learning to project the data onto this manifold, representation learning reduces the effective dimensionality, allowing simpler models or subsequent layers to process it effectively.*
+<summary>Quiz 2: A sensor stream varies mainly along a two-dimensional surface. What does that tell you about the encoder you will need?</summary>
+*Two local coordinates may describe nearby readings. The mapping from sensor values to those coordinates can still be complicated on a folded surface. Test a candidate encoder and decoder on held-out readings to see how much detail they preserve.*
 </details>
 
 <details>
-<summary>Quiz 3: Give an example of hierarchical representation in Natural Language Processing.</summary>
-*In NLP, lower levels might represent raw characters or sub-word tokens. The next level combines them into words or morphemes. Higher levels represent phrases, then sentences, and finally full document concepts or intents. Modern LLMs learn these hierarchies implicitly through their attention layers.*
+<summary>Quiz 3: Could a larger classifier recover the acting score if its only input is the review's mean score?</summary>
+*The two swapped reviews both produce zero and have opposite acting scores. Any deterministic classifier sees the same input and must give the same output. Retaining separate aspect scores supplies the missing distinction.*
 </details>
 
 <details>
-<summary>Quiz 4: Why is Self-Supervised Learning considered a major milestone in Representation Learning?</summary>
-*Self-supervised learning allows models to learn representations from unlabeled data by creating pretext tasks (like predicting masked words or next frames). This eliminates the need for massive human-labeled datasets, which were a major bottleneck, enabling models to train on internet-scale data and learn universal representations.*
+<summary>Quiz 4: You pretrain an encoder by predicting masked words in movie reviews. Which labels do you need to evaluate whether it can identify praise for the acting?</summary>
+*The original text supplies the target for each masked word during pretraining. To measure accuracy on the acting question, you also need held-out reviews labeled for the acting, including cases where the plot and acting receive opposite assessments.*
 </details>
 
 <details>
@@ -205,5 +169,7 @@ Compare how Traditional ML (Lexicon-based Feature Engineering) and Deep Learning
 
 1. <a id="ref-1"></a>Bengio, Y., Courville, A., & Vincent, P. (2013). *Representation learning: A review and new perspectives*. IEEE transactions on pattern analysis and machine intelligence, 35(8), 1798-1828. [arXiv:1206.5538](https://arxiv.org/abs/1206.5538).
 2. <a id="ref-2"></a>LeCun, Y., Bengio, Y., & Hinton, G. (2015). *Deep learning*. Nature, 521(7553), 436-444.
-3. <a id="ref-3"></a>Breiman, L. (2001). *Statistical modeling: The two cultures*. Statistical science, 16(3), 199-231.
+3. <a id="ref-3"></a>Breiman, L. (2001). [Statistical Modeling: The Two Cultures](https://doi.org/10.1214/ss/1009213726). Statistical Science, 16(3), 199-231.
 4. <a id="ref-4"></a>**Recommended Video**: [StatQuest: Word Embedding and Word2Vec](https://www.youtube.com/watch?v=viZrOnJclY0) A great visual explanation of Word Embeddings and Word2Vec, a prime example of representation learning.
+5. <a id="ref-5"></a>Krizhevsky, A., Sutskever, I., & Hinton, G. E. (2012). [ImageNet Classification with Deep Convolutional Neural Networks](https://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks).
+6. <a id="ref-6"></a>Devlin, J., et al. (2018). [BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding](https://arxiv.org/abs/1810.04805).

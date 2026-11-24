@@ -1,0 +1,12 @@
+---
+import { readFileSync } from 'node:fs';
+import { Code } from 'astro:components';
+import { withBasePath } from '../../utils/paths.js';
+
+const { lang } = Astro.props;
+const filename = '/labs/self_attention.py';
+const code = readFileSync(`public${filename}`, 'utf8').trimEnd();
+---
+
+<p><a href={withBasePath(filename)} download="self_attention.py">{lang === 'ko' ? 'PyTorch 예제 내려받기' : 'Download the PyTorch example'} (self_attention.py)</a></p>
+<Code code={code} lang="python" theme="github-dark" />

@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+message: "To cite the textbook or one of its teaching labs, use the book citation below."
+title: Foundation Model Engineering
+authors:
+  - family-names: So
+    given-names: Seongeun
+repository-code: https://github.com/sungeuns/foundation-model-engineering
+license: MIT
+preferred-citation:
+  type: book
+  title: Foundation Model Engineering
+  authors:
+    - family-names: So
+      given-names: Seongeun
+  year: 2026
+  url: https://sungeuns.github.io/foundation-model-engineering/

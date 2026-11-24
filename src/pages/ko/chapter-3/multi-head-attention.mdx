@@ -1,58 +1,44 @@
 ---
 layout: ../../../layouts/BookLayout.astro
-title: "3.2 Multi-head Attention (MHA)"
+title: "3.2 멀티 헤드 어텐션"
 lang: "ko"
 ---
 
-import MhaVisualizer from '../../../components/chapter-3/MhaVisualizer';
+import MhaVisualizer from '../../../components/chapter-3/MhaVisualizer.tsx';
 
-# 3.2 Multi-head Attention (MHA)
+# 3.2 멀티 헤드 어텐션
 
-Self-Attention은 강력하지만, 이를 한 번만 적용하는 것(Single-Head)은 모델이 다양한 유형의 관계에 동시에 집중하는 능력을 제한합니다. **Multi-Head Attention (MHA)** 은 여러 개의 어텐션 매커니즘을 병렬로 실행하여 이 문제를 해결합니다.
-
-이것을 비유를 통해 이해해 봅시다.
+한 어텐션 헤드는 질의 하나에 대해 각 입력 위치의 가중치를 구합니다. 값 벡터의 모든 좌표에 같은 가중치를 씁니다. 출력의 한 부분에는 첫 토큰의 숫자가, 다른 부분에는 마지막 토큰의 특징이 필요하다면 어떻게 할까요? 두 헤드가 각자 다른 가중치로 값을 읽고, 출력 투영이 두 결과를 섞을 수 있습니다. [[1]](#ref-1)
 
 ---
 
 ### **비유: 전문가 위원회**
 
-당신이 복잡한 법률 문서를 분석하고 있다고 가정해 봅시다.
-
-*   **Single-Head Attention은 한 명의 일반 연구원** 에게 문서를 읽게 하는 것과 같습니다. 그들은 잘 해낼 수 있지만, 한 번에 하나의 측면(예: 전반적인 의미)에만 집중할 수 있습니다.
-*   **Multi-Head Attention은 전문가 위원회** 를 고용하는 것과 같습니다:
-    *   **전문가 1** 은 *법률 용어* 에 집중합니다.
-    *   **전문가 2** 는 *재정적 영향* 에 집중합니다.
-    *   **전문가 3** 은 *역사적 배경* 에 집중합니다.
-
-그들은 모두 동시에 같은 문서를 읽지만 서로 다른 측면에 주의(attend)를 기울입니다. 결국 그들은 결과를 결합하여 훨씬 더 풍부한 분석을 제공합니다.
-
-MHA에서 각 "헤드(head)"는 서로 다른 유형의 관계(예: 문법, 상호 참조, 사실적 연결)에 주의를 기울이는 법을 배웁니다.
+두 검토자가 같은 보고서를 읽고 각자 눈여겨본 대목을 짧은 메모로 남기면, 편집자는 두 메모를 종합합니다. 멀티헤드 어텐션에서 각 헤드가 어떤 질의·키·값을 읽을지는 투영 행렬이 결정합니다. 두 헤드가 서로 다른 패턴을 학습할지는 학습 결과에 달려 있습니다. 처음부터 각 헤드에 특정 분야가 배정되는 것은 아닙니다.
 
 ---
 
 ## 왜 Multi-Head인가? (표현 서브스페이스)
 
-Multi-Head Attention의 이점을 이해하기 위해 "bank"라는 단어를 생각해 봅시다. 이 단어는 금융 기관을 의미할 수도 있고 강의 기슭을 의미할 수도 있습니다.
-*   단일 헤드 어텐션 매커니즘에서는 모델이 "bank"에 대해 하나의 어텐션 분포를 만들어야 합니다. 만약 모델이 금융 문맥("money"와 관련된)과 구문론적 문맥(앞에 나오는 관사 "The"와 관련된)을 모두 포착해야 한다면, 타협을 해야 합니다.
-*   Multi-Head Attention을 사용하면 한 헤드는 **의미적 관계** (bank $\to$ money)에 집중할 수 있고, 다른 헤드는 **구문적 관계** (bank $\to$ The)에 집중할 수 있습니다.
+입력 벡터 세 개가 $A=(1,0)$, $B=(0,1)$, $C=(1,1)$ 이라고 합시다. 첫 헤드는 질의와 키 모두에서 첫 좌표를, 둘째 헤드는 둘째 좌표를 읽습니다. 질의가 C라면 두 좌표 모두 1입니다. 첫 헤드에서는 A와 C의 점수가 같고, 둘째 헤드에서는 B와 C의 점수가 같습니다. 이 예제에는 마스크가 없으므로 두 헤드 모두 세 입력 전체를 볼 수 있습니다.
 
-$d_{model}$ 차원의 임베딩을 $h$개의 더 작은 차원 $d_k$의 서브스페이스(subspaces)로 투영함으로써, 서로 다른 패턴을 표현할 수 있지만 헤드별 전문화가 보장되지는 않습니다. 출력 투영과 공유 잔차 경로를 통해 헤드의 결과가 상호작용합니다. 이는 CNN이 여러 필터를 사용하여 서로 다른 시각적 특징(예: 가장자리, 질감)을 감지하는 것과 유사합니다.
+다음 단계로 전달할 정보는 값이 결정합니다. 좌표가 $(x,y)$ 인 토큰에서 헤드 1은 $x-y$, 헤드 2는 $2y$ 를 값으로 읽습니다. 헤드 1의 값은 $[1,-1,0]$ 이므로 두 토큰이 서로의 기여를 일부 상쇄할 수 있습니다. 가중치가 높다는 사실만으로 헤드 출력까지 알 수는 없습니다. [두 헤드 계산 예제](#two-head-calculation)에서 이 가중치들이 최종 벡터에 어떻게 반영되는지 확인할 수 있습니다.
 
 ---
 
 ## Multi-Head Attention의 수학적 원리
 
-$d_{model}$ 차원의 키, 밸류, 쿼리로 단일 어텐션을 수행하는 대신, MHA는 쿼리, 키, 밸류를 서로 다른 학습된 선형 투영(linear projections)을 통해 $h$번 선형 투영하여 각각 $d_k, d_k, d_v$ 차원으로 만듭니다.
+여기서 $Q$, $K$, $V$ 는 각 투영에 들어가는 입력입니다. 셀프 어텐션에서는 셋 모두 같은 시퀀스 행렬 $X$ 를 쓸 수 있습니다. 아래 식에서 각 헤드의 질의·키 차원은 $d_k$, 값 차원은 $d_v$ 입니다. 한 질의 위치에서 헤드 $h$ 개가 낸 결과를 특징 축을 따라 이어 붙입니다.
 
 $$\text{MultiHead}(Q, K, V) = \text{Concat}(\text{head}_1, \dots, \text{head}_h)W^O$$
 
 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', margin: '20px 0' }}>
 
 <div style={{ maxWidth: '600px', width: '100%' }}>
-![Multi-Head Attention](../../../assets/images/chapter-3/multi-head-attention.png)
+![각 헤드가 세 입력을 투영해 어텐션을 계산하고, 모든 헤드의 출력을 이어 붙여 선형 투영하는 구조도](../../../assets/images/chapter-3/multi-head-attention.png)
 </div>
 
-<em style={{ marginTop: '10px', color: '#7f8c8d' }}>Source: [Lilian Weng's Blog](https://lilianweng.github.io/posts/2018-06-24-attention/)</em>
+<em style={{ marginTop: '10px', color: '#7f8c8d' }}>Vaswani 외, 그림 2 오른쪽. [Lilian Weng의 어텐션 해설](https://lilianweng.github.io/posts/2018-06-24-attention/)에도 같은 도식이 실려 있습니다. [[1]](#ref-1)</em>
 
 </div>
 
@@ -65,83 +51,74 @@ $$\text{head}_i = \text{Attention}(QW_i^Q, KW_i^K, VW_i^V)$$
 *   $W_i^V \in \mathbb{R}^{d_{model} \times d_v}$
 *   $W^O \in \mathbb{R}^{hd_v \times d_{model}}$
 
-일반적으로 $h = 8$개의 병렬 어텐션 헤드를 사용합니다. 이들 각각에 대해 $d_k = d_v = d_{model}/h$를 사용합니다.
+최초 트랜스포머의 기본 모델은 $d_{model}=512$ 에 헤드 8개를 사용해 헤드당 $d_k=d_v=64$ 였습니다 [[1]](#ref-1). 같은 폭의 헤드를 쓰는 구현에서는 전체 폭을 나누어떨어지게 하는 헤드 수를 선택할 수 있습니다. 전체 폭과 시퀀스 길이가 고정돼 있으면 헤드 수가 늘어도 점수 행렬의 곱셈량은 대체로 비슷합니다. 다만 모든 가중치를 저장하는 단순 구현은 헤드마다 시퀀스 길이의 제곱에 해당하는 행렬을 보관합니다.
 
 ---
 
 ## PyTorch 구현
 
-다음은 PyTorch에서 Multi-Head Attention을 구현하는 방법입니다. 여기에는 입력 투영, 여러 헤드로 분할, 어텐션 적용, 그리고 결과 연결이 포함됩니다.
+아래 CPU 예제는 가중치를 직접 확인하기 위해 중간 행렬을 꺼내 보여 줍니다. 입력은 특징 폭이 같은 배치 단위 float32 질의·키·값이며, 키와 값의 시퀀스 길이는 같습니다. 선택적으로 전달하는 불리언 마스크는 모든 배치와 헤드가 공유하는 질의 위치 × 키 위치 행렬입니다. `True` 인 위치를 볼 수 있습니다. 한 행이 모두 가려지면 softmax를 계산할 수 있는 위치가 없으므로 오류를 냅니다. 드롭아웃, 샘플별 패딩 마스크, 캐싱, 융합 커널은 이 예제에서 생략합니다.
 
 ```python
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
+from torch import nn
+
 
 class MultiHeadAttention(nn.Module):
-    def __init__(self, d_model, num_heads):
-        super(MultiHeadAttention, self).__init__()
-        assert d_model % num_heads == 0
-        
-        self.d_model = d_model
-        self.num_heads = num_heads
-        self.d_k = d_model // num_heads
-        
-        # Q, K, V를 위한 선형 투영
-        self.w_q = nn.Linear(d_model, d_model)
-        self.w_k = nn.Linear(d_model, d_model)
-        self.w_v = nn.Linear(d_model, d_model)
-        
-        # 출력 투영
-        self.w_o = nn.Linear(d_model, d_model)
-        
-    def forward(self, q, k, v, mask=None):
-        batch_size = q.size(0)
-        
-        # 1. 선형 투영
-        Q = self.w_q(q)
-        K = self.w_k(k)
-        V = self.w_v(v)
-        
-        # 2. 헤드로 분할
-        # Shape change: (batch, seq_len, d_model) -> (batch, seq_len, num_heads, d_k) -> (batch, num_heads, seq_len, d_k)
-        Q = Q.view(batch_size, -1, self.num_heads, self.d_k).transpose(1, 2)
-        K = K.view(batch_size, -1, self.num_heads, self.d_k).transpose(1, 2)
-        V = V.view(batch_size, -1, self.num_heads, self.d_k).transpose(1, 2)
-        
-        # 3. Scaled Dot-Product Attention 적용
-        scores = torch.matmul(Q, K.transpose(-2, -1)) / (self.d_k ** 0.5)
-        if mask is not None:
-            scores = scores.masked_fill(mask == 0, -1e9)
-        weights = F.softmax(scores, dim=-1)
-        attention_output = torch.matmul(weights, V)
-        
-        # 4. 헤드 연결 (Concatenate)
-        # Shape change: (batch, num_heads, seq_len, d_k) -> (batch, seq_len, num_heads, d_k) -> (batch, seq_len, d_model)
-        concat_output = attention_output.transpose(1, 2).contiguous().view(batch_size, -1, self.d_model)
-        
-        # 5. 출력 투영
-        output = self.w_o(concat_output)
-        
-        return output, weights
+    def __init__(self, width, heads):
+        super().__init__()
+        if width < 1 or heads < 1 or width % heads:
+            raise ValueError("width and heads must be positive, with width divisible by heads")
+        self.heads = heads
+        self.head_width = width // heads
+        self.w_q = nn.Linear(width, width, bias=False)
+        self.w_k = nn.Linear(width, width, bias=False)
+        self.w_v = nn.Linear(width, width, bias=False)
+        self.w_o = nn.Linear(width, width, bias=False)
 
-# 예제 사용법
-mha = MultiHeadAttention(d_model=64, num_heads=8)
-x = torch.randn(2, 10, 64) # 배치 크기 2, 시퀀스 길이 10, d_model 64
-output, weights = mha(x, x, x)
-print("Output Shape:", output.shape)
-print("Attention Weights Shape:", weights.shape)
+    def split(self, x):
+        batch, length, _ = x.shape
+        return x.reshape(batch, length, self.heads, self.head_width).transpose(1, 2)
+
+    def forward(self, q, k, v, allowed=None):
+        queries = self.split(self.w_q(q))
+        keys = self.split(self.w_k(k))
+        values = self.split(self.w_v(v))
+        scores = (queries @ keys.transpose(-2, -1)) / self.head_width**0.5
+        if allowed is not None:
+            if allowed.dtype != torch.bool or allowed.shape != scores.shape[-2:]:
+                raise ValueError("expected a shared boolean [query, key] mask")
+            if not allowed.any(dim=-1).all():
+                raise ValueError("each query must have a visible key")
+            scores = scores.masked_fill(~allowed, -torch.inf)
+        weights = scores.softmax(dim=-1)
+        context = weights @ values
+        joined = context.transpose(1, 2).reshape(q.shape)
+        return self.w_o(joined), weights
+
+
+layer = MultiHeadAttention(width=2, heads=2)
+x = torch.tensor([[[1., 0.], [0., 1.], [1., 1.]]])
+with torch.no_grad():
+    layer.w_q.weight.copy_(torch.eye(2))
+    layer.w_k.weight.copy_(torch.eye(2))
+    layer.w_v.weight.copy_(torch.tensor([[1., -1.], [0., 2.]]))
+    layer.w_o.weight.copy_(torch.tensor([[1., 1.], [1., -1.]]))
+    output, weights = layer(x, x, x)
+    torch.testing.assert_close(output[0, 2], torch.tensor([1.956232, -1.422319]))
+    visible = torch.ones(3, 3, dtype=torch.bool).tril()
+    _, causal_weights = layer(x, x, x, visible)
+    assert torch.count_nonzero(causal_weights.triu(1)) == 0
+    torch.testing.assert_close(causal_weights.sum(-1), torch.ones(1, 2, 3))
 ```
+
+첫 호출은 질의 C의 계산 예제를 그대로 재현합니다. 두 번째 호출은 인과 마스크를 적용합니다. 마지막 두 줄은 미래 위치의 가중치가 0이고 보이는 위치의 가중치 합은 1인지 확인합니다.
 
 ---
 
 ## 예제: 다양한 관점
 
-두 개의 서로 다른 헤드가 "The bank was full of money."라는 문장에 어떻게 주의를 기울이는지 시각화해 보세요.
-*   **Head 1** 은 "bank"를 "money"와 연관시키는 법을 배울 수 있습니다 (금융 문맥).
-*   **Head 2** 는 "bank"를 "The"와 같은 문법적 요소와 연관시키는 법을 배울 수 있습니다.
-
-단어 **"bank"** 에 대한 시뮬레이션된 attention 패턴을 보려면 헤드를 선택하세요.
+질의가 C일 때 헤드 출력은 약 $0.267$ 과 $1.689$ 입니다. 출력 투영은 이어 붙인 두 값 $(u,v)$ 를 $(u+v,u-v)$ 로 바꾸므로, 반올림하면 최종 벡터는 $(1.956,-1.422)$ 입니다. 둘째 헤드의 값만 투영 직전에 0으로 만들면 어느 좌표가 달라질지 먼저 예측해 보세요. 이어서 질의를 C에서 A로 바꾸고 한 헤드의 가중치만 달라지는 이유를 설명해 보세요.
 
 <MhaVisualizer client:load lang="ko" />
 
@@ -150,33 +127,28 @@ print("Attention Weights Shape:", weights.shape)
 ## Quizzes
 
 <details>
-<summary>Quiz 1: 왜 하나의 큰 어텐션 헤드 대신 여러 개의 작은 헤드를 사용하나요?</summary>
-*여러 헤드를 사용하면 모델이 서로 다른 위치에서 서로 다른 표현 서브스페이스(representation subspaces)의 정보에 주의를 기울일 수 있습니다. 하나의 큰 헤드는 하나의 어텐션 가중치 집합만 계산할 수 있으므로 여러 유형의 관계를 평균화해야 하므로 표현력이 떨어질 수 있습니다.*
+<summary>Quiz 1: 질의를 C에서 A로 바꾸면 헤드 2가 모든 토큰에 같은 가중치를 주는 이유는 무엇인가요?</summary>
+*헤드 2는 질의의 둘째 좌표를 읽습니다. A에서 이 좌표는 0이라 세 점곱이 모두 0이고 softmax 결과는 균등합니다. 헤드 1이 읽는 첫 좌표는 C와 A 모두 1입니다.*
 </details>
 
 <details>
-<summary>Quiz 2: MHA에서 출력 투영 $W^O$의 목적은 무엇인가요?</summary>
-*모든 헤드의 출력을 연결(concatenate)한 결과는 $hd_v$ 차원(일반적으로 $d_{model}$과 같음)을 갖습니다. 출력 투영 $W^O$는 모든 헤드의 정보를 혼합하고 이를 다시 $d_{model}$ 공간으로 투영하여 네트워크가 결합된 정보를 효과적으로 사용할 수 있도록 하는 학습된 선형 변환입니다.*
+<summary>Quiz 2: 질의가 C일 때 헤드 2의 값을 출력 투영 직전에 0으로 만들면 무엇이 바뀌나요?</summary>
+*헤드가 계산한 가중치와 원래 가중합은 그대로이고, 이어 붙이는 둘째 값만 0이 됩니다. 두 출력 좌표에 모두 둘째 값이 들어가므로 결과는 약 (1.956, −1.422)에서 (0.267, 0.267)로 바뀝니다.*
 </details>
 
 <details>
-<summary>Quiz 3: 만약 $d_{model} = 512$이고 $8$개의 헤드가 있다면, 각 헤드에 대한 $Q, K, V$의 차원은 얼마인가요?</summary>
-*일반적으로 $d_k = d_v = d_{model} / h$로 설정합니다. 따라서 각 헤드에 대해 차원은 $512 / 8 = 64$가 됩니다.*
+<summary>Quiz 3: 폭 512인 층에 같은 폭의 헤드 8개가 있으면 질의 하나에서 몇 개의 특징을 이어 붙이나요?</summary>
+*헤드마다 값의 좌표 64개를 반환합니다. 따라서 8 × 64 = 512개의 특징이 출력 투영에 들어갑니다.*
 </details>
 
 <details>
-<summary>Quiz 4: 총 차원이 같을 때 Multi-Head Attention의 계산 비용은 Single-Head Attention과 어떻게 비교됩니까?</summary>
-*각 헤드의 차원이 줄어들기 때문에($d_k = d_{model}/h$), Multi-Head Attention의 총 계산 비용은 전체 차원을 사용하는 Single-Head Attention과 비슷합니다. 이러한 연산들은 GPU에서 효과적으로 배치 처리 및 병렬화될 수 있습니다.*
+<summary>Quiz 4: 모델 폭을 고정한 채 헤드 수를 늘려도 메모리 사용량이 증가할 수 있는 이유는 무엇인가요?</summary>
+*점곱에 참여하는 좌표 수는 줄지만, 단순 구현은 헤드마다 질의 위치 × 키 위치 크기의 가중치 행렬을 보관합니다. 배치와 시퀀스 길이가 같다면 헤드 수가 두 배가 될 때 저장할 가중치 수도 두 배입니다. 이 행렬 전체를 저장하지 않는 커널은 메모리 사용 방식이 다릅니다.*
 </details>
 
 <details>
-<summary>Quiz 5: 헤드를 연결한 후 출력 투영 $W^O$를 사용하지 않으면 어떤 일이 발생할까요?</summary>
-*출력 투영 $W^O$가 없다면 모델은 서로 다른 헤드에서 얻은 독립적인 특징들을 어떻게 결합하거나 혼합할지 배우지 못하고 단순히 연결하기만 할 것입니다. $W^O$는 모델이 서로 다른 헤드 간의 상호 작용을 학습할 수 있게 해줍니다.*
-</details>
-
-<details>
-<summary>Quiz 6: $q$와 $k$의 요소들이 독립이고 평균 0, 분산 1인 확률 변수라고 가정할 때, 점곱 $q \cdot k$의 분산이 $d_k$임을 수학적으로 증명하고 $\frac{1}{\sqrt{d_k}}$ 스케일링 인자가 분산을 어떻게 1로 복원하는지 설명하시오.</summary>
-*$q, k \in \mathbb{R}^{d_k}$ 벡터의 각 요소가 독립적인 확률 변수이며 $\mathbb{E}[q_i] = \mathbb{E}[k_i] = 0$ 및 $\text{Var}(q_i) = \text{Var}(k_i) = 1$을 만족한다고 가정해 봅시다. 두 벡터의 점곱은 $q \cdot k = \sum_{i=1}^{d_k} q_i k_i$입니다. $q_i$와 $k_i$가 독립이므로, $\mathbb{E}[q_i k_i] = \mathbb{E}[q_i]\mathbb{E}[k_i] = 0$입니다. 독립 변수 곱의 분산은 $\text{Var}(q_i k_i) = \mathbb{E}[q_i^2 k_i^2] - (\mathbb{E}[q_i k_i])^2 = \mathbb{E}[q_i^2]\mathbb{E}[k_i^2] - 0 = 1 \times 1 = 1$입니다. 각 요소가 독립적이므로, 합의 분산은 각 분산의 합과 같습니다: $\text{Var}(q \cdot k) = \sum_{i=1}^{d_k} \text{Var}(q_i k_i) = d_k \times 1 = d_k$. 이를 $\sqrt{d_k}$로 나누면, 분산은 $\text{Var}\left(\frac{q \cdot k}{\sqrt{d_k}}\right) = \frac{1}{d_k} \text{Var}(q \cdot k) = \frac{d_k}{d_k} = 1$이 됩니다. 이 스케일링은 차원이 커질 때 소프트맥스 함수가 매우 작은 기울기를 갖는 영역으로 포화(Saturation)되는 것을 방지합니다.*
+<summary>Quiz 5: 예제에서 마스크 한 행이 모두 거짓이면 왜 오류를 내나요?</summary>
+*모든 키가 가려지면 가중치를 나눠 줄 위치가 없습니다. 모든 점수를 똑같은 유한한 음수로 바꾸면 가려진 키들에 가중치가 균등하게 배분돼 오류를 알아채기 어렵습니다.*
 </details>
 
 ---

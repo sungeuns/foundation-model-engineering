@@ -6,9 +6,9 @@
 
 A free textbook for AI engineers, with interactive explanations, PyTorch examples, and CPU labs. Read in **[English](https://sungeuns.github.io/foundation-model-engineering/)** or **[한국어](https://sungeuns.github.io/foundation-model-engineering/ko/)**. No account required.
 
-[![The book's attention demo calculates token weights and an output vector from explicit Q, K, and V vectors.](public/social/attention-demo.png)](https://sungeuns.github.io/foundation-model-engineering/chapter-3/self-attention-mathematics/#example-attention-weight-matrix)
+[![The book's attention demo calculates token weights and an output vector from explicit Q, K, and V vectors.](public/social/attention-demo.png)](https://sungeuns.github.io/foundation-model-engineering/chapter-3/self-attention-mathematics/#attention-weight-example)
 
-*Screenshot of the book's calculated toy-attention demo. [Try it](https://sungeuns.github.io/foundation-model-engineering/chapter-3/self-attention-mathematics/#example-attention-weight-matrix): choose a query, mask future tokens, and inspect the weighted output. These are authored vectors, not measurements from a trained model.*
+*Screenshot of the book's calculated toy-attention demo. [Try it](https://sungeuns.github.io/foundation-model-engineering/chapter-3/self-attention-mathematics/#attention-weight-example): choose a query, mask future tokens, and inspect the weighted output. These are authored vectors, not measurements from a trained model.*
 
 ## Start with one question
 
@@ -17,7 +17,7 @@ You do not need to read the whole book first.
 | Your question | Start here | What you can do |
 | --- | --- | --- |
 | The weights fit. Why does serving run out of memory? | [KV cache management](https://sungeuns.github.io/foundation-model-engineering/chapter-12/kv-cache-management/#worked-example-the-tenth-request-does-not-fit) | Calculate memory as context, batch size, and KV heads change. |
-| What does an attention weight actually do? | [Self-attention mathematics](https://sungeuns.github.io/foundation-model-engineering/chapter-3/self-attention-mathematics/#example-attention-weight-matrix) | Follow query/key scores through masking, softmax, and a weighted sum. |
+| What does an attention weight actually do? | [Self-attention mathematics](https://sungeuns.github.io/foundation-model-engineering/chapter-3/self-attention-mathematics/#attention-weight-example) | Follow query/key scores through masking, softmax, and a weighted sum. |
 | How many context positions does one image use? | [Visual token budget](https://sungeuns.github.io/foundation-model-engineering/chapter-11/vision-language-bridges/#visual-token-budget) | Change image size and count. Compare patch projection with a decoder that reads separate visual memory. |
 | My RAG answer is wrong. Where did the evidence go? | [Trace one answer](https://sungeuns.github.io/foundation-model-engineering/chapter-14/rag-failure-modes-and-operational-design/#trace-a-rag-answer) | Use chunk IDs to distinguish a retrieval miss, omitted context, and an unsupported citation across six cases. |
 | Why can the same word select different MoE experts? | [Top-k router lab](https://sungeuns.github.io/foundation-model-engineering/chapter-5/sparse-vs-dense-models/#moe-routing-lab) | Change the preceding words and expert count, then inspect the weights and combined output. |
@@ -48,6 +48,7 @@ Then try `uncertain` and `missing`. The [evaluation guide](https://sungeuns.gith
 
 ### Follow and contribute
 
+- To cite the textbook in a syllabus or paper, use [the book citation](CITATION.cff) or choose **Cite this repository** on GitHub for APA or BibTeX. For a specific experiment, include its chapter link and the Git commit you ran.
 - Bookmark the project with a GitHub star if it is useful. Share a specific lesson with someone facing the same engineering problem.
 - Subscribe to chapter updates: [English RSS](https://sungeuns.github.io/foundation-model-engineering/feed.xml) · [한국어 RSS](https://sungeuns.github.io/foundation-model-engineering/ko/feed.xml).
 - [Report a correction](https://github.com/sungeuns/foundation-model-engineering/issues/new/choose): include the page, the claim or behavior, and a source or reproducible example.

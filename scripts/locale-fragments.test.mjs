@@ -21,6 +21,7 @@ test('shared end sections exist in both translations of every canonical chapter'
 
 test('shared exercise IDs belong to the same authored content in both translations', () => {
   const components = [
+    ['/chapter-3/multi-head-attention', 'two-head-calculation', 'MhaVisualizer', 'chapter-3'],
     ['/chapter-5/sparse-vs-dense-models', 'moe-routing-lab', 'MoERouterVisualizer', 'chapter-5'],
     ['/chapter-11/vision-language-bridges', 'visual-token-budget', 'VisionLanguageBridgeVisualizer', 'chapter-11'],
     ['/chapter-17/experimental-design-and-uncertainty', 'release-lab', 'PairedReleaseLab', 'chapter-17'],
@@ -35,6 +36,7 @@ test('shared exercise IDs belong to the same authored content in both translatio
     }
   }
   for (const [route, id] of [
+    ['/chapter-3/self-attention-mathematics', 'attention-weight-example'],
     ['/chapter-10/dpo', 'reference-relative-example'],
     ['/chapter-12/serving-policies-slos-and-fallbacks', 'streaming-latency-trace'],
     ['/chapter-14/rag-failure-modes-and-operational-design', 'trace-a-rag-answer'],

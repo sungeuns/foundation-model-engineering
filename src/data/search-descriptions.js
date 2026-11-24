@@ -243,8 +243,8 @@ export const searchDescriptions = {
     ko: '기호 규칙과 학습된 신경망 표현의 가정을 비교하고, 사람이 작성한 지식에서 데이터로 학습한 가중치로 옮겨 간 흐름을 살펴봅니다.',
   },
   '/chapter-1/power-of-representation': {
-    en: 'Explore feature engineering, representation learning, the manifold hypothesis, and latent spaces to understand what deep networks learn from data.',
-    ko: '특성 공학, 표현 학습, 매니폴드 가설과 잠재 공간을 통해 심층 신경망이 데이터에서 무엇을 학습하는지 이해합니다.',
+    en: 'Swap the adjectives in a film review to see what pooling loses. Fit word scores from ratings and explore a two-dimensional autoencoder bottleneck.',
+    ko: '영화평에서 연기와 줄거리에 붙은 평가를 맞바꿔 평균이 어떤 정보를 잃는지 확인합니다. 단어 점수 학습과 2차원 오토인코더 병목도 다룹니다.',
   },
   '/chapter-1/deep-learning-paradigms': {
     en: 'Compare supervised, self-supervised, and reinforcement learning, then connect these paradigms to foundation models and autoregressive training loss.',
@@ -271,8 +271,8 @@ export const searchDescriptions = {
     ko: '1차원 합성곱이 텍스트를 처리하는 방식과 국소 수용 영역의 의미를 살펴보고, PyTorch로 구현한 TextCNN을 이해합니다.',
   },
   '/chapter-3/multi-head-attention': {
-    en: 'Understand multi-head attention through representation subspaces, projection shapes, head concatenation, and a PyTorch implementation.',
-    ko: '표현 부분 공간, 투영 텐서의 형태와 헤드 결합을 통해 멀티 헤드 어텐션을 이해하고 PyTorch 구현을 살펴봅니다.',
+    en: 'Compute two attention heads from three tokens, mute one before the output projection, and reproduce the weights and output in PyTorch.',
+    ko: '토큰 세 개로 두 헤드의 가중치를 계산합니다. 출력 투영 직전에 한 헤드의 기여를 0으로 바꾸고, 두 출력 좌표가 어떻게 달라지는지 확인합니다.',
   },
   '/chapter-3/position-encoding-strategy': {
     en: 'Compare sinusoidal position encodings and rotary position embeddings (RoPE), including their mathematics and PyTorch implementation.',
@@ -371,8 +371,8 @@ export const searchDescriptions = {
     ko: '지속 사전 학습(CPT)·RAG·SFT의 선택 기준을 살펴봅니다. 문서 비율과 학습 토큰 비율의 차이를 계산하고, 리플레이·토크나이저 호환성·복구·배포 기준을 설계합니다.',
   },
   '/chapter-3/self-attention-mathematics': {
-    en: 'Understand self-attention through Q, K, V projections, scaled dot products, attention weights, and a PyTorch implementation.',
-    ko: 'Q, K, V 투영부터 스케일드 닷 프로덕트와 어텐션 가중치까지, 셀프 어텐션의 수학적 원리를 PyTorch 코드와 함께 설명합니다.',
+    en: 'Trace four tokens through Q, K, V, softmax and a causal mask. Download the PyTorch example to reproduce the browser output and check it against SDPA.',
+    ko: '네 토큰의 질의·키·값으로 어텐션 가중치를 계산하고 인과 마스크로 출력을 바꿔 봅니다. 내려받은 PyTorch 예제로 결과를 재현해 SDPA와 대조합니다.',
   },
   '/chapter-5/routing-algorithms': {
     en: 'Explore how MoE routers assign tokens to experts: top-k routing, load balancing, Expert Choice, Soft MoE, and auxiliary-loss-free routing.',

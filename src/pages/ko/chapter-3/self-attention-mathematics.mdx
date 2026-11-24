@@ -1,12 +1,13 @@
 ---
 layout: ../../../layouts/BookLayout.astro
-title: "3.1 Self-Attention Mathematics"
+title: "3.1 셀프 어텐션 수학"
 lang: "ko"
 ---
 
+import AttentionExampleCode from '../../../components/chapter-3/AttentionExampleCode.astro';
 import AttentionVisualizer from '../../../components/chapter-3/AttentionVisualizer';
 
-# 3.1 Self-Attention Mathematics
+# 3.1 셀프 어텐션 수학
 
 순환 모델은 정보를 순서대로 전달합니다. 첫 번째 토큰과 백 번째 토큰을 연결하려면 중간 위치들을 거치는 계산이 필요합니다. Self-attention은 각 위치가 다른 위치의 정보를 직접 읽는 방법을 학습하게 합니다. 원래 트랜스포머는 이 방식으로 학습 예제 안에서 병렬 처리를 가로막던 순환 연산을 없앴습니다 [[1]](#ref-1).
 
@@ -18,24 +19,17 @@ import AttentionVisualizer from '../../../components/chapter-3/AttentionVisualiz
 
 ### **비유: 파일 서랍장 시스템**
 
-당신이 매우 효율적인 파일 시스템을 갖춘 도서관에서 연구를 하고 있다고 가정해 봅시다.
+도서관에서 새가 나는 원리를 조사한다고 해 봅시다. 지금 찾는 내용이 **질의(query)** 이고, 서류철 겉에 적힌 색인어가 **키(key)** 이며, 안에 들어 있는 자료가 **값(value)** 입니다.
 
-*   **Query ($Q$):** 이것은 당신이 찾고 있는 것입니다. 머릿속에 있는 주제입니다 (예: "새는 어떻게 나는가?").
-*   **Key ($K$):** 이것들은 파일 폴더에 붙어 있는 라벨이나 태그입니다. 각 폴더에는 안에 무엇이 들어 있는지에 대한 요약이 있습니다.
-*   **Value ($V$):** 이것은 폴더 안에 들어 있는 실제 내용입니다.
+어텐션은 질의를 읽을 수 있는 각 키와 비교해 점수를 매긴 뒤, 소프트맥스로 점수를 가중치로 바꿉니다. 서류철 두 개의 가중치가 0.7과 0.3이라면 값 벡터는 그 비율로 출력에 기여합니다. 색인어가 질문에 꼭 들어맞아도 안의 자료가 유용하리라는 보장은 없습니다. 점수는 자료를 섞을 비율을 정하고, 실제로 출력에 담기는 내용은 값 벡터가 정합니다.
 
-필요한 정보를 찾기 위해:
-1.  당신의 **Query** 를 모든 **Key** 와 비교하여 어떤 폴더가 관련이 있는지 확인합니다.
-2.  각 폴더에 대한 **관련성 점수 (Attention weight)** 를 계산합니다.
-3.  폴더에서 **Value** 를 추출하되, 관련성 점수가 높은 폴더의 값에 더 많은 가중치를 부여합니다.
-
-Self-attention에서는 각 토큰 위치가 query, key, value를 제공합니다. 읽을 수 있는 위치는 마스크가 정하며, 인과적 디코더는 미래 토큰을 볼 수 없습니다.
+셀프 어텐션에서는 각 토큰 위치에서 질의·키·값을 모두 만듭니다. 인과 마스크는 그 질의가 읽을 수 있는 위치를 제한합니다.
 
 ---
 
 ## 임베딩에서 Q, K, V로: 선형 투영 (Linear Projections)
 
-실제로는 입력 단어 임베딩을 Queries, Keys, Values로 직접 사용하지 않습니다. 대신, 학습 가능한 가중치 행렬을 사용하여 이들을 서로 다른 공간으로 투영(project)합니다.
+각 토큰의 입력 벡터에 세 가중치 행렬을 각각 곱해 질의, 키, 값을 만듭니다. 세 행렬은 학습 과정에서 달라질 수 있습니다.
 
 $T$를 시퀀스 길이, $d_{model}$을 임베딩 차원이라고 할 때, 행렬 $X \in \mathbb{R}^{T \times d_{model}}$로 표현되는 입력 시퀀스가 주어지면 다음과 같이 계산합니다:
 
@@ -55,17 +49,17 @@ $$V = XW_V$$
 
 ## Scaled Dot-Product Attention의 수학적 원리
 
-Self-Attention의 핵심 연산은 **Scaled Dot-Product Attention** 입니다. 행렬 $Q, K, V$로 묶인 Query, Key, Value 세트가 주어지면, 연산은 다음과 같이 정의됩니다:
+질의 하나와 모든 키의 내적을 구해 크기를 조정한 뒤, 소프트맥스를 적용합니다. 이렇게 얻은 가중치로 값 벡터를 섞는 연산이 **스케일드 닷 프로덕트 어텐션** 입니다. 모든 질의에 대한 연산을 행렬로 쓰면 다음과 같습니다.
 
 $$\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V$$
 
 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', margin: '20px 0' }}>
 
 <div style={{ maxWidth: '600px', width: '100%' }}>
-![Self-Attention Matrix Calculation](../../../assets/images/chapter-3/self-attention-matrix-calculation.png)
+![질의와 키의 곱에 스케일링과 소프트맥스를 적용하고, 그 가중치로 값을 합하는 행렬 계산](../../../assets/images/chapter-3/self-attention-matrix-calculation.png)
 </div>
 
-<em style={{ marginTop: '10px', color: '#7f8c8d' }}>Source: [The Illustrated Transformer by Jay Alammar](https://jalammar.github.io/illustrated-transformer/)</em>
+<em style={{ marginTop: '10px', color: '#7f8c8d' }}>그림 출처 · Jay Alammar의 [The Illustrated Transformer](https://jalammar.github.io/illustrated-transformer/)</em>
 
 </div>
 
@@ -80,7 +74,7 @@ $$\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)
 ### 단계별 분석
 
 1.  **Dot Product ($QK^T$):** 각 Query와 모든 Key 사이의 원시 유사도를 측정합니다.
-2.  **Scaling ($\frac{1}{\sqrt{d_k}}$):** 내적(dot product)의 크기가 너무 커지는 것을 방지합니다. 크기가 커지면 softmax 함수가 매우 작은 기울기를 갖는 영역으로 밀려나기 때문입니다.
+2.  **Scaling ($\frac{1}{\sqrt{d_k}}$):** 내적을 키 차원의 제곱근으로 나눕니다. 차원 수가 커졌다는 이유만으로 점수 차가 벌어져 소프트맥스가 한 위치에 쏠리는 경향을 줄입니다.
 3.  **Softmax:** 스케일링된 점수를 합이 1이 되는 확률(attention weights)로 변환합니다.
 4.  **Weighted Sum ($V$):** Attention weight에 Value를 곱하여 최종 출력을 얻습니다.
 
@@ -88,63 +82,25 @@ $$\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)
 
 ## PyTorch 구현
 
-아래 작은 구현은 점수 행렬과 가중합을 직접 보여줍니다.
+‘cat’ 위치에서 구한 네 내적은 차례로 1, 2, 1, −1입니다. 여기에 $1/\sqrt{2}$를 곱하고 미래 위치를 가리면 ‘The’와 ‘cat’만 남습니다. 두 가중치는 약 0.3302와 0.6698입니다. 각각의 값 벡터 $[1,0]$, $[0,2]$에 이 가중치를 곱해 더하면 출력은 $[0.3302,1.3395]$입니다. 네 위치를 모두 열었을 때의 출력은 약 $[0.6455,1.2407]$입니다. 아래 실습에서 ‘cat’을 고르고 온도 1로 두 경우를 확인해 보세요.
 
-> **의도적으로 단순화한 구현입니다.** CPU float32 예제이며 전체 어텐션 행렬을 메모리에 만듭니다. 드롭아웃, 혼합 정밀도 누적, 융합 커널, 캐시 위치 오프셋을 생략했습니다. 마스크에서 1/True는 허용된 위치를 뜻하며 각 쿼리 행에 적어도 하나의 key가 보여야 합니다. 그렇지 않으면 이 유한값 마스크 구현은 의미 없는 분포를 만듭니다.
+**CPU에서 실행하는 예제입니다.** PyTorch가 설치된 환경에서 `python self_attention.py`를 실행하세요. 화면에 나오는 네 토큰의 질의·키·값을 그대로 사용하며 자료형은 float32입니다. 점수 행렬을 직접 계산한 뒤 네 출력을 모두 드롭아웃을 끈 PyTorch SDPA의 출력과 대조합니다. 마지막에는 뒤쪽 두 값 벡터를 바꿔도 앞쪽 두 위치의 인과적 출력이 같은지 검사합니다. 학습, 커널 융합 최적화, KV 캐시 오프셋은 생략했습니다. [[2]](#ref-2)
 
-```python
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
+<AttentionExampleCode lang="ko" />
 
-def scaled_dot_product_attention(query, key, value, mask=None):
-    """
-    Scaled Dot-Product Attention 계산.
-    """
-    d_k = query.size(-1)
-    
-    # Step 1 & 2: 내적(Dot product) 및 스케일링
-    # query shape: (batch, heads, seq_len, d_k)
-    # key.transpose(-2, -1) shape: (batch, heads, d_k, seq_len)
-    # scores shape: (batch, heads, seq_len, seq_len)
-    scores = torch.matmul(query, key.transpose(-2, -1)) / (d_k ** 0.5)
-    
-    # 선택 사항: 마스크 적용 (예: 인과적 autoregressive 디코딩용)
-    if mask is not None:
-        scores = scores.masked_fill(mask == 0, -1e9)
-    
-    # Step 3: Softmax를 통한 attention weights 획득
-    attention_weights = F.softmax(scores, dim=-1)
-    
-    # Step 4: Value의 가중 합
-    # output shape: (batch, heads, seq_len, d_v)
-    output = torch.matmul(attention_weights, value)
-    
-    return output, attention_weights
-
-# 예제 사용법
-batch_size = 1
-seq_len = 4
-d_k = 8
-d_v = 8
-
-# 랜덤 텐서
-Q = torch.randn(batch_size, 1, seq_len, d_k)
-K = torch.randn(batch_size, 1, seq_len, d_k)
-V = torch.randn(batch_size, 1, seq_len, d_v)
-
-output, weights = scaled_dot_product_attention(Q, K, V)
-print("Output Shape:", output.shape)
-print("Attention Weights Shape:", weights.shape)
-```
+이 코드와 PyTorch의 함수형 SDPA에서 불리언 마스크의 `True`는 읽을 수 있는 키를 뜻합니다. 어느 질의에서든 키를 전부 가리면 가중치를 나눠 줄 곳이 없습니다. 이때 한 행을 같은 유한한 값으로 채워 소프트맥스를 적용하면 가렸던 모든 키에 똑같은 가중치가 생깁니다. 예제 함수는 이 입력을 오류로 처리합니다. [[2]](#ref-2)
 
 ---
 
+<a id="attention-weight-example"></a>
+
 ## 예제: 어텐션 가중치 행렬
 
-주의 가중치 한 행이 출력 벡터가 되기까지를 따라가 봅시다. 아래 예제는 네 토큰과 직접 지정한 2차원 Q, K, V 벡터를 사용합니다. 질의 토큰을 고르고 인과 마스크를 켜고 끄면서 가중치가 어떻게 달라지는지, 가중된 값들이 어떤 출력으로 합쳐지는지 확인하세요. 작은 입력에 대한 정확한 계산이며, 학습된 모델에서 측정한 주의 패턴은 아닙니다.
+토큰 네 개에 2차원 질의·키·값 벡터를 지정했습니다. ‘cat’을 고른 뒤 인과 마스크를 켜고 끄면서 어떤 토큰의 가중치가 0이 되는지 보세요. 각 값 벡터에 화면의 가중치를 곱해 더하면 표시된 출력을 재현할 수 있습니다.
 
 <AttentionVisualizer client:load lang="ko" />
+
+여기서는 한 행의 가중치로 값 벡터의 두 좌표를 모두 섞었습니다. [두 헤드 실습](../multi-head-attention/#two-head-calculation)에서는 같은 입력에서 가중치 두 벌을 따로 계산합니다. 한 헤드의 기여를 0으로 만들면 최종 출력의 어느 좌표가 달라질까요?
 
 ---
 
@@ -156,8 +112,8 @@ print("Attention Weights Shape:", weights.shape)
 </details>
 
 <details>
-<summary>Quiz 2: Self-Attention과 일반적인 Attention (예: Bahdanau Attention)의 차이점은 무엇인가요?</summary>
-*일반적인 attention은 대개 디코더 상태를 인코더 상태와 정렬합니다 (cross-attention). Self-attention은 단일 시퀀스의 서로 다른 위치들을 연결하여 동일한 시퀀스의 표현을 계산합니다 (예: 문장 내의 단어들이 같은 문장 내의 다른 단어들에 주의를 기울임).*
+<summary>Quiz 2: 인코더–디코더 교차 어텐션에서 질의·키·값은 각각 어디에서 오나요?</summary>
+*질의는 디코더 상태에서, 키와 값은 인코더 상태에서 만듭니다. 셀프 어텐션에서는 같은 시퀀스의 상태로 세 가지를 모두 만듭니다. 어느 쪽이든 점수 계산법과 각 질의가 읽을 수 있는 위치를 정해야 합니다.*
 </details>
 
 <details>
@@ -171,8 +127,8 @@ print("Attention Weights Shape:", weights.shape)
 </details>
 
 <details>
-<summary>Quiz 5: Self-Attention은 가변 길이 시퀀스를 어떻게 처리하나요?</summary>
-*Self-attention은 행렬 연산을 기반으로 하므로 고정된 시퀀스 길이에 의존하지 않고 가변 길이 시퀀스를 자연스럽게 처리할 수 있습니다. 출력 차원은 입력 시퀀스 길이에 의해 결정되며, 길이에 관계없이 동일한 매개변수(투영 행렬)가 사용됩니다.*
+<summary>Quiz 5: 토큰 두 개인 입력을 네 자리로 패딩해 배치에 넣으면 출력의 어느 축이 늘어나며, 패딩은 어떻게 처리해야 하나요?</summary>
+*출력에는 질의마다 한 행이 있고 각 행의 폭은 $d_v$입니다. 패딩하면 행 수가 늘어도 특징 수는 같습니다. 실제 질의의 가중치를 정규화하기 전에 패딩 키를 가리고, 손실이나 풀링을 계산할 때는 패딩 질의의 출력을 제외합니다. 인과 마스크만으로는 패딩 위치를 구별할 수 없습니다.*
 </details>
 
 <details>
@@ -185,3 +141,4 @@ print("Attention Weights Shape:", weights.shape)
 ## References
 
 1. <a id="ref-1"></a>Vaswani, A., et al. (2017). *Attention is all you need*. In Advances in neural information processing systems (pp. 5998-6008). [arXiv:1706.03762](https://arxiv.org/abs/1706.03762).
+2. <a id="ref-2"></a>PyTorch. [Scaled dot product attention, PyTorch 2.15](https://docs.pytorch.org/docs/2.15/generated/torch.nn.functional.scaled_dot_product_attention.html).
