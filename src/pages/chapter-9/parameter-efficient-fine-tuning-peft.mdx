@@ -8,7 +8,7 @@ import LoRAParameterVisualizer from '../../components/chapter-9/LoRAParameterVis
 
 # 9.3 Parameter-Efficient Fine-Tuning (PEFT)
 
-Parameter-Efficient Fine-Tuning (PEFT) freezes most pretrained weights and learns a small task-specific state. It lowers gradient and optimizer-state cost, enables many adapters per base model, and can simplify rollback. It does not make activation memory disappear, and the base model, tokenizer, template, adapter, and runtime remain one compatibility unit.
+A transformer projection with 4,096 inputs and 1,024 outputs contains 4,194,304 weights. You can adapt it by training just 81,920 values at rank 16 while keeping the original matrix frozen. Where do those values go? [Change the projection and rank](#lora-projection-count), then try merging the learned update into an inference weight. Parameter-efficient fine-tuning (PEFT) lets several tasks share a base model while keeping a separate adapter for each task.
 
 ---
 
@@ -22,65 +22,105 @@ LoRA removes optimizer states and gradients for frozen base weights, but forward
 
 ## LoRA: A Low-Rank Update
 
-For a frozen weight $W_0\in\mathbb{R}^{d\times k}$, LoRA learns
+Let $k$ be the number of input features and $d$ the number of output features. PyTorch stores a linear layer's weight $W_0$ as $d\times k$. LoRA freezes this weight and learns two smaller factors. The input first passes through $A$ ($r\times k$), then through $B$ ($d\times r$). The rank $r$ sets the width of the intermediate representation and bounds the rank of the update. With B initialized to zero, the update starts at rank zero. The scalar $\alpha$ sets its scale. [[1]](#ref-1) [[4]](#ref-4)
 
 $$
-W = W_0 + \Delta W,
-\qquad
-\Delta W = \frac{\alpha}{r}BA,
+W = W_0 + \frac{\alpha}{r}BA.
 $$
 
-where $A\in\mathbb{R}^{r\times k}$, $B\in\mathbb{R}^{d\times r}$, and $r\ll\min(d,k)$. Initializing one factor to zero keeps the initial function unchanged [[1]](#ref-1).
+With $k=4096$, $d=1024$ and $r=16$, A holds $16\times4096=65{,}536$ values and B holds $1024\times16=16{,}384$. Together they train **81,920 parameters**, about **1.95%** of the 4,194,304 weights. If you adapt another projection, count its input and output widths separately. These counts exclude bias.
 
-The decisive choices are not only rank $r$. Sweep rank, $\alpha$, learning rate, effective batch in supervised tokens, token budget, dropout, and target modules. `q_proj`/`v_proj` is a cheap baseline; `all-linear` often gives more capacity at higher memory and checkpoint size. Train embeddings or `lm_head` only when new tokens, domain vocabulary, or output calibration justify it—and record tied-weight behavior.
+<a id="lora-projection-count"></a>
+
+<LoRAParameterVisualizer client:load lang="en" />
+
+Set the widths to 12 and 8. At rank 4 the factors hold 80 values for 96 base weights. At rank 8 they hold 160. Factorization saves parameters only while $r(k+d)<kd$. For a training run, sweep rank alongside the target modules, $\alpha$, learning rate, dropout, supervised tokens per update and total token budget. Training only query and value projections is one baseline. Adapting every linear layer increases both the number of trainable parameters and checkpoint size. Record whether embeddings and output weights are tied before deciding to train either.
+
+<a id="lora-merge-check"></a>
 
 ### Educational Merge Semantics
 
-The module below illustrates an **idempotent** merge/unmerge contract. A real injector must wrap the actual pretrained module rather than constructing a random replacement, preserve bias/dtype/device, handle sharding, and test output equivalence.
+**Scope of the example.** Run the next two blocks together with CPU PyTorch. They wrap a single dense floating-point `nn.Linear`, with the bias frozen and shared across both paths. A separate inference buffer temporarily costs one more weight matrix. Unmerge before loading, casting or editing parameters. The example omits dropout, tied weights, distributed training, quantization and concurrent updates.
 
 ```python
+import math
 import torch
-import torch.nn as nn
+from torch import nn
+from torch.nn import functional as F
+
 
 class LoRAWrapper(nn.Module):
-    def __init__(self, base: nn.Linear, rank=16, alpha=32):
+    def __init__(self, base: nn.Linear, rank: int, alpha: float):
         super().__init__()
-        self.base = base
-        self.base.requires_grad_(False)
-        self.A = nn.Parameter(torch.empty(rank, base.in_features, device=base.weight.device))
-        self.B = nn.Parameter(torch.zeros(base.out_features, rank, device=base.weight.device))
-        nn.init.kaiming_uniform_(self.A, a=5 ** 0.5)
+        if not 1 <= rank <= min(base.in_features, base.out_features):
+            raise ValueError("rank must fit both feature dimensions")
+        self.base = base.requires_grad_(False)
+        self.A = nn.Parameter(base.weight.new_empty(rank, base.in_features))
+        self.B = nn.Parameter(base.weight.new_zeros(base.out_features, rank))
+        nn.init.kaiming_uniform_(self.A, a=math.sqrt(5))
         self.scale = alpha / rank
-        self.merged = False
-
-    def delta(self):
-        return (self.B @ self.A).to(self.base.weight.dtype) * self.scale
+        self.register_buffer("merged_weight", None, persistent=False)
 
     def forward(self, x):
-        if self.merged:
-            return self.base(x)
-        return self.base(x) + (x @ self.A.T @ self.B.T) * self.scale
+        if self.merged_weight is not None:
+            return F.linear(x, self.merged_weight, self.base.bias)
+        return self.base(x) + F.linear(F.linear(x, self.A), self.B) * self.scale
 
     @torch.no_grad()
     def merge(self):
-        if not self.merged:
-            self.base.weight.add_(self.delta())
-            self.merged = True
+        if self.training:
+            raise RuntimeError("switch to eval mode before merging")
+        if self.merged_weight is None:
+            self.merged_weight = self.base.weight + (self.B @ self.A) * self.scale
 
-    @torch.no_grad()
     def unmerge(self):
-        if self.merged:
-            self.base.weight.sub_(self.delta())
-            self.merged = False
+        self.merged_weight = None
+
+    def train(self, mode=True):
+        if mode:
+            self.unmerge()
+        return super().train(mode)
 ```
 
-Test repeated `merge()` calls, merge→unmerge restoration, and outputs before/after merge within a dtype-appropriate tolerance. Do not set frozen base weights trainable merely to mark merge state.
+A starts with random values and B starts at zero, so the first prediction must match the supplied base layer. Fit one synthetic batch of two three-position sequences to a zero target with one SGD step. The resulting nonzero update makes the merge test meaningful. Each inference merge computes a fresh weight from the original and caches it; calling `merge()` again leaves it alone (an idempotent operation). Unmerging drops the cache. This avoids subtracting a rounded update from a rounded sum, which can change the original bits. The fused and separate matrix products can still round differently.
+
+```python
+for dtype in (torch.float32, torch.float64):
+    torch.manual_seed(7)
+    base = nn.Linear(12, 8, bias=True, dtype=dtype)
+    layer = LoRAWrapper(base, rank=4, alpha=8)
+    x = torch.randn(2, 3, 12, dtype=dtype)
+    target = torch.zeros(2, 3, 8, dtype=dtype)
+    original = base.weight.detach().clone()
+    assert sum(p.numel() for p in layer.parameters() if p.requires_grad) == 80
+    assert torch.equal(layer(x), base(x))
+
+    optimizer = torch.optim.SGD([layer.A, layer.B], lr=0.1)
+    F.mse_loss(layer(x), target).backward()
+    optimizer.step()
+    layer.eval()
+    with torch.no_grad():
+        expected = layer(x)
+        assert not torch.equal(expected, base(x))
+        for _ in range(3):
+            layer.merge()
+            layer.merge()
+            torch.testing.assert_close(layer(x), expected)
+            layer.unmerge()
+            assert torch.equal(base.weight, original)
+            assert torch.equal(layer(x), expected)
+    print(dtype, expected.shape)
+```
+
+Both dtypes produce a tensor of shape `[2, 3, 8]`. The test compares outputs with PyTorch's dtype-specific tolerance and checks the original weight for exact equality after each cycle.
 
 ---
 
 ## QLoRA: Quantized Storage, Floating-Point Updates
 
 QLoRA stores frozen base weights in 4-bit **NF4**, optionally uses **double quantization** for quantization constants, and computes through dequantized values while LoRA parameters remain trainable [[2]](#ref-2). The **compute dtype**—usually BF16 on supported hardware, otherwise carefully tested FP16—is distinct from the storage dtype.
+
+**Configuration sketch for one CUDA device.** Supply a verified local base checkpoint and compatible quantization backend. This block configures the adapter; the training loop, data, evaluation and distributed placement are omitted. [[3]](#ref-3)
 
 ```python
 import torch
@@ -95,7 +135,7 @@ quant = BitsAndBytesConfig(
     bnb_4bit_compute_dtype=torch.bfloat16,
 )
 model = AutoModelForCausalLM.from_pretrained(
-    model_id, quantization_config=quant, device_map="auto"
+    model_id, quantization_config=quant, device_map={"": 0}
 )
 model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=True)
 model = get_peft_model(model, LoraConfig(
@@ -126,15 +166,15 @@ Version the deployment as one artifact bundle:
 
 Loading the right adapter on the wrong base can produce plausible but invalid output. Add an explicit compatibility guard. For merged deployment, merge into an explicitly selected floating-point dtype, save a new immutable checkpoint, and compare logits/generations against unmerged inference. Do not assume merging directly into 4-bit weights is lossless or reversible. Retain the original base and adapter for rollback.
 
-<LoRAParameterVisualizer client:load />
-
 ---
 
 ## Run and Release Gates
 
-Monitor token-normalized loss, trainable/frozen parameter counts, gradient norms by adapter module, nonfinite values, peak allocated/reserved memory, tokens per second, data wait, and domain/length slices. Save adapter plus optimizer, scheduler, scaler, RNG, sampler, and data cursor for exact continuation.
+For a chat task, pin the base and tokenizer, apply the serving chat template, and train only on the intended assistant tokens. Preserve EOS on retained responses, mask padding and prompt tokens, and check that packed examples cannot attend across boundaries. The [SFT example](../sft-fundamentals/) spells out these checks. Evaluate on held-out conversations from different source groups. The regression above instead uses an unpadded synthetic tensor and mean squared error.
 
-Abort on unexpected trainable base parameters, missing target modules, persistent overflow, memory beyond the declared headroom, or held-out regression beyond the gate. Release only after paired domain, base-retention, safety, format/tool, latency, and cost evaluation. Exercise both adapter unload and last-known-good base switching.
+Track training and validation loss per supervised token, domain and length slices, adapter gradient and activation norms, nonfinite or overflow counts, peak memory, tokens per second and data wait. For distributed runs, include model FLOP utilization and collective waits. Record batch IDs so a bad update can be replayed. A resumable checkpoint includes the adapter and pinned base identity, optimizer, scheduler, scaler, token counter, RNG, sampler and data cursor, with dataset and configuration hashes.
+
+Stop if a frozen base parameter acquires a gradient, a target layer was missed, repeated overflow persists, or memory exceeds the agreed headroom. Before a rollout, set tolerances for domain quality, retention, safety, formatting and tool use, latency, cost and errors. Compare the candidate and current adapter on the same held-out cases with uncertainty by slice. If a critical slice fails its limit, keep the prior bundle in service. Rehearse restoring that bundle and running its probes before the next release.
 
 ---
 
@@ -160,6 +200,11 @@ Abort on unexpected trainable base parameters, missing target modules, persisten
 *At minimum: exact base revision, tokenizer and chat template, special-token and generation configuration, adapter config and weights, precision/quantization settings, code/library versions, and the evaluation report.*
 </details>
 
+<details>
+<summary>Quiz 5: For 12 input features and 8 output features, what is the largest integer rank that still trains fewer parameters than the original weight?</summary>
+*The weight has 96 values and the two factors train 20r. To stay below 96, r must be at most 4. Rank 5 already trains 100 values.*
+</details>
+
 ---
 
 ## References
@@ -167,3 +212,4 @@ Abort on unexpected trainable base parameters, missing target modules, persisten
 1. <a id="ref-1"></a>Hu, E. J., et al. (2021). *LoRA: Low-Rank Adaptation of Large Language Models.* [arXiv:2106.09685](https://arxiv.org/abs/2106.09685).
 2. <a id="ref-2"></a>Dettmers, T., et al. (2023). *QLoRA: Efficient Finetuning of Quantized LLMs.* [arXiv:2305.14314](https://arxiv.org/abs/2305.14314).
 3. <a id="ref-3"></a>Hugging Face. *PEFT documentation.* [Documentation](https://huggingface.co/docs/peft/).
+4. <a id="ref-4"></a>PyTorch. [`torch.nn.Linear`: weight and input shapes](https://docs.pytorch.org/docs/2.15/generated/torch.nn.Linear.html).

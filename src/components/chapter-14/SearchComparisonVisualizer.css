@@ -20,28 +20,36 @@
   color: inherit;
   font: inherit;
 }
-.ld-presets { display: flex; flex-wrap: wrap; gap: .4rem; }
-.ld-presets button {
+.ld-presets { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .65rem; }
+.ld-presets a {
   padding: .35rem .6rem;
   border: 1px solid #527184;
   border-radius: .3rem;
   background: #fff;
   color: inherit;
   font: inherit;
-  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: .15em;
 }
-.ld-presets button[aria-pressed="true"] { background: #205467; color: white; }
-.lexical-dense :is(input, button, summary):focus-visible { outline: 3px solid #1b67af; outline-offset: 2px; }
+.ld-presets a[aria-current="true"], .lexical-dense:has(.ld-static) .ld-presets a:target { background: #205467; color: white; }
+.lexical-dense :is(input, a, summary):focus-visible { outline: 3px solid #1b67af; outline-offset: 2px; }
+.ld-static > div { display: none; }
+.ld-static > [data-default] { display: block; }
+.lexical-dense:has(.ld-presets a:target:not(#lexical-product-code)) .ld-static > [data-default] { display: none; }
+.lexical-dense:has(#lexical-paraphrase:target) [data-preset="lexical-paraphrase"],
+.lexical-dense:has(#lexical-identifier:target) [data-preset="lexical-identifier"],
+.lexical-dense:has(#lexical-product-code:target) [data-preset="lexical-product-code"],
+.lexical-dense:has(#lexical-book:target) [data-preset="lexical-book"] { display: block; }
 .lexical-dense details { margin: .8rem 0; }
 .lexical-dense table { display: table; width: 100%; border-collapse: collapse; }
-.lexical-dense caption { text-align: left; font-weight: 600; margin-bottom: .3rem; }
+.lexical-dense caption { text-align: left; font-weight: 600; margin-bottom: .3rem; overflow-wrap: anywhere; }
 .lexical-dense th, .lexical-dense td {
   padding: .35rem .3rem;
   font-size: .92rem;
   line-height: 1.35;
   text-align: left;
 }
-.lexical-dense tbody td { white-space: nowrap; }
+.lexical-dense thead th:not(:first-child), .lexical-dense tbody td { white-space: nowrap; }
 .lexical-dense p { margin: .6rem 0; }
 @media (max-width: 440px) {
   .lexical-dense th, .lexical-dense td { padding: .3rem .2rem; font-size: .84rem; }

@@ -78,7 +78,8 @@ test('every built page has canonical, reciprocal language links, and a local soc
     assert.ok(head.includes('max-image-preview:large'), route);
     assert.doesNotMatch(head, /content="[^"]*\bnoindex\b/);
     const schemas = [...head.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/g)].map(m => JSON.parse(m[1]));
-    const timestamp = revisions.get(`src/pages${route}.mdx`)?.timestamp;
+    const revision = revisions.get(`src/pages${route}.mdx`);
+    const timestamp = revision?.timestamp;
     assert.equal(schemas[0].dateModified, timestamp, `${route}: manuscript revision`);
     const byline = html.match(/<p class="manuscript-revision"[^>]*>([\s\S]*?)<\/p>/)?.[1];
     if (timestamp) {
@@ -90,6 +91,18 @@ test('every built page has canonical, reciprocal language links, and a local soc
         dateStyle: 'long', timeZone: 'UTC',
       });
       assert.equal(time?.[2], visibleDate, `${route}: localized manuscript date`);
+      const sourceUrl = `https://github.com/sungeuns/foundation-model-engineering/blob/${revision.commit}/src/pages${route}.mdx`;
+      const links = parseFragment(byline).childNodes.filter(node => node.tagName === 'a');
+      const [sourceLink, citationLink] = links.map(link => Object.fromEntries(link.attrs.map(a => [a.name, a.value])));
+      assert.equal(sourceLink.href, sourceUrl, route);
+      assert.match(citationLink.download, new RegExp(`-${lang}-${revision.commit.slice(0, 12)}\\.ris$`));
+      const prefix = 'data:application/x-research-info-systems;charset=utf-8,';
+      assert.ok(citationLink.href.startsWith(prefix), route);
+      const fields = decodeURIComponent(citationLink.href.slice(prefix.length)).split('\r\n');
+      assert.equal(fields[0], 'TY  - CHAP', route);
+      assert.ok(fields.includes(`LA  - ${lang}`) && fields.includes(`UR  - ${absolute(route)}`), route);
+      assert.ok(fields.includes(`DA  - ${timestamp.slice(0, 10).replaceAll('-', '/')}`), route);
+      assert.ok(fields.some(line => line.startsWith('N1  - ') && line.endsWith(sourceUrl)), route);
     } else {
       assert.equal(byline, undefined, `${route}: no unsupported revision date`);
     }

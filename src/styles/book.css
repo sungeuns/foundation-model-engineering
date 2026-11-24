@@ -190,6 +190,10 @@ header .book-title {
   color: var(--secondary-color);
   font-size: .9rem;
 }
+.manuscript-revision a {
+  color: inherit;
+  text-underline-offset: .18em;
+}
 
 main {
   font-size: 1.125rem;

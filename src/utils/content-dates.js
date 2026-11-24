@@ -10,7 +10,9 @@ export function getContentRevisions(cwd = process.cwd()) {
   }).trim();
   try {
     if (git('rev-parse', '--is-shallow-repository') !== 'false') return revisions;
-    const history = git('log', '--topo-order', '--format=REV:%H:%ct', '--name-only', '--', 'src/pages');
+    // Follow the published branch. A merge can introduce manuscript text that
+    // exists in neither parent, so its diff against the previous edition matters.
+    const history = git('log', '--first-parent', '--diff-merges=first-parent', '--format=REV:%H:%ct', '--name-only', '--', 'src/pages');
     const seen = new Set();
     let revision;
     let order = 0;
@@ -48,10 +50,10 @@ export function getContentRevisions(cwd = process.cwd()) {
 // The static build renders every chapter in one snapshot. A development
 // server can outlive many edits, so it must not serve a cached revision date.
 let buildRevisions;
-export function getManuscriptTimestamp(chapterPath) {
+export function getManuscriptRevision(chapterPath) {
   if (!import.meta.env?.PROD) return;
   buildRevisions ??= getContentRevisions();
-  return buildRevisions.get(`src/pages${chapterPath}.mdx`)?.timestamp;
+  return buildRevisions.get(`src/pages${chapterPath}.mdx`);
 }
 
 // Preserve the sitemap API while RSS retains the full timestamp and identity.

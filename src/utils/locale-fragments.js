@@ -1,4 +1,5 @@
 import { canonicalKvSearch } from '../components/chapter-12/kv-scenario.mjs';
+import { retrievalFragments } from '../components/chapter-14/retrieval-presets.js';
 import { readReleaseScenario } from '../components/chapter-17/release-scenario.js';
 
 // These IDs name the same authored exercise in both translations. Do not infer
@@ -19,6 +20,7 @@ const lessonFragments = {
   '/chapter-5/expert-parallelism': ['expert-dispatch-lab'],
   '/chapter-7/tiny-decoder-lab': ['decoder-copy-trace', 'local-decoder-setup'],
   '/chapter-8/continued-pretraining-and-domain-adaptation': ['token-mixture-example'],
+  '/chapter-9/parameter-efficient-fine-tuning-peft': ['lora-projection-count', 'lora-merge-check'],
   '/chapter-10/dpo': ['reference-relative-example'],
   '/chapter-11/vision-language-bridges': ['visual-token-budget'],
   '/chapter-12/kv-cache-management': ['kv-cache-capacity', 'kv-calculator', 'mixed-request-budget', 'kv-payload-notebook'],
@@ -28,7 +30,7 @@ const lessonFragments = {
   '/chapter-13/ptq-vs-qat': ['quantization-grid-example'],
   '/chapter-13/quantization-methods': ['weighted-rounding-example'],
   '/chapter-14/advanced-retrieval': ['rrf-candidate-cutoff'],
-  '/chapter-14/lexical-to-semantic-search': ['lexical-dense-example'],
+  '/chapter-14/lexical-to-semantic-search': ['lexical-dense-example', ...retrievalFragments],
   '/chapter-14/graphrag-and-ontology': ['graph-evidence-example'],
   '/chapter-14/rag-failure-modes-and-operational-design': ['trace-a-rag-answer'],
   '/chapter-16/decision-models-and-selective-prediction': ['calibration-drift-example'],

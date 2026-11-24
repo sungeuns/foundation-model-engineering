@@ -31,6 +31,16 @@ export const socialCards = {
       alt: 'CPU PyTorch 실습: 작은 디코더로 합성 토큰 복사 과제를 학습하고 인과 마스크, 과거 문맥 제거, 체크포인트 재개를 검증합니다.',
     },
   },
+  '/chapter-8/continued-pretraining-and-domain-adaptation': {
+    en: {
+      image: '/social/token-mixture-en.png',
+      alt: 'Two runs each predict 112,000 tokens. Reading 80 work orders once supplies 32,000 domain tokens (28.6%). Reading the same orders twice supplies 64,000 (57.1%). Replay text supplies the remaining 80,000 and 48,000 tokens respectively.',
+    },
+    ko: {
+      image: '/social/token-mixture-ko.png',
+      alt: '두 학습 모두 예측 대상은 112,000토큰입니다. 정비 기록 80건을 한 번 읽으면 32,000토큰(28.6%), 같은 기록을 두 번 읽으면 64,000토큰(57.1%)이 정비 기록에서 나옵니다. 나머지 80,000토큰과 48,000토큰은 각각 리플레이 문서에서 옵니다.',
+    },
+  },
   '/chapter-11/vision-language-bridges': {
     en: {
       image: '/social/vision-bridge-en.png',

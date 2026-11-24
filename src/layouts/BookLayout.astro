@@ -7,7 +7,8 @@ import { searchDescriptions } from '../data/search-descriptions.js';
 import { socialCards } from '../data/social-cards.js';
 import modelSnapshot from '../data/commercial-model-snapshot.json';
 import { sharedLocaleFragments } from '../utils/locale-fragments.js';
-import { getManuscriptTimestamp } from '../utils/content-dates.js';
+import { getManuscriptRevision } from '../utils/content-dates.js';
+import { chapterCitation } from '../utils/chapter-citation.js';
 import { getBasePath, normalizePathname, stripBasePath, withBasePath, withPagePath } from '../utils/paths.js';
 import 'katex/dist/katex.min.css';
 import '../styles/book.css';
@@ -78,7 +79,13 @@ const toAbsoluteUrl = (pagePath) => {
 const githubUrl = 'https://github.com/sungeuns/foundation-model-engineering';
 const feedPath = withBasePath(isKo ? '/ko/feed.xml' : '/feed.xml', basePath);
 const canonicalUrl = toAbsoluteUrl(currentPath);
-const manuscriptTimestamp = currentSub && getManuscriptTimestamp(currentPath);
+const revision = currentSub && getManuscriptRevision(currentPath);
+const manuscriptTimestamp = revision?.timestamp;
+const manuscriptUrl = revision && `${githubUrl}/blob/${revision.commit}/src/pages${currentPath}.mdx`;
+const citationTitle = Astro.props.headings?.find((heading: MarkdownHeading) => heading.depth === 1)?.text || contentTitle;
+const citation = revision && chapterCitation({
+  title: citationTitle, lang, timestamp: revision.timestamp, canonicalUrl, manuscriptUrl,
+});
 const manuscriptDate = manuscriptTimestamp && new Date(manuscriptTimestamp).toLocaleDateString(
   isKo ? 'ko-KR' : 'en-US', { dateStyle: 'long', timeZone: 'UTC' },
 );
@@ -264,9 +271,15 @@ if (currentIndex !== -1) {
             </ol>
           </nav>
         )}
-        {manuscriptTimestamp && (
+        {revision && (
           <p class="manuscript-revision">
-            {isKo ? '원고 수정일' : 'Manuscript updated'} <time datetime={manuscriptTimestamp}>{manuscriptDate}</time> (UTC)
+            {isKo ? '원고 수정일' : 'Manuscript updated'}{' '}
+            <a href={manuscriptUrl} aria-label={isKo ? `${manuscriptDate} 원고 버전 보기 (GitHub)` : `View the ${manuscriptDate} manuscript revision on GitHub`}>
+              <time datetime={manuscriptTimestamp}>{manuscriptDate}</time>
+            </a> (UTC)
+            {' · '}<a href={citation} download={`foundation-model-engineering-${currentSub.id}-${lang}-${revision.commit.slice(0, 12)}.ris`}>
+              {isKo ? '이 절 인용하기 (RIS)' : 'Cite this chapter (RIS)'}
+            </a>
           </p>
         )}
         {servingGuide.lessons.includes(enTarget) && (

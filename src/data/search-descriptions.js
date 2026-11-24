@@ -391,8 +391,8 @@ export const searchDescriptions = {
     ko: '지도 미세조정의 손실 마스크, 토크나이저 고유 채팅 템플릿, 패킹과 잘림 처리를 이해하고 학습 실행·평가 기준을 살펴봅니다.',
   },
   '/chapter-9/parameter-efficient-fine-tuning-peft': {
-    en: 'Understand LoRA and QLoRA through memory budgets, low-rank updates, adapter merging, base-model compatibility, and release evaluation.',
-    ko: '메모리 예산과 저랭크 업데이트를 통해 LoRA와 QLoRA를 이해하고, 어댑터 병합·베이스 모델 호환성·배포 평가를 살펴봅니다.',
+    en: 'Count LoRA parameters in a rectangular projection. Run a CPU PyTorch merge check, then compare the memory costs of LoRA and QLoRA.',
+    ko: '직사각형 가중치에 LoRA를 적용해 학습할 파라미터 수를 계산합니다. CPU PyTorch로 어댑터 병합을 검증하고 LoRA와 QLoRA의 메모리 비용을 구분합니다.',
   },
   '/chapter-10/dpo': {
     en: 'Calculate Direct Preference Optimization (DPO) loss for two response pairs in Python. Change only the reference model to see why the preference margin can flip sign.',

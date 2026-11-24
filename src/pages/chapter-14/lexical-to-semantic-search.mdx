@@ -34,15 +34,17 @@ A dense retriever learns to map a query and a passage to vectors. Karpukhin et a
 
 Compare four support titles with two scoring rules. **BM25** uses the title terms. **Cosine similarity** uses a small vector whose coordinates count words in three topic dictionaries, in the order wheel, activation and learning. Open the dictionary in the exercise to see every word. A learned retriever would estimate its representation from data. Here the word groups are chosen by hand so you can compute every score.
 
-Start with *flat tire*. No title contains either term, so all four BM25 scores are zero. The topic dictionary maps both query words to the wheel coordinate. Title C, *Patch punctured wheels*, has the same direction, giving a cosine of 1. Try typing *tire activation*. Against C the cosine becomes $2/(\sqrt{2}\times 2)\approx0.707$ because only one of the two query coordinates is shared.
+Which title should win for *activation XJ-992-B*? A and B mention activation, but only B contains the product code. Check both scores below. Each example link reopens that query, including in the other edition. Text you type stays in this tab.
 
 <SearchComparisonVisualizer client:load locale="en" />
 
 ### The Keyword Stronghold: Precision on Specifics
 
-Now select *activation XJ-992-B*. Titles A and B both mention *activation*, and only B contains the code. For a term found in $f$ of $N$ titles, the exercise uses $\mathrm{IDF}(f)=\ln(1+(N-f+0.5)/(f+0.5))$ [[4]](#ref-4). BM25 uses $k_1=1.2$ for term-frequency saturation and $b=0.75$ for length normalization. Each distinct query term contributes once. All titles are three terms long and no title repeats a term, so the usual factor $(k_1+1)\,\mathrm{tf}/(\mathrm{tf}+k_1(1-b+bL/\overline L))$ equals 1 for each match. Here $L$ is title length, $\overline L$ is mean title length and $\mathrm{tf}$ is the term's frequency in that title.
+In the [product-code example](#lexical-product-code), the rare code earns a larger BM25 contribution than the shared word *activation*. For a term found in $f$ of $N$ titles, the exercise uses $\mathrm{IDF}(f)=\ln(1+(N-f+0.5)/(f+0.5))$ [[4]](#ref-4). BM25 uses $k_1=1.2$ for term-frequency saturation and $b=0.75$ for length normalization. Each distinct query term contributes once. All titles are three terms long and no title repeats a term, so the usual factor $(k_1+1)\,\mathrm{tf}/(\mathrm{tf}+k_1(1-b+bL/\overline L))$ equals 1 for each match. Here $L$ is title length, $\overline L$ is mean title length and $\mathrm{tf}$ is the term's frequency in that title.
 
 A scores $\mathrm{IDF}(2)=0.693$ and B adds $\mathrm{IDF}(1)=1.204$ to reach **1.897** (rounded). Their topic vectors are identical, so both cosine scores equal 1. With the code alone, B still matches lexically. The dictionary has no entry for the code, so the query vector has zero length and cosine is undefined. A dash in the table marks that case. Query and title tokens are converted to lowercase, keep internal hyphens, and use no stemming or morphological analysis.
+
+Follow the [*flat tire* example](#lexical-paraphrase) to see the other failure. No title contains either term, so all four BM25 scores are zero. The dictionary gives the query and title C, *Patch punctured wheels*, the same direction, for a cosine of 1. Type *tire activation* and C shares just one of the two query coordinates. Its cosine drops to $2/(\sqrt{2}\times 2)\approx0.707$.
 
 **Reproduce the scores in Python.** The example uses the standard library and the four-title corpus statistics above.
 

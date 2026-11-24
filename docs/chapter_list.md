@@ -76,7 +76,7 @@
 
 * **9.1 Instruction Following:** 모델이 사용자의 의도를 이해하게 만드는 과정.
 * **9.2 Dataset Quality vs Quantity:** 'LIMA' 논문이 시사하는 고품질 데이터의 힘.
-* **9.3 Parameter-Efficient Fine-Tuning (PEFT):** LoRA, DoRA, Prefix Tuning, Adapters.
+* **9.3 Parameter-Efficient Fine-Tuning (PEFT):** 직사각형 가중치의 LoRA 파라미터 수, PyTorch 병합·복원 검증, QLoRA 메모리와 어댑터 배포.
 * **9.4 Prompting, ICL, and Prompt Optimization:** ICL의 최적화 비유, 추론 예산, DSPy/GEPA 탐색과 봉인 평가.
 * **9.5 Synthetic Instructions & Self-Instruct:** 모델을 이용한 고품질 인스트럭션 데이터 생성.
 * **Summary:** 사전 학습된 모델에 '말귀'를 알아먹게 하는 기술과 효율적인 미세 조정 기법을 정리합니다.

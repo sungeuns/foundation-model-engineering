@@ -1,0 +1,27 @@
+.lora-counts {
+  margin: 1.5rem 0;
+  padding: clamp(1rem, 3vw, 1.75rem);
+  background: #f6f8fa;
+  border: 1px solid #d0d7de;
+  border-radius: .65rem;
+  color: #24292f;
+}
+.lora-counts h3 { margin-top: 0; }
+.lora-counts .lora-controls, .lora-counts .lora-matrices {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
+  gap: 1rem;
+  margin: 1rem 0;
+}
+.lora-counts .lora-controls { border: 0; padding: 0; min-width: 0; }
+.lora-counts legend { padding: 0 0 .4rem; font-size: .85rem; color: #404c56; }
+.lora-counts label { display: grid; align-content: start; gap: .35rem; font-weight: 600; }
+.lora-counts select, .lora-counts input { width: 100%; font: inherit; accent-color: #185393; }
+.lora-counts select { padding: .25rem; }
+.lora-counts :is(input, select):focus-visible { outline: 3px solid #1c63a9; outline-offset: 2px; }
+.lora-counts .lora-matrices div { min-width: 0; border-top: 2px solid #99acbe; padding-top: .45rem; }
+.lora-counts dt { font-weight: 600; }
+.lora-counts dd { margin: .2rem 0 0; color: #404c56; font-variant-numeric: tabular-nums; }
+.lora-counts dd strong { display: block; color: #142e49; font-size: 1.12rem; }
+.lora-counts .lora-total { margin: .75rem 0; }
+.lora-counts > p:last-child { margin-bottom: 0; font-size: .9rem; }

@@ -281,3 +281,17 @@ for locale in ['', 'ko/']:
     )
     assert (committed, accepted) == ([0], 0)
 print('EN/KO speculative sampling respects zero-probability tokens and disjoint support')
+
+# Run the published projection and its nonzero update, including both CPU dtypes.
+for locale in ['', 'ko/']:
+    path = ROOT / locale / 'chapter-9/parameter-efficient-fine-tuning-peft.mdx'
+    blocks = re.findall(r'```python\n(.*?)\n```', path.read_text(), re.S)
+    scope = {}
+    exec(compile('\n\n'.join(blocks[:2]), str(path), 'exec'), scope)
+    layer = scope['layer']
+    layer.merge()
+    layer.train()
+    assert layer.merged_weight is None
+    assert all(p.grad is None for p in layer.base.parameters())
+    torch.testing.assert_close(layer(scope['x']), scope['expected'], rtol=0, atol=0)
+print('EN/KO LoRA projection preserves frozen weights, dtype, bias and merge round-trips')

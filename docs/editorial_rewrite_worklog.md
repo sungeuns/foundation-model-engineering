@@ -303,10 +303,10 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 8.2 | `/chapter-8/chinchilla-optimality` | Inspected 2026-11-15 | a5c303a07cd048a5700ec4cf86eeb44387cdcc43775eb4a2c5678f4aed6250d1 | 113d3edaa8047c8e5b5455f712a931429e550d22c1d260be5947dab80f4ef2a6 |
 | 8.3 | `/chapter-8/over-training-vs-optimal-training` | Inspected 2026-11-15 | 0cd59dc676f0efe54f93a85775af740fc13bd689502b3ead940bf61212f2d83c | 21d9ca8bfbe9e711f63a75a24d0760d53ffdd87d8f22954f7ac911f7c0a18248 |
 | 8.4 | `/chapter-8/transfer-learning-and-generalization` | Inspected 2026-11-15 | 6149872f6cc783dadf7e47acf48874d9abc6519c56fc7757b4d90f038decb547 | 0ac5c5ffb3ff08bc0fdf8fdde2e69bf8bdc9e69674d6e97a2b7cc3ee5c286290 |
-| 8.5 | `/chapter-8/continued-pretraining-and-domain-adaptation` | Inspected 2026-11-25 | a05fce7aa246ca02074f01e86a35fc4535a5f81889953eb35dff00a4cd73bc61 | c456d2b4ee41ac376ffd24ba79b8d45f1c95dfccaefffbbb8b7ea4de8de17217 |
+| 8.5 | `/chapter-8/continued-pretraining-and-domain-adaptation` | Inspected 2026-11-25 | 666b13a66fd23fc03b6f5922512297d52db3890b5a98ce45d3b8b400ad3ec87d | ce9fa54564e85f22fd6c5ebd7ab0ff5f1f49435c2139e40d941846e514da786c |
 | 9.1 | `/chapter-9/sft-fundamentals` | Mechanical only | b2dbb035ab6f20f9feb26b00ddd7c7682a87073a963c6c684070bd7c7f1bcfe0 | 862868e98d4f3041ce06b9738bc2fc3ddeb8ab262d21f9248abe5b2831f0fcc2 |
 | 9.2 | `/chapter-9/dataset-quality-vs-quantity` | Mechanical only | c1fbbd7fb05803bfad44ce38dbb967c1be944c928bea80897aa0756dc4ac28d6 | 9818a5430db861e431fa0fc861105c64cd5749eb7661fa4b9bbd7891fc486b13 |
-| 9.3 | `/chapter-9/parameter-efficient-fine-tuning-peft` | Mechanical only | c51b6e408c85486d3438fda48d4165cd1cfc8ae7d251662f0033e80726ddc580 | 5e2052d35216a2a367fd9233ddbe9255b68cbbf1f0edaab5cd9e337f3311c04c |
+| 9.3 | `/chapter-9/parameter-efficient-fine-tuning-peft` | Inspected 2026-11-25 | a0d3642dd64937bb1c238c59bad386af28be354f34bde124a103ecb3085253fa | f5fbe73bc76153d14da56a9a3cae5ed1014f3dfde883a37321fc21c3ef5276dd |
 | 9.4 | `/chapter-9/prompt-engineering-as-sft` | Inspected 2026-11-15 | a0d054e1053d08fb0459c941fc7b54a7935c42315c12fb0534d6adc5978c2f66 | a8eb98f41ea974270f2121a28d2e2478d1b6f34c5682172c52036eaf58e79a61 |
 | 9.5 | `/chapter-9/synthetic-instructions-and-self-instruct` | Mechanical only | ffbd735a54153fd69c5c1a0717da310c2cc58903b0a34fee751f67e9db76ba0e | e2ba9a38024cd3fcaab7c042fb6300bce232e0b4ff9f22ce7698ec3456a93cb3 |
 | 10.1 | `/chapter-10/human-feedback-loop` | Mechanical only | c721f614debefbefa2a90afe0f4dbc41425deb1e332f9ca1fda7ea4349e85668 | 04484c7249da48a808d45b3a79161557f6ddcd14cd3082c6c336097564f45612 |
@@ -331,7 +331,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 13.3 | `/chapter-13/weight-sparsification` | Mechanical only | cef7eea23f21faf8a4719bc13b2f3e28a8743ba0230c67b01438dbac642a6530 | 4d1291c234050b189b7f5c66be305966e3fadd57ef521d171ca9283131987aed |
 | 13.4 | `/chapter-13/knowledge-distillation` | Mechanical only | f184dcb71820a852dee1c7b2d640412cec7cad8a6f765ee912da00daf6b337f0 | 7c19030da7fe737ad78f41f6d09a1aa1107040bbb7cedcf7176b24e5db8dfccb |
 | 13.5 | `/chapter-13/advanced-quantization` | Inspected 2026-11-15 | 27a364583a8df29cdea48119e65184594a4c27ab9f8f22437778a330596d4a3b | b55fe9860d8cf44911a1bf6508787d6c865bfbdf548adff861878ccdf10fd691 |
-| 14.1 | `/chapter-14/lexical-to-semantic-search` | Inspected 2026-11-25 | 619dc7efcda7c610b7e2cc3053a212f23a42f576da035818001b52284e980454 | 0dd39dadd13c776d393203d8eb2d0f1f18fe9055733a965d406d1a1b0b48c21d |
+| 14.1 | `/chapter-14/lexical-to-semantic-search` | Inspected 2026-11-25 | d3cacb52c528e8eb26f4c42e59d97fbe35f837e46c3f7e9937f840ab40af16c5 | 63fb0c225f7f29746b8eae4bd9267edbf0ca9e1101a4191f4d8df07fc911e9b6 |
 | 14.2 | `/chapter-14/vector-indexing-and-db-solutions` | Inspected 2026-11-15 | 9cd80b8fa316923b8db209981294ea15b991ef55851416fb72455a0f12d92783 | 7f9a5d85dde7cb1d91679e64a99760562b8640003062593ded9483faf4af35c4 |
 | 14.3 | `/chapter-14/advanced-retrieval` | Inspected 2026-11-25 | 9d36c4745fed765a1bc1d313e25a34dcff6d3a98454117ed3f068b5011014de5 | 3fd737ee0f924360584f111037eb2eea565eb57df15498251914528cae92396a |
 | 14.4 | `/chapter-14/rag-orchestration` | Inspected 2026-11-15 | c0415652280790508493840235e671903d660547416bc0bf3a73aba796039dd8 | 71eb996863fcf49fa62bc979e9167173c39fec0312811f89ac3095eca414b283 |
@@ -681,3 +681,11 @@ In §17.1, with 10 successful answers out of 20, drawing nine leaves 10 failing 
 Section 7.5 now links to the CPU environment at commit `b6a54ff80e80cbf10d68b15d4419bbae2269ef7e`. The English starter completed all ten code cells in a single anonymous public Binder session with Python 3.12.16 and PyTorch 2.15.0+cpu. Restoring the valid checkpoint reproduced the uninterrupted run. The modified copy was rejected, and the exported result packet passed checksum verification. The Korean starter executed separately in a local kernel. Both translated worked notebooks also rendered their measured outputs with JavaScript disabled.
 
 In sections 4.5 and 17.6, checked GPT-6.2 Astra and Sol access against the launch announcement. The release table now names documented product and API routes and distinguishes the healthcare search configurations from the scored general models. Checked Gemini and Qwen product access against their dated launch posts. Historical rows describe the API access in the source without claiming it was the only way to use a model. The 45 numerical profiles retain the November 24 evaluation snapshot.
+
+### 2026-11-25 reproducible retrieval links and LoRA dimensions
+
+In §14.1, the published exercise link now shows the two activation titles and the scores discussed in the source. Each named query has a bilingual deep link. Checked the scores after reload, browser history navigation and edition switching with and without JavaScript. Custom queries stay in the current page.
+
+In §9.3, used the same factor orientation in the equation, calculator and PyTorch module. For a layer with 4,096 inputs, 1,024 outputs and rank 16, A has 65,536 parameters and B has 16,384. Compared the explicit and merged inference paths after a nonzero update in CPU float32 and float64. Checked that repeated merges do not accumulate the update and that discarding the merged copy preserves the base weights.
+
+In §8.5, ran the published counting script on 140 work-order visits of 400 targets each and 14 replay visits of 4,000 targets each. Both sources contribute 56,000 targets even though they account for different numbers of visits. The bilingual share figures use the same script for the one-pass and two-pass comparison.

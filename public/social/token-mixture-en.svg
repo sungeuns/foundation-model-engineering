@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" xml:lang="en" role="img" aria-labelledby="card-title card-description">
+<title id="card-title">Same 80 work orders, two training runs</title><desc id="card-description">Two runs each predict 112,000 tokens. Reading 80 work orders once supplies 32,000 domain tokens (28.6%). Reading the same orders twice supplies 64,000 (57.1%). Replay text supplies the remaining 80,000 and 48,000 tokens respectively.</desc>
+<rect width="1200" height="630" fill="#f5f2eb"/>
+<g font-family="DejaVu Sans, sans-serif" fill="#192a30">
+<text x="58" y="88" font-size="48" font-weight="700">Same 80 work orders, two training runs</text>
+<text x="60" y="145" font-size="38" fill="#4e5d61">Both runs predict 112,000 tokens.</text>
+<g id="one_pass">
+<text x="60" y="227" font-size="38" font-weight="700">Read each order once</text>
+<text x="1140" y="227" font-size="38" text-anchor="end" fill="#256257" font-weight="700">28.6% from work orders</text>
+<rect x="60" y="245" width="1080" height="59" rx="4" fill="#dbe2df"/>
+<rect x="60" y="245" width="308.57142857142856" height="59" rx="4" fill="#256257"/>
+<text x="214.28571428571428" y="287" font-size="37" fill="white" text-anchor="middle" font-weight="700">32,000</text>
+<text x="754.2857142857142" y="287" font-size="37" text-anchor="middle" font-weight="700">80,000</text>
+</g>
+<g id="repeat_domain">
+<text x="60" y="365" font-size="38" font-weight="700">Read each order twice</text>
+<text x="1140" y="365" font-size="38" text-anchor="end" fill="#256257" font-weight="700">57.1% from work orders</text>
+<rect x="60" y="383" width="1080" height="59" rx="4" fill="#dbe2df"/>
+<rect x="60" y="383" width="617.1428571428571" height="59" rx="4" fill="#256257"/>
+<text x="368.57142857142856" y="425" font-size="37" fill="white" text-anchor="middle" font-weight="700">64,000</text>
+<text x="908.5714285714286" y="425" font-size="37" text-anchor="middle" font-weight="700">48,000</text>
+</g>
+<rect x="60" y="493" width="29" height="29" rx="3" fill="#256257"/>
+<text x="104" y="519" font-size="34" >Work orders</text>
+<rect x="440" y="493" width="29" height="29" rx="3" fill="#dbe2df" stroke="#82918e" stroke-width="2"/>
+<text x="484" y="519" font-size="34" >Replay documents</text>
+<path d="M60 553H1140" stroke="#bbc8c1" stroke-width="2"/>
+<text x="60" y="602" font-size="27" fill="#256257">Foundation Model Engineering · 8.5</text>
+</g></svg>

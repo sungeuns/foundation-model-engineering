@@ -3,9 +3,10 @@
 // Or regenerate one lesson without touching existing previews:
 //   node scripts/generate-lab-social-cards.mjs --only vision-bridge
 // Requires installed project dependencies (sharp) and Noto Sans CJK KR / DejaVu Sans
-// fonts. No network, model call, or external image is used. These are explanatory
-// cards, not plots or screenshots of measured experimental outcomes.
+// fonts. The token-mixture preview also runs the chapter’s Python 3 script.
+// These figures use the published exercises and require no network access.
 import fs from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
@@ -97,6 +98,21 @@ const copy = {
         ['군집 단위 재표집', '유사 사례 사이의 의존성을 보존합니다.'],
       ],
       decisions: ['통과', '재검토', '차단'], gate: '합성 오프라인 평가 기준',
+    },
+  },
+  'token-mixture': {
+    path: '/chapter-8/continued-pretraining-and-domain-adaptation', number: '8.5', render: tokenMixtureSvg,
+    en: {
+      title: 'Same 80 work orders, two training runs',
+      total: 'Both runs predict 112,000 tokens.',
+      passes: ['Read each order once', 'Read each order twice'],
+      share: 'from work orders', domain: 'Work orders', replay: 'Replay documents',
+    },
+    ko: {
+      title: '같은 정비 기록 80건을 한 번 읽을 때와 두 번 읽을 때',
+      total: '두 학습 모두 예측 대상은 112,000토큰입니다.',
+      passes: ['각 기록을 한 번씩', '각 기록을 두 번씩'],
+      share: '정비 기록 비율', domain: '정비 기록', replay: '리플레이 문서',
     },
   },
   'vision-bridge': {
@@ -341,6 +357,44 @@ ${text(c.result, 638, 341, 32, `fill="${muted}"`)}
 <path d="M60 356H1140M60 452H1140M60 548H1140" fill="none" stroke="#bbc8c1" stroke-width="2"/>
 ${rows}
 ${text(ko ? '파운데이션 모델 엔지니어링 · ' + lesson.number : 'Foundation Model Engineering · ' + lesson.number, 60, 601, 25, `fill="${teal}"`)}
+</g></svg>\n`;
+}
+
+function tokenMixtureSvg(lesson, lang, card) {
+  const copy = lesson[lang];
+  const output = execFileSync('python3', [path.join(root, 'public/labs/token_exposure.py')], { encoding: 'utf8' });
+  const records = output.trim().split('\n').slice(1).map(line => {
+    const [run, source, , , targetCount, share] = line.split(',');
+    return { run, source, targets: Number(targetCount), share };
+  });
+  const bars = ['one_pass', 'repeat_domain'].map((run, i) => {
+    const domain = records.find(row => row.run === run && row.source === 'domain');
+    const replay = records.find(row => row.run === run && row.source === 'replay');
+    const width = 1080 * domain.targets / (domain.targets + replay.targets);
+    const y = 245 + i * 138;
+    const summary = lang === 'ko' ? copy.share + ' ' + domain.share + '%' : domain.share + '% ' + copy.share;
+    return `<g id="${run}">
+${text(copy.passes[i], 60, y - 18, 38, 'font-weight="700"')}
+${text(summary, 1140, y - 18, 38, `text-anchor="end" fill="${teal}" font-weight="700"`)}
+<rect x="60" y="${y}" width="1080" height="59" rx="4" fill="#dbe2df"/>
+<rect x="60" y="${y}" width="${width}" height="59" rx="4" fill="${teal}"/>
+${text(domain.targets.toLocaleString('en-US'), 60 + width / 2, y + 42, 37, 'fill="white" text-anchor="middle" font-weight="700"')}
+${text(replay.targets.toLocaleString('en-US'), 60 + (1080 + width) / 2, y + 42, 37, 'text-anchor="middle" font-weight="700"')}
+</g>`;
+  }).join('\n');
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" xml:lang="${lang}" role="img" aria-labelledby="card-title card-description">
+<title id="card-title">${escape(copy.title)}</title><desc id="card-description">${escape(card.alt)}</desc>
+<rect width="1200" height="630" fill="#f5f2eb"/>
+<g font-family="${lang === 'ko' ? 'Noto Sans CJK KR, DejaVu Sans' : 'DejaVu Sans'}, sans-serif" fill="${ink}">
+${text(copy.title, 58, 88, lang === 'ko' ? 47 : 48, 'font-weight="700"')}
+${text(copy.total, 60, 145, 38, `fill="${muted}"`)}
+${bars}
+<rect x="60" y="493" width="29" height="29" rx="3" fill="${teal}"/>
+${text(copy.domain, 104, 519, 34)}
+<rect x="440" y="493" width="29" height="29" rx="3" fill="#dbe2df" stroke="#82918e" stroke-width="2"/>
+${text(copy.replay, 484, 519, 34)}
+<path d="M60 553H1140" stroke="#bbc8c1" stroke-width="2"/>
+${text((lang === 'ko' ? '파운데이션 모델 엔지니어링' : 'Foundation Model Engineering') + ' · ' + lesson.number, 60, 602, 27, `fill="${teal}"`)}
 </g></svg>\n`;
 }
 

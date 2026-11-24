@@ -1,5 +1,7 @@
+export const authorName = { given: 'Seongeun', family: 'So' };
+
 export const site = {
-  author: 'Seongeun So',
+  author: `${authorName.given} ${authorName.family}`,
   url: 'https://sungeuns.github.io',
   titles: {
     en: 'Foundation Model Engineering',

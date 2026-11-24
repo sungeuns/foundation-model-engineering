@@ -80,3 +80,32 @@ test('latest revision identity survives skewed clocks, while future and shallow 
     rmSync(cwd, { recursive: true, force: true });
   }
 });
+
+test('source links identify text introduced by a merge, including edits made during the merge', () => {
+  const cwd = mkdtempSync(join(tmpdir(), 'fme-citation-merge-'));
+  const git = (...args) => execFileSync('git', args, { cwd, stdio: 'pipe', encoding: 'utf8' }).trim();
+  const file = 'src/pages/example.mdx';
+  try {
+    git('init', '-b', 'main');
+    git('config', 'user.name', 'Content Revision Test');
+    git('config', 'user.email', 'test@example.invalid');
+    mkdirSync(join(cwd, 'src/pages'), { recursive: true });
+    writeFileSync(join(cwd, file), 'First edition\n');
+    git('add', '.');
+    git('commit', '-m', 'First edition');
+    git('switch', '-c', 'runtime');
+    writeFileSync(join(cwd, 'runtime.txt'), 'Runtime note\n');
+    git('add', '.');
+    git('commit', '-m', 'Document runtime');
+    git('switch', 'main');
+    git('merge', '--no-commit', '--no-ff', 'runtime');
+    writeFileSync(join(cwd, file), 'Second edition with runtime instructions\n');
+    git('add', file);
+    git('commit', '-m', 'Publish the revised manuscript with the new runtime');
+    const revision = getContentRevisions(cwd).get(file);
+    assert.equal(revision.commit, git('rev-parse', 'HEAD'));
+    assert.equal(git('show', `${revision.commit}:${file}`), 'Second edition with runtime instructions');
+  } finally {
+    rmSync(cwd, { recursive: true, force: true });
+  }
+});

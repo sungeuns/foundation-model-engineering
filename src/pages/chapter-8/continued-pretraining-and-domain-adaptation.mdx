@@ -94,6 +94,10 @@ The repeated token IDs stand in for lengths. Suppose each of 80 distinct work or
 
 In the first schedule, 80% of the documents supply only 32,000 / 112,000 of the targets. In the second, eight fewer long replay documents make room for another pass through the same 80 work orders. Domain exposure doubles while the number of distinct work orders stays at 80. The arithmetic tells you what the model sees. Whether the second pass improves performance on a *new* work order is an evaluation question.
 
+What would it take to give each source exactly half the targets? One replay document supplies as many targets as ten work orders. At this budget, **140 work-order visits and 14 replay visits** give 56,000 targets from each source. That is about 90.9% work-order visits. Recalculate the ratio if truncation or masking changes the targets per visit.
+
+<a href={withBasePath('/social/token-mixture-en.png')} download="token-mixture-en.png">Download the two schedules as a figure (PNG)</a>.
+
 <a href={withBasePath('/labs/token_exposure.py')} download="token_exposure.py">Download the Python token-count audit</a>. Run `python token_exposure.py` to reproduce both schedules, or `python token_exposure.py visits.csv` for your own run. Each CSV row records one document visit as `source,document_id,loss_targets`. Count targets after truncation, packing, and label masking. If a visit spans several blocks, add their contributions and reuse the document ID on later visits.
 
 The immutable dataset manifest should contain source URI or internal ID, license or consent basis, collection time, PII/secrets policy, deletion lineage, language/domain labels, filter versions, exact and near-duplicate cluster IDs, shard checksum, tokenizer hash, and sample ID. Perform deduplication and semantic clustering **before** assigning train/dev/test splits. Quarantine public benchmarks, private release prompts, rubrics, semantic neighbors, and synthetic variants from both domain and replay corpora.
