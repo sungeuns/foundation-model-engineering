@@ -1,0 +1,66 @@
+---
+const ko = Astro.props.lang === 'ko';
+const source = ['a', 'red', 'fox', 'PAD'];
+const target = ['START', 'red'];
+const validKeys = source.map(token => token !== 'PAD');
+const tables = [
+  {
+    title: ko ? '인코더 자기 어텐션' : 'Encoder self-attention',
+    keys: source, queries: source.slice(0, -1),
+    rows: source.slice(0, -1).map(() => validKeys),
+  },
+  {
+    title: ko ? '디코더 자기 어텐션' : 'Decoder self-attention',
+    keys: target, queries: target,
+    rows: target.map((_, i) => target.map((_, j) => j <= i)),
+  },
+  {
+    title: ko ? '교차 어텐션' : 'Cross-attention',
+    keys: source, queries: target,
+    rows: target.map(() => validKeys),
+  },
+];
+---
+
+<figure class="attention-masks">
+  <p>{ko ? '행은 질의, 열은 키입니다. 1은 참조 가능, 0은 차단을 뜻합니다.' : 'Rows are queries and columns are keys. A 1 allows access. A 0 blocks it.'}</p>
+  <div class="mask-tables">
+    {tables.map(({ title, keys, queries, rows }) => (
+      <table>
+        <caption>{title}</caption>
+        <thead>
+          <tr>
+            <th scope="col">{ko ? '질의' : 'Query'}</th>
+            {keys.map(key => <th scope="col">{key}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {queries.map((query, i) => (
+            <tr>
+              <th scope="row">{query}</th>
+              {rows[i].map(visible => <td class={visible ? 'visible' : 'blocked'}>{visible ? '1' : '0'}</td>)}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    ))}
+  </div>
+  <figcaption>
+    {ko ? '원래 트랜스포머의 어텐션 규칙을 예문에 적용해 만든 표입니다. 인코더에서 사용하지 않는 PAD 질의 행은 생략했습니다.' : 'Tables calculated for this example from the original Transformer’s attention rules. The unused encoder PAD query row is omitted.'}
+    {' '}<a href="#ref-4">[4]</a>
+  </figcaption>
+</figure>
+
+<style>
+  .attention-masks { margin: 1.4rem 0; }
+  .attention-masks p { margin: 0 0 .8rem; }
+  .mask-tables { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); gap: 1rem; align-items: start; }
+  .attention-masks table { display: table; width: 100%; border-collapse: collapse; table-layout: fixed; margin: 0; box-shadow: none; border-radius: 0; }
+  .attention-masks caption { text-align: left; padding: 0 0 .35rem; color: #213742; font-size: 1rem; font-weight: 650; }
+  .attention-masks :is(th, td) { padding: .3rem .05rem; text-align: center; border: 1px solid #b9c6cc; font-size: .875rem; font-variant-numeric: tabular-nums; }
+  .attention-masks th { background: #edf1f3; color: #243a46; }
+  .attention-masks tr > :first-child { width: 3.1rem; }
+  .attention-masks .visible { background: #cce9dd; color: #194938; font-weight: 650; }
+  .attention-masks .blocked { background: #fbfaf7; color: #48545c; }
+  .attention-masks figcaption { margin-top: .75rem; color: #465565; font-size: .9rem; }
+</style>

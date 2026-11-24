@@ -28,9 +28,9 @@
 
 ### **Chapter 4: LLM Architectures & Paradigms**
 
-* **4.1 Encoder-only (BERT-style):** Masked Language Modeling과 분류 작업 최적화.
+* **4.1 Encoder-only (BERT-style):** 한 문장에서 어텐션이 읽는 위치와 MLM이 채점하는 위치를 구분하고 두 손실값을 PyTorch로 검산.
 * **4.2 Decoder-only (GPT-style):** Causal Language Modeling과 차세대 생성 모델의 주류화.
-* **4.3 Encoder-Decoder (T5/BART):** Seq2Seq 작업의 강자와 Unified Framework.
+* **4.3 Encoder-Decoder (T5/BART):** 원문과 출력의 길이가 다를 때 교차 어텐션의 마스크를 검산하고 T5와 BART의 복원 정답을 비교.
 * **4.4 Hybrid & Prefix LM:** 다양한 입출력 구조에 따른 학습 효율성 비교.
 * **4.5 다양한 LLM 아키텍처와 최신 트렌드:** Hybrid/linear/sparse attention, MLA, MoE, MTP와 Causal Encoder-Decoder·조건부 메모리를 공개 범위와 함께 비교.
 * **Summary:** 목적에 따라 달라지는 모델 아키텍처의 유형과 생성형 AI에서 Decoder-only가 널리 쓰이는 이유를 분석합니다.
@@ -156,7 +156,7 @@
 * **17.3 Elo Rating & Leaderboards:** LMSYS Chatbot Arena와 같은 인간 선호도 기반 평가.
 * **17.4 Contamination Issues:** 학습 데이터에 평가셋이 포함되는 문제와 검증법.
 * **17.5 Production Evaluation and Release Gates:** offline eval, judge calibration, canary, rollout gate를 실제 릴리스 프로세스와 연결하는 방법.
-* **17.6 Commercial and Open-weight Model Benchmarks:** 2026-11-24에 확인한 GLM-5.4·GPT-6.2 Astra/Sol·Gemini 4 Neon/Carbon 등을 포함한 43개 프로필. 공개 상태·평가 설정·가격 가정을 구분하고 Python 예제로 긴 문맥 비용을 계산.
+* **17.6 Commercial and Open-weight Model Benchmarks:** 2026-11-24에 확인한 GLM-5.4·GPT-6.2 Astra/Sol·Gemini 4 Neon/Carbon 등을 포함한 45개 프로필. 공개 상태·평가 설정·가격 가정을 구분하고 Python 예제로 긴 문맥 비용을 계산.
 * **17.7 Experimental Design and Uncertainty:** 실험 설계와 불확실성.
 * **Summary:** 모델의 '진짜 실력'을 객관적이고 공정하게 측정하기 위한 평가 방법론과 지표를 다룹니다.
 

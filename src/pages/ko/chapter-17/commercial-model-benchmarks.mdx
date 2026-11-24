@@ -89,7 +89,9 @@ Z.ai가 11월 23일 공개한 **GLM-5.4** 는 Coding Plan, ZCode, Z.ai Chat에�
 
 OpenAI는 11월 17일 **GPT-6.2 Astra와 Sol** 을 공개했다. 둘 다 텍스트·이미지를 입력받아 텍스트를 출력하는 호스팅 모델이며, 가중치와 내부 아키텍처 상세는 제공하지 않는다. API는 문맥 창 1,050,000 토큰, 최대 입력 922,000 토큰, 최대 출력 128,000 토큰을 구분한다. 도구 호출에는 Responses를 사용하며 추론 강도 `none`은 거부한다. 기존 에이전트를 이전할 때 확인해야 할 조건이다 [[8]](#ref-8) [[9]](#ref-9) [[10]](#ref-10).
 
-11월 23일 OpenAI는 Plus·Pro·Business·Enterprise 이용자에게 **ChatGPT 채팅 탭** 에 맞춘 GPT-6.2를 순차 배포하기 시작했다. 시스템 카드에서는 이 버전을 “GPT-6.2 (November 23)”이라고 부른다. 고객지원팀이 채팅 탭에서 더 나은 답변을 얻었다면 API로 만든 상담 서비스에서도 같은 결과를 기대할 수 있을까? 채팅 릴리스 노트에는 대응하는 API 체크포인트가 명시돼 있지 않다. 채팅을 실행한 날짜와 요금제, 사용한 도구를 기록하고, 같은 상담 사례를 서비스에 배포할 API 모델 ID와 추론 강도로 다시 평가해야 한다. 표의 Astra와 Sol 점수는 각 API 평가 프로필에서 측정한 값이다. [[115]](#ref-115) [[116]](#ref-116)
+11월 23일 OpenAI는 Plus·Pro·Business·Enterprise 이용자에게 **ChatGPT 채팅 탭** 에 맞춘 GPT-6.2를 순차 배포하기 시작했다. 시스템 카드에서는 이 버전을 “GPT-6.2 (November 23)”이라고 부른다. [[115]](#ref-115) [[116]](#ref-116)
+
+11월 24일 OpenAI는 이 요금제의 최신 채팅 모델을 API에서 호출할 수 있도록 `chat-latest`를 갱신했다. 모델 카드에는 이 별칭만 나와 있고, 특정 버전을 고정할 수 있는 날짜별 스냅샷 ID는 없다. 고객지원팀이 오늘 어려운 문의를 시험한 뒤 다음 달에 같은 별칭을 호출하면 다른 버전이 응답할 수 있다. 비교하려면 원래 문의와 실행 날짜, 도구 설정, 당시 답변을 함께 보관한다. 배포 전에는 실제 서비스에서 쓸 API 모델 ID와 추론 강도로 같은 문의를 다시 평가한다. 위 표의 Astra와 Sol 점수는 각각 표에 적힌 API 설정에서 측정한 값이다. [[8]](#ref-8) [[123]](#ref-123)
 
 차트의 Max 추론 프로필만 보고 지연 시간에 민감한 서비스의 적정 추론 강도를 정할 수는 없다. 실제로 운영할 추론 강도와 서비스 등급에서 비교해야 한다. 아래 비용 예제는 기본 토큰 단가를 정확히 옮겼더라도 비용 계산이 틀릴 수 있는 이유를 보여준다.
 
@@ -297,3 +299,4 @@ Sol 요청 두 건에 입력 544,000토큰과 과금 대상 출력 20,000토큰�
 120. <a id="ref-120"></a>[Tencent가 11월 20일 공개한 가중치 리비전의 파일](https://huggingface.co/tencent/Hy4/tree/c10c0de5b6f850703fb0a90e65d1c32b558b9167).
 121. <a id="ref-121"></a>[Artificial Analysis의 Tencent Hy4 평가 프로필](https://artificialanalysis.ai/models/tencent-hy4).
 122. <a id="ref-122"></a>[Tencent Hy 라이선스 10조](https://huggingface.co/tencent/Hy4/blob/c10c0de5b6f850703fb0a90e65d1c32b558b9167/LICENSE).
+123. <a id="ref-123"></a>[OpenAI의 Chat Latest 모델 카드와 API 스냅샷 목록](https://developers.openai.com/api/docs/models/chat-latest).

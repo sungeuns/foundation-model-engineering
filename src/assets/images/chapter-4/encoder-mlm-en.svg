@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="278" viewBox="0 0 360 278" xml:lang="en" role="img" aria-labelledby="mlm-title mlm-description">
+<title id="mlm-title">One query at “bank”</title><desc id="mlm-description">The query at bank reads the input keys the, [MASK], bank and flooded with weights 1/8, 2/8, 1/8 and 4/8. The padding key has zero weight. Only [MASK] and bank are scored in the loss, against river and bank respectively.</desc>
+<rect width="360" height="278" fill="white"/>
+<g font-family="system-ui, Noto Sans CJK KR, sans-serif" fill="#1e3533">
+ <text x="15" y="27" font-weight="700" font-size="20">One query at “bank”</text>
+ <g font-size="15" font-weight="600"><text x="15" y="57">Input key</text><text x="115" y="57">Attention weight</text><text x="266" y="57">MLM target</text></g>
+ <path d="M12 65h336" stroke="#7a928b"/>
+ <g font-family="ui-monospace, monospace" font-size="17"><g><path d="M12 99h336" stroke="#d2dcd9"/>
+  <text x="16" y="87">the</text>
+  <rect x="116" y="75" width="80" height="12" rx="2" fill="#e7efed"/>
+  <rect x="116" y="75" width="10" height="12" rx="2" fill="#24645b"/>
+  <text x="209" y="87">1/8</text>
+  <text x="271" y="87">—</text></g>
+<g><path d="M12 133h336" stroke="#d2dcd9"/>
+  <text x="16" y="121">[MASK]</text>
+  <rect x="116" y="109" width="80" height="12" rx="2" fill="#e7efed"/>
+  <rect x="116" y="109" width="20" height="12" rx="2" fill="#24645b"/>
+  <text x="209" y="121">2/8</text>
+  <text x="271" y="121">river</text></g>
+<g><path d="M12 167h336" stroke="#d2dcd9"/>
+  <text x="16" y="155">bank</text>
+  <rect x="116" y="143" width="80" height="12" rx="2" fill="#e7efed"/>
+  <rect x="116" y="143" width="10" height="12" rx="2" fill="#24645b"/>
+  <text x="209" y="155">1/8</text>
+  <text x="271" y="155">bank</text></g>
+<g><path d="M12 201h336" stroke="#d2dcd9"/>
+  <text x="16" y="189">flooded</text>
+  <rect x="116" y="177" width="80" height="12" rx="2" fill="#e7efed"/>
+  <rect x="116" y="177" width="40" height="12" rx="2" fill="#24645b"/>
+  <text x="209" y="189">4/8</text>
+  <text x="271" y="189">—</text></g>
+<g><path d="M12 235h336" stroke="#d2dcd9"/>
+  <text x="16" y="223">[PAD]</text>
+  <rect x="116" y="211" width="80" height="12" rx="2" fill="#e7efed"/>
+  <rect x="116" y="211" width="0" height="12" rx="2" fill="#24645b"/>
+  <text x="209" y="223">0</text>
+  <text x="271" y="223">—</text></g></g>
+ <text x="14" y="262" font-size="13">A dash means this position contributes no MLM loss.</text>
+</g></svg>

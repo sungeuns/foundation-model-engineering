@@ -4,185 +4,104 @@ title: "4.3 Encoder-Decoder (T5/BART)"
 lang: "en"
 ---
 
+import EncoderDecoderMasks from '../../components/chapter-4/EncoderDecoderMasks.astro';
+import CrossAttentionExample from '../../components/chapter-4/CrossAttentionExample.astro';
+
 # 4.3 Encoder-Decoder (T5/BART)
 
-The **Encoder-Decoder** architecture, also known as Seq2Seq, is the original Transformer design introduced in *Attention Is All You Need*. It splits the job in two: an **Encoder** reads and organizes the input, and a **Decoder** turns that representation into an output sequence.
+An editor wants to shorten the caption `a red fox` to `red fox`. When the model produces its first word, can it already read `fox`? Yes, on the **source** side. On the **target** side, it has only the start token. An encoder-decoder Transformer keeps these two sequences separate. The encoder reads the source once. At each output step, the decoder reads the target prefix and uses **cross-attention** to consult the encoder's representations. [[4]](#ref-4)
 
-There is a simple reason this design remains important even in the age of decoder-only LLMs. Some tasks do not feel like open-ended continuation. They feel like careful transformation: translate this sentence, summarize this article, rewrite this paragraph, convert this structure into another one. Encoder-decoder models were built for exactly that style of work.
+<a id="the-metaphor-the-translator-and-the-scribe"></a>
+<a id="the-architecture-bridging-two-worlds"></a>
+<a id="cross-attention-example"></a>
 
-So while general-purpose assistants shifted toward decoder-only models, encoder-decoder systems remain a strong fit whenever the input sequence itself must be modeled precisely before generation begins.
+## Reading the source while writing the target
 
----
+Treat each word as one token for this example. The batch has four source slots, `a red fox PAD`. During training, the two decoder inputs are `START red` and their labels are `red fox`. `START` stands for the model's decoder-start token. We stop after the second word. An end-of-sequence prediction would need one more row.
 
-## The Metaphor: The Translator and The Scribe
+The original Transformer applies self-attention and then a feed-forward network within **each encoder block**. Within **each decoder block**, it applies causal self-attention, cross-attention to the final encoder states, then a feed-forward network. The tables show which keys a query can read at each kind of attention. [[4]](#ref-4)
 
-Imagine a process of translating a book from French to English:
+<EncoderDecoderMasks lang="en" />
 
-1.  **The Encoder (The French Expert):** Reads the entire French sentence, understands the context, and creates a detailed mental map of the meaning.
-2.  **The Decoder (The English Scribe):** Takes the mental map from the encoder and starts writing the English sentence, word by word, ensuring it flows naturally in English while staying true to the original meaning.
+Read the `START` row twice. Its decoder self-attention can see only `START`, so it cannot copy the target label `red`. Its cross-attention can read all three source words, including the source word `red`. The source caption will also be present at inference. The next decoder row can read both `START` and the supplied target word `red` to predict `fox`. At inference the decoder feeds back its generated word. For the one-sequence versions of these rules, see [the encoder mask in §4.1](/chapter-4/encoder-only/#mlm-target-example) and [the shifted labels in §4.2](/chapter-4/decoder-only/#shifted-target-example).
 
-This division of labor is the essence of the Encoder-Decoder architecture.
+<a id="core-mechanism-cross-attention"></a>
 
----
+## Why the cross-attention scores have two rows and four columns
 
-## The Architecture: Bridging Two Worlds
+In one decoder block, take queries $Q$ from its target states after causal self-attention. Project keys $K$ and values $V$ from the final encoder states. For one head of key dimension $d_k$, the rows of the result are weighted sums of source values. [[4]](#ref-4)
 
-The defining feature of this architecture is the interaction between the Encoder and the Decoder, mediated by **Cross-Attention**.
+$$
+A=\operatorname{softmax}_{\text{source}}\!\left(QK^{\mathsf T}/\sqrt{d_k}+M\right),\qquad O=AV.
+$$
 
-1.  **Encoder**: Uses **Bidirectional Self-Attention** to process the input.
-2.  **Decoder**: Uses **Causal Self-Attention** to generate the output autoregressively.
-3.  **Cross-Attention**: The Decoder attends to the Encoder's output, allowing it to focus on relevant parts of the input sequence while generating each output token.
+Here $M$ adds zero to a valid source score and $-\infty$ to a padding score. For $T$ target input positions and $S$ padded source slots, both $A$ and the broadcast mask have effective shape $T\times S$ per head. In the example $T=2$, $S=4$. Each row sums to one over the three valid source slots. Two rows with the same visibility can assign very different weights.
 
-<div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', margin: '20px 0' }}>
+<a id="pytorch-implementation-cross-attention"></a>
 
-<div style={{ maxWidth: '800px', width: '100%' }}>
-![Encoder-Decoder Architecture](../../assets/images/chapter-4/encoder_decoder_attention_pattern.png)
-</div>
+## Test the padding mask by changing one value
 
-<em style={{ marginTop: '10px', color: '#7f8c8d' }}>Source: AI-generated illustration</em>
+The CPU example below starts at the projected queries, keys and values. It uses one batch item, one head, one feature and at least one valid source key. It omits learned projections, residual connections, dropout, batching across examples and the training loop. PyTorch's scaled dot-product attention accepts a Boolean mask in which `True` allows a key. A single source-mask row broadcasts over both decoder queries. [[5]](#ref-5)
 
-</div>
+<CrossAttentionExample lang="en" />
 
----
+Run `python cross_attention.py`. The first query is zero, so its three valid keys have equal weight and return $(3+6+12)/3=7$. For the second query the three unnormalized weights are $1,2,4$, so it returns $(3+12+48)/7=9$. Changing the padding value from 90 to 900 leaves both outputs unchanged. Raising the source value for `fox` by 21 adds 7 to the first output and 12 to the second. A triangular cross-attention mask would incorrectly hide `fox` from the first query and fail this test.
 
-## Core Mechanism: Cross-Attention
+<a id="evolution-and-key-models"></a>
+<a id="1-t5-text-to-text-transfer-transformer"></a>
+<a id="2-bart"></a>
+<a id="comparison-of-encoder-decoder-models"></a>
 
-In Cross-Attention, the Queries ($Q$) come from the Decoder's previous layer, while the Keys ($K$) and Values ($V$) come from the Encoder's output.
+## What should the decoder reconstruct in T5 and BART?
 
-$$\text{Cross-Attention}(Q_{dec}, K_{enc}, V_{enc}) = \text{softmax}\left(\frac{Q_{dec}K_{enc}^T}{\sqrt{d_k}}\right)V_{enc}$$
+Take the sentence `the red fox crossed the bridge` and hide `red fox`. Both models can put the damaged sentence in the encoder. Write down the target labels before choosing your loss. These are illustrative word-level strings, with tokenizer-specific start and end IDs omitted.
 
-This allows the decoder to "look back" at the input sentence at every step of generation.
+| Training objective | Encoder input | Decoder target |
+| --- | --- | --- |
+| T5 span corruption | `the <X> crossed the bridge` | `<X> red fox <Y>` |
+| BART text infilling | `the <mask> crossed the bridge` | `the red fox crossed the bridge` |
 
----
+In the T5 paper's example format, each missing span gets a distinct **sentinel**, and a final sentinel closes the target. The decoder predicts the missing spans and their delimiters. The same text-to-text interface can later emit a class label such as `positive`. Raffel et al. used the C4 corpus for pre-training. [[1]](#ref-1)
 
-## Evolution and Key Models
+BART reconstructs the entire original sequence, including unchanged words. Lewis et al. tested several ways to damage a document. Their large model combined span infilling with sentence permutation. If a data pipeline gives both models the full original sentence as labels, it has silently changed the T5 objective. [[2]](#ref-2)
 
-### 1. T5 (Text-to-Text Transfer Transformer)
-**Motivation**: Before T5, different NLP tasks often required different model architectures or output heads (e.g., a classification head for sentiment analysis, a span prediction head for question answering). Google aimed to simplify this by proposing a unified framework where *every* NLP task is cast as a text-to-text problem, allowing the same model, loss function, and hyperparameters to be used across all tasks [[1]](#ref-1).
+<a id="a-recent-counterexample-causal-encoder-decoder"></a>
 
-**Key Innovations**:
-- **Text-to-Text Framework**: Framed tasks like translation, summarization, and even classification as mapping input text to output text. For example, to classify sentiment, the input is "sentiment: This movie is great" and the model outputs the text "positive".
-- **Span Corruption Pre-training**: Instead of masking single tokens, T5 masked contiguous spans of tokens and trained the model to reconstruct them, which proved more effective for sequence-to-sequence tasks.
-- **Scale and Data**: Introduced the C4 dataset (Colossal Clean Crawled Corpus), pushing the boundaries of scale for Encoder-Decoder models.
+## A causal encoder changes the visibility rule
 
----
-
-### 2. BART
-**Motivation**: Facebook's BART was designed to combine the strengths of bidirectional encoders (like BERT) and autoregressive decoders (like GPT). The goal was to create a model that could excel at both understanding tasks and generation tasks, particularly those requiring sequence-to-sequence mapping like summarization and translation.
-
-**Key Innovations**:
-- **Denoising Autoencoder**: Trained by corrupting text with various noising operations and learning to reconstruct the original text [[2]](#ref-2). Operations included token masking, token deletion, text infilling, sentence permutation, and document rotation.
-- **Autoregressive Decoder**: Unlike BERT which predicts masked tokens in parallel, BART's decoder generates the output autoregressively, making it much better suited for generating fluent text.
-
----
-
-### Comparison of Encoder-Decoder Models
-
-| Feature | T5 | BART |
-| :--- | :--- | :--- |
-| **Core Idea** | Text-to-Text Unification | Denoising Autoencoder |
-| **Pre-training Task** | Span Corruption (Fill in the blanks) | Multiple Denoising Tasks (Masking, Deletion, etc.) |
-| **Architecture** | Standard Encoder-Decoder | Encoder + Autoregressive Decoder |
-| **Best Suited For** | Multitask Learning, Translation | Summarization, Comprehension |
-
-
----
-
-## PyTorch Implementation: Cross-Attention
-
-Here is a simplified implementation of the Cross-Attention mechanism.
-
-```python
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-
-class CrossAttention(nn.Module):
-    def __init__(self, d_model, num_heads):
-        super().__init__()
-        self.num_heads = num_heads
-        self.d_k = d_model // num_heads
-        
-        self.q_linear = nn.Linear(d_model, d_model)
-        self.k_linear = nn.Linear(d_model, d_model)
-        self.v_linear = nn.Linear(d_model, d_model)
-        self.out_linear = nn.Linear(d_model, d_model)
-
-    def forward(self, decoder_hidden, encoder_output):
-        # decoder_hidden: (batch, seq_len_dec, d_model)
-        # encoder_output: (batch, seq_len_enc, d_model)
-        batch_size = decoder_hidden.size(0)
-        
-        # Project and split into heads
-        Q = self.q_linear(decoder_hidden).view(batch_size, -1, self.num_heads, self.d_k).transpose(1, 2)
-        K = self.k_linear(encoder_output).view(batch_size, -1, self.num_heads, self.d_k).transpose(1, 2)
-        V = self.v_linear(encoder_output).view(batch_size, -1, self.num_heads, self.d_k).transpose(1, 2)
-        
-        # Scaled dot-product attention
-        scores = torch.matmul(Q, K.transpose(-2, -1)) / (self.d_k ** 0.5)
-        weights = F.softmax(scores, dim=-1)
-        
-        # Output
-        output = torch.matmul(weights, V)
-        output = output.transpose(1, 2).contiguous().view(batch_size, -1, self.num_heads * self.d_k)
-        
-        return self.out_linear(output), weights
-
-# Example usage
-d_model = 64
-num_heads = 4
-seq_len_dec = 5
-seq_len_enc = 10
-batch_size = 2
-
-decoder_hidden = torch.randn(batch_size, seq_len_dec, d_model)
-encoder_output = torch.randn(batch_size, seq_len_enc, d_model)
-
-cross_attn = CrossAttention(d_model, num_heads)
-output, weights = cross_attn(decoder_hidden, encoder_output)
-
-print("Output Shape:", output.shape) # Expected: (2, 5, 64)
-print("Attention Weights Shape:", weights.shape) # Expected: (2, 4, 5, 10)
-```
-
----
-
-## A Recent Counterexample: Causal Encoder-Decoder
-
-**As of 2026-10-13**, DeepSeek V4.1 Flash's published CED architecture shows why “autoregressive” and “decoder-only” are different labels [[3]](#ref-3). Its encoder is causal, unlike the bidirectional source encoder described for T5/BART above. The report gives different active-parameter budgets for prefill and decode. The lesson is to inspect attention masks and phase-specific execution rather than conclude that every encoder-decoder is a translation-style model or that every text generator executes a decoder-only stack. See [Chapter 4.5](/chapter-4/various-llm-architectures) for the cache implications.
-
+**Research snapshot as of 2026-11-25.** DeepSeek's V4.1-Flash report describes a causal encoder-decoder (CED). For global attention, the lower half of the stack is a causal encoder. Upper layers derive global cache entries from the midpoint states through layer-specific projections. The report distinguishes work during prompt prefill and token decoding. A later prompt token therefore cannot change an earlier causal encoder state. In the T5/BART-style source encoder above, an earlier source word *can* read a later one. The distinction matters when deciding which representations can be reused as a prompt grows. [[3]](#ref-3) [Chapter 4.5](/chapter-4/various-llm-architectures)
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: What is the main structural difference between Cross-Attention and Self-Attention?</summary>
-*In Self-Attention, the Queries, Keys, and Values all come from the same sequence. In Cross-Attention, the Queries come from the decoder (representing the target sequence being generated), while the Keys and Values come from the encoder (representing the source sequence being processed).*
+<summary>Quiz 1: Why can the first target row read the source word “red” while predicting the target word “red”?</summary>
+*The source is available at inference. On the target side, only the start token is visible in that row. Feeding the target label itself into the first decoder row would leak the answer.*
 </details>
 
 <details>
-<summary>Quiz 2: Why are Encoder-Decoder models traditionally preferred for machine translation over Decoder-only models?</summary>
-*Because translation requires a full understanding of the source sentence before generating the target sentence. The encoder can create a rich, bidirectional representation of the source, and the decoder can then generate the translation while attending to this representation via cross-attention.*
+<summary>Quiz 2: Why does a batch with two target inputs and four source slots need a rectangular cross-attention mask?</summary>
+*Each query belongs to a target input and each key belongs to a source slot. Both target queries may read all three real source words. A target-side triangular mask would wrongly hide later source words.*
 </details>
 
 <details>
-<summary>Quiz 3: How does T5 frame classification tasks (like sentiment analysis) as a text-to-text problem?</summary>
-*T5 takes the text to be classified as input (e.g., "sentiment: This movie is great") and is trained to output the text label directly (e.g., "positive" or "negative") rather than a class index. This unifies all tasks into a single format.*
+<summary>Quiz 3: A padding-value change leaves the output unchanged. Why also change a real source value?</summary>
+*A broken computation that ignores every source value could also pass the padding test. In this fixture changing the final real value shifts both outputs by known, different amounts.*
 </details>
 
 <details>
-<summary>Quiz 4: What is the purpose of the "denoising" objective in BART?</summary>
-*The denoising objective forces the model to recover original text from corrupted input. This teaches the model to understand the structure and semantics of language deeply, making it better at generating coherent text during fine-tuning for tasks like summarization.*
+<summary>Quiz 4: After hiding “red fox,” which model has a training label for the unchanged word “crossed”?</summary>
+*BART reconstructs the full original sentence. The T5 span-corruption target contains only the hidden span and its sentinel delimiters.*
 </details>
 
 <details>
-<summary>Quiz 5: Why did Decoder-only models eventually become more popular than Encoder-Decoder models for general-purpose LLMs?</summary>
-*Decoder-only models are simpler to scale, require less complex infrastructure for serving, and exhibited powerful emergent abilities like in-context learning, which made them highly effective as general-purpose assistants without task-specific fine-tuning.*
+<summary>Quiz 5: Can the first source state from a T5-style encoder be reused unchanged after extending its source?</summary>
+*It can attend to the new source token, so extending the source can change that state. A strictly causal encoder keeps its earlier positions independent of appended tokens.*
 </details>
-
----
 
 ## References
 
-1. <a id="ref-1"></a>Raffel, C., et al. (2019). *Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer*. [arXiv:1910.10683](https://arxiv.org/abs/1910.10683).
-2. <a id="ref-2"></a>Lewis, M., et al. (2019). *BART: Denoising Sequence-to-Sequence Pre-training for Natural Language Generation, Translation, and Comprehension*. [arXiv:1910.13461](https://arxiv.org/abs/1910.13461).
-3. <a id="ref-3"></a>DeepSeek-AI. (2026). DeepSeek-V4.1-Flash technical report. [Source](https://arxiv.org/abs/2609.19969).
+1. <a id="ref-1"></a>Raffel, C., et al. (2020). *Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer*. [Paper, Figure 2](https://arxiv.org/html/1910.10683).
+2. <a id="ref-2"></a>Lewis, M., et al. (2020). *BART: Denoising Sequence-to-Sequence Pre-training for Natural Language Generation, Translation, and Comprehension*. [ACL Anthology](https://aclanthology.org/2020.acl-main.703/).
+3. <a id="ref-3"></a>DeepSeek-AI. (2026). *DeepSeek-V4.1-Flash: Pushing the Limits of KV Cache Compression*. [Technical report](https://arxiv.org/abs/2609.19969).
+4. <a id="ref-4"></a>Vaswani, A., et al. (2017). *Attention Is All You Need*. [Paper, §3](https://arxiv.org/html/1706.03762).
+5. <a id="ref-5"></a>PyTorch. [Scaled dot-product attention, PyTorch 2.15](https://docs.pytorch.org/docs/2.15/generated/torch.nn.functional.scaled_dot_product_attention.html).

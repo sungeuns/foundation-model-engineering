@@ -278,9 +278,9 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 3.3 | `/chapter-3/position-encoding-strategy` | Inspected 2026-11-15 | 63c3645268727e12760f56b1748a44bbac8afd1c7f66f9d49329e76e39130fb8 | 17d34127b63e936f20ca9f2440fa2aed52e5291548cf18a9dcf8b4f3fdf7463e |
 | 3.4 | `/chapter-3/layer-normalization-residuals` | Inspected 2026-11-15 | d9c2b8dbee0ba9d5c365d0395014e3e9d6fe06e7f58387401fd6ae625584825f | 7571b6552563c1bc6c771e9a1cb3acc1163645b179e7bb7e6a3dc2769e2cfe5e |
 | 3.5 | `/chapter-3/complexity-analysis` | Inspected 2026-11-15 | 528f765af0e658c5d7116b5d3651be5a3ec6496b5651970285143831e0344b2c | d5da6dea75982e92dc97033508aacd582e677911caa2afbfb61f1356fbf12537 |
-| 4.1 | `/chapter-4/encoder-only` | Mechanical only | 0c3d099ec9bb466a4cc1a22bd17ff1608388e3ac87ea1da233382efe081e63cd | a594d06325d22f53605f35a62a4e7031f6ef626832e2e8ea43d0352e496e7ea5 |
+| 4.1 | `/chapter-4/encoder-only` | Inspected 2026-11-25 | d1ead46157733149700b6dbe04d9b4b762b926993bb8fbd5656077c6183979a9 | 20c6167fe0147b402577fea44ad27b8267f000770e267848e558f60acc6969cf |
 | 4.2 | `/chapter-4/decoder-only` | Inspected 2026-11-25 | 566f11bdb11a6760f26ac9639bd0922af4ad46077497b6332ca7d4647a090e8b | 7a42e67720a62c01c9801e20b6ef5523aa9f6fb0fe3b60cdb074afb20dc23897 |
-| 4.3 | `/chapter-4/encoder-decoder` | Mechanical only | c0372544843683d2e7b80936ba33fd4c343a4b6850c40844ae59ccc34362f918 | 58320112ec9f19b8f62065ae1a140df644263abfdce47911ee04fda8ea0ff5d0 |
+| 4.3 | `/chapter-4/encoder-decoder` | Inspected 2026-11-25 | a81d35a1f33c94b446e07b1a1c911d1288c7936c2231803a570350bdf7ff76ae | 124605867b0725c421d411857fa79b4d56f1a39a0f1c02d401f7c82686e5128a |
 | 4.4 | `/chapter-4/hybrid-prefix-lm` | Inspected 2026-11-25 | 6edb93ff3d69526c5abd2108193b487cc82eb60c9c9887033237a77e72052127 | 59715e846873b8af91b74291aa803ff3047a646a79042af60da4b04a3dccef60 |
 | 4.5 | `/chapter-4/various-llm-architectures` | Inspected 2026-11-24 | 028ebccee02c3a1b30297a6c43b9ed91806975ff737f33e8a5ccd5ea26f26a30 | 5d9fb05bb56198c702831691a20832099bac533ece95857c22101dfb884863a8 |
 | 5.1 | `/chapter-5/sparse-vs-dense-models` | Inspected 2026-11-25 | 01f8735ffcc52bb919dfea3402cb6fbdb0313849c20a83c447820f04e5bb6c08 | 7908d7d81bd30342d4223623ac332bf1d17f91a47e55e1deb8ba8d3ee2b88c37 |
@@ -354,7 +354,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 17.3 | `/chapter-17/elo-rating-and-leaderboards` | Inspected 2026-11-15 | 14f931df5e4641c576c1763d446b2c663d1f282abf438767e5a330d49b31a9b9 | 1e78f5819e5452372109f72327dad0f7831b3b9ce66750000c9378a906744c30 |
 | 17.4 | `/chapter-17/contamination-issues` | Mechanical only | 38a0cad52c7504804a57a8cc2deed94a3ac2fe68f7648809261abad1cf6b4fa5 | ad7b87426dcdde29f69a6921696a462359e7681d7d3b5ee5c11f3d80ec0a71c7 |
 | 17.5 | `/chapter-17/production-evaluation-and-release-gates` | Mechanical only | 60ddb6057d61fb19bdcbbed9bdb165b892e506e549dbe2b985e976bab1ef60f4 | 25e04ba235e259243c4df62f67886f8ae54283189fc0e32334e31f2e2a1d582e |
-| 17.6 | `/chapter-17/commercial-model-benchmarks` | Inspected 2026-11-25 | 48a826465c1ec483f43c1ebdf0a5f7a7a77a581287fc7ac478621f885716869d | ff430c9ebfa914e0f2508ee6f51ce4efed099d192bedbba7267a3d596591f0e5 |
+| 17.6 | `/chapter-17/commercial-model-benchmarks` | Inspected 2026-11-25 | 4a49828c17446fd693ac686fc8ff5511adde668d5bd79ad3a5c0d385889e7bd4 | 81b1ffabb6d28b33cd31188c769502570b14c35d6f3611eb6b421c48b4611b2f |
 | 17.7 | `/chapter-17/experimental-design-and-uncertainty` | Inspected 2026-11-25 | 15572b32598a7c488cd3930fe29d3dd54f54ebd5521257817788e039253cdf1d | 00b4ea5b58d4ec986eee7b8d4ed7fbb61749c27a0c9c1c77aced73a4d86f14b1 |
 | 18.1 | `/chapter-18/red-teaming` | Mechanical only | fa815b07490b4a1039a2e91d2c98e9f1f212d6479f534afa5f09020cc8f93598 | 5aa628372d20829e842ce6b3fad0133fee7c40e63c345e76f0b823b351df6f59 |
 | 18.2 | `/chapter-18/jailbreaking-and-defense` | Mechanical only | caff93966e1d1a925120d696bf37a09fa46cc63cd9378c818ac9f1d489348afd | 165303014a71dfa4ec8e28c0ac7f38712f5d97fbcd551510aa5539cb33c33ac1 |
@@ -633,3 +633,9 @@ Both editions of 4.2 follow the three shifted targets in one four-token sequence
 ### 2026-11-25 training exposure and serving cross-references
 
 Inspection of both 8.5 manuscripts covered the service-ticket diagnosis, the meaning of a counted loss target, and two different sampling schedules with the same 112,000 targets. The inline examples and downloadable CSV auditor reproduce the same token shares. The 12.1 and 12.3 manuscripts reviewed earlier that day now link directly to the relevant block table, speculative decoding lesson and disaggregated serving section. Verification of these link-only edits covered the URLs, destination anchors and language in both editions.
+
+### 2026-11-25 encoder attention and training targets
+
+In 4.1, both editions distinguish the keys attended to by one query from the positions scored by the MLM loss. The two PyTorch reductions reproduce 1.040 and 0.693 nats. Review of 4.3 covered the three attention masks, the different reconstruction targets in T5 and BART, and the scope of the DeepSeek causal encoder description. With the two-query CPU fixture, changing a padding value leaves both outputs unchanged. Increasing the last real source value by 21 raises them by 7 and 12. Existing heading links are retained in both editions.
+
+The 17.6 product note was checked against OpenAI’s November 24 API changelog and the Chat Latest model card. The rolling API alias can change between evaluations. The profile table retains the Astra and Sol evaluation settings.

@@ -161,6 +161,23 @@ test('home notebook download links save the localized notebook file', () => {
   }
 });
 
+test('the two homepages and the six collected lessons link to their serving EPUB', () => {
+  const collected = new Set(['kv-cache-management', 'continuous-batching', 'serving-policies-slos-and-fallbacks']);
+  for (const route of routes) {
+    const lang = route.startsWith('/ko') ? 'ko' : 'en';
+    const lesson = route.replace(/^\/ko(?=\/|$)/, '').match(/^\/chapter-12\/([^/]+)$/)?.[1];
+    const home = route === '/' || route === '/ko';
+    const html = readFileSync(`${outputDir}${route === '/' ? '' : route}/index.html`, 'utf8');
+    const epubLinks = [...html.matchAll(/<a\b[^>]*href="([^"]+\.epub)"[^>]*>/g)].filter(match => match[1].includes('/llm-serving-'));
+    assert.equal(epubLinks.length, home || collected.has(lesson) ? 1 : 0, route);
+    if (!epubLinks.length) continue;
+    const [link] = epubLinks;
+    assert.equal(link[1], `https://github.com/sungeuns/foundation-model-engineering/releases/download/serving-guide-2026-11/llm-serving-${lang}.epub`, route);
+    assert.ok(link[0].includes('type="application/epub+zip"'), route);
+    if (!home) assert.ok(link.index < html.indexOf('<main'), `${route}: keep self-downloads outside exported lesson text`);
+  }
+});
+
 test('the book and README open the same worked KV budget in each edition', () => {
   for (const edition of ['', '/ko']) {
     const html = readFileSync(`${outputDir}${edition}/index.html`, 'utf8');

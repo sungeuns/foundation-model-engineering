@@ -287,16 +287,16 @@ export const searchDescriptions = {
     ko: 'Transformer의 연산량과 메모리 복잡도를 분석하고 시퀀스 모델별 비용을 비교하며, 어텐션의 제곱 증가를 시각화로 확인합니다.',
   },
   '/chapter-4/encoder-only': {
-    en: 'Explore BERT-style encoder-only models: bidirectional attention, masked language modeling, representation learning, and an MLM head example.',
-    ko: 'BERT 계열 인코더 전용 모델의 양방향 어텐션, 마스킹 언어 모델링과 표현 학습을 살펴보고 MLM 헤드 예제를 이해합니다.',
+    en: 'Why can BERT score a word it never masked? Trace one attention row, compare two masked language modeling losses in PyTorch, and see how padding affects each calculation.',
+    ko: 'BERT는 왜 그대로 둔 단어까지 채점할까요? 한 문장에서 어텐션에 보이는 단어와 예측할 단어를 짚고, PyTorch로 두 손실값을 계산합니다.',
   },
   '/chapter-4/decoder-only': {
     en: 'Follow three next-token predictions in a GPT-style decoder. Check the shifted labels and causal mask in PyTorch, then compare prompt prefill with token-by-token decoding.',
     ko: 'GPT 계열 디코더는 한 문장에서 다음 토큰을 어떻게 학습할까요? 세 위치의 정답과 인과 마스크를 PyTorch로 확인하고, 프롬프트 처리와 토큰 생성의 계산 차이를 살펴봅니다.',
   },
   '/chapter-4/encoder-decoder': {
-    en: 'Understand T5- and BART-style encoder-decoder models, how cross-attention connects input and output, and the corresponding PyTorch mechanism.',
-    ko: 'T5·BART 계열 인코더-디코더 모델과 입력·출력을 연결하는 교차 어텐션을 이해하고, 해당 메커니즘의 PyTorch 예제를 살펴봅니다.',
+    en: 'Trace two decoder queries across four source positions. Test padding in PyTorch cross-attention, then write the different training targets for T5 and BART.',
+    ko: '디코더가 첫 단어를 쓸 때 원문을 어디까지 읽을 수 있을까요? 2행 4열 교차 어텐션을 PyTorch로 검산하고, 같은 문장에서 T5와 BART의 학습 정답을 비교합니다.',
   },
   '/chapter-4/hybrid-prefix-lm': {
     en: 'Build a seven-token prefix LM mask in PyTorch. Trace which tokens can see one another and test for future-token leakage with scaled dot-product attention.',

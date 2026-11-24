@@ -10,3 +10,16 @@ export const site = {
     ko: 'CPU로 작은 디코더를 학습하고, RAG 답변의 근거를 추적하고, 모델을 배포해도 될지 평가해 보세요. 학습·서빙·평가를 실습으로 익히는 무료 한영 교재입니다.',
   },
 };
+
+const servingGuideRelease = 'https://github.com/sungeuns/foundation-model-engineering/releases/download/serving-guide-2026-11';
+export const servingGuide = {
+  lessons: [
+    '/chapter-12/kv-cache-management',
+    '/chapter-12/continuous-batching',
+    '/chapter-12/serving-policies-slos-and-fallbacks',
+  ],
+  downloads: {
+    en: `${servingGuideRelease}/llm-serving-en.epub`,
+    ko: `${servingGuideRelease}/llm-serving-ko.epub`,
+  },
+};

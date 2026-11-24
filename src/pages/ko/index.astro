@@ -5,6 +5,7 @@ import BookLayout from '../../layouts/BookLayout.astro';
 
 import modelSnapshot from '../../data/commercial-model-snapshot.json';
 import { chapters } from '../../data/chapters.js';
+import { servingGuide } from '../../data/site.js';
 import { withBasePath, withPagePath } from '../../utils/paths.js';
 
 const getPath = (p) => `/ko${p}`;
@@ -25,7 +26,7 @@ const getPath = (p) => `/ko${p}`;
   <p>앞선 토큰을 가리면 디코더는 반복되는 기호열을 어디까지 복사할 수 있을까요? <a href={withPagePath('/ko/chapter-7/tiny-decoder-lab') + '#decoder-copy-trace'}>토큰별 예측 기록</a>을 먼저 읽고 <a href="https://colab.research.google.com/github/sungeuns/foundation-model-engineering/blob/main/public/labs/tiny-decoder-lab-ko.ipynb">Colab에서 실행</a>하거나 <a href={withBasePath('/labs/tiny-decoder-lab-ko.ipynb')} download="tiny-decoder-lab-ko.ipynb">Jupyter 노트북을 내려받으세요</a>. 데이터는 코드로 생성합니다. Colab에서 실행하려면 Google 로그인이 필요합니다.</p>
 
   <h2>이 책에 관하여</h2>
-  <p>오프라인에서 읽으려면 <a href="https://github.com/sungeuns/foundation-model-engineering/releases/download/serving-guide-2026-11/llm-serving-ko.epub">서빙 세 절을 모은 전자책(EPUB)</a>을 내려받으세요. KV 메모리와 요청 스케줄링, 스트리밍 지연을 다룹니다.</p>
+  <p>오프라인에서 읽으려면 <a href={servingGuide.downloads.ko} type="application/epub+zip">서빙 세 절을 모은 전자책(EPUB)</a>을 내려받으세요. KV 메모리와 요청 스케줄링, 스트리밍 지연을 다룹니다.</p>
   <p>Seongeun So가 AI의 도움을 받아 집필한 독립 교재입니다. <a href="#book-contents">전체 {chapters.reduce((n, chapter) => n + chapter.subs.length, 0)}개 절</a>을 둘러보거나 <a href="https://github.com/sungeuns/foundation-model-engineering">GitHub에서 책을 저장</a>할 수 있습니다. 예제가 설명과 다르게 동작하면 해당 장과 재현 조건을 적어 <a href="https://github.com/sungeuns/foundation-model-engineering/issues/new/choose">수정을 요청해 주세요</a>.</p>
   <p class="last-update">최근 업데이트 <time datetime="2026-11-25">2026-11-25</time></p>
 

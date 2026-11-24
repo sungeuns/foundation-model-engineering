@@ -39,7 +39,9 @@ test('shared exercise IDs belong to the same authored content in both translatio
   }
   for (const [route, id] of [
     ['/chapter-3/self-attention-mathematics', 'attention-weight-example'],
+    ['/chapter-4/encoder-only', 'mlm-target-example'],
     ['/chapter-4/decoder-only', 'shifted-target-example'],
+    ['/chapter-4/encoder-decoder', 'cross-attention-example'],
     ['/chapter-4/hybrid-prefix-lm', 'prefix-mask-test'],
     ['/chapter-7/tiny-decoder-lab', 'decoder-copy-trace'],
     ['/chapter-7/tiny-decoder-lab', 'local-decoder-setup'],
