@@ -5,6 +5,8 @@ export function setupContentsSearch(sidebar: HTMLElement, closeDrawer: () => voi
   const status = sidebar.querySelector<HTMLElement>('#searchStatus')!;
   const panel = sidebar.querySelector<HTMLElement>('#sectionResults')!;
   const list = panel.querySelector('ul')!;
+  const contents = sidebar.querySelector<HTMLElement>('#contentsLinks')!;
+  const currentChapter = contents.querySelector<HTMLElement>('a[aria-current="page"]');
   const groups = [...sidebar.querySelectorAll<HTMLElement>('.chapter-group')].map(group => ({
     group,
     links: [...group.querySelectorAll<HTMLAnchorElement>('li a')].map(link => ({
@@ -72,6 +74,16 @@ export function setupContentsSearch(sidebar: HTMLElement, closeDrawer: () => voi
     }
   }
 
+  function positionChapterList(query: string) {
+    if (query || !currentChapter) {
+      contents.scrollTop = 0;
+      return;
+    }
+    const link = currentChapter.getBoundingClientRect();
+    const view = contents.getBoundingClientRect();
+    contents.scrollTop += link.top - view.top - (contents.clientHeight - link.height) / 2;
+  }
+
   function search() {
     const query = input.value.trim();
     const termSets = searchPhrases(query).map(phrase => phrase.split(' '));
@@ -88,10 +100,12 @@ export function setupContentsSearch(sidebar: HTMLElement, closeDrawer: () => voi
     }
     if (query && !index && !loading) void loadIndex();
     renderSections();
+    positionChapterList(query);
   }
 
   input.addEventListener('input', search);
   sidebar.querySelector<HTMLElement>('#contentsSearch')!.hidden = false;
+  positionChapterList(input.value.trim());
   // Some browsers restore the field on Back, including from their page cache.
   window.addEventListener('pageshow', () => { if (input.value.trim()) search(); });
 

@@ -275,7 +275,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 2.4 | `/chapter-2/cnns-for-nlp` | Inspected 2026-11-25 | 3ea1f3cff839b4a390d8a98af7bf540f1367736bdb09d50869c6a05ba369437c | a44815cf317e2f8a2e4068d1a8584eafc24a81e5c85c4d7e5a09f8ff5c481aa6 |
 | 3.1 | `/chapter-3/self-attention-mathematics` | Inspected 2026-11-25 | ef9cc6c406b93e84902c0080009a02e8b3c9a64b29a016ab10752ce974e49229 | 999ed01fb864abf45042c9ad3ccef4122d307affa4cd1420e85dcc19c1646d82 |
 | 3.2 | `/chapter-3/multi-head-attention` | Inspected 2026-11-25 | bc5026a7ec1b9aa4d5bc4589f7f6011630bc877efcb8d179954ee0560d8a705f | 4316a26ed2c414ccdb0c4f4ad6642d98286b9350748fd362920a1d183cac8b68 |
-| 3.3 | `/chapter-3/position-encoding-strategy` | Inspected 2026-11-15 | 63c3645268727e12760f56b1748a44bbac8afd1c7f66f9d49329e76e39130fb8 | 17d34127b63e936f20ca9f2440fa2aed52e5291548cf18a9dcf8b4f3fdf7463e |
+| 3.3 | `/chapter-3/position-encoding-strategy` | Inspected 2026-11-25 | fde9e5daa7404ba9c213feaeac0bb80b8e6342ba2164885a911cb7e98ee4a1ef | 37d4d640ad0c9f5edbda4657a564c77931db24b6a455b646ab77eec260bfc51e |
 | 3.4 | `/chapter-3/layer-normalization-residuals` | Inspected 2026-11-25 | a3587f46c53f4796ac71f768e9561130af2c053e394f20d83a1d8f12a6841487 | a69ef3c4fc27e17f5313847ce8003f1b3acb57db1b99557a5354f904818065ba |
 | 3.5 | `/chapter-3/complexity-analysis` | Inspected 2026-11-15 | 528f765af0e658c5d7116b5d3651be5a3ec6496b5651970285143831e0344b2c | d5da6dea75982e92dc97033508aacd582e677911caa2afbfb61f1356fbf12537 |
 | 4.1 | `/chapter-4/encoder-only` | Inspected 2026-11-25 | d1ead46157733149700b6dbe04d9b4b762b926993bb8fbd5656077c6183979a9 | 20c6167fe0147b402577fea44ad27b8267f000770e267848e558f60acc6969cf |
@@ -331,9 +331,9 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 13.3 | `/chapter-13/weight-sparsification` | Mechanical only | cef7eea23f21faf8a4719bc13b2f3e28a8743ba0230c67b01438dbac642a6530 | 4d1291c234050b189b7f5c66be305966e3fadd57ef521d171ca9283131987aed |
 | 13.4 | `/chapter-13/knowledge-distillation` | Mechanical only | f184dcb71820a852dee1c7b2d640412cec7cad8a6f765ee912da00daf6b337f0 | 7c19030da7fe737ad78f41f6d09a1aa1107040bbb7cedcf7176b24e5db8dfccb |
 | 13.5 | `/chapter-13/advanced-quantization` | Inspected 2026-11-15 | 27a364583a8df29cdea48119e65184594a4c27ab9f8f22437778a330596d4a3b | b55fe9860d8cf44911a1bf6508787d6c865bfbdf548adff861878ccdf10fd691 |
-| 14.1 | `/chapter-14/lexical-to-semantic-search` | Inspected 2026-11-15 | 14b58e7aaf9ebe7914bbdc7dcb6de1b48eee71d893d20e58039dce184d55b9cd | 80983723429f788bbd719d8ac7ce5235fa89888ad9bd39aaf7ade613b32f7bb5 |
+| 14.1 | `/chapter-14/lexical-to-semantic-search` | Inspected 2026-11-25 | 619dc7efcda7c610b7e2cc3053a212f23a42f576da035818001b52284e980454 | 0dd39dadd13c776d393203d8eb2d0f1f18fe9055733a965d406d1a1b0b48c21d |
 | 14.2 | `/chapter-14/vector-indexing-and-db-solutions` | Inspected 2026-11-15 | 9cd80b8fa316923b8db209981294ea15b991ef55851416fb72455a0f12d92783 | 7f9a5d85dde7cb1d91679e64a99760562b8640003062593ded9483faf4af35c4 |
-| 14.3 | `/chapter-14/advanced-retrieval` | Inspected 2026-11-25 | f5261364645a4ac9935949094a48fd98f3884e66cbf40b675070b068874ebdce | 05784d2936ca643a04d71799ea2d33822708e1d77457ebf4c577293e47f95fb2 |
+| 14.3 | `/chapter-14/advanced-retrieval` | Inspected 2026-11-25 | 9d36c4745fed765a1bc1d313e25a34dcff6d3a98454117ed3f068b5011014de5 | 3fd737ee0f924360584f111037eb2eea565eb57df15498251914528cae92396a |
 | 14.4 | `/chapter-14/rag-orchestration` | Inspected 2026-11-15 | c0415652280790508493840235e671903d660547416bc0bf3a73aba796039dd8 | 71eb996863fcf49fa62bc979e9167173c39fec0312811f89ac3095eca414b283 |
 | 14.5 | `/chapter-14/graphrag-and-ontology` | Inspected 2026-11-25 | 1d56da922b530c30f04507318a0384f06ab78fde769574a20d96de1d2777026e | 0a9106cf60adb75afe3e3dd465c6c642b79fe2153b696ad812a7cc9e745cb780 |
 | 14.6 | `/chapter-14/rag-failure-modes-and-operational-design` | Inspected 2026-11-25 | c72856114d2cb84479aafdc3b30c627c29b5aef1166e94797f37f2694fdf81ac | 8087cbcf0189649a93b9ae5cd534eebce28cb31bbfdeed8359f7cd5d1d4583f5 |
@@ -355,7 +355,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 17.4 | `/chapter-17/contamination-issues` | Mechanical only | 38a0cad52c7504804a57a8cc2deed94a3ac2fe68f7648809261abad1cf6b4fa5 | ad7b87426dcdde29f69a6921696a462359e7681d7d3b5ee5c11f3d80ec0a71c7 |
 | 17.5 | `/chapter-17/production-evaluation-and-release-gates` | Inspected 2026-11-25 | d2917516ef75c2ede2cd4db285a221090b09f181104e7112bd388f427ecc5298 | cb7d670ce7898fe43516e3cc8a38e295b6e24bba8e3a65c7579c61f3e03b9fb3 |
 | 17.6 | `/chapter-17/commercial-model-benchmarks` | Inspected 2026-11-25 | 4324c5452ff272c53a0aefbf090cc4be191837e1397dc7e6ea9151a7e027738c | c176b072443536badcd5a17bf25f6fa73877c2a39d98b8902019834de0fd54f8 |
-| 17.7 | `/chapter-17/experimental-design-and-uncertainty` | Inspected 2026-11-25 | 15572b32598a7c488cd3930fe29d3dd54f54ebd5521257817788e039253cdf1d | 00b4ea5b58d4ec986eee7b8d4ed7fbb61749c27a0c9c1c77aced73a4d86f14b1 |
+| 17.7 | `/chapter-17/experimental-design-and-uncertainty` | Inspected 2026-11-25 | a49f4705d53ea21959540b6d9cbaade29cdd63310712a6f8e2d67eb9288746cc | 8040249564bacddeebe7eda07ece30695e580990c258f0393284df9e3d07735f |
 | 18.1 | `/chapter-18/red-teaming` | Mechanical only | fa815b07490b4a1039a2e91d2c98e9f1f212d6479f534afa5f09020cc8f93598 | 5aa628372d20829e842ce6b3fad0133fee7c40e63c345e76f0b823b351df6f59 |
 | 18.2 | `/chapter-18/jailbreaking-and-defense` | Mechanical only | caff93966e1d1a925120d696bf37a09fa46cc63cd9378c818ac9f1d489348afd | 165303014a71dfa4ec8e28c0ac7f38712f5d97fbcd551510aa5539cb33c33ac1 |
 | 18.3 | `/chapter-18/hallucination-detection` | Mechanical only | d3a1ee8ab17c7b845363483dd7b3112556523b0df6d833116a334717d79bdea3 | e00f30c37d36caa4f654de8a6ac61a682be8526e6be2245f2d1235f53787be8c |
@@ -665,3 +665,7 @@ In 12.1, both notebook editions use the same pinned checkpoint, tokenizer and ex
 Recalculated the two source weights and context vector in §2.3. At the first decoder step, the additive score assigns fox 0.6363 of the weight. The dot product gives it 0.2689 with the same states. In §2.4, moving *not* changes the maximum activation from 2 to 1 and leaves two windows tied. On CPU, the length-aware classifier excludes windows that touch right padding in mixed-length batches.
 
 Checked the Ling-3.2-air checkpoint configuration and linked both homepages and READMEs directly to the 262,144-token answer in §17.6. Compared Artificial Analysis's versioned Terminal-Bench results and documented the v5.0.2 grading changes beside the archived v5.0.1 table.
+
+### 2026-11-25 positional coordinates, retrieval rankings and release scenarios
+
+Checked the 320 sinusoidal pairs in §3.3 against float64 PyTorch, including the signed offset in the RoPE example and the last sine coordinate at an odd width. In §14.1 the exact activation code separates two BM25 scores (0.693 and 1.897) whose hand-authored topic vectors tie. A bare code produces an undefined cosine. In §14.3, both editions link to the executable fusion example at the step immediately before document C receives its second reciprocal-rank contribution. In §17.7 the links in the opening comparison identify the target-improvement and retention-regression fixtures individually.

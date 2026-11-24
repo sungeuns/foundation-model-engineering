@@ -8,270 +8,161 @@ import PeVisualizer from '../../components/chapter-3/PeVisualizer';
 
 # 3.3 Position Encoding Strategy
 
-Since the Transformer architecture contains no recurrence and no convolution, it has no notion of word order. To give the model a sense of position, we must inject information about the relative or absolute position of the tokens in the sequence. This is where **Positional Encoding** comes in.
+Use the same three tokens in two orders, `dogs chase cats` and `cats chase dogs`. In an encoder with full self-attention, no positional inputs and no mask, swapping *dogs* and *cats* swaps their output vectors. The middle word *chase* gets exactly the same output in both sentences. That is a problem if the task is to decide who is doing the chasing.
 
----
+<a id="motivation-the-bag-of-words-problem"></a>
+<a id="1-rnns-recurrent-neural-networks-natural-order"></a>
+<a id="2-cnns-convolutional-neural-networks-local-order"></a>
+<a id="3-transformers-self-attention-permutation-equivariance"></a>
+<a id="the-metaphor-page-numbers-on-loose-sheets"></a>
+## Where does order enter?
 
-### **Motivation: The Bag-of-Words Problem**
+An RNN changes state after each word, so the second word already sees the first. A convolution assigns separate weights to the left, middle and right positions of its filter. Unmasked self-attention uses the same query, key and value projections at every position. Reordering the rows reorders the pairwise scores and values together. This property is called **permutation equivariance**. A causal mask changes the argument because the set of earlier tokens that each position can read depends on its index.
 
-To understand why we need positional encoding, we must contrast how Transformers process data compared to older sequence models like RNNs and CNNs.
+The original Transformer added a position vector to each token embedding before the first encoder or decoder layer. Put *dogs* at position 0 in one sentence and at position 2 in another, and its input vector changes even though its token embedding stays the same. [[1]](#ref-1)
 
-#### 1. RNNs (Recurrent Neural Networks): Natural Order
-RNNs process tokens sequentially, one by one. The model maintains a hidden state that is updated at each step: $h_t = f(h_{t-1}, x_t)$. Because it processes word A, then word B, then word C, it **naturally inherits a sense of time and order**. It knows that B came after A.
+<a id="the-mathematics-of-sinusoidal-positional-encoding"></a>
+<a id="why-sinusoidal"></a>
+## One clock per dimension pair
 
-#### 2. CNNs (Convolutional Neural Networks): Local Order
-CNNs apply filters to local windows of text (e.g., n-grams). By looking at words in groups of 3 or 5, the model **captures local order** and proximity. It knows which words are adjacent.
+Let $p$ be a zero-based position and $d$ the embedding width. Each pair index $i$ supplies two coordinates, $2i$ and $2i+1$, with the same angular frequency $\omega_i$ in radians per position. For even $d$, the pairs run from $i=0$ through $d/2-1$. [[1]](#ref-1)
 
-#### 3. Transformers (Self-Attention): Permutation Equivariance
-In contrast, Self-Attention processes all tokens in the sequence **simultaneously in parallel**.
-$$Attention(Q, K, V) = softmax\left(\frac{QK^T}{\sqrt{d_k}}\right)V$$
-For unmasked self-attention without position-dependent inputs, there is no index in this formula. If you shuffle the words in the input sentence, the output vectors will be exactly the same, just shuffled in the same way. The model treats the input as a **set of words** (or a bag of words), not a sequence.
-
-<div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', margin: '20px 0' }}>
-<div style={{ maxWidth: '800px', width: '100%' }}>
-![Sequence Models Comparison](../../assets/images/chapter-3/sequence_models_comparison.png)
-</div>
-<em style={{ marginTop: '10px', color: '#7f8c8d' }}>Source: AI-generated illustration</em>
-</div>
-
-*   **The Metaphor:**
-    *   **RNN** is like reading a sentence word-by-word, moving your finger along the line.
-    *   **CNN** is like looking at the sentence through a magnifying glass that shows 3 words at a time.
-    *   **Transformer** is like putting all the words into a blender and looking at the mixture. Without labels, you can't tell which word was first.
-
-To break this symmetry and give the Transformer a sense of order, we must add **Positional Encoding**.
-
----
-
-### **The Metaphor: Page Numbers on Loose Sheets**
-
-Imagine you have a book, but all the pages are torn out and scattered on the floor.
-
-*   If you just read the pages (pure self-attention), you can understand the content of each page, but you won't know the story's order. Is page A before page B?
-*   **Positional Encoding** is like writing a **page number** at the bottom of each sheet before you throw them on the floor. Now, even if they are scattered, you can read the page number and know exactly where that page belongs in the sequence.
-
-In Transformers, we don't just append the number; we add a complex wave pattern to the word embeddings.
-
----
-
-## The Mathematics of Sinusoidal Positional Encoding
-
-The authors of "Attention Is All You Need" [[1]](#ref-1) used sine and cosine functions of different frequencies to generate positional encodings.
-
-For a token at position $pos$ and dimension $i$:
-$$PE_{(pos, 2i)} = \sin\left(\frac{pos}{10000^{2i/d_{model}}}\right)$$
-$$PE_{(pos, 2i+1)} = \cos\left(\frac{pos}{10000^{2i/d_{model}}}\right)$$
-
-<div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', margin: '20px 0' }}>
-
-<div style={{ maxWidth: '600px', width: '100%' }}>
-![Positional Encoding](../../assets/images/chapter-3/positional-encoding.png)
-</div>
-
-<em style={{ marginTop: '10px', color: '#7f8c8d' }}>Source: [The Illustrated Transformer by Jay Alammar](https://jalammar.github.io/illustrated-transformer/)</em>
-
-</div>
-
-Where:
-*   $pos$ is the position in the sequence.
-*   $i$ is the dimension index ($0 \le i < d_{model}/2$).
-*   $d_{model}$ is the dimension of the embedding.
-
-### Why Sinusoidal?
-The authors chose this because they hypothesized it would allow the model to easily learn to attend by **relative positions**, since for any fixed offset $k$, $PE_{pos+k}$ can be represented as a linear function of $PE_{pos}$.
-
-### The Linear Relationship for Relative Positions
-
-Let's look at the mathematical property that allows the model to attend to relative positions.
-For a specific dimension $2i$, the positional encoding is:
-$$PE_{(pos, 2i)} = \sin(\omega_i \cdot pos)$$
-$$PE_{(pos, 2i+1)} = \cos(\omega_i \cdot pos)$$
-where $\omega_i = 1 / 10000^{2i/d_{model}}$.
-
-If we want to find the encoding for position $pos + k$, we can use the trigonometric angle addition formulas:
-$$\sin(\omega_i(pos + k)) = \sin(\omega_i pos)\cos(\omega_i k) + \cos(\omega_i pos)\sin(\omega_i k)$$
-$$\cos(\omega_i(pos + k)) = \cos(\omega_i pos)\cos(\omega_i k) - \sin(\omega_i pos)\sin(\omega_i k)$$
-
-Notice that $\cos(\omega_i k)$ and $\sin(\omega_i k)$ are constants for a fixed offset $k$. Therefore, we can express the encoding at $pos+k$ as a linear combination of the encoding at $pos$:
 $$
-\begin{bmatrix}
-PE_{(pos+k, 2i)} \\
-PE_{(pos+k, 2i+1)}
-\end{bmatrix}
-=
-\begin{bmatrix}
-\cos(\omega_i k) & \sin(\omega_i k) \\
--\sin(\omega_i k) & \cos(\omega_i k)
-\end{bmatrix}
-\begin{bmatrix}
-PE_{(pos, 2i)} \\
-PE_{(pos, 2i+1)}
-\end{bmatrix}
+\omega_i=10000^{-2i/d},\qquad
+PE_{p,2i}=\sin(p\omega_i),\qquad
+PE_{p,2i+1}=\cos(p\omega_i).
 $$
-This linear relationship makes it easy for the model to learn to attend to relative positions, regardless of the absolute position.
 
----
+At position zero, every complete pair is $(0,1)$. Move one position to the right with $d=32$. Pair 0 turns by one radian and becomes approximately $(0.841471,0.540302)$. Pair 8, in dimensions 16 and 17, turns by only $0.01$ radians and becomes $(0.010000,0.999950)$. A single shift changes the fast pair visibly while the slow pair hardly moves.
 
-## Beyond Sinusoidal: Evolution of Position Encodings
-
-While the sinusoidal approach was a brilliant starting point, the field has developed various methods to better capture position information. Here is a comparison of the most prominent techniques:
-
-### 1. Absolute Positional Encodings (Sinusoidal & Learned)
-- **Sinusoidal**: Fixed functions. Theoretically allows extrapolation to longer sequences, but in practice, performance degrades.
-- **Learned**: Treats position as a learnable embedding (like word embeddings). Used in BERT and GPT-2/3. It is simple but cannot extrapolate beyond the maximum sequence length defined during training.
-
-### 2. Relative Positional Encodings
-Instead of giving each token an absolute position, these methods encode the *distance* between tokens.
-- **Shaw et al. (2018)**: Modifies self-attention to include relative position representations in keys and values.
-
-### 3. Rotary and Bias-Based Encodings
-- **RoPE (Rotary Position Embedding)**: Applies a rotation matrix to Query and Key vectors based on their position. It naturally captures relative distance and is used in Llama, Gemma, DeepSeek, Qwen, and many modern LLMs.
-- **ALiBi (Attention with Linear Biases)**: Instead of adding embeddings, it adds a static penalty to attention scores that grows linearly with distance. Its distance bias supports extrapolation experiments, but quality beyond trained lengths still requires validation.
-
-### Comparison Table
-
-| Method | Type | Extrapolation | Learnable? | Used In | Pros | Cons |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Sinusoidal** | Absolute | Limited | No | Original Transformer | No parameters to learn | Fixed, not optimal for all tasks |
-| **Learned** | Absolute | Requires table extension | Yes | BERT, GPT-3 | Adapts to data | Cannot handle longer sequences |
-| **RoPE** | Relative | Requires length-specific validation | No | Llama, Gemma, DeepSeek, Qwen | Captures relative distance well | Complex implementation |
-| **ALiBi** | Relative | Requires length-specific validation | No | BLOOM, MPT | Very simple, great extrapolation | May require fine-tuning for very long |
-
-### Why Sinusoidal Was Chosen (and Why We Moved On)
-The original Transformer used sinusoidal encodings because:
-1.  **No parameters**: It didn't increase model size.
-2.  **Theoretical extrapolation**: The authors hoped it would handle longer sequences.
-
-However, as models grew and sequence lengths became critical (e.g., handling whole books), RoPE and ALiBi provide alternative ways to encode relative position. Extrapolation quality depends on training length, scaling, attention pattern, task and serving implementation.
-
----
-
-## A Closer Look at Rotary Position Embedding (RoPE)
-
-RoPE encodes absolute positions through rotations while making query–key interactions depend on relative displacement [[2]](#ref-2). The mathematical property does not guarantee reliable retrieval or reasoning at arbitrary lengths.
-
-### The Intuition: Rotation in 2D Space
-
-Imagine the representation of a token as a point in a multi-dimensional space. For simplicity, let's look at just 2 dimensions.
-- If we have no position information, the distance and angle between two token vectors are fixed.
-- RoPE injects position by **rotating** these vectors. The angle of rotation is proportional to the token's position in the sequence.
-
-If token A is at position $m$ and token B is at position $n$, RoPE rotates token A by $m\theta$ and token B by $n\theta$.
-When calculating the attention score (dot product) between them, the result depends on the *difference* in their angles, which is $(m-n)\theta$. This perfectly captures the **relative distance** between the tokens!
-
-### The Mathematics of RoPE
-
-RoPE operates on Query ($Q$) and Key ($K$) vectors *after* they are projected, rather than adding to the input embeddings.
-
-For a 2D vector $x = [x_1, x_2]$, RoPE applies a rotation matrix:
-$$RoPE(x, m) = \begin{bmatrix} \cos(m\theta) & -\sin(m\theta) \\ \sin(m\theta) & \cos(m\theta) \end{bmatrix} \begin{bmatrix} x_1 \\ x_2 \end{bmatrix}$$
-
-For a $d$-dimensional vector, we group dimensions into $d/2$ pairs and apply a 2D rotation to each pair with a different frequency $\theta_i = 10000^{-2i/d}$.
-
-The magic happens in the attention score calculation. Let $q_m$ be the query at position $m$ and $k_n$ be the key at position $n$:
-$$(RoPE(q_m, m))^T (RoPE(k_n, n)) = q_m^T R_m^T R_n k_n = q_m^T R_{n-m} k_n$$
-Because $R_m^T R_n = R_{n-m}$, the positional component depends on $n-m$, while the dot product also depends on $q$ and $k$.
-
-### Why RoPE Dominates Modern LLMs (Insights)
-
-1. **Relative positional component:** Position enters through $n-m$, while the score still depends on query and key content.
-2. **No pointwise monotonic decay:** Rotations and frequencies do not make every query–key score decrease monotonically with distance.
-3. **Validated extrapolation:** Frequency scaling changes training/evaluation conditions. Test retrieval, position sensitivity, reasoning and serving memory at each target length; a 4K-trained model does not automatically gain reliable 128K behavior.
-
----
-
-## PyTorch Implementation
-
-Here is how you generate the positional encoding matrix in PyTorch.
-
-```python
-import torch
-import torch.nn as nn
-import math
-
-class PositionalEncoding(nn.Module):
-    def __init__(self, d_model, max_len=5000):
-        super(PositionalEncoding, self).__init__()
-
-        # Create a matrix of shape (max_len, d_model)
-        pe = torch.zeros(max_len, d_model)
-        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
-
-        # Fill sine and cosine values
-        pe[:, 0::2] = torch.sin(position * div_term)
-        pe[:, 1::2] = torch.cos(position * div_term)
-
-        # Add a batch dimension (1, max_len, d_model)
-        pe = pe.unsqueeze(0)
-
-        # Register as buffer (won't be updated by optimizer)
-        self.register_buffer('pe', pe)
-
-    def forward(self, x):
-        # x shape: (batch_size, seq_len, d_model)
-        # Add positional encoding to input embeddings
-        x = x + self.pe[:, :x.size(1)]
-        return x
-
-# Example usage
-d_model = 16
-seq_len = 10
-pe_layer = PositionalEncoding(d_model)
-
-# Simulated input embeddings
-x = torch.randn(1, seq_len, d_model)
-x_encoded = pe_layer(x)
-
-print("Original shape:", x.shape)
-print("Encoded shape:", x_encoded.shape)
-```
-
----
+<a id="positional-encoding-grid"></a>
 
 ## Example: The Encoding Matrix
 
-Visualize the positional encoding matrix. The horizontal axis represents the embedding dimension, and the vertical axis represents the position in the sequence. The wave patterns allow the model to distinguish positions.
+Each row is one position. Each pair of adjacent columns uses sine on the left and cosine on the right. Start at position 1 and switch the frequency pair from 0 to 8. Then set the position to 0 and predict which values will be identical across all 16 pairs. Both controls work with the arrow keys.
 
 <PeVisualizer client:load lang="en" />
 
----
+<a id="the-linear-relationship-for-relative-positions"></a>
+## Moving a fixed number of positions
+
+Can we compute a pair at position $p+k$ from the same pair at $p$? The sine and cosine addition formulas give the following matrix for an offset $k$.
+
+$$
+\begin{bmatrix}
+\sin((p+k)\omega_i)\\ \cos((p+k)\omega_i)
+\end{bmatrix}
+=
+\begin{bmatrix}
+\cos(k\omega_i) & \sin(k\omega_i)\\
+-\sin(k\omega_i) & \cos(k\omega_i)
+\end{bmatrix}
+\begin{bmatrix}
+\sin(p\omega_i)\\ \cos(p\omega_i)
+\end{bmatrix}.
+$$
+
+Once $k$ and the frequency pair are chosen, the matrix stays the same for every starting position. This was one reason the Transformer authors tried sine and cosine features. Their translation experiments found similar results for learned and sinusoidal position embeddings. The formula alone cannot predict how well a trained model will use a longer context. [[1]](#ref-1)
+
+<a id="beyond-sinusoidal-evolution-of-position-encodings"></a>
+<a id="1-absolute-positional-encodings-sinusoidal--learned"></a>
+<a id="2-relative-positional-encodings"></a>
+<a id="3-rotary-and-bias-based-encodings"></a>
+<a id="comparison-table"></a>
+<a id="why-sinusoidal-was-chosen-and-why-we-moved-on"></a>
+## Where four approaches change the computation
+
+| Method | What changes in the model? | What happens at a new position or distance? |
+| --- | --- | --- |
+| Absolute position | Add a learned table row or a fixed sinusoidal vector to the token embedding. | A learned table needs a row for the index. A sinusoid is defined at any index, though an implementation can cache only a finite table. [[1]](#ref-1) |
+| Relative representations | Add learned representations of token displacement to the key and optionally the value. | In Shaw et al., offsets outside the clipping distance share their outermost learned representation. [[3]](#ref-3) |
+| Rotary position embedding (RoPE) | Rotate projected query and key pairs before taking their dot product. | Their relative rotation depends on the signed offset. [[2]](#ref-2) |
+| Attention with Linear Biases (ALiBi) | Apply a head-specific distance penalty to the attention score. | The causal distance penalty continues linearly over longer ranges. The final weight also depends on token content. [[4]](#ref-4) |
+
+<a id="a-closer-look-at-rotary-position-embedding-rope"></a>
+<a id="the-intuition-rotation-in-2d-space"></a>
+<a id="the-mathematics-of-rope"></a>
+<a id="why-rope-dominates-modern-llms-insights"></a>
+## What a rotary attention score measures
+
+Consider one query pair $q$ at position $m$ and one key pair $k$ at position $n$. Write $R_t$ for a rotation by $t\theta$, where $\theta$ is this pair's angular frequency. RoPE rotates both vectors. The two rotations combine inside the dot product. [[2]](#ref-2)
+
+$$
+(R_m q)^\top(R_n k)=q^\top R_m^\top R_n k=q^\top R_{n-m} k .
+$$
+
+Move the query and key together from positions $(2,5)$ to $(9,12)$ while holding their content vectors fixed. Both scores now use $R_3$, so they are equal. Change the key vector and the scores can differ even at the same separation. In a longer deployment, test retrieval or answer quality at the target length and at several evidence positions before extending the serving limit.
+
+## PyTorch Implementation
+
+This CPU example adds a cached position table to floating-point embeddings shaped $[B,S,d]$ for batch size $B$, sequence length $S$ and width $d$. The first token in every row has position 0. For an odd width, the example keeps the final unpaired sine coordinate. The relative-shift identity above applies to complete pairs. Batched decoding with different cache offsets would need explicit per-request positions.
+
+```python
+import math
+import torch
+from torch import nn
+
+class PositionalEncoding(nn.Module):
+    def __init__(self, d_model, max_len=5000):
+        super().__init__()
+        if d_model < 1 or max_len < 1:
+            raise ValueError("d_model and max_len must be positive")
+        position = torch.arange(max_len, dtype=torch.float32)[:, None]
+        even = torch.arange(0, d_model, 2, dtype=torch.float32)
+        angle = position * torch.exp(-math.log(10000.0) * even / d_model)
+        table = torch.zeros(max_len, d_model)
+        table[:, 0::2] = angle.sin()
+        # An odd width has one fewer cosine column.
+        table[:, 1::2] = angle[:, :d_model // 2].cos()
+        self.register_buffer("pe", table.unsqueeze(0))
+
+    def forward(self, x):
+        if x.ndim != 3 or x.size(2) != self.pe.size(2):
+            raise ValueError("expected [batch, positions, d_model]")
+        if x.size(1) > self.pe.size(1):
+            raise ValueError("sequence exceeds max_len")
+        return x + self.pe[:, :x.size(1)].to(dtype=x.dtype)
+
+encoder = PositionalEncoding(32, max_len=20)
+y = encoder(torch.zeros(2, 20, 32))
+torch.testing.assert_close(y[0, 1, :2], torch.tensor([0.841471, 0.540302]))
+torch.testing.assert_close(y[0, 1, 16:18], torch.tensor([0.00999983, 0.999950]))
+odd = PositionalEncoding(3, max_len=2)(torch.zeros(1, 2, 3))
+torch.testing.assert_close(odd[0, 0], torch.tensor([0., 1., 0.]))
+```
+
+The checks reproduce the two pairs from the diagram and exercise an odd-width input. Try increasing $S$ above 20 with this instance. The formula still exists, but this module's saved table has no row for the next token.
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: Why doesn't the Transformer just use the absolute position number (1, 2, 3...) as encoding?</summary>
-*If we just add absolute integers, the values can become very large for long sequences, dominating the word embeddings. Also, the model might not generalize well to sequence lengths longer than those seen during training. Sinusoidal encodings are bounded between -1 and 1 and provide a smooth, continuous representation of position.*
+<summary>Quiz 1: Why does the output for chase stay the same when the two nouns swap in the opening example?</summary>
+*The middle query is unchanged. The keys and values swap together, so the same values receive the same weights in the weighted sum. A position-dependent input or mask can change that result.*
 </details>
 
 <details>
-<summary>Quiz 2: What is the benefit of using both sine and cosine functions?</summary>
-*Using both allows the model to represent relative positions as linear combinations. Specifically, $PE_{pos+k}$ can be computed as a linear transformation of $PE_{pos}$, making it easier for the model to learn to attend to relative positions (e.g., "the word 2 steps to the left").*
+<summary>Quiz 2: At position zero, what values do dimensions 30 and 31 have?</summary>
+*They form pair 15. Its angle is zero regardless of frequency, giving sin(0) = 0 and cos(0) = 1.*
 </details>
 
 <details>
-<summary>Quiz 3: Are there alternatives to sinusoidal positional encoding?</summary>
-*Yes. Many modern models (like GPT-3) use **Learned Positional Embeddings**, where position vectors are treated as parameters and learned during training just like word embeddings. Another popular method is **RoPE (Rotary Position Embedding)**, used in Llama models, which applies a rotation to the query and key vectors depending on their position.*
+<summary>Quiz 3: Why does a one-position move change dimensions 16 and 17 less than dimensions 0 and 1 in the example?</summary>
+*Pair 8 turns through 0.01 radians per position, while pair 0 turns through 1 radian per position. Both pairs use unit-amplitude waves.*
 </details>
 
 <details>
-<summary>Quiz 4: Why are different frequencies used for different dimensions in positional encoding?</summary>
-*Different frequencies create a unique pattern for each position that doesn't repeat for a very long sequence length. Low dimensions have high frequencies (short wavelengths), while high dimensions have low frequencies (long wavelengths), allowing the model to capture both fine-grained and coarse-grained positional relationships.*
+<summary>Quiz 4: Why could a position fail in the CPU example even though the sinusoid is mathematically defined there?</summary>
+*The module precomputes a finite table. Registering it as a buffer saves it with the module and moves it with the module, but it does not extend the table.*
 </details>
 
 <details>
-<summary>Quiz 5: In the PyTorch implementation, why do we use `register_buffer` for the positional encoding matrix?</summary>
-*`register_buffer` is used for tensors that are part of the model state but are not parameters to be learned by the optimizer. This ensures the positional encoding matrix is saved along with the model parameters when saving the model, and moved to the GPU when `.to('cuda')` is called on the model, without calculating gradients for it.*
+<summary>Quiz 5: If a query and key stay three tokens apart, when does RoPE preserve their dot product?</summary>
+*For the same frequency schedule and unchanged pre-rotation query and key vectors, the relative rotation is unchanged. New content or a change in earlier hidden states can change the score.*
 </details>
-
-<details>
-<summary>Quiz 6: Which part of a RoPE score depends on relative position?</summary>
-*For rotation $R_m$ by $m\theta$, $(R_mq)^T(R_nk)=q^TR_{n-m}k$. Position enters as a relative displacement, but content vectors $q,k$ still determine the score. Neither monotonic distance decay nor quality beyond trained lengths follows from this identity.*
-</details>
-
----
 
 ## References
 
-1. <a id="ref-1"></a>Vaswani, A., et al. (2017). *Attention is all you need*. Advances in neural information processing systems, 30. [arXiv:1706.03762](https://arxiv.org/abs/1706.03762).
-2. <a id="ref-2"></a>Su, J., et al. (2021). *RoFormer: Enhanced Transformer with Rotary Position Embedding*. [arXiv:2104.09864](https://arxiv.org/abs/2104.09864).
+1. <a id="ref-1"></a>Vaswani, A., et al. (2017). [Attention Is All You Need, §3.5](https://arxiv.org/abs/1706.03762).
+2. <a id="ref-2"></a>Su, J., et al. (2021). [RoFormer: Enhanced Transformer with Rotary Position Embedding](https://arxiv.org/abs/2104.09864).
+3. <a id="ref-3"></a>Shaw, P., Uszkoreit, J., & Vaswani, A. (2018). [Self-Attention with Relative Position Representations](https://aclanthology.org/N18-2074/).
+4. <a id="ref-4"></a>Press, O., Smith, N. A., & Lewis, M. (2021). [Train Short, Test Long: Attention with Linear Biases Enables Input Length Extrapolation](https://arxiv.org/abs/2108.12409).

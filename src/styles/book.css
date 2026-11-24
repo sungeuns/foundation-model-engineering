@@ -353,6 +353,17 @@ html { scroll-padding-top: 1.5rem; }
 .sidebar a { font-size: .9rem; line-height: 1.5; padding: .45rem .55rem; }
 .sidebar ul { padding-left: .25rem; }
 .sidebar a.active { border-left: 3px solid var(--accent-color); background: #eee5f4; }
+.contents-panel { display: flex; flex-direction: column; height: 100%; }
+#contentsSearch { flex: none; padding-bottom: .5rem; }
+#contentsLinks {
+  flex: 1 1 auto;
+  min-height: 4rem;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  overflow-anchor: none;
+  padding: .3rem;
+  margin: 0 -.3rem;
+}
 .chapter-search-label { display: block; font-size: .85rem; font-weight: 600; margin-bottom: .3rem; }
 #chapterSearch { box-sizing: border-box; width: 100%; min-height: 44px; font: inherit; font-size: .85rem; padding: .5rem .65rem; border: 1px solid #8b929b; border-radius: 6px; background: white; color: #243447; }
 .contents-search-status { margin: .5rem 0; font-size: .85rem; }

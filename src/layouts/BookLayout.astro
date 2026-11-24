@@ -201,17 +201,18 @@ if (currentIndex !== -1) {
     <button class="sidebar-backdrop" id="sidebarBackdrop" type="button" tabindex="-1" aria-label={isKo ? '목차 닫기' : 'Close contents'} hidden></button>
 
     <nav class="sidebar" id="sidebar" aria-label={isKo ? '책 목차' : 'Book contents'}>
-      <div data-nosnippet>
+      <div class="contents-panel" data-nosnippet>
       <div class="sidebar-title"><a href={toHref(homePath)} style="text-decoration: none; color: inherit;">{isKo ? '목차' : 'Table of Contents'}</a></div>
       <div id="contentsSearch" hidden>
         <label class="chapter-search-label" for="chapterSearch">{isKo ? '장·절 찾기' : 'Find chapters and sections'}</label>
         <input id="chapterSearch" data-index-url={withBasePath(`/search/${lang}.json`, basePath)} type="search" placeholder={isKo ? '예: GLM-5.4, 첫 토큰 지연' : 'e.g. GLM-5.4, first token'} autocomplete="off" />
+      </div>
+      <div id="contentsLinks">
         <p id="searchStatus" class="contents-search-status" role="status" hidden></p>
         <div id="sectionResults" hidden>
           <h2>{isKo ? '찾은 절' : 'Matching sections'}</h2>
           <ul></ul>
         </div>
-      </div>
       {chapters.map(ch => (
         <div class="chapter-group">
           <h2>{ch.title[lang]}</h2>
@@ -236,6 +237,7 @@ if (currentIndex !== -1) {
           </ul>
         </div>
       ))}
+      </div>
       </div>
     </nav>
 
@@ -358,6 +360,7 @@ if (currentIndex !== -1) {
         window.addEventListener('hashchange', updateLocaleLink);
         window.addEventListener('popstate', updateLocaleLink);
         window.addEventListener('pageshow', updateLocaleLink);
+        window.addEventListener('release-scenario-change', updateLocaleLink);
       }
 
       const isKo = document.documentElement.lang === 'ko';
@@ -412,12 +415,6 @@ if (currentIndex !== -1) {
         element.setAttribute('aria-label', element.tagName === 'TABLE' ? (isKo ? '표: 가로로 스크롤할 수 있습니다' : 'Table: scroll horizontally') : element.tagName === 'PRE' ? (isKo ? '코드 예제' : 'Code example') : (isKo ? '수식' : 'Equation'));
       });
 
-      // Scroll active link into view
-      const activeLink = document.querySelector('.sidebar a.active');
-      if (activeLink) {
-        const nav = document.getElementById('sidebar');
-        if (nav && activeLink instanceof HTMLElement) nav.scrollTop = Math.max(0, activeLink.offsetTop - nav.clientHeight / 2);
-      }
     </script>
 <style>
   .serving-guide { margin: 0 0 1rem; font-size: .9rem; }

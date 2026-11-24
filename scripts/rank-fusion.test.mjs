@@ -29,10 +29,19 @@ test('finite crossover and weight changes follow the two lists', () => {
   assert.equal(example(60, 4, 2)[0].score, 2 / 61 + 1 / 64);
 });
 
-test('the bilingual Python example runs as printed', () => {
+test('both editions run and link to the exact Python example used by the trace', () => {
   const code = ['', 'ko/'].map(locale => {
     const chapter = new URL(`../src/pages/${locale}chapter-14/advanced-retrieval.mdx`, import.meta.url);
-    return readFileSync(chapter, 'utf8').match(/```python\n([\s\S]+?)\n```/)[1];
+    const source = readFileSync(chapter, 'utf8');
+    const printed = source.match(/```python\n([\s\S]+?)\n```/)[1];
+    const link = new URL(source.match(/^\[rrf-code-trace\]: <([^>]+)>$/m)[1]);
+    assert.equal(link.origin + link.pathname, 'https://pythontutor.com/visualize.html');
+    const options = new URLSearchParams(link.hash.slice(1));
+    assert.equal(options.get('mode'), 'display');
+    assert.equal(options.get('py'), '311');
+    assert.equal(options.get('curInstr'), '22'); // C's second contribution, just before the update.
+    assert.equal(options.get('code'), printed);
+    return printed;
   });
   assert.equal(code[0], code[1]);
   const run = spawnSync('python3', ['-c', code[0]], { encoding: 'utf8' });

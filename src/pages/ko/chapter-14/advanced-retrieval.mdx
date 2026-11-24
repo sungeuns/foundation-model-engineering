@@ -55,6 +55,10 @@ assert [doc for doc, _ in fuse(dense, bm25, depth=1)] == ["A", "B"]
 assert fuse(dense, bm25, dense_weight=2)[0][0] == "B"
 ```
 
+BM25 목록의 두 번째 문서는 C입니다. C는 이미 밀집 검색에서 0.016129점을 얻었습니다. 2위에 한 번 더 들면 몇 점이 더해질까요? [Python Tutor에서 이 계산을 열고][rrf-code-trace] **Next** 를 누르세요. C의 누적 점수가 0.0322581이 되어 0.0320184점인 A를 앞섭니다.
+
+[rrf-code-trace]: <https://pythontutor.com/visualize.html?via=ai#code=def%20fuse(dense%2C%20bm25%2C%20depth%3D4%2C%20k%3D60%2C%20dense_weight%3D1)%3A%0A%20%20%20%20scores%20%3D%20%7B%7D%0A%20%20%20%20for%20hits%2C%20weight%20in%20%5B(dense%2C%20dense_weight)%2C%20(bm25%2C%201)%5D%3A%0A%20%20%20%20%20%20%20%20unique_ids%20%3D%20list(dict.fromkeys(hits))%5B%3Adepth%5D%0A%20%20%20%20%20%20%20%20for%20rank%2C%20doc_id%20in%20enumerate(unique_ids%2C%20start%3D1)%3A%0A%20%20%20%20%20%20%20%20%20%20%20%20scores%5Bdoc_id%5D%20%3D%20scores.get(doc_id%2C%200)%20%2B%20weight%20%2F%20(k%20%2B%20rank)%0A%20%20%20%20return%20sorted(scores.items()%2C%20key%3Dlambda%20pair%3A%20(-pair%5B1%5D%2C%20pair%5B0%5D))%0A%0A%0Adense%20%3D%20%5B%22B%22%2C%20%22C%22%2C%20%22D%22%2C%20%22A%22%5D%0Abm25%20%3D%20%5B%22A%22%2C%20%22C%22%2C%20%22E%22%2C%20%22B%22%5D%0Aassert%20fuse(dense%2C%20bm25)%5B0%5D%20%3D%3D%20(%22C%22%2C%202%20%2F%2062)%0Aassert%20%5Bdoc%20for%20doc%2C%20_%20in%20fuse(dense%2C%20bm25%2C%20depth%3D1)%5D%20%3D%3D%20%5B%22A%22%2C%20%22B%22%5D%0Aassert%20fuse(dense%2C%20bm25%2C%20dense_weight%3D2)%5B0%5D%5B0%5D%20%3D%3D%20%22B%22&mode=display&py=311&curInstr=22>
+
 이 예제에서 확인한 것은 순위가 바뀌는 과정입니다. 실제로 첫 문서가 더 유용해졌는지 알려면 평가용으로 남겨 둔 지원 질의에 대해 문단의 관련성을 판정하고, 같은 질의로 BM25·밀집 검색·융합을 비교해야 합니다. 후보 수를 고정했을 때의 재현율과 화면에 표시한 상위 결과의 관련성을 따로 측정하세요. 두 검색기가 모두 놓친 로그는 $k$ 를 바꿔도 돌아오지 않습니다.
 
 ## 3. 질문을 잃지 않는 질의 변환

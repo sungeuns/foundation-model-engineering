@@ -1,4 +1,5 @@
 import { canonicalKvSearch } from '../components/chapter-12/kv-scenario.mjs';
+import { readReleaseScenario } from '../components/chapter-17/release-scenario.js';
 
 // These IDs name the same authored exercise in both translations. Do not infer
 // counterparts from heading order, translated slugs, or reference numbers.
@@ -8,6 +9,7 @@ const lessonFragments = {
   '/chapter-2/cnns-for-nlp': ['textcnn-filter-example'],
   '/chapter-3/self-attention-mathematics': ['attention-weight-example', 'batched-padding-example'],
   '/chapter-3/multi-head-attention': ['two-head-calculation'],
+  '/chapter-3/position-encoding-strategy': ['positional-encoding-grid'],
   '/chapter-3/layer-normalization-residuals': ['normalization-example', 'pytorch-normalization-check'],
   '/chapter-4/encoder-only': ['mlm-target-example'],
   '/chapter-4/decoder-only': ['shifted-target-example'],
@@ -26,6 +28,7 @@ const lessonFragments = {
   '/chapter-13/ptq-vs-qat': ['quantization-grid-example'],
   '/chapter-13/quantization-methods': ['weighted-rounding-example'],
   '/chapter-14/advanced-retrieval': ['rrf-candidate-cutoff'],
+  '/chapter-14/lexical-to-semantic-search': ['lexical-dense-example'],
   '/chapter-14/graphrag-and-ontology': ['graph-evidence-example'],
   '/chapter-14/rag-failure-modes-and-operational-design': ['trace-a-rag-answer'],
   '/chapter-16/decision-models-and-selective-prediction': ['calibration-drift-example'],
@@ -65,7 +68,12 @@ export function sharedHeadingAliases(headings, sharedFragments) {
 }
 
 export function localeHref(baseHref, hash, sharedFragments, search = '', aliases) {
-  const scenario = search && sharedFragments.includes('kv-calculator') ? canonicalKvSearch(search) : '';
+  let scenario = '';
+  if (search && sharedFragments.includes('kv-calculator')) scenario = canonicalKvSearch(search);
+  if (search && sharedFragments.includes('release-lab')) {
+    const release = readReleaseScenario(search);
+    if (release) scenario = `?scenario=${release}`;
+  }
   const pageHref = baseHref.split('#')[0] + scenario;
   if (!hash.startsWith('#')) return pageHref;
   let id;

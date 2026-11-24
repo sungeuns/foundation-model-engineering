@@ -68,6 +68,8 @@ test('shared exercise IDs belong to the same authored content in both translatio
     ['/chapter-17/commercial-model-benchmarks', 'ling-32-air-context'],
     ['/chapter-2/dawn-of-attention', 'translation-alignment-example'],
     ['/chapter-2/cnns-for-nlp', 'textcnn-filter-example'],
+    ['/chapter-3/position-encoding-strategy', 'positional-encoding-grid'],
+    ['/chapter-14/lexical-to-semantic-search', 'lexical-dense-example'],
     ['/chapter-14/rag-failure-modes-and-operational-design', 'trace-a-rag-answer'],
   ]) {
     assert.ok(sharedLocaleFragments(route, modelIds).includes(id), route);
@@ -114,6 +116,19 @@ test('locale links keep deployment paths and only verified fragments as the loca
       assert.equal(localeHref(`${page}#references`, '', fragments), page);
     }
   }
+});
+
+test('a shared release fixture survives translation only on its own lesson', () => {
+  const fragments = sharedLocaleFragments('/chapter-17/experimental-design-and-uncertainty');
+  const page = '/preview/ko/chapter-17/experimental-design-and-uncertainty/';
+  for (const scenario of ['gain', 'regression', 'uncertain', 'missing']) {
+    const search = `?tracking=abc&scenario=${scenario}`;
+    assert.equal(localeHref(page, '#release-lab', fragments, search), `${page}?scenario=${scenario}#release-lab`);
+  }
+  for (const search of ['?scenario=other', '?scenario=missing&scenario=gain', '?scenario=']) {
+    assert.equal(localeHref(page, '#release-lab', fragments, search), page + '#release-lab');
+  }
+  assert.equal(localeHref('/ko/', '', [], '?scenario=gain'), '/ko/');
 });
 
 test('a previously shared heading URL switches to the exercise in the other edition', () => {

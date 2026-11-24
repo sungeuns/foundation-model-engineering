@@ -55,6 +55,10 @@ assert [doc for doc, _ in fuse(dense, bm25, depth=1)] == ["A", "B"]
 assert fuse(dense, bm25, dense_weight=2)[0][0] == "B"
 ```
 
+At the second BM25 hit, C already has a score of 0.016129 from the dense list. What will one more second-place hit add? Open the [Python Tutor trace at that update][rrf-code-trace] and select **Next**. C’s running score becomes 0.0322581, just ahead of A’s 0.0320184.
+
+[rrf-code-trace]: <https://pythontutor.com/visualize.html?via=ai#code=def%20fuse(dense%2C%20bm25%2C%20depth%3D4%2C%20k%3D60%2C%20dense_weight%3D1)%3A%0A%20%20%20%20scores%20%3D%20%7B%7D%0A%20%20%20%20for%20hits%2C%20weight%20in%20%5B(dense%2C%20dense_weight)%2C%20(bm25%2C%201)%5D%3A%0A%20%20%20%20%20%20%20%20unique_ids%20%3D%20list(dict.fromkeys(hits))%5B%3Adepth%5D%0A%20%20%20%20%20%20%20%20for%20rank%2C%20doc_id%20in%20enumerate(unique_ids%2C%20start%3D1)%3A%0A%20%20%20%20%20%20%20%20%20%20%20%20scores%5Bdoc_id%5D%20%3D%20scores.get(doc_id%2C%200)%20%2B%20weight%20%2F%20(k%20%2B%20rank)%0A%20%20%20%20return%20sorted(scores.items()%2C%20key%3Dlambda%20pair%3A%20(-pair%5B1%5D%2C%20pair%5B0%5D))%0A%0A%0Adense%20%3D%20%5B%22B%22%2C%20%22C%22%2C%20%22D%22%2C%20%22A%22%5D%0Abm25%20%3D%20%5B%22A%22%2C%20%22C%22%2C%20%22E%22%2C%20%22B%22%5D%0Aassert%20fuse(dense%2C%20bm25)%5B0%5D%20%3D%3D%20(%22C%22%2C%202%20%2F%2062)%0Aassert%20%5Bdoc%20for%20doc%2C%20_%20in%20fuse(dense%2C%20bm25%2C%20depth%3D1)%5D%20%3D%3D%20%5B%22A%22%2C%20%22B%22%5D%0Aassert%20fuse(dense%2C%20bm25%2C%20dense_weight%3D2)%5B0%5D%5B0%5D%20%3D%3D%20%22B%22&mode=display&py=311&curInstr=22>
+
 These fixed lists show *how* fusion changes the answer order. To measure whether the new first result actually helps, judge passages for held-out support queries and compare BM25, dense search, and fusion on those same queries. Record recall at the candidate cutoff separately from relevance at the displayed rank. No choice of $k$ can recover a log that both retrievers missed.
 
 ## 3. Query Transformation Without Losing the Question

@@ -21,7 +21,7 @@
 
 * **3.1 Self-Attention Mathematics:** $Q, K, V$로 한 토큰의 출력을 구하고, 길이가 다른 두 요청의 패딩 값 하나를 바꿔 마스크의 축이 맞는지 검산.
 * **3.2 Multi-head Attention (MHA):** 다양한 관점에서 특징을 추출하는 병렬 어텐션 구조.
-* **3.3 Position Encoding Strategy:** Sinusoidal부터 최신 RoPE(Rotary), ALiBi까지의 비교 분석.
+* **3.3 Position Encoding Strategy:** 위치·차원별 사인과 코사인 값을 PyTorch로 검산하고 RoPE 점곱에서 상대 위치의 역할을 계산.
 * **3.4 Layer Normalization & Residuals:** 두 특성값으로 LayerNorm·RMSNorm과 엡실론의 효과를 검산하고, 잔차 분기를 0으로 둘 때 Pre-LN과 Post-LN의 출력 비교.
 * **3.5 Complexity Analysis:** 시퀀스 길이에 따른 $O(n^2)$ 복잡도와 메모리 병목 현상.
 * **Summary:** Transformer 계열 Foundation Model의 내부 로직을 수학적, 구조적으로 파헤칩니다.
@@ -121,7 +121,7 @@
 
 ### **Chapter 14: RAG (Retrieval Augmented Generation)**
 
-* **14.1 From Lexical to Semantic Search:** 왜 벡터 임베딩이 필요한가, 키워드 검색의 한계와 시맨틱 검색, 청킹(Chunking) 기법들.
+* **14.1 From Lexical to Semantic Search:** 지원 문서 네 개에서 동의어와 식별자를 검색해 BM25와 코사인 점수를 비교하고 문서 분할의 영향을 확인.
 * **14.2 Vector Indexing & DB Solutions:** HNSW, ScaNN 등 벡터 인덱싱 알고리즘 비교 및 상용 벡터 DB 솔루션.
 * **14.3 Advanced Retrieval & Reranking:** 하이브리드 검색, Bi-encoder와 Cross-encoder를 이용한 리랭킹(BERT와의 연결), 쿼리 변환(HyDE 등).
 * **14.4 RAG Orchestration:** Self-RAG, Corrective RAG (CRAG) 등 복합 워크플로우.

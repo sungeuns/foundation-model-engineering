@@ -219,8 +219,8 @@ export const searchDescriptions = {
     ko: '활성값 이상치, 회전 변환과 BitNet b1.58 같은 삼진 가중치 접근법을 통해 저비트 양자화의 어려움과 설계 선택을 이해합니다.',
   },
   '/chapter-14/lexical-to-semantic-search': {
-    en: 'Compare lexical and semantic retrieval, explore document chunking, and connect embedding quality to contrastive learning and Matryoshka representations.',
-    ko: '키워드 검색과 의미 검색, 문서 청킹을 비교하고, 대조 학습과 Matryoshka 표현이 임베딩 품질에 어떻게 연결되는지 살펴봅니다.',
+    en: 'Search four support titles with BM25 and cosine similarity. Try a synonym or an exact activation code, inspect the scores and see which evidence reaches your RAG system.',
+    ko: '지원 문서 제목 네 개를 BM25와 코사인 유사도로 검색합니다. 동의어와 활성화 코드를 입력해 점수를 비교하고 RAG에 어떤 근거가 전달되는지 확인합니다.',
   },
   '/chapter-14/vector-indexing-and-db-solutions': {
     en: 'Compare exact search and approximate nearest-neighbor indexing, including HNSW, ScaNN, metadata filtering, and vector-database access control.',
@@ -275,8 +275,8 @@ export const searchDescriptions = {
     ko: '토큰 세 개로 두 헤드의 가중치를 계산합니다. 출력 투영 직전에 한 헤드의 기여를 0으로 바꾸고, 두 출력 좌표가 어떻게 달라지는지 확인합니다.',
   },
   '/chapter-3/position-encoding-strategy': {
-    en: 'Compare sinusoidal position encodings and rotary position embeddings (RoPE), including their mathematics and PyTorch implementation.',
-    ko: '사인·코사인 위치 인코딩과 회전 위치 임베딩(RoPE)을 비교하고, 위치 정보를 전달하는 수학적 원리와 PyTorch 구현을 살펴봅니다.',
+    en: 'Pick a position and a pair of dimensions on a sinusoidal grid, reproduce the values in PyTorch and see how a relative offset enters a RoPE dot product.',
+    ko: '위치와 차원 쌍을 골라 사인·코사인 값을 읽고 PyTorch로 검산합니다. RoPE 점곱에서는 두 토큰의 위치 차이가 어떻게 남는지 계산합니다.',
   },
   '/chapter-3/layer-normalization-residuals': {
     en: 'Add 10 to both features of a token and compare LayerNorm with RMSNorm. Change epsilon, reproduce the outputs in PyTorch, and trace a zero branch through Pre-LN and Post-LN.',

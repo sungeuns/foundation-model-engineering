@@ -1,8 +1,9 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
 import { releaseLabTitle } from '../../data/lab-titles.js';
+import { readReleaseScenario, releaseScenarios } from './release-scenario.js';
 import './paired-release-lab.css';
 
-type Scenario = 'gain' | 'uncertain' | 'regression' | 'missing';
+type Scenario = typeof releaseScenarios[number];
 type Status = 'idle' | 'loading' | 'running' | 'done' | 'cancelled' | 'error';
 type Decision = 'Pass' | 'Review' | 'Block';
 type Slice = { clusters: number; delta: number; lower_95_one_sided: number; upper_95_one_sided: number };
@@ -15,7 +16,6 @@ type CompletePacket = {
   bootstrap_repetitions: number;
 };
 type Packet = CompletePacket | { decision: 'Review'; reason: string };
-const scenarios: Scenario[] = ['gain', 'uncertain', 'regression', 'missing'];
 const record = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null;
 const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
 
@@ -37,10 +37,12 @@ export default function PairedReleaseLab({ lang = 'en', workerUrl }: { lang?: 'e
   const id = useId();
   const [hydrated, setHydrated] = useState(false);
   const [scenario, setScenario] = useState<Scenario>('gain');
+  const [invalidScenario, setInvalidScenario] = useState(false);
   const [status, setStatus] = useState<Status>('idle');
   const [packet, setPacket] = useState<Packet | null>(null);
   const workerRef = useRef<Worker | null>(null);
   const generation = useRef(0);
+  const appliedSearch = useRef('');
   const busy = status === 'loading' || status === 'running';
   const scriptUrl = `${workerUrl.slice(0, workerUrl.lastIndexOf('/') + 1)}paired_release.py`;
   const decisionLabel = (decision: Decision) => ko ? ({ Pass: '통과', Review: '재검토', Block: '차단' }[decision]) : decision;
@@ -51,11 +53,26 @@ export default function PairedReleaseLab({ lang = 'en', workerUrl }: { lang?: 'e
     : { gain: 'Target improvement', uncertain: 'Uncertain improvement', regression: 'Retention regression', missing: 'Missing paired outcome' };
 
   useEffect(() => {
+    const restore = () => {
+      appliedSearch.current = location.search;
+      const params = new URLSearchParams(location.search);
+      const selected = readReleaseScenario(params);
+      stopWorker();
+      setPacket(null);
+      setStatus('idle');
+      setScenario(selected ?? 'gain');
+      setInvalidScenario(params.has('scenario') && !selected);
+    };
+    restore();
     setHydrated(true);
+    // Fragment-only history navigation doesn't change the selected fixture.
+    const restoreOnHistory = () => {
+      if (location.search !== appliedSearch.current) restore();
+    };
+    window.addEventListener('popstate', restoreOnHistory);
     return () => {
-      generation.current += 1;
-      workerRef.current?.terminate();
-      workerRef.current = null;
+      window.removeEventListener('popstate', restoreOnHistory);
+      stopWorker();
     };
   }, []);
 
@@ -120,12 +137,23 @@ export default function PairedReleaseLab({ lang = 'en', workerUrl }: { lang?: 'e
     <p>{ko ? '시나리오를 고르고 실행을 누르면 jsDelivr에서 Python 실행 환경을 내려받습니다. 실습은 이 탭에서 계산되며 로그인이나 설치가 필요 없습니다.' : 'Choose a scenario and press Run to download Python from jsDelivr. The experiment runs in this tab without an account or installation.'}</p>
     <div className="paired-release-controls">
       <label htmlFor={`${id}-scenario`}>{ko ? '합성 시나리오' : 'Synthetic scenario'}
-        <select id={`${id}-scenario`} data-release-scenario value={scenario} disabled={!hydrated || busy} onChange={event => {
+        <select id={`${id}-scenario`} data-release-scenario value={hydrated ? scenario : ''} disabled={!hydrated || busy} onChange={event => {
           generation.current += 1;
-          setScenario(event.target.value as Scenario);
+          const selected = event.target.value as Scenario;
+          setScenario(selected);
+          setInvalidScenario(false);
           setPacket(null);
           setStatus('idle');
-        }}>{scenarios.map(name => <option key={name} value={name}>{scenarioLabels[name]} ({name})</option>)}</select>
+          const url = new URL(location.href);
+          url.searchParams.set('scenario', selected);
+          url.hash = 'release-lab';
+          history.replaceState(history.state, '', url);
+          appliedSearch.current = url.search;
+          window.dispatchEvent(new Event('release-scenario-change'));
+        }}>
+          {!hydrated && <option value="">{ko ? '시나리오 선택' : 'Choose a scenario'}</option>}
+          {releaseScenarios.map(name => <option key={name} value={name}>{scenarioLabels[name]} ({name})</option>)}
+        </select>
       </label>
       <div className="paired-release-actions">
         <button type="button" data-release-action="run" disabled={!hydrated || busy} onClick={run}>{status === 'error' ? (ko ? '다시 실행' : 'Retry') : (ko ? '실행' : 'Run')}</button>
@@ -134,6 +162,8 @@ export default function PairedReleaseLab({ lang = 'en', workerUrl }: { lang?: 'e
         }}>{ko ? '취소' : 'Cancel'}</button>}
       </div>
     </div>
+    {invalidScenario && <p>{ko ? '링크의 시나리오를 읽을 수 없어 목표 과제 개선 예제를 열었습니다.' : 'The link did not specify a recognized scenario. Target improvement is selected.'}</p>}
+    {hydrated && <a href={`?scenario=${scenario}#release-lab`}>{ko ? '선택한 시나리오 링크' : 'Link to the selected scenario'}</a>}
     <p className="paired-release-status" data-release-status role="status" aria-live="polite" aria-atomic="true">{statusText}</p>
     <noscript><p>{ko ? '브라우저 실행에는 JavaScript가 필요합니다. 아래 Python 파일을 내려받아 로컬에서 실행하세요.' : 'Browser execution needs JavaScript. Download the Python file below to run locally.'}</p></noscript>
 
@@ -175,6 +205,6 @@ export default function PairedReleaseLab({ lang = 'en', workerUrl }: { lang?: 'e
     </div>}
 
     <p className="paired-release-note">{ko ? '2026-11-25 버전의 합성 평가 자료를 사용합니다. 통과는 이 실습에서 정한 기준을 만족했다는 뜻입니다.' : 'This exercise uses synthetic cases from the 2026-11-25 source snapshot. Pass applies to the offline criteria shown here.'}</p>
-    <div className="paired-release-fallback"><a href={scriptUrl} download="paired_release.py">{ko ? 'Python 실습 내려받기' : 'Download the Python lab'}</a><span>{ko ? 'Python 3.10 이상 · 추가 패키지 없음' : 'Python 3.10+ · no extra packages'}</span><code>python paired_release.py --scenario {scenario}</code></div>
+    <div className="paired-release-fallback"><a href={scriptUrl} download="paired_release.py">{ko ? 'Python 실습 내려받기' : 'Download the Python lab'}</a><span>{ko ? 'Python 3.10 이상 · 추가 패키지 없음' : 'Python 3.10+ · no extra packages'}</span><code>python paired_release.py {hydrated ? `--scenario ${scenario}` : '--help'}</code></div>
   </section>;
 }

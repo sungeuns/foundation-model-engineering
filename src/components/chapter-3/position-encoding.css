@@ -1,0 +1,92 @@
+.position-grid {
+  margin: 1.25rem 0;
+  padding: clamp(.65rem, 2.5vw, 1.25rem);
+  border: 1px solid #b3c2cc;
+  border-radius: .45rem;
+  font-variant-numeric: tabular-nums;
+}
+.position-grid figcaption {
+  margin: 0 0 .75rem;
+  color: inherit;
+  font: inherit;
+  font-weight: 650;
+  text-align: start;
+}
+.position-grid-controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  gap: .4rem 1.5rem;
+}
+.position-grid-controls label,
+.position-grid-controls span {
+  display: block;
+}
+.position-grid-controls input {
+  display: block;
+  width: 100%;
+  height: 1.6rem;
+  margin: 0;
+  accent-color: #175c82;
+  cursor: pointer;
+}
+.position-grid-controls input:focus-visible {
+  outline: 2px solid #1e6099;
+  outline-offset: 2px;
+}
+.position-grid-axes {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: .2rem .35rem;
+  align-items: center;
+  margin: .7rem 0 .25rem;
+  font-size: .85rem;
+}
+.position-grid-columns {
+  grid-column: 2;
+  text-align: center;
+}
+.position-grid-rows {
+  grid-column: 1;
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  justify-content: space-between;
+  text-align: center;
+}
+.position-grid svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 18rem;
+  border: 1px solid #79838b;
+}
+.position-grid-halo,
+.position-grid-selection {
+  fill: none;
+  vector-effect: non-scaling-stroke;
+}
+.position-grid-halo { stroke: white; stroke-width: 4; }
+.position-grid-selection { stroke: #18242d; stroke-width: 1.7; }
+.position-grid-legend {
+  display: flex;
+  align-items: center;
+  justify-content: end;
+  gap: .25rem;
+  font-size: .85rem;
+}
+.position-grid-legend i {
+  width: 2rem;
+  height: .5rem;
+  background: linear-gradient(to right, rgb(155, 70, 20), white);
+  border: 1px solid #aab2b9;
+}
+.position-grid-legend i:last-of-type {
+  background: linear-gradient(to right, white, rgb(25, 94, 150));
+}
+.position-grid-readout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .1rem 1.3rem;
+  margin-top: .5rem;
+}
+.position-grid .position-grid-readout p { margin: 0; }

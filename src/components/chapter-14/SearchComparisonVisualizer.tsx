@@ -1,30 +1,39 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { compareTitles, examples } from './lexical-dense.mjs';
 import './SearchComparisonVisualizer.css';
 
 export default function SearchComparisonVisualizer({ locale = 'en' }: { locale?: 'en' | 'ko' }) {
   const ko = locale === 'ko';
-  const [query, setQuery] = useState('');
-  const [submitted, setSubmitted] = useState<string | null>(null);
-  const docs = ko ? ['펑크 난 바퀴를 수리하는 방법', '제품 활성화 코드: XJ-992-B', '웹 개발과 404 오류 안내', '딥러닝 교재'] : ['How to repair a punctured wheel', 'Product activation code: XJ-992-B', 'Web development and 404 errors', 'Deep learning textbook'];
-  const presets = ko ? ['타이어 펑크', 'XJ-992-B', 'AI 책'] : ['flat tire', 'XJ-992-B', 'AI book'];
-  const normalized = submitted?.trim().toLowerCase() ?? '';
-  const preset = presets.findIndex(x => x.toLowerCase() === normalized);
-  const semantic = preset === 0 ? [0] : preset === 1 ? [2, 1] : preset === 2 ? [3] : [];
-  const terms = normalized.split(/\s+/).filter(Boolean);
-  const lexical = docs.map((text, i) => ({ i, hits: terms.filter(x => text.toLowerCase().includes(x)).length })).filter(x => x.hits > 0).sort((a, b) => b.hits - a.hits || a.i - b.i);
-  const run = (value: string) => {setQuery(value);setSubmitted(value.trim() ? value : null);};
-  return <section className="search-visualizer glass">
-    <h3>{ko ? '키워드 일치와 의미 검색의 차이' : 'Lexical matching and semantic retrieval'}</h3>
-    <p>{ko ? '고정 교육 예제입니다. 키워드는 부분 문자열 일치 개수이며 BM25가 아닙니다. 의미 순위는 미리 작성했으며 임베딩을 계산하지 않습니다.' : 'Fixed teaching example. Lexical results count substring matches, not BM25. Semantic rankings are authored; no embeddings are computed.'}</p>
-    <form className="search-input-container" onSubmit={e => {e.preventDefault();run(query);}}>
-      <label className="search-query-label">{ko ? '검색 질의' : 'Search query'}<input type="text" value={query} onChange={e => {setQuery(e.target.value);setSubmitted(null);}} className="search-input" /></label>
-      <button type="submit" className="search-button">{ko ? '검색' : 'Search'}</button>
-    </form>
-    <div className="presets">{presets.map(q => <button type="button" key={q} onClick={() => run(q)} className="preset-btn">{q}</button>)}</div>
-    {submitted !== null && <div className="search-results-grid" aria-live="polite">
-      <div><h4>{ko ? '키워드 일치 순위' : 'Substring-match ranking'}</h4>{lexical.length ? <ol>{lexical.map(x => <li key={x.i}>{docs[x.i]} ({x.hits})</li>)}</ol> : <p>{ko ? '일치 없음' : 'No matches'}</p>}</div>
-      <div><h4>{ko ? '작성된 의미 순위' : 'Authored semantic ranking'}</h4>{preset < 0 ? <p>{ko ? '이 질의의 의미 예제는 없습니다. 프리셋을 선택하세요.' : 'No semantic example for this query. Choose a preset.'}</p> : <ol>{semantic.map(i => <li key={i}>{docs[i]}</li>)}</ol>}</div>
-    </div>}
-    <p>{ko ? '동의어가 키워드 일치에서 빠질 수 있고 정확한 코드는 의미 검색에서 밀릴 수 있음을 보여 줍니다. 실제 실패율이나 유사도 점수는 나타내지 않습니다. 평가에서는 두 검색기의 후보 합집합과 관련성 레이블을 비교하세요.' : 'This illustrates synonym misses and an exact identifier being demoted by semantic retrieval. It does not measure failure rates or similarity scores. Evaluate the candidate union against relevance labels.'}</p>
+  const { groups, presets } = examples[locale];
+  const [query, setQuery] = useState(presets[0]);
+  const { tokens, queryVector, rows } = compareTitles(locale, query);
+  const topics = ko ? ['바퀴', '등록', '학습'] : ['wheel', 'activation', 'learning'];
+  const best = (field: 'bm25' | 'cosine') => {
+    const max = Math.max(...rows.map(row => row[field] ?? 0));
+    return rows.filter(row => max > 0 && row[field] === max).map(row => row.id).join(', ');
+  };
+  const undefinedScore = ko ? '정의되지 않음' : 'undefined';
+  return <section className="lexical-dense" aria-label={ko ? '제목 네 개의 검색 점수' : 'Retrieval scores for four titles'}>
+    <label>{ko ? '검색어' : 'Query'}
+      <input type="search" value={query} onChange={e => setQuery(e.target.value)} />
+    </label>
+    <div className="ld-presets">{presets.map(text =>
+      <button type="button" key={text} aria-pressed={query === text} onClick={() => setQuery(text)}>{text}</button>
+    )}</div>
+    <details><summary>{ko ? '주제 벡터에 쓰는 단어' : 'Words counted in each topic vector'}</summary>
+      <ul>{groups.map((words, i) => <li key={topics[i]}><strong>{topics[i]}</strong> · {words.join(', ')}</li>)}</ul>
+    </details>
+    <p>{ko ? '질의 벡터' : 'Query vector'} ({topics.join(', ')}) <strong>[{queryVector.join(', ')}]</strong></p>
+    <table><caption>{ko ? '문서별 점수' : 'Scores by document'}</caption>
+      <thead><tr><th scope="col">{ko ? '문서' : 'Title'}</th><th scope="col">{ko ? '벡터' : 'Vector'}</th><th scope="col">BM25</th><th scope="col">{ko ? '코사인' : 'Cosine'}</th></tr></thead>
+      <tbody>{rows.map(row => <tr key={row.id}><th scope="row">{row.id} · {row.title}</th><td>[{row.vector.join(', ')}]</td>
+        <td>{row.bm25.toFixed(3)}</td><td>{row.cosine === null ? <abbr title={undefinedScore} aria-label={undefinedScore}>—</abbr> : row.cosine.toFixed(3)}</td></tr>)}</tbody>
+    </table>
+    <div aria-live="polite">
+      {tokens.length > 0 ? <>
+        <p>{ko ? 'BM25 최고점' : 'Highest BM25'} · <strong>{best('bm25') || (ko ? '일치하는 단어 없음' : 'no matching term')}</strong></p>
+        <p>{ko ? '코사인 최고점' : 'Highest cosine'} · <strong>{best('cosine') || (ko ? '질의 벡터가 0이어서 계산할 수 없음' : 'undefined for a zero query vector')}</strong></p>
+      </> : <p>{ko ? '검색어를 입력해 점수를 비교하세요.' : 'Enter a query to compare scores.'}</p>}
+    </div>
   </section>;
 }
