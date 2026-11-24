@@ -281,7 +281,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 4.1 | `/chapter-4/encoder-only` | Mechanical only | 0c3d099ec9bb466a4cc1a22bd17ff1608388e3ac87ea1da233382efe081e63cd | a594d06325d22f53605f35a62a4e7031f6ef626832e2e8ea43d0352e496e7ea5 |
 | 4.2 | `/chapter-4/decoder-only` | Mechanical only | c0c4d6a6c3109423997c9d58d65f923f6e2375445577a79054e871947dd2a372 | da46705e79b232e46f7d0a0fb4e21a7c8ee6b4d49554290f5b931c21b4222bdd |
 | 4.3 | `/chapter-4/encoder-decoder` | Mechanical only | c0372544843683d2e7b80936ba33fd4c343a4b6850c40844ae59ccc34362f918 | 58320112ec9f19b8f62065ae1a140df644263abfdce47911ee04fda8ea0ff5d0 |
-| 4.4 | `/chapter-4/hybrid-prefix-lm` | Mechanical only | ebe7194bc50255772200359bc604906d56494def1f09ca586850109416062cec | e03163e41d634bc7d775fa56494f3ea67a781c4c6f3f11610edc9f5123dabd91 |
+| 4.4 | `/chapter-4/hybrid-prefix-lm` | Inspected 2026-11-25 | 8c3aedbd0301cf4151c7a7596d23ad6ee3ae0266102a9f7dd5556183c5f7e3b7 | 297baf4e0a9d0e372bc5eb92ad9954b163f6ca66dfa42075b353e6cd427882bd |
 | 4.5 | `/chapter-4/various-llm-architectures` | Inspected 2026-11-24 | 028ebccee02c3a1b30297a6c43b9ed91806975ff737f33e8a5ccd5ea26f26a30 | 5d9fb05bb56198c702831691a20832099bac533ece95857c22101dfb884863a8 |
 | 5.1 | `/chapter-5/sparse-vs-dense-models` | Inspected 2026-11-25 | 01f8735ffcc52bb919dfea3402cb6fbdb0313849c20a83c447820f04e5bb6c08 | 7908d7d81bd30342d4223623ac332bf1d17f91a47e55e1deb8ba8d3ee2b88c37 |
 | 5.2 | `/chapter-5/routing-algorithms` | Inspected 2026-11-15 | 3b83671dec53a4a69ee8c357d810ac48b3b2b069f1b54fdb76a8e567ae6ed3e7 | 436d75fa19297b28084c3bf55cb2e92e341e86d33370e1843de1c263a8f9d356 |
@@ -315,12 +315,12 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 10.4 | `/chapter-10/kto-and-ipo` | Mechanical only | 61ac741df320db7fb3031414fdacaf5770fa28200d3f91f8d69cec83c273c046 | 6a539344952c0246f5777ddf9e6a1be24babe58b085a53cc1752efa3ea2be7c5 |
 | 10.5 | `/chapter-10/alignment-tax` | Inspected 2026-11-15 | e630460ac1b1a8620d753362e400c3bea18d69cff7a6265b3820b6ce7230c6f6 | 5041f746d84764553aecee5b114599a703cc2206889aa57838d5b2719b0bec7e |
 | 11.1 | `/chapter-11/vision-language-bridges` | Inspected 2026-11-25 | 24fb4f6155431bf716e88e29bceaa78cbb3a5631641da212c9e073d7d71a10b8 | d0eba2f44cf9745be286fba5bd051849ee0471874e6c208df815f5bc3da8ff9f |
-| 11.2 | `/chapter-11/audio-and-speech-integration` | Inspected 2026-11-24 | 3c8de54d3316183f25505eea48298dc784a4b0a61b55390f944bbc0a60ffef91 | 150f266fee7ca8b40ccdc495d9f7898048b2d7d54991e2d51bbd40978ff03629 |
+| 11.2 | `/chapter-11/audio-and-speech-integration` | Mechanical only | 3c8de54d3316183f25505eea48298dc784a4b0a61b55390f944bbc0a60ffef91 | 22e94e2436f5521f61e09272972d1e6d45237c4bb02d987c49af7e99eb1e8df7 |
 | 11.3 | `/chapter-11/unified-multimodal-any-to-any` | Inspected 2026-11-15 | 63b49653980ac69e7662b92d1423aad27976789545651d8f21bb97c04a0993a2 | 05b4775ea2e63d295a8def6928b0a7280187755f1e95669da1a9db2ad9134158 |
 | 11.4 | `/chapter-11/image-diffusion-models` | Inspected 2026-11-24 | 5bb8bc33ff8adf86105e24018b03423e9f19e0d29739f64b843c0cbeadea05e8 | 308de426fdbc7b1c845a4d63be36b83988abe2eb36026affba1dd101194816b7 |
 | 11.5 | `/chapter-11/video-generation-foundations` | Inspected 2026-11-15 | b34544d0352be5feafdfc0d30ac23092d50edf3a3af5f3e4d37cc62531230c20 | 55c0488a07c962041cdbb0cdb945d18c8e136b23dba2aed6f6970f1c33cb4b4b |
-| 11.6 | `/chapter-11/commercial-video-models` | Mechanical only | 12216aad67ffc900bcfe437f20a7fcf9be618ccc5d617f698f4466ef15ff33cb | f1062aaf3252f602074e1ffaafe79f0e2bb3f8f4c5aa06d1acfcee29dc009660 |
-| 12.1 | `/chapter-12/kv-cache-management` | Inspected 2026-11-25 | 6eb5663c2aecea3ce2a7fd4931c17af5deac5265962d058a039cfb74e9915bef | 211c2ee9a2d70f58742acdfd72b6caab6fbc89d3fd5f50262c07ab84b8168c95 |
+| 11.6 | `/chapter-11/commercial-video-models` | Mechanical only | 12216aad67ffc900bcfe437f20a7fcf9be618ccc5d617f698f4466ef15ff33cb | 6ee6e17876daa24bd17b8d709b7f541276019da545887510035b916819ae13a3 |
+| 12.1 | `/chapter-12/kv-cache-management` | Mechanical only | 328b3bb27441c78f0bf3b6998407c4da3374bb8ce00b98bc5d23d83d2706d51a | b01a4f5cb3560cb0e76c8555a6c65e08851bbf29f9df4ea6ea7f859a7cb8b9f7 |
 | 12.2 | `/chapter-12/paged-attention-vllm` | Mechanical only | 75d76b30c45ca44edbb56072df6f91209343c7d8ad5c69270cd6b6c4e9700dba | 2446c00fd36edfd6fda8dc1aaf18805e0de0af19615ad504eb4e9acac8356917 |
 | 12.3 | `/chapter-12/continuous-batching` | Inspected 2026-11-25 | 6ef1bf606cdf836c97703e2c9518a7f395f6c7242f614fb7e24f7a44ed301b28 | 4c9be3e2b663d439d85799a0f93db2a485fbca65eb945328789a188afd3b65db |
 | 12.4 | `/chapter-12/speculative-decoding` | Inspected 2026-11-15 | c211bce7483db5699601fe8743d1686ab5b645e7c574072d3cd8f2d8daaf0c70 | a3c7a599410b1ee428f27865bd9dbd1979703192f108984ae5fb522cd9ab3bb2 |
@@ -343,11 +343,11 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 15.4 | `/chapter-15/verifiers-and-reward-models` | Inspected 2026-11-15 | 1df2f83671fe99369f93970e14964d76e87f0b4c5eae9ae80431f19b20e9ec4b | d8fb58ecaa2190024660cee06381a0d2ab5c04f4ef830ef6ddad789603be1063 |
 | 15.5 | `/chapter-15/reasoning-post-training-rlvr` | Inspected 2026-11-15 | 5d7b0b2af95b466bfd3261c57d4597e27ec2abc2c2dca49a750cefa2ff7e4c7f | ad356581811918d430e3f75ddb4fab33d944cbe31a1a87ce59eeefaaaf02d7fd |
 | 16.1 | `/chapter-16/function-calling-and-tool-use` | Inspected 2026-11-15 | 2c1926ca9a765c43ce7cef9a2ae1e9a6ba7ce2e27419c81e91f94ee274d0367c | 495ad575c567acc70c086386aebbc5ce1013f711d2a54735c4291f7c05a87b86 |
-| 16.2 | `/chapter-16/autonomous-agents` | Inspected 2026-11-15 | 1cd74977e816829cc79cec624a2ec7bac64a3097a9d99709a3bc885efc82fd47 | 4374e8a8045f50d5bc4b473e01247fbfa596dd1215225d93d5e1d7753d422cda |
+| 16.2 | `/chapter-16/autonomous-agents` | Mechanical only | 1cd74977e816829cc79cec624a2ec7bac64a3097a9d99709a3bc885efc82fd47 | 388ee3c6548171a9adc7b5f30bec329e9bfad5ad3a857fdfa7d31159942e632b |
 | 16.3 | `/chapter-16/self-improving-agents` | Inspected 2026-11-15 | cdbdde227c5a7dc74ca2bdfc2c54f0b62d8d659b72ff06e7832e2cf0b4566719 | 82c98f13a708cfe27d97f74869cad8cfae0c7b7ce490e24447cdf38b8c21a282 |
 | 16.4 | `/chapter-16/multi-agent-collaboration` | Mechanical only | a155d11e7c31a3c47f3b5a6ecbc02c54c5a3d638c70aac59e5fa0a48af1953df | 2dca3cc2d271f458117b44c0110ea8762a1416ab4f1554e10a4a87253e7a983a |
-| 16.5 | `/chapter-16/long-term-memory-for-agents` | Inspected 2026-11-15 | 282f35343780e2c45555ff63e389a1335a91ec8c00f22085e8f8bbd8b97d3f0e | 79672d19b29964f0947323500cb64c26b5519868ef3a550fb71117b6ed33539a |
-| 16.6 | `/chapter-16/agent-reliability-recovery-and-guardrails` | Inspected 2026-11-15 | cd83fc417cb7950d6d24116d1492925a16694aa596d897d0cb4cc7be3f18ca7e | 482fba3bba250ed2809c19f0acb31acc9d97fcf9d99b2088f72d33ec92ccf79c |
+| 16.5 | `/chapter-16/long-term-memory-for-agents` | Mechanical only | 282f35343780e2c45555ff63e389a1335a91ec8c00f22085e8f8bbd8b97d3f0e | 121d1cb19357df979ff3139d6022f6041bc711842a38f62a81ecf5d87c592fcd |
+| 16.6 | `/chapter-16/agent-reliability-recovery-and-guardrails` | Mechanical only | cd83fc417cb7950d6d24116d1492925a16694aa596d897d0cb4cc7be3f18ca7e | 16b6b0641b20d49d6fd5de7a7568d32d4889fe2fa1f88289396ea078b4874895 |
 | 16.7 | `/chapter-16/decision-models-and-selective-prediction` | Inspected 2026-11-15 | 11804b8958ee5bad618e14856a0e49b1f47fbb6c47168b58d910d0d796833ce4 | 4e60990227ed403274365841e57f7a71228610ce244d226c2d1077dd515d3c50 |
 | 17.1 | `/chapter-17/academic-benchmarks` | Mechanical only | 2949edf4e9fe1e16fda3f118fa009854dbb67b9501b7989aece12379a4df2686 | 1b13ad1b53dafd3bc3d45f8253913244a7c02ed8336963afc3b707ab4607a567 |
 | 17.2 | `/chapter-17/llm-as-a-judge` | Inspected 2026-11-18 | b3a6cd38fea260a08812c4a3a8f29bc76f30267c3d95247827eda51cb867c7e3 | 630473d35f271219ecf4ae6dc5fc37e897b051893a8f0ad3b9d6fede80c2d0d2 |
@@ -358,7 +358,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 17.7 | `/chapter-17/experimental-design-and-uncertainty` | Inspected 2026-11-25 | 15572b32598a7c488cd3930fe29d3dd54f54ebd5521257817788e039253cdf1d | 00b4ea5b58d4ec986eee7b8d4ed7fbb61749c27a0c9c1c77aced73a4d86f14b1 |
 | 18.1 | `/chapter-18/red-teaming` | Mechanical only | fa815b07490b4a1039a2e91d2c98e9f1f212d6479f534afa5f09020cc8f93598 | 5aa628372d20829e842ce6b3fad0133fee7c40e63c345e76f0b823b351df6f59 |
 | 18.2 | `/chapter-18/jailbreaking-and-defense` | Mechanical only | caff93966e1d1a925120d696bf37a09fa46cc63cd9378c818ac9f1d489348afd | 165303014a71dfa4ec8e28c0ac7f38712f5d97fbcd551510aa5539cb33c33ac1 |
-| 18.3 | `/chapter-18/hallucination-detection` | Inspected 2026-11-15 | d3a1ee8ab17c7b845363483dd7b3112556523b0df6d833116a334717d79bdea3 | 85d58b77dcac5ff08bbdb13964faff2e93d8223760b0b46f4055337515d5162f |
+| 18.3 | `/chapter-18/hallucination-detection` | Mechanical only | d3a1ee8ab17c7b845363483dd7b3112556523b0df6d833116a334717d79bdea3 | e00f30c37d36caa4f654de8a6ac61a682be8526e6be2245f2d1235f53787be8c |
 | 18.4 | `/chapter-18/scalable-oversight` | Inspected 2026-11-15 | ddc4e57280940d9f2de2d5e5f551b035d60ae4feeb324a2a84256e798feb9c7f | 5536d313417dd89e9909d73ed8762c85d7450129338432d8a05ea21c7ee99f3b |
 | 19.1 | `/chapter-19/mechanistic-interpretability` | Mechanical only | e78ed254abbd08dcc580e5d937948f89757d22138640f21b47a48ef61b6769c4 | 146df874ff1cb000e3684a35ed34035a22b496a75e3fbe70e205b649ec302ee4 |
 | 19.2 | `/chapter-19/logit-lens-and-attention-visualization` | Mechanical only | 8f6a64cbb90f5881b4fda6b927ecbdb6a9fe1fcf319cb3bdb5c873bce37a80e5 | e8c6c59743939cc2e865e2b40d86cfd76e6139a553fd10b7f5e46bcd71324f4b |
@@ -370,7 +370,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 20.4 | `/chapter-20/neural-networks-as-programs` | Inspected 2026-11-15 | 55b5f77c413bfd3de7fa682467ff500d07887f4dabafbb79903beccf9b5c4759 | e88b792d77ef04624e0dee7e78480fadde710c80d0f3c1cdc729c60f56e765bf |
 | 20.5 | `/chapter-20/multi-token-prediction` | Inspected 2026-11-18 | e6f6d2d7bcefe3b290e7c0d81c7612e000d2bcfe5dc3593a29a285e27416f560 | d407bab93f7b3b6e03c5ec9d36bced5d4df7e538fe6083aadd5d636b14fe80a9 |
 | 20.6 | `/chapter-20/diffusion-based-llms` | Inspected 2026-11-15 | f2236899fbf327ac90e1c1edae9c77a4173fb6721102a7364fbf85542541d836 | 0d5a117e60a90c1f8d746e5b29f01a13cc4929aa7a0e729e93fc003611ef22ed |
-| 20.7 | `/chapter-20/path-to-agi-and-world-models` | Inspected 2026-11-24 | 8183cc17179d853f3eeb28ec3a79304d0f964353738881a14598a24d9cb35450 | 6d9ae7eb1e161417e7b1d05c8cba110761108178d73e9fbc5da2ed1694dc14e4 |
+| 20.7 | `/chapter-20/path-to-agi-and-world-models` | Mechanical only | 8183cc17179d853f3eeb28ec3a79304d0f964353738881a14598a24d9cb35450 | 32d969fab57f649573a5dc7db10b1afe6897596e02d990f1a5e96bf64a7c8cb1 |
 
 ### Verification for the October 13 pass
 
@@ -600,3 +600,9 @@ The Korean title, frontmatter and former heading anchor were inspected on 37 les
 The 14.3 revision follows the same ordered document IDs in the English and Korean prose, Python example and browser exercise. The candidate cutoff determines whether the incident log can be considered at all. Equal-weight fusion, the explicit dense-weight variation and tied ranks each have a calculation readers can reproduce.
 
 The 17.6 revision matches the November 23 Ling-3.2-air and November 20 Tencent Hy4 checkpoints with their evaluation profiles. The November 23 ChatGPT rollout has its own product note. The source-backed November 24 comparison now has 45 profiles from 19 providers, 34 matched AA indices and 32 reported task costs. The downloadable cost example shows why two pairs of calls with identical total token counts can have different prices. The current inventory hashes above cover both revised lesson pairs.
+
+### 2026-11-25 chapter links and mask verification
+
+In 4.4 the revised figure and PyTorch example both use three prefix tokens and four target tokens. All 49 query/key entries were checked in both editions. The CPU regression changes a future value, tests every output against its expected value and exercises the old float-mask counterexample. The current 4.4 hashes bind this editorial review to the two published manuscripts.
+
+In 12.1, inspection covered the nine-request scenario, shareable calculator settings and bilingual links. Seven other Korean pages each changed one cross-reference to point to the matching Korean chapter. Reversing that single href edit reproduces the earlier complete manuscript in every case. These eight pairs carry current hashes and the narrower mechanical review scope. Earlier full-page inspections remain at commit `f857238`.

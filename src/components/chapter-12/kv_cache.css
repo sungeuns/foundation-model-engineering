@@ -19,7 +19,9 @@
 .kv-calculator-container input,.kv-calculator-container select { width: 100%; box-sizing: border-box; min-width: 0; }
 .kv-calculator-container select,.kv-calculator-container input[type="number"] { padding: .45rem; min-height: 42px; border: 1px solid #8998a8; border-radius: 4px; background: white; color: #172033; font: inherit; font-size: .9rem; }
 .kv-calculator-container input[type="range"] { min-height: 30px; accent-color: #1d4ed8; }
-.kv-calculator-container :is(input, select, button):focus-visible { outline: 3px solid #2563eb; outline-offset: 3px; }
+.kv-calculator-container :is(input, select, button, a):focus-visible { outline: 3px solid #2563eb; outline-offset: 3px; }
+.kv-share { margin: .4rem 0; }
+.kv-share a { display: inline-flex; align-items: center; min-height: 44px; }
 .kv-budget-control,.kv-result { padding: 1rem; border-radius: 8px; }
 .kv-budget-control { margin-bottom: 1rem; border: 1px solid #cbd5e1; background: white; }
 .kv-budget-control > :first-child { margin-bottom: .8rem; }

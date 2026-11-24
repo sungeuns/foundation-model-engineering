@@ -249,13 +249,9 @@ if (currentIndex !== -1) {
                 <path d="M12 2C6.48 2 2 6.58 2 12.26c0 4.53 2.87 8.37 6.84 9.73.5.1.68-.22.68-.49 0-.24-.01-.88-.01-1.73-2.78.62-3.37-1.37-3.37-1.37-.45-1.19-1.11-1.51-1.11-1.51-.91-.64.07-.63.07-.63 1 .07 1.53 1.06 1.53 1.06.9 1.57 2.36 1.12 2.94.85.09-.67.35-1.12.63-1.38-2.22-.26-4.56-1.14-4.56-5.07 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.31.1-2.71 0 0 .84-.28 2.75 1.05A9.34 9.34 0 0 1 12 6.97c.85 0 1.7.12 2.5.35 1.9-1.33 2.74-1.05 2.74-1.05.55 1.4.2 2.45.1 2.71.64.72 1.03 1.63 1.03 2.75 0 3.94-2.34 4.8-4.57 5.06.36.32.68.94.68 1.9 0 1.37-.01 2.47-.01 2.81 0 .27.18.59.69.49A10.15 10.15 0 0 0 22 12.26C22 6.58 17.52 2 12 2Z"></path>
               </svg>
             </a>
-            <div class="dropdown" id="localeDropdown">
-              <button class="dropbtn" id="localeButton" type="button" aria-haspopup="true" aria-expanded="false">{lang.toUpperCase()}</button>
-              <div class="dropdown-content" id="localeMenu" data-shared-fragments={JSON.stringify(localeFragments)}>
-                <a href={toHref(enTarget)}>English (EN)</a>
-                <a href={toHref(koTarget)}>Korean (KO)</a>
-              </div>
-            </div>
+            <a id="localeLink" class="locale-link" href={toHref(isKo ? enTarget : koTarget)}
+              lang={isKo ? 'en' : 'ko'} hreflang={isKo ? 'en' : 'ko'} rel="alternate"
+              data-shared-fragments={JSON.stringify(localeFragments)}>{isKo ? 'English' : '한국어'}</a>
           </div>
         </header>
         {!isHomePage && (
@@ -329,26 +325,18 @@ if (currentIndex !== -1) {
       const toggle = document.getElementById('menuToggle');
       const sidebar = document.getElementById('sidebar');
       const backdrop = document.getElementById('sidebarBackdrop');
-      const localeDropdown = document.getElementById('localeDropdown');
-      const localeButton = document.getElementById('localeButton');
-      const localeMenu = document.getElementById('localeMenu');
-      const sharedFragments: string[] = JSON.parse(localeMenu?.dataset.sharedFragments || '[]');
-      const localeLinks = [...(localeMenu?.querySelectorAll<HTMLAnchorElement>('a[href]') || [])]
-        .map(link => ({ link, baseHref: link.getAttribute('href') || '' }));
-      const updateLocaleLinks = () => {
-        localeLinks.forEach(({ link, baseHref }) => {
-          link.setAttribute('href', localeHref(baseHref, window.location.hash, sharedFragments));
-        });
-      };
-      // Update actual hrefs so copying a link or opening a new tab works too.
-      // Page-only hrefs remain a useful fallback when JavaScript is unavailable.
-      updateLocaleLinks();
-      window.addEventListener('hashchange', updateLocaleLinks);
-      window.addEventListener('popstate', updateLocaleLinks);
-      window.addEventListener('pageshow', updateLocaleLinks);
-      localeDropdown?.addEventListener('pointerenter', updateLocaleLinks);
-      localeDropdown?.addEventListener('focusin', updateLocaleLinks);
-      localeDropdown?.addEventListener('contextmenu', updateLocaleLinks);
+      const localeLink = document.querySelector<HTMLAnchorElement>('#localeLink');
+      if (localeLink) {
+        const targetPage = localeLink.getAttribute('href')!;
+        const fragments: string[] = JSON.parse(localeLink.dataset.sharedFragments || '[]');
+        const updateLocaleLink = () => {
+          localeLink.setAttribute('href', localeHref(targetPage, location.hash, fragments, location.search));
+        };
+        updateLocaleLink();
+        window.addEventListener('hashchange', updateLocaleLink);
+        window.addEventListener('popstate', updateLocaleLink);
+        window.addEventListener('pageshow', updateLocaleLink);
+      }
 
       const isKo = document.documentElement.lang === 'ko';
       const mobile = window.matchMedia('(max-width: 900px)');
@@ -401,29 +389,6 @@ if (currentIndex !== -1) {
         element.tabIndex = 0;
         element.setAttribute('aria-label', element.tagName === 'TABLE' ? (isKo ? '표: 가로로 스크롤할 수 있습니다' : 'Table: scroll horizontally') : element.tagName === 'PRE' ? (isKo ? '코드 예제' : 'Code example') : (isKo ? '수식' : 'Equation'));
       });
-
-      if (localeDropdown && localeButton) {
-        localeButton.addEventListener('click', () => {
-          updateLocaleLinks();
-          const isOpen = localeDropdown.classList.toggle('open');
-          localeButton.setAttribute('aria-expanded', String(isOpen));
-        });
-
-        document.addEventListener('click', (event) => {
-          if (!localeDropdown.contains(event.target)) {
-            localeDropdown.classList.remove('open');
-            localeButton.setAttribute('aria-expanded', 'false');
-          }
-        });
-
-        localeDropdown.addEventListener('keydown', (event) => {
-          if (event.key === 'Escape') {
-            localeDropdown.classList.remove('open');
-            localeButton.setAttribute('aria-expanded', 'false');
-            localeButton.focus();
-          }
-        });
-      }
 
       // Scroll active link into view
       const activeLink = document.querySelector('.sidebar a.active');

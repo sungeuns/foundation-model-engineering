@@ -4,138 +4,106 @@ title: "4.4 Hybrid & Prefix LM"
 lang: "en"
 ---
 
+import PrefixMaskFigure from '../../components/chapter-4/PrefixMaskFigure.astro';
+
 # 4.4 Hybrid & Prefix LM
 
-While Encoder-only and Decoder-only models represent the two extremes of the Transformer spectrum, **Hybrid** and **Prefix Language Models (Prefix LM)** aim to bridge the gap, offering the best of both worlds.
+A translation service receives the whole source sentence before it writes the first word of the translation. While reading the source, a word near the end can clarify a word near the beginning. While writing the translation, each decision has to use only what the service has received or written so far. A **prefix language model** can enforce both rules in one stack of Transformer layers. [[2]](#ref-2)
 
-These architectures are designed to handle tasks that require both deep bidirectional understanding of a prompt (like an Encoder) and fluent autoregressive generation (like a Decoder), without the full complexity of a separate Encoder-Decoder architecture.
+<a id="the-metaphor-the-guided-storyteller"></a>
+<a id="prefix-lm-non-causal-attention-on-the-prompt"></a>
 
----
+## Which positions can read one another?
 
-## The Metaphor: The Guided Storyteller
+Suppose the input has three source positions, P1–P3, followed by four translation positions, T1–T4. P1 can read P3. P1 must never read T1, even during training when the whole translation is present in memory. If it could, an answer could leak into a source representation that later layers read.
 
-Imagine a writer who is given a detailed outline (the Prefix) and asked to write the story (the Target).
-*   While reading and understanding the outline, the writer can look back and forth freely to grasp the full context.
-*   However, when writing the story itself, they must write word by word, only looking at what they have written so far and the outline.
+Let $i$ be the query position, $j$ the key position, and $L_p$ the prefix length. Positions start at 1. The mask permits a pair when $j \le L_p$ **or** $j \le i$. Every row can read the entire prefix. A target row can also read its own token and earlier target tokens. A row describes the input used to predict the **next** token. [[2]](#ref-2)
 
-This is how a Prefix LM works. It allows bidirectional attention within the prefix (prompt) but enforces causal attention for the generated target.
+<PrefixMaskFigure lang="en" />
 
----
+Read the row for T1. Its four visible values come from P1, P2, P3 and T1 itself. That row predicts **T2**. To predict T1, read the output at P3, the last source position in this example. The two rows show why the diagonal belongs in the mask and why the labels shift one place.
 
-## Prefix LM: Non-Causal Attention on the Prompt
+<a id="key-models-and-innovations"></a>
+<a id="1-glm-general-language-model-2021"></a>
 
-In a **Prefix LM**, the input sequence is divided into two parts: a prefix of length $L_p$ and a target of length $L_t$.
+## How GLM uses the boundary
 
-*   **Prefix Tokens ($1 \le i \le L_p$):** Can attend to all other prefix tokens bidirectionally.
-*   **Target Tokens ($L_p < i \le L_p + L_t$):** Can attend to all prefix tokens and all preceding target tokens (causal attention).
+In the original GLM blank-infilling objective, the prefix contains a damaged passage with a marker at each missing span. The target contains the missing spans in a sampled order. For example, the source can use the words on both sides of a blank, but the only missing words a target position can read are the ones supplied so far. GLM records the location of the blank and the position within its reconstruction separately. Its span markers and training targets add structure beyond the simple translation example. [[1]](#ref-1)
 
-<div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', margin: '20px 0' }}>
+<a id="2-palm-parallel-sublayers-are-a-separate-design-axis"></a>
 
-<div style={{ maxWidth: '800px', width: '100%' }}>
-![Prefix LM Attention Pattern](../../assets/images/chapter-4/prefix_lm_attention_pattern.png)
-</div>
+### Parallel sublayers in PaLM
 
-<em style={{ marginTop: '10px', color: '#7f8c8d' }}>Source: AI-generated illustration</em>
+PaLM computes attention and feed-forward branches in parallel inside each block. That choice changes how a layer runs. The attention mask separately determines which token positions can exchange information. [[4]](#ref-4)
 
-</div>
+<a id="pytorch-implementation-prefix-mask"></a>
 
-As shown in the diagram, the attention mask is a hybrid: full visibility in the prefix region and a lower-triangular shape in the target region.
+## Test for a leak with PyTorch
 
----
+In PyTorch's scaled dot-product attention (SDPA), a Boolean `True` makes a key visible. Passing a floating-point matrix of ones and zeros instead adds those numbers to the attention scores. A zero in that matrix leaves a forbidden key eligible for softmax. [[3]](#ref-3)
 
-## Key Models and Innovations
-
-### 1. GLM (General Language Model) (2021)
-**Motivation**: The AI field was divided between Encoder-only models (good for understanding) and Decoder-only models (good for generation). The authors of GLM wanted to create a single model that could excel at both types of tasks by unifying the pre-training objectives. They aimed to overcome the limitations of BERT (not suitable for generation) and GPT (suboptimal for understanding due to unidirectional attention).
-
-**Key Innovations**:
-- **Autoregressive blank infilling:** Both GLM and T5 reconstruct missing spans autoregressively. GLM differs in span generation order, two-dimensional positions and its single-stack mask design. [[1]](#ref-1)
-- **2D Positional Encoding**: To handle the autoregressive generation of missing spans, GLM uses a unique 2D positional encoding that captures both the position in the original sentence and the position within the generated span.
-- **Flexibility**: By varying the number and length of blanks, GLM can be trained to act like an Encoder-only model, a Decoder-only model, or a full Encoder-Decoder model.
-
----
-
-### 2. PaLM parallel sublayers are a separate design axis
-
-PaLM computes attention and MLP branches in parallel. This is an execution/architecture choice, separate from the bidirectional and causal visibility defined by a prefix-LM mask. Parallel branches do not make a decoder-only model a hybrid encoder.
-
-
----
-
-## PyTorch Implementation: Prefix Mask
-
-Here is how to construct an attention mask for a Prefix LM in PyTorch.
+This CPU example uses one unpadded sequence, one head, and one scalar per position. It tests the mask directly. Padding and packed examples need additional masks for valid keys and example boundaries.
 
 ```python
 import torch
+from torch.nn.functional import scaled_dot_product_attention
 
-def create_prefix_mask(prefix_len, total_len):
-    """
-    Create an attention mask for a Prefix LM.
-    """
-    mask = torch.zeros(total_len, total_len)
+prefix_len, length = 3, 7
+position = torch.arange(length)
+query_pos, key_pos = position[:, None], position[None, :]
+allowed = (key_pos < prefix_len) | (key_pos <= query_pos)
 
-    # 1. Prefix can attend to all prefix tokens bidirectionally
-    mask[:prefix_len, :prefix_len] = 1
+# [batch, heads, positions, features]
+q = k = torch.zeros(1, 1, length, 1)
+values = torch.arange(1, length + 1, dtype=q.dtype).view_as(q)
 
-    # 2. Target tokens can attend to all prefix tokens and preceding target tokens
-    for i in range(prefix_len, total_len):
-        mask[i, :i+1] = 1
+def attend(v, mask):
+    return scaled_dot_product_attention(q, k, v, attn_mask=mask, dropout_p=0.0).flatten()
 
-    return mask
+output = attend(values, allowed)
+torch.testing.assert_close(output, torch.tensor([2., 2., 2., 2.5, 3., 3.5, 4.]))
 
-# Example usage
-prefix_len = 3
-total_len = 7 # prefix_len (3) + target_len (4)
-
-mask = create_prefix_mask(prefix_len, total_len)
-
-print("Prefix LM Mask:")
-print(mask)
+changed = values.clone()
+changed[0, 0, 4, 0] += 100  # T2
+new_output = attend(changed, allowed)
+torch.testing.assert_close(new_output[:4], output[:4])
+assert new_output[4] > output[4]
 ```
 
-Expected output for `prefix_len=3` and `total_len=7`:
-```
-[[1., 1., 1., 0., 0., 0., 0.],
- [1., 1., 1., 0., 0., 0., 0.],
- [1., 1., 1., 0., 0., 0., 0.],
- [1., 1., 1., 1., 0., 0., 0.],
- [1., 1., 1., 1., 1., 0., 0.],
- [1., 1., 1., 1., 1., 1., 0.],
- [1., 1., 1., 1., 1., 1., 1.]]
-```
+With every query and key set to zero, visible keys receive equal weight. T1 returns the mean of 1, 2, 3 and 4, which is 2.5. Changing the value at T2 cannot change T1. To reproduce the leak, call `attend(values, allowed.float())` and then `attend(changed, allowed.float())`. The T1 output jumps from about **3.257** to **10.465**. A change in a future token has reached an earlier row.
 
----
+The same boundary matters when reusing a prompt cache. If a new source token becomes part of the bidirectional prefix, earlier source positions can read it. Recompute the affected prefix representations before treating them as final. Adding a target token preserves the earlier rows' visibility.
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: How does a Prefix LM differ from a standard Decoder-only model in processing the prompt?</summary>
-*A standard Decoder-only model processes the prompt causally, meaning a token in the prompt cannot attend to subsequent tokens in the prompt. A Prefix LM allows bidirectional attention within the prompt, allowing tokens to see the entire context of the prompt.*
+<summary>Quiz 1: Why does a strictly causal mask miss information at P1?</summary>
+*P1 could use P2 and P3 to interpret the source, but a strictly causal row at P1 exposes only P1.*
 </details>
 
 <details>
-<summary>Quiz 2: What is the main advantage of Prefix LM over a full Encoder-Decoder architecture?</summary>
-*Prefix LM uses a single unified stack of Transformer layers, whereas Encoder-Decoder uses two separate stacks. This makes Prefix LM simpler to implement and potentially more parameter-efficient, while still providing some benefits of bidirectional prompt understanding.*
+<summary>Quiz 2: Why can the T1 row read T1 without learning its answer in advance?</summary>
+*Its label is T2. The T1 row must block T2 and later target positions.*
 </details>
 
 <details>
-<summary>Quiz 3: In the PyTorch example, why is the top-left $3 \times 3$ block of the mask filled with 1s?</summary>
-*Because the prefix length is 3, and tokens in the prefix are allowed to attend to all other tokens in the prefix bidirectionally. Thus, all pairs within the prefix have valid attention.*
+<summary>Quiz 3: What does the value at T1 become if all seven keys are visible in the example?</summary>
+*With zero attention logits the weights would be uniform across all seven positions. Their mean is 4. With the prefix mask only the first four are visible and the mean is 2.5.*
 </details>
 
 <details>
-<summary>Quiz 4: For what kind of tasks might a Prefix LM be particularly suitable?</summary>
-*Prefix LMs are suitable for tasks with a clear separation between a context/prompt and a generation target, such as summarization (prompt is the text, target is the summary) or translation, where full understanding of the prompt is beneficial before generation begins.*
+<summary>Quiz 4: When would adding a token force you to revisit cached prefix states?</summary>
+*Extending the bidirectional source opens a new key to earlier source positions. Appending a target token leaves those earlier rows unchanged.*
 </details>
 
 <details>
-<summary>Quiz 5: What is the core idea behind GLM's pre-training objective?</summary>
-*GLM uses an autoregressive blank-infilling objective. It randomly blanks out contiguous spans of tokens from the input and trains the model to reconstruct them autoregressively, allowing it to handle both understanding and generation tasks effectively.*
+<summary>Quiz 5: How does GLM know which blank to fill when it generates spans out of text order?</summary>
+*One position coordinate identifies the original blank and a second tracks progress within the span being generated.*
 </details>
-
----
 
 ## References
 
-1. <a id="ref-1"></a>Du, Z., et al. (2021). *GLM: General Language Model Pretraining with Autoregressive Blank Infilling*. [arXiv:2103.10360](https://arxiv.org/abs/2103.10360).
+1. <a id="ref-1"></a>Du, Z., et al. (2022). [GLM: General Language Model Pretraining with Autoregressive Blank Infilling, §2.1 and Figure 2](https://aclanthology.org/2022.acl-long.26/).
+2. <a id="ref-2"></a>Raffel, C., et al. (2020). [Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer, §3.2.1 and Figures 3–4](https://jmlr.org/papers/v21/20-074.html).
+3. <a id="ref-3"></a>PyTorch. [Scaled dot product attention, PyTorch 2.15](https://docs.pytorch.org/docs/2.15/generated/torch.nn.functional.scaled_dot_product_attention.html).
+4. <a id="ref-4"></a>Chowdhery, A., et al. (2023). [PaLM: Scaling Language Modeling with Pathways, §2](https://jmlr.org/papers/v24/22-1144.html).

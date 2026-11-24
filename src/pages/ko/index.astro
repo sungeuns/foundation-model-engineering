@@ -23,7 +23,7 @@ const getPath = (p) => `/ko${p}`;
 
   <h2>직접 만들고 검증해보세요</h2>
   <p><a href={withPagePath('/ko/chapter-7/tiny-decoder-lab')}>작은 디코더 실습</a>에서는 CPU로 모델을 학습합니다. 앞선 토큰을 가려도 기호열을 복사할 수 있을지 예측해 보세요. <a href={withPagePath('/ko/chapter-17/experimental-design-and-uncertainty') + '#release-lab'}>브라우저 평가 실습</a>에서는 두 후보 모두 목표 과제 정답률이 15%p 올랐습니다. 왜 한 후보만 통과하는지 직접 실행해 확인해 보세요.</p>
-  <p>디코더 실습을 시작하려면 <a href="https://colab.research.google.com/github/sungeuns/foundation-model-engineering/blob/main/public/labs/tiny-decoder-lab-ko.ipynb">Colab에서 한국어 노트북을 열거나</a> <a href={withBasePath('/labs/tiny-decoder-lab-ko.ipynb')}>Jupyter용으로 내려받으세요</a>. CPU PyTorch로 실행하고 데이터를 직접 생성합니다. 모델 다운로드나 API 키는 필요하지 않으며, Colab에서 실행할 때는 Google 로그인이 필요합니다.</p>
+  <p>디코더 실습을 시작하려면 <a href="https://colab.research.google.com/github/sungeuns/foundation-model-engineering/blob/main/public/labs/tiny-decoder-lab-ko.ipynb">Colab에서 한국어 노트북을 열거나</a> <a href={withBasePath('/labs/tiny-decoder-lab-ko.ipynb')} download="tiny-decoder-lab-ko.ipynb">Jupyter용으로 내려받으세요</a>. CPU PyTorch로 실행하고 데이터를 직접 생성합니다. 모델 다운로드나 API 키는 필요하지 않으며, Colab에서 실행할 때는 Google 로그인이 필요합니다.</p>
   <p>총 {chapters.reduce((total, chapter) => total + chapter.subs.length, 0)}개 절에서 아키텍처·학습·추론·검색·에이전트·평가·안전을 연결합니다. 짧은 퀴즈로 실패 원인을 설명하고 트레이드오프를 선택해보세요. 설명용 계산과 시뮬레이션에는 그 성격을 표시하며, 실제 모델의 측정 결과와 구분합니다.</p>
 
   <h2>함께 고쳐가는 책</h2>

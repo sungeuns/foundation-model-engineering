@@ -299,8 +299,8 @@ export const searchDescriptions = {
     ko: 'T5·BART 계열 인코더-디코더 모델과 입력·출력을 연결하는 교차 어텐션을 이해하고, 해당 메커니즘의 PyTorch 예제를 살펴봅니다.',
   },
   '/chapter-4/hybrid-prefix-lm': {
-    en: 'Learn how prefix language models combine bidirectional prompt attention with causal generation, using an explicit prefix-mask implementation.',
-    ko: 'Prefix LM이 프롬프트의 양방향 어텐션과 인과적 생성을 결합하는 방식을 배우고, 프리픽스 마스크 구현을 살펴봅니다.',
+    en: 'Build a seven-token prefix LM mask in PyTorch. Trace which tokens can see one another and test for future-token leakage with scaled dot-product attention.',
+    ko: '일곱 토큰으로 접두사 언어 모델의 어텐션 마스크를 만듭니다. 각 위치에서 읽을 수 있는 토큰을 표로 확인하고 PyTorch에서 미래 토큰 누출을 검사합니다.',
   },
   '/chapter-4/various-llm-architectures': {
     en: 'Why can a model run more layers than it stores? Explore the reused 28-layer block in GLM-5.4, sparsity, and a worked example of multi-head latent attention (MLA).',

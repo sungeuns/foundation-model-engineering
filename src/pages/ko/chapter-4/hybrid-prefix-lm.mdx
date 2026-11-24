@@ -4,140 +4,108 @@ title: "4.4 하이브리드 언어 모델과 접두사 언어 모델(Prefix LM)"
 lang: "ko"
 ---
 
+import PrefixMaskFigure from '../../../components/chapter-4/PrefixMaskFigure.astro';
+
 <a id="44-hybrid--prefix-lm"></a>
 
 # 4.4 하이브리드 언어 모델과 접두사 언어 모델(Prefix LM)
 
-Encoder-only 모델과 Decoder-only 모델이 Transformer 스펙트럼의 양 극단을 대표하는 동안, **Hybrid** 및 **Prefix Language Model (Prefix LM)** 은 그 격차를 해소하여 두 세계의 장점을 모두 제공하는 것을 목표로 합니다.
+번역 서비스는 번역문의 첫 단어를 쓰기 전에 원문 전체를 받습니다. 원문을 읽을 때는 문장 끝의 단어가 첫 단어의 뜻을 알려 줄 수 있습니다. 번역문을 쓸 때는 아직 쓰지 않은 단어를 들여다볼 수 없습니다. **접두사 언어 모델(Prefix LM)** 은 하나의 트랜스포머에서 이 두 가지 읽기 규칙을 함께 적용합니다. [[2]](#ref-2)
 
-이러한 아키텍처는 프롬프트에 대한 깊은 양방향 이해(Encoder와 같음)와 유창한 autoregressive 생성(Decoder와 같음)이 모두 필요한 과업을, 별도의 Encoder-Decoder 아키텍처의 복잡성 없이 처리하도록 설계되었습니다.
+<a id="the-metaphor-the-guided-storyteller-안내를-받는-이야기꾼"></a>
+<a id="prefix-lm-non-causal-attention-on-the-prompt"></a>
 
----
+## 각 위치에서 어느 토큰을 읽을 수 있을까요?
 
-## The Metaphor: The Guided Storyteller (안내를 받는 이야기꾼)
+원문이 P1~P3 세 토큰, 번역문이 T1~T4 네 토큰이라고 합시다. P1은 P3을 읽을 수 있습니다. 그러나 P1에서 T1을 읽을 수 있으면 정답인 번역문이 원문의 표현에 섞여 뒤쪽 층에 전달됩니다. 학습할 때 이미 번역문 전체가 메모리에 올라와 있어도 이 경로는 차단해야 합니다.
 
-세부적인 개요(Prefix)를 받고 이야기(Target)를 쓰라는 요청을 받은 작가를 상상해 보세요.
-*   개요를 읽고 이해하는 동안 작가는 전체 맥락을 파악하기 위해 앞뒤로 자유롭게 살펴볼 수 있습니다.
-*   그러나 이야기를 직접 쓸 때는 지금까지 쓴 내용과 개요만 보면서 한 단어씩 써내려 가야 합니다.
+질의 위치를 $i$, 키 위치를 $j$, 접두사 길이를 $L_p$ 라 하고, 위치 번호는 1부터 셉니다. $j \le L_p$ 또는 $j \le i$ 이면 해당 키를 읽을 수 있습니다. 모든 행에서 원문 전체를 읽습니다. 번역 구간의 행에서는 지금까지 쓴 번역과 현재 토큰도 읽습니다. 이때 각 행으로 예측하는 것은 **다음 토큰** 입니다. [[2]](#ref-2)
 
-이것이 바로 Prefix LM의 작동 방식입니다. 프롬프트(prefix) 내에서는 bidirectional 어텐션을 허용하지만, 생성되는 대상(target)에 대해서는 causal 어텐션을 강제합니다.
+<PrefixMaskFigure lang="ko" />
 
----
+T1 행을 따라가 보세요. P1, P2, P3, T1 네 곳의 값을 읽어 그다음 토큰인 **T2** 를 예측합니다. 첫 번역 토큰 T1을 예측하는 곳은 이 예제의 마지막 원문 위치인 P3입니다. 대각선이 열려 있어도 정답을 미리 보는 일이 없는 이유가 여기에 있습니다.
 
-## Prefix LM: Non-Causal Attention on the Prompt
+<a id="key-models-and-innovations"></a>
+<a id="1-glm-general-language-model-2021"></a>
 
-**Prefix LM** 에서 입력 시퀀스는 두 부분으로 나뉩니다: 길이가 $L_p$인 prefix와 길이가 $L_t$인 target.
+## GLM은 이 경계를 어떻게 이용할까요?
 
-*   **Prefix Tokens ($1 \le i \le L_p$):** 다른 모든 prefix 토큰에 bidirectional하게 어텐션을 기울일 수 있습니다.
-*   **Target Tokens ($L_p < i \le L_p + L_t$):** 모든 prefix 토큰과 이전의 모든 target 토큰에 어텐션을 기울일 수 있습니다 (causal 어텐션).
+초기 GLM은 글에서 단어가 연속된 구간을 몇 군데 골라 지우고 그 자리에 표식을 남깁니다. 빈칸이 든 글이 접두사이고, 지운 구간들을 복원한 내용이 생성 대상입니다. 원문에서는 빈칸 앞뒤를 모두 읽을 수 있습니다. 빈칸을 채우는 동안에는 지금까지 주어진 복원 토큰까지만 읽습니다. GLM은 빈칸을 채우는 순서를 바꿔 학습하며, 원문에서 빈칸이 있던 위치와 그 안에서 몇 번째 토큰을 쓰는지를 따로 기록합니다. 이때 쓰는 위치 정보와 구간 표식은 위 번역 예제에 추가되는 요소입니다. [[1]](#ref-1)
 
-<div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', margin: '20px 0' }}>
+<a id="2-palm의-병렬-하위-레이어는-별도-설계-축"></a>
 
-<div style={{ maxWidth: '800px', width: '100%' }}>
-![Prefix LM Attention Pattern](../../../assets/images/chapter-4/prefix_lm_attention_pattern.png)
-</div>
+### PaLM에서 병렬로 계산하는 부분
 
-<em style={{ marginTop: '10px', color: '#7f8c8d' }}>출처: AI 생성 이미지</em>
+PaLM은 한 블록 안에서 어텐션과 피드포워드 분기를 병렬로 계산합니다. 이는 층 안의 연산을 어떻게 실행할지에 관한 선택입니다. 토큰끼리 어느 방향으로 정보를 주고받을 수 있는지는 어텐션 마스크가 정합니다. [[4]](#ref-4)
 
-</div>
+<a id="pytorch-implementation-prefix-mask"></a>
 
-다이어그램에 표시된 것처럼 어텐션 마스크는 하이브리드 형태입니다: prefix 영역에서는 완전한 가시성을 제공하고, target 영역에서는 하삼각(lower-triangular) 형태를 띱니다.
+## PyTorch로 미래 토큰이 새어 들어오는지 확인하기
 
----
+PyTorch의 스케일드 닷 프로덕트 어텐션(SDPA)에서 불리언 마스크의 `True` 는 해당 키를 읽어도 된다는 뜻입니다. 실수형 행렬에 1과 0을 넣어 넘기면 이 숫자는 어텐션 점수에 더해집니다. 이때 0을 더한 키도 소프트맥스 계산에 참여합니다. [[3]](#ref-3)
 
-## Key Models and Innovations
-
-### 1. GLM (General Language Model) (2021)
-**Motivation**: AI 분야는 이해에 유리한 Encoder-only 모델과 생성에 유리한 Decoder-only 모델로 나뉘어 있었습니다. GLM의 저자들은 사전 학습 목표를 통합하여 단일 모델로 두 가지 유형의 과업 모두에서 탁월한 성능을 발휘하는 모델을 만들고자 했습니다. 그들은 BERT(생성에 부적합)와 GPT(단방향 어텐션으로 인해 이해에 차선책)의 한계를 극복하고자 했습니다 [[1]](#ref-1).
-
-**핵심 혁신 (Key Innovations)**:
-- **자기회귀 공백 채우기:** GLM과 T5 모두 빠진 스팬을 자기회귀적으로 복원합니다. GLM의 차이는 스팬 생성 순서와 2차원 위치 표현, 단일 스택의 마스크 설계입니다. [[1]](#ref-1)
-- **2D 위치 인코딩 (2D Positional Encoding)**: 누락된 스팬의 autoregressive 생성을 처리하기 위해, GLM은 원래 문장에서의 위치와 생성된 스팬 내에서의 위치를 모두 캡처하는 고유한 2D 위치 인코딩을 사용합니다.
-- **유연성**: 공백의 수와 길이를 변경함으로써 GLM은 Encoder-only 모델, Decoder-only 모델 또는 전체 Encoder-Decoder 모델처럼 작동하도록 학습될 수 있습니다.
-
----
-
-### 2. PaLM의 병렬 하위 레이어는 별도 설계 축
-
-PaLM은 attention과 MLP 분기를 병렬로 계산합니다. 이는 연산 스케줄의 선택이며 prefix-LM의 양방향·인과적 가시 범위를 결정하지 않습니다. 병렬 분기를 사용한 decoder-only 모델이 자동으로 하이브리드 인코더가 되지는 않습니다.
-
-
----
-
-## PyTorch Implementation: Prefix Mask
-
-다음은 PyTorch에서 Prefix LM을 위한 어텐션 마스크를 구성하는 방법입니다.
+아래 코드는 CPU에서 패딩이 없는 문장 한 개, 헤드 하나, 위치마다 스칼라 값 하나로 마스크를 검사합니다. 길이가 다른 문장을 묶거나 여러 예제를 이어 붙인다면 유효한 키와 예제 사이의 경계도 마스크에 반영해야 합니다.
 
 ```python
 import torch
+from torch.nn.functional import scaled_dot_product_attention
 
-def create_prefix_mask(prefix_len, total_len):
-    """
-    Create an attention mask for a Prefix LM.
-    """
-    mask = torch.zeros(total_len, total_len)
+prefix_len, length = 3, 7
+position = torch.arange(length)
+query_pos, key_pos = position[:, None], position[None, :]
+allowed = (key_pos < prefix_len) | (key_pos <= query_pos)
 
-    # 1. Prefix can attend to all prefix tokens bidirectionally
-    mask[:prefix_len, :prefix_len] = 1
+# [batch, heads, positions, features]
+q = k = torch.zeros(1, 1, length, 1)
+values = torch.arange(1, length + 1, dtype=q.dtype).view_as(q)
 
-    # 2. Target tokens can attend to all prefix tokens and preceding target tokens
-    for i in range(prefix_len, total_len):
-        mask[i, :i+1] = 1
+def attend(v, mask):
+    return scaled_dot_product_attention(q, k, v, attn_mask=mask, dropout_p=0.0).flatten()
 
-    return mask
+output = attend(values, allowed)
+torch.testing.assert_close(output, torch.tensor([2., 2., 2., 2.5, 3., 3.5, 4.]))
 
-# Example usage
-prefix_len = 3
-total_len = 7 # prefix_len (3) + target_len (4)
-
-mask = create_prefix_mask(prefix_len, total_len)
-
-print("Prefix LM Mask:")
-print(mask)
+changed = values.clone()
+changed[0, 0, 4, 0] += 100  # T2
+new_output = attend(changed, allowed)
+torch.testing.assert_close(new_output[:4], output[:4])
+assert new_output[4] > output[4]
 ```
 
-`prefix_len=3` 및 `total_len=7`에 대한 예상 출력:
-```
-[[1., 1., 1., 0., 0., 0., 0.],
- [1., 1., 1., 0., 0., 0., 0.],
- [1., 1., 1., 0., 0., 0., 0.],
- [1., 1., 1., 1., 0., 0., 0.],
- [1., 1., 1., 1., 1., 0., 0.],
- [1., 1., 1., 1., 1., 1., 0.],
- [1., 1., 1., 1., 1., 1., 1.]]
-```
+질의와 키를 모두 0으로 두면 볼 수 있는 위치들의 가중치가 같습니다. T1의 출력은 1, 2, 3, 4의 평균인 2.5입니다. T2의 값을 바꿔도 T1의 출력은 그대로입니다. 미래 값이 새는 문제를 재현하려면 `attend(values, allowed.float())` 와 `attend(changed, allowed.float())` 를 차례로 실행해 보세요. T1의 출력이 약 **3.257** 에서 **10.465** 로 뜁니다. 미래 토큰 하나를 바꾼 영향이 앞선 위치까지 번진 것입니다.
 
----
+프롬프트 캐시를 재사용할 때도 같은 원리가 적용됩니다. 원문의 끝에 토큰을 추가하면 앞선 원문 위치에서도 새 토큰을 읽을 수 있습니다. 이 경우에는 영향을 받는 원문의 표현을 다시 계산해야 합니다. 번역문만 한 토큰 연장하면 앞선 행에서 볼 수 있는 범위는 그대로입니다.
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: Prefix LM은 프롬프트를 처리할 때 표준 Decoder-only 모델과 어떻게 다릅니까?</summary>
-*표준 Decoder-only 모델은 프롬프트를 인과적으로(causally) 처리하므로, 프롬프트의 토큰이 프롬프트 내의 후속 토큰에 어텐션을 기울일 수 없습니다. 반면 Prefix LM은 프롬프트 내에서 bidirectional 어텐션을 허용하여 토큰이 프롬프트의 전체 컨텍스트를 볼 수 있도록 합니다.*
+<summary>Quiz 1: P1에 일반적인 인과 마스크를 적용하면 어떤 정보를 놓칠까요?</summary>
+*원문의 첫 위치에서는 P2와 P3도 단어의 의미를 결정하는 단서입니다. 인과 마스크를 적용한 P1은 P1만 읽습니다.*
 </details>
 
 <details>
-<summary>Quiz 2: 풀(full) Encoder-Decoder 아키텍처와 비교하여 Prefix LM의 가장 큰 장점은 무엇입니까?</summary>
-*Prefix LM은 단일 통합 Transformer 레이어 스택을 사용하는 반면, Encoder-Decoder는 두 개의 별도 스택을 사용합니다. 이로 인해 Prefix LM은 구현이 더 간단하고 잠재적으로 파라미터 효율성이 더 높으면서도, 양방향 프롬프트 이해의 일부 이점을 여전히 제공합니다.*
+<summary>Quiz 2: T1 행이 T1을 읽어도 정답을 미리 보는 것이 아닌 이유는 무엇일까요?</summary>
+*T1 행이 예측할 정답은 T2입니다. 이 행에서는 T2와 그 이후의 번역 토큰을 차단해야 합니다.*
 </details>
 
 <details>
-<summary>Quiz 3: PyTorch 예시에서 마스크의 왼쪽 상단 $3 \times 3$ 블록이 1로 채워진 이유는 무엇입니까?</summary>
-*Prefix 길이가 3이고, prefix 내의 토큰은 prefix 내의 다른 모든 토큰에 bidirectional하게 어텐션을 기울일 수 있기 때문입니다. 따라서 prefix 내의 모든 쌍은 유효한 어텐션을 가집니다.*
+<summary>Quiz 3: 예제에서 일곱 위치가 전부 보이면 T1의 출력은 얼마일까요?</summary>
+*어텐션 점수가 모두 0이므로 일곱 값이 같은 가중치를 받아 평균인 4가 됩니다. 접두사 마스크를 쓰면 첫 네 값의 평균인 2.5입니다.*
 </details>
 
 <details>
-<summary>Quiz 4: 어떤 종류의 과업에 Prefix LM이 특히 적합할 수 있습니까?</summary>
-*Prefix LM은 요약(프롬프트는 텍스트, 타겟은 요약) 또는 번역과 같이 컨텍스트/프롬프트와 생성 대상(target)이 명확히 분리된 과업에 적합하며, 생성이 시작되기 전에 프롬프트에 대한 완전한 이해가 유익한 경우에 유리합니다.*
+<summary>Quiz 4: 토큰 하나를 추가했을 때 어떤 경우에 접두사 캐시를 다시 계산해야 할까요?</summary>
+*양방향으로 읽는 원문에 토큰을 추가하면 앞선 원문 위치에서도 새 키를 볼 수 있습니다. 번역문 끝에 토큰을 추가하면 앞선 행은 그대로입니다.*
 </details>
 
 <details>
-<summary>Quiz 5: GLM의 pre-training 목표 뒤에 숨겨진 핵심 아이디어는 무엇입니까?</summary>
-*GLM은 autoregressive blank-infilling 목표를 사용합니다. 입력에서 연속된 토큰 범위를 무작위로 비우고(blank) 모델이 이를 autoregressive하게 복원하도록 학습시켜, 이해 및 생성 과업을 모두 효과적으로 처리할 수 있도록 합니다.*
+<summary>Quiz 5: GLM은 원문과 다른 순서로 빈칸을 채울 때 각 토큰의 위치를 어떻게 구분할까요?</summary>
+*한 좌표는 원문에서 어느 빈칸인지를 가리키고, 다른 좌표는 그 구간에서 몇 번째 토큰을 복원하고 있는지를 나타냅니다.*
 </details>
-
----
 
 ## References
 
-1. <a id="ref-1"></a>Du, Z., et al. (2021). *GLM: General Language Model Pretraining with Autoregressive Blank Infilling*. [arXiv:2103.10360](https://arxiv.org/abs/2103.10360).
+1. <a id="ref-1"></a>Du, Z., et al. (2022). [GLM 논문 2.1절과 그림 2](https://aclanthology.org/2022.acl-long.26/).
+2. <a id="ref-2"></a>Raffel, C., et al. (2020). [T5 논문 3.2.1절과 그림 3·4](https://jmlr.org/papers/v21/20-074.html).
+3. <a id="ref-3"></a>PyTorch. [PyTorch 2.15의 스케일드 닷 프로덕트 어텐션](https://docs.pytorch.org/docs/2.15/generated/torch.nn.functional.scaled_dot_product_attention.html).
+4. <a id="ref-4"></a>Chowdhery, A., et al. (2023). [PaLM 논문 2절](https://jmlr.org/papers/v24/22-1144.html).

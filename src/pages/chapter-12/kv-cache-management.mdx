@@ -73,7 +73,7 @@ Now admit nine requests whose prompts are already 8,192 tokens long and allow ea
 
 *Calculated from the lesson's 320 KiB per token and 24 GiB net KV budget.* [Open the full-size chart](../../social/kv-budget-en.png)
 
-Select **Load the nine-request example**. Prompt caching leaves 1.5 GiB free. Before looking at the maximum-length result, predict how much extra memory the pool would need if every request added 2,048 tokens. To try a different budget, you can enter total memory, weights and other reservations for the same pool. For example, 80 GiB total minus 48 GiB of weights and 8 GiB reserved for other costs leaves 24 GiB for KV.
+[Open the calculator with nine requests](?kv=1&batch=9&sequence=8192&generated=2048&layers=80&heads=8&dimension=128&precision=2&budget=24#kv-calculator). After changing the inputs, copy the link below the calculator to share the same workload and memory budget. Prompt caching leaves 1.5 GiB free. Before looking at the maximum-length result, predict how much extra memory the pool would need if every request added 2,048 tokens. To try a different budget, you can enter total memory, weights and other reservations for the same pool. For example, 80 GiB total minus 48 GiB of weights and 8 GiB reserved for other costs leaves 24 GiB for KV.
 
 <KVCacheCalculator client:load lang="en" />
 

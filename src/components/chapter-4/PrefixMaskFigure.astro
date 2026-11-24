@@ -1,0 +1,67 @@
+---
+const ko = Astro.props.lang === 'ko';
+const prefixLength = 3;
+const tokens = ['P1', 'P2', 'P3', 'T1', 'T2', 'T3', 'T4'];
+const mask = tokens.map((_, row) => tokens.map((_, column) => column < prefixLength || column <= row));
+---
+
+<figure class="prefix-mask">
+  <table>
+    <caption>{ko ? '행은 질의 위치, 열은 참조할 키 위치' : 'Rows are query positions. Columns are key positions.'}</caption>
+    <thead>
+      <tr>
+        <th scope="col">{ko ? '질의' : 'Query'}</th>
+        {tokens.map(token => <th scope="col">{token}</th>)}
+      </tr>
+    </thead>
+    <tbody>
+      {tokens.map((query, row) => (
+        <tr>
+          <th scope="row">{query}</th>
+          {mask[row].map(visible => <td class={visible ? 'visible' : undefined}>{visible ? '1' : '0'}</td>)}
+        </tr>
+      ))}
+    </tbody>
+  </table>
+  <p>{ko ? '1 = 참조 가능 · 0 = 차단. 굵은 선은 접두사(P)와 생성 구간(T)의 경계입니다.' : '1 = visible · 0 = blocked. The heavier rules separate prefix (P) from target (T).'}</p>
+  <figcaption>
+    {ko ? 'Raffel 등의 그림 3에 나오는 규칙을 일곱 위치에 적용해 HTML 표로 계산했습니다.' : 'HTML table calculated for seven positions using the mask rule in Figure 3 of Raffel et al.'}
+    {' '}<a href="#ref-2">[2]</a>
+  </figcaption>
+</figure>
+
+<style>
+  .prefix-mask {
+    margin: 1.5rem 0;
+    max-width: 34rem;
+  }
+  .prefix-mask table {
+    display: table;
+    width: 100%;
+    margin: 0;
+    table-layout: fixed;
+    border-collapse: collapse;
+    border-radius: 0;
+    box-shadow: none;
+    font-variant-numeric: tabular-nums;
+  }
+  .prefix-mask caption {
+    padding-bottom: .6rem;
+    color: #263749;
+    text-align: left;
+    font-weight: 600;
+  }
+  .prefix-mask :is(th, td) {
+    padding: .35rem .1rem;
+    text-align: center;
+    border: 1px solid #ccd6dd;
+  }
+  .prefix-mask tr > :first-child { width: 3.5rem; }
+  .prefix-mask th { background: #f1f5f7; }
+  .prefix-mask td { background: #fff; color: #596778; }
+  .prefix-mask td.visible { background: #cbe8df; color: #174a40; font-weight: 600; }
+  .prefix-mask tr > :nth-child(5) { border-left: 2px solid #3e5968; }
+  .prefix-mask tbody tr:nth-child(4) > * { border-top: 2px solid #3e5968; }
+  .prefix-mask p { margin: .55rem 0 .25rem; }
+  .prefix-mask figcaption { color: #465565; font-size: .9rem; }
+</style>

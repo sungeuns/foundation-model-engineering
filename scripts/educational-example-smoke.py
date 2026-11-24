@@ -211,3 +211,16 @@ for locale in ['', 'ko/']:
     full,h=counter(x);first,state=counter(x[:,:2]);second,_=counter(x[:,2:],state)
     assert torch.allclose(full,torch.cat([first,second],1),atol=1e-10)
 print('EN/KO GoT task history, judge rejection, worker padding and recurrent-state continuation passed')
+
+# Run each printed SDPA example, including its future-value isolation assertions.
+# The float 0/1 comparison is a deliberate failure case described in the lesson.
+for locale in ['', 'ko/']:
+    lesson = ROOT / f'{locale}chapter-4/hybrid-prefix-lm.mdx'
+    code = re.search(r'```python\n(.*?)\n```', lesson.read_text(), re.S).group(1)
+    example = {}
+    exec(compile(code, str(lesson), 'exec'), example)
+    mask = example['allowed']
+    assert mask.dtype == torch.bool
+    leak = [example['attend'](example[name], mask.float())[3] for name in ('values', 'changed')]
+    torch.testing.assert_close(torch.stack(leak), torch.tensor([3.257, 10.465]), atol=.001, rtol=0)
+    print(f'{locale or "en/"}: prefix visibility and additive-mask leakage verified')

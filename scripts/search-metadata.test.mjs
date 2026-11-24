@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import test from 'node:test';
+import { parse } from 'parse5';
 import { chapters } from '../src/data/chapters.js';
 import { searchDescriptions } from '../src/data/search-descriptions.js';
 import { socialCards } from '../src/data/social-cards.js';
@@ -53,6 +54,11 @@ test('every built page has canonical, reciprocal language links, and a local soc
     for (const [locale, target] of [['en', en], ['ko', en === '/' ? '/ko' : `/ko${en}`], ['x-default', en]]) {
       assert.ok(head.includes(`hreflang="${locale}" href="${absolute(target)}"`), `${route}: ${locale}`);
     }
+    const switchLink = html.match(/<a\b[^>]*\bid="localeLink"[^>]*>/)?.[0];
+    const otherLang = lang === 'en' ? 'ko' : 'en';
+    const otherRoute = lang === 'ko' ? en : en === '/' ? '/ko' : `/ko${en}`;
+    assert.ok(switchLink?.includes(`href="${new URL(absolute(otherRoute)).pathname}"`), `${route}: visible edition link`);
+    assert.ok(switchLink.includes(`hreflang="${otherLang}"`), route);
     const socialImage = socialCards[en]?.[lang]?.image || `/social/cover-${lang}.png`;
     assert.ok(head.includes(`property="og:image" content="${base}${socialImage}"`), route);
     assert.ok(head.includes(`name="twitter:image" content="${base}${socialImage}"`), route);
@@ -107,31 +113,50 @@ test('every built page has canonical, reciprocal language links, and a local soc
   }
 });
 
-test('internal links resolve to canonical deployed paths and real fragments', () => {
+test('internal links resolve to real canonical destinations and respect the chapter edition', () => {
   const siteBase = new URL(base);
-  const routeUrls = new Set(routes.map(route => `${base}${route === '/' ? '' : route}/`));
-  const files = new Map();
+  const pages = new Map();
   for (const route of routes) {
-    const url = `${base}${route === '/' ? '' : route}/`;
-    files.set(url, readFileSync(`${outputDir}${route === '/' ? '' : route}/index.html`, 'utf8'));
+    const suffix = route === '/' ? '' : route;
+    const html = readFileSync(`${outputDir}${suffix}/index.html`, 'utf8');
+    const links = [];
+    const ids = new Set();
+    function visit(node, inMain) {
+      const attrs = Object.fromEntries((node.attrs || []).map(({ name, value }) => [name, value]));
+      if (attrs.id) ids.add(attrs.id);
+      if (node.tagName === 'a' && attrs.href) links.push({ ...attrs, inMain });
+      for (const child of node.childNodes || []) visit(child, inMain || node.tagName === 'main');
+    }
+    visit(parse(html), false);
+    const chapterLang = route === '/' || route === '/ko' ? null : route.startsWith('/ko/') ? 'ko' : 'en';
+    pages.set(`${base}${suffix}/`, { ids, links, chapterLang });
   }
-  for (const [pageUrl, html] of files) {
-    for (const match of html.matchAll(/<a\s[^>]*href="([^"]+)"/g)) {
-      const href = match[1].replaceAll('&amp;', '&');
+  for (const [pageUrl, page] of pages) {
+    for (const { href, hreflang, inMain } of page.links) {
       const url = new URL(href, pageUrl);
       if (url.origin !== siteBase.origin) continue;
       assert.ok(url.pathname.startsWith(`${siteBase.pathname}/`), `${pageUrl}: outside deployment base: ${href}`);
-      const target = `${url.origin}${url.pathname}`;
-      if (routeUrls.has(target)) {
-        if (url.hash) {
-          const id = decodeURIComponent(url.hash.slice(1));
-          assert.ok(files.get(target).includes(`id="${id}"`), `${pageUrl}: missing fragment ${href}`);
+      const target = pages.get(url.origin + url.pathname);
+      if (target) {
+        if (url.hash) assert.ok(target.ids.has(decodeURIComponent(url.hash.slice(1))), `${pageUrl}: missing fragment ${href}`);
+        if (inMain && page.chapterLang && target.chapterLang && page.chapterLang !== target.chapterLang) {
+          assert.equal(hreflang, target.chapterLang, `${pageUrl}: unlabeled change of edition to ${href}`);
         }
       } else {
         const assetPath = url.pathname.slice(siteBase.pathname.length);
         assert.ok(/\.[^/]+$/.test(assetPath) && existsSync(`${outputDir}${assetPath}`), `${pageUrl}: broken or noncanonical link ${href}`);
       }
     }
+  }
+});
+
+test('home notebook download links save the localized notebook file', () => {
+  for (const edition of ['', '/ko']) {
+    const html = readFileSync(`${outputDir}${edition}/index.html`, 'utf8');
+    const filename = `tiny-decoder-lab${edition ? '-ko' : ''}.ipynb`;
+    const href = `href="${new URL(base).pathname}/labs/${filename}"`;
+    const link = [...html.matchAll(/<a\s[^>]*>/g)].map(([tag]) => tag).find(tag => tag.includes(href));
+    assert.ok(link?.includes(`download="${filename}"`), `${edition}/index.html: notebook download`);
   }
 });
 

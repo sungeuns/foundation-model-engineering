@@ -24,6 +24,7 @@ test('shared exercise IDs belong to the same authored content in both translatio
     ['/chapter-3/multi-head-attention', 'two-head-calculation', 'MhaVisualizer', 'chapter-3'],
     ['/chapter-5/sparse-vs-dense-models', 'moe-routing-lab', 'MoERouterVisualizer', 'chapter-5'],
     ['/chapter-11/vision-language-bridges', 'visual-token-budget', 'VisionLanguageBridgeVisualizer', 'chapter-11'],
+    ['/chapter-12/kv-cache-management', 'kv-calculator', 'KVCacheCalculator', 'chapter-12'],
     ['/chapter-17/experimental-design-and-uncertainty', 'release-lab', 'PairedReleaseLab', 'chapter-17'],
   ];
   for (const [route, id, component, chapter] of components) {
@@ -60,6 +61,18 @@ test('model fragments share record identity, rather than guessing at every model
   }
   assert.equal(localeHref('/ko/benchmarks/', '#model-not-in-the-snapshot', fragments), '/ko/benchmarks/');
   assert.ok(!sharedLocaleFragments('/chapter-11/vision-language-bridges', modelIds).includes('model-glm-54'));
+});
+
+test('switching editions preserves a valid shared KV calculation only on its lesson', () => {
+  const fragments = sharedLocaleFragments('/chapter-12/kv-cache-management');
+  const page = '/preview/ko/chapter-12/kv-cache-management/';
+  const query = '?kv=1&batch=9&sequence=8192&generated=2048&layers=80&heads=8&dimension=128&precision=2&budget=24';
+  for (const hash of ['', '#kv-calculator', '#quizzes']) {
+    assert.equal(localeHref(page, hash, fragments, query + '&utm_source=example'), page + query + hash);
+  }
+  assert.equal(localeHref(page, '#kv-calculator', fragments, query + '&budget=12'), page + '#kv-calculator');
+  const other = '/preview/ko/chapter-3/multi-head-attention/';
+  assert.equal(localeHref(other, '#two-head-calculation', sharedLocaleFragments('/chapter-3/multi-head-attention'), query), other + '#two-head-calculation');
 });
 
 test('locale links keep deployment paths and only verified fragments as the location changes', () => {

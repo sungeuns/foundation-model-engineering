@@ -1,3 +1,5 @@
+import { canonicalKvSearch } from '../components/chapter-12/kv-scenario.mjs';
+
 // These IDs name the same authored exercise in both translations. Do not infer
 // counterparts from heading order, translated slugs, or reference numbers.
 const lessonFragments = {
@@ -7,7 +9,7 @@ const lessonFragments = {
   '/chapter-7/tiny-decoder-lab': ['decoder-copy-trace', 'local-decoder-setup'],
   '/chapter-10/dpo': ['reference-relative-example'],
   '/chapter-11/vision-language-bridges': ['visual-token-budget'],
-  '/chapter-12/kv-cache-management': ['kv-cache-capacity'],
+  '/chapter-12/kv-cache-management': ['kv-cache-capacity', 'kv-calculator'],
   '/chapter-12/serving-policies-slos-and-fallbacks': ['streaming-latency-trace'],
   '/chapter-14/advanced-retrieval': ['rrf-candidate-cutoff'],
   '/chapter-14/rag-failure-modes-and-operational-design': ['trace-a-rag-answer'],
@@ -24,8 +26,9 @@ export function sharedLocaleFragments(chapterPath, modelIds = []) {
   return ['quizzes', 'references', ...(lessonFragments[chapterPath] || []), ...models];
 }
 
-export function localeHref(baseHref, hash, sharedFragments) {
-  const pageHref = baseHref.split('#')[0];
+export function localeHref(baseHref, hash, sharedFragments, search = '') {
+  const scenario = search && sharedFragments.includes('kv-calculator') ? canonicalKvSearch(search) : '';
+  const pageHref = baseHref.split('#')[0] + scenario;
   if (!hash.startsWith('#')) return pageHref;
   let id;
   try {

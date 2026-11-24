@@ -1,4 +1,55 @@
-# OERSI records for the two published editions of the same teaching lab.
+# OERSI records for both textbook editions and their standalone decoder labs.
+- "@context": https://schema.org/
+  type: LearningResource
+  creativeWorkStatus: Published
+  id: https://sungeuns.github.io/foundation-model-engineering/
+  name: Foundation Model Engineering
+  description: >-
+    An English textbook for readers with Python, linear algebra and probability.
+    Work through attention and training objectives, then test models under serving,
+    retrieval and evaluation constraints. Reproduce a causal mask on a CPU,
+    calculate how much memory a batch of requests needs and trace a missing
+    citation back to the retrieval stage. Lessons include code, diagrams,
+    reasoning questions and references.
+  inLanguage: [en]
+  creator:
+    - type: Person
+      givenName: Seongeun
+      familyName: So
+  license: https://opensource.org/license/mit
+  educationalLevel:
+    - https://w3id.org/kim/educationalLevel/level_A
+  learningResourceType:
+    - https://w3id.org/kim/hcrt/textbook
+  about:
+    - https://w3id.org/kim/hochschulfaechersystematik/n079
+  keywords: [foundation models, inference, retrieval, PyTorch]
+
+- "@context": https://schema.org/
+  type: LearningResource
+  creativeWorkStatus: Published
+  id: https://sungeuns.github.io/foundation-model-engineering/ko/
+  name: 파운데이션 모델 엔지니어링
+  description: >-
+    Python과 선형대수, 확률의 기초를 아는 독자를 위한 한국어 교재입니다.
+    어텐션과 학습 목적함수에서 시작해 모델 서빙, 검색, 평가로 이어집니다.
+    CPU에서 인과 마스크를 검증하고, 여러 요청을 동시에 처리할 때 필요한 메모리를
+    계산하고, 답변에 빠진 근거를 검색 단계까지 거슬러 추적합니다.
+    각 절에는 코드와 도식, 이해를 확인하는 질문, 참고 문헌이 있습니다.
+  inLanguage: [ko]
+  creator:
+    - type: Person
+      givenName: Seongeun
+      familyName: So
+  license: https://opensource.org/license/mit
+  educationalLevel:
+    - https://w3id.org/kim/educationalLevel/level_A
+  learningResourceType:
+    - https://w3id.org/kim/hcrt/textbook
+  about:
+    - https://w3id.org/kim/hochschulfaechersystematik/n079
+  keywords: [파운데이션 모델, 추론, 검색, PyTorch]
+
 - "@context": https://schema.org/
   type: LearningResource
   creativeWorkStatus: Published
@@ -55,4 +106,4 @@
   isPartOf:
     - type: LearningResource
       id: https://sungeuns.github.io/foundation-model-engineering/ko/
-      name: Foundation Model Engineering
+      name: 파운데이션 모델 엔지니어링
