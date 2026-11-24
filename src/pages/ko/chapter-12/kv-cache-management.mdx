@@ -99,6 +99,8 @@ $$
 
 <a href={withBasePath('/labs/kv-queue-ko.xlsx')} download="kv-queue-ko.xlsx">혼합 요청 KV 캐시 계산표 내려받기(XLSX)</a>. 기본 예제에는 길이가 같은 요청 9개가 들어 있습니다. 각 행의 프롬프트 길이와 출력 한도를 바꿔 위 표를 재현하거나, 최대 32개 요청으로 자신의 대기열을 계산해 보세요. 이 계산은 모든 요청이 동시에 출력 한도까지 자랄 경우의 KV 데이터 예약량을 구합니다. 실제 할당량을 추정하려면 요청 종료 시점, 접두사 공유, [블록 단위 할당](/ko/chapter-12/paged-attention-vllm/#2-the-os-inspiration-paging-and-block-tables)도 반영해야 합니다.
 
+요청들을 패딩으로 같은 길이에 맞추는 엔진이라면 [짧은 프롬프트가 KV 캐시에서 실제로 몇 자리를 차지하는지](#kv-batch-padding) 측정해 보세요.
+
 ## 3. KV 폭 줄이기
 
 $H_Q$ 는 쿼리 헤드 수입니다. 구조에 따라 키와 값을 공유하는 방식이 달라집니다.
@@ -235,6 +237,25 @@ CPU에서 FP32로 실행한 SmolLM2-135M은 요청 하나의 토큰 한 자리�
 
 [Colab에서 한국어 노트북을 실행하거나](https://colab.research.google.com/github/sungeuns/foundation-model-engineering/blob/main/public/labs/kv-cache-payload-ko.ipynb) <a href={withBasePath('/labs/kv-cache-payload-ko.ipynb')} download="kv-cache-payload-ko.ipynb">Jupyter용 파일을 내려받으세요</a>. PyTorch가 설치된 CPU 런타임을 사용합니다. 첫 셀이 Transformers를 설치하고, 처음 실행할 때 공개 체크포인트 약 270 MB를 내려받습니다. 요청마다 토큰을 네 개씩 더 입력하면 캐시가 몇 바이트가 될지 먼저 예상해 보세요. 실습에서는 토큰을 하나 넣을 때마다 다음 토큰의 로짓도 전체 재계산 결과와 비교합니다. 여기서 재는 것은 키와 값 텐서의 크기입니다. 프로세스 전체에는 모델 가중치와 임시 버퍼 등도 들어 있습니다.
 
+<a id="kv-batch-padding"></a>
+
+### 두 요청이 토큰을 생성할수록 패딩 비용도 늘어날까?
+
+2026-11-25에 “Water boils at”(3토큰)을 11토큰짜리 프롬프트와 짝지었습니다. 대조군에서는 같은 문장을 다른 3토큰짜리 프롬프트와 묶었습니다. 각 쌍을 한 프로세스에서 두 방식으로 처리했습니다. 왼쪽에 패딩을 넣은 밀집 배치 하나와 패딩 없는 개별 요청 두 개를 매 단계 함께 진행했습니다. SmolLM2-135M은 30개 층 각각에 KV 헤드가 3개이고 헤드 차원은 64입니다 [[9]](#ref-9). 모든 층의 FP32 키와 값을 합하면 토큰 한 자리에 45 KiB가 듭니다.
+
+| 프롬프트 길이(토큰) | 측정 시점 | 밀집 배치(KiB) | 개별 캐시 두 개의 합(KiB) | 차이(KiB) |
+| --- | --- | ---: | ---: | ---: |
+| 3, 11 | 프리필 직후 | 990 | 630 | 360 |
+| 3, 11 | 요청마다 4토큰 추가 후 | 1,350 | 990 | 360 |
+| 3, 3 | 프리필 직후 | 270 | 270 | 0 |
+| 3, 3 | 요청마다 4토큰 추가 후 | 630 | 630 | 0 |
+
+패딩은 마스크로 가리는데 왜 여덟 자리의 비용이 들까요? 마스크는 실제 토큰이 패딩 위치를 참조하지 못하게 합니다. 그래도 밀집 K·V 텐서에는 실제 토큰 14개를 위해 22자리가 들어갑니다. 두 요청이 토큰을 하나씩 더 생성하면 어느 쪽이든 캐시가 90 KiB씩 늘어나므로 처음 생긴 360 KiB 차이가 유지됩니다. 길이가 같은 쌍에는 패딩이 필요 없습니다. 지연 시간과 처리량은 실제 서빙 엔진에서 별도로 측정해야 합니다.
+
+각 요청은 배치와 개별 실행 양쪽에서 자기 로짓이 가장 높은 다음 토큰을 골랐습니다. 프리필 직후와 토큰을 하나씩 네 번 추가한 각 시점에 실제 토큰 ID와 0부터 센 위치가 정확히 일치했습니다. 모든 층에서 유효한 위치의 K·V 값과 마지막 유효 위치의 전체 어휘 로짓도 허용 오차 `atol=rtol=1e-4` 안에서 일치했습니다. 다음 토큰은 스무 번 모두 같았고, 로짓의 최대 절대 차이는 $4.01 \times 10^{-5}$ 였습니다. CPU 스레드 하나에서 eager 어텐션으로 실행했고, 표의 용량에서 가중치와 할당기 부가 비용, 임시 버퍼는 제외했습니다.
+
+파일을 내려받아 맨 위에 적힌 패키지를 설치한 뒤 `python kv_batch_padding.py`를 실행하세요. <a href={withBasePath('/labs/kv_batch_padding.py')} download="kv_batch_padding.py">파이썬 코드</a> · <a href={withBasePath('/labs/2026-11/kv-batch-padding-cpu.json')}>단계별 측정값과 토큰 ID(JSON)</a>.
+
 <a id="6-production-cache-계약"></a>
 
 ## 6. 서비스에 적용하기 전에 확인할 항목
@@ -296,3 +317,4 @@ CPU에서 FP32로 실행한 SmolLM2-135M은 요청 하나의 토큰 한 자리�
 6. <a id="ref-6"></a>Li, F. (2026). Validating Hybrid-State Cache Recovery for GLM-5.3-Flash with vLLM and LMCache. [Source](https://arxiv.org/abs/2609.15030).
 7. <a id="ref-7"></a>PyTorch Contributors. *Scaled Dot Product Attention*, PyTorch 2.15 documentation. [Mask and GQA API contract](https://docs.pytorch.org/docs/2.15/generated/torch.nn.functional.scaled_dot_product_attention.html).
 8. <a id="ref-8"></a>Hugging Face. *How caching works*. [Transformers documentation](https://huggingface.co/docs/transformers/cache_explanation).
+9. <a id="ref-9"></a>Hugging Face TB. *SmolLM2-135M 체크포인트 설정*. [리비전 `93efa2f`의 모델 차원](https://huggingface.co/HuggingFaceTB/SmolLM2-135M/resolve/93efa2f097d58c2a74874c7e644dbc9b0cee75a2/config.json).

@@ -1,6 +1,6 @@
 # The model fits in memory. Why does the next request fail?
 
-Status: editorial draft, not submitted to an external platform. Adapted from the book's KV cache lesson. Written with AI assistance; the numerical example was checked by executable arithmetic. Before external publication, the author should review the argument and the destination's current rules.
+Unsubmitted editorial draft adapted from the book's KV cache lesson with AI assistance. It includes a hypothetical capacity calculation and a measured CPU experiment. Before external publication, the author should review the argument and the destination's current rules.
 
 A model loads successfully. A few requests run. Then a longer conversation arrives and memory runs out.
 
@@ -44,6 +44,12 @@ Assume the serving pool has 24 GiB left **for KV payload**, after separately res
 The admission check passed. The continuation budget did not.
 
 A dynamic scheduler can admit more work than a conservative maximum-length reservation, but it needs an explicit response when demand grows: queue, preempt, recompute, or enforce an output limit. Those choices change latency and sometimes user-visible behavior. A payload calculation alone does not predict measured GPU concurrency.
+
+## What does one short prompt cost beside a long one?
+
+A CPU experiment with SmolLM2-135M counted the elements in every layer’s FP32 key and value tensors. One cached position per request took 45 KiB. Two prompts contained 3 and 11 tokens. Run separately, their caches totaled 630 KiB after prefill. Put them in one left-padded batch and the tensors held 22 positions instead of 14, using 990 KiB. The mask kept the short request from attending to its eight padding positions. Those positions still occupied **360 KiB**.
+
+After four more tokens were fed to each request, the totals reached 1,350 KiB batched and 990 KiB separate. With two 3-token prompts, both layouts started at 270 KiB and ended at 630 KiB. Both routes chose the same next tokens in these runs. If you budget for mixed-length traffic, check how your serving backend stores masked positions. This experiment measures the KV tensors only. [Reproduce the batch-padding measurement](https://sungeuns.github.io/foundation-model-engineering/chapter-12/kv-cache-management/#kv-batch-padding).
 
 ## Three tempting fixes that answer different questions
 

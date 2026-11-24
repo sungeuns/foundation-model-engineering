@@ -54,6 +54,7 @@ test('shared exercise IDs belong to the same authored content in both translatio
     ['/chapter-12/kv-cache-management', 'kv-cache-capacity'],
     ['/chapter-12/kv-cache-management', 'mixed-request-budget'],
     ['/chapter-12/kv-cache-management', 'kv-payload-notebook'],
+    ['/chapter-12/kv-cache-management', 'kv-batch-padding'],
     ['/chapter-12/paged-attention-vllm', 'paged-kv-addresses'],
     ['/chapter-12/speculative-decoding', 'speculative-sampling-example'],
     ['/chapter-12/serving-policies-slos-and-fallbacks', 'streaming-latency-trace'],

@@ -320,7 +320,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 11.4 | `/chapter-11/image-diffusion-models` | Inspected 2026-11-24 | 5bb8bc33ff8adf86105e24018b03423e9f19e0d29739f64b843c0cbeadea05e8 | 308de426fdbc7b1c845a4d63be36b83988abe2eb36026affba1dd101194816b7 |
 | 11.5 | `/chapter-11/video-generation-foundations` | Inspected 2026-11-15 | b34544d0352be5feafdfc0d30ac23092d50edf3a3af5f3e4d37cc62531230c20 | 55c0488a07c962041cdbb0cdb945d18c8e136b23dba2aed6f6970f1c33cb4b4b |
 | 11.6 | `/chapter-11/commercial-video-models` | Mechanical only | 12216aad67ffc900bcfe437f20a7fcf9be618ccc5d617f698f4466ef15ff33cb | 6ee6e17876daa24bd17b8d709b7f541276019da545887510035b916819ae13a3 |
-| 12.1 | `/chapter-12/kv-cache-management` | Inspected 2026-11-25 | 8ae9f8716ff34e7ede151ca3e7b9cfde3eb2e1665f49fe10d62c65b94a045560 | b4fdaf7266a4de429a38dbe840c389f31dee09a961c069d937e4414700b3d88c |
+| 12.1 | `/chapter-12/kv-cache-management` | Inspected 2026-11-25 | 77d67f8b9d9f673da82caab028ba83d26d05ac39c859f34e4416ff28608ac5fb | 68cb301badb2236bf919bc2e750050c20d192757268c7b334c48b65e9f61ad77 |
 | 12.2 | `/chapter-12/paged-attention-vllm` | Inspected 2026-11-25 | 52cf569f107eda54688b02ae4a5149d5191e4e56e3241ffe32a2b53ae8bc66d8 | 14402809f988d4e8b12edd29476af19ece120d3abe6c86ac16ca1a664496bb46 |
 | 12.3 | `/chapter-12/continuous-batching` | Inspected 2026-11-25 | 588de002d211758e1fbb83af67004497e5280cad3512efc790f73f9b3d2a24b3 | 3f9ff09b65675139196bd073123e28a306180a8ec7d07398d1e331351f5a7124 |
 | 12.4 | `/chapter-12/speculative-decoding` | Inspected 2026-11-25 | a5f93ea8411bab0fe68bf277224f8f19f111ac0f0fd73f6b4eda75739a8990b5 | 61986787b62bf6d99f59ab08a66d2ea6312e472faea94ded13c4a7d627d03cc4 |
@@ -689,3 +689,7 @@ In §14.1, the published exercise link now shows the two activation titles and t
 In §9.3, used the same factor orientation in the equation, calculator and PyTorch module. For a layer with 4,096 inputs, 1,024 outputs and rank 16, A has 65,536 parameters and B has 16,384. Compared the explicit and merged inference paths after a nonzero update in CPU float32 and float64. Checked that repeated merges do not accumulate the update and that discarding the merged copy preserves the base weights.
 
 In §8.5, ran the published counting script on 140 work-order visits of 400 targets each and 14 replay visits of 4,000 targets each. Both sources contribute 56,000 targets even though they account for different numbers of visits. The bilingual share figures use the same script for the one-pass and two-pass comparison.
+
+### 2026-11-25 dense and unpadded SmolLM2 cache measurements
+
+In §12.1, ran the pinned FP32 CPU experiment from `public/labs/kv_batch_padding.py` and checked its JSON against both editions. A batch of 3- and 11-token prompts used 990 KiB after prefill, compared with 630 KiB summed across the individual requests. The 360 KiB difference persisted through four appends. The two 3-token prompts had no padding gap. Across the two prompt pairs, all 20 next-token choices agreed. A separate process reproduced the published JSON byte for byte.

@@ -36,3 +36,29 @@ test('both KV notebooks run the same pinned experiment and link back to their le
   }
   assert.deepEqual(code[0], code[1]);
 });
+
+test('both padding tables report the recorded dense and independent cache sizes', () => {
+  const report = JSON.parse(read('public/labs/2026-11/kv-batch-padding-cpu.json'));
+  const tableTotals = [];
+  for (const scenario of [report.unequal_lengths, report.equal_lengths]) {
+    for (const [step, row] of scenario.rows.entries()) {
+      assert.equal(row.step, step);
+      const denseBytes = row.dense_key + row.dense_value;
+      const soloBytes = row.solo_total.reduce((a, b) => a + b, 0);
+      assert.deepEqual(row.solo_total, scenario.lengths.map(n => (n + step) * scenario.bytes_per_position));
+      assert.equal(denseBytes, scenario.lengths.length * (Math.max(...scenario.lengths) + step) * scenario.bytes_per_position);
+      assert.equal(denseBytes - soloBytes, row.padding_bytes);
+      if (step === 0 || step === scenario.rows.length - 1) {
+        tableTotals.push([denseBytes, soloBytes, row.padding_bytes].map(n => n / 1024));
+      }
+    }
+  }
+  for (const prefix of ['', 'ko/']) {
+    const text = read(`src/pages/${prefix}chapter-12/kv-cache-management.mdx`);
+    const section = text.split('<a id="kv-batch-padding"></a>')[1].split('\n## ')[0];
+    const totals = section.split('\n').filter(line => /^\|\s*3\b/.test(line)).map(line =>
+      line.trim().split('|').slice(-4, -1).map(cell => Number(cell.replaceAll(',', '').trim()))
+    );
+    assert.deepEqual(totals, tableTotals);
+  }
+});

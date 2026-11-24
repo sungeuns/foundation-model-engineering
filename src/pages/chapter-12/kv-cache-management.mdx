@@ -97,6 +97,8 @@ Raise the output cap of just **one** long request from 2,048 to 12,288 tokens. I
 
 <a href={withBasePath('/labs/kv-queue-en.xlsx')} download="kv-queue-en.xlsx">Download the mixed-request KV workbook (XLSX)</a>. It starts with nine equal-length requests. Edit the prompt and output cap in each row to reproduce the table or model a queue of up to 32 requests. The calculation reserves KV payload as if every request reached its cap at the same time. Actual allocation also depends on completion times, prefix sharing and [block rounding](/chapter-12/paged-attention-vllm/#2-the-os-inspiration-paging-and-block-tables).
 
+If your engine pads requests to a common length, [measure how much KV space the shorter prompt occupies](#kv-batch-padding).
+
 ## 3. Reducing KV Width
 
 Let $H_Q$ be query heads.
@@ -231,6 +233,25 @@ SmolLM2-135M stores 46,080 bytes of keys and values per position per request in 
 
 [Run the English notebook in Colab](https://colab.research.google.com/github/sungeuns/foundation-model-engineering/blob/main/public/labs/kv-cache-payload-en.ipynb) or <a href={withBasePath('/labs/kv-cache-payload-en.ipynb')} download="kv-cache-payload-en.ipynb">download it for Jupyter</a>. Use a CPU runtime with PyTorch installed. The setup cell installs Transformers. The first run downloads the public checkpoint (about 270 MB). Add four tokens to each request and predict the new byte count before running the next cell. It also compares the next-token logits to a full recomputation after each step. This measures the K/V tensor contents. The process also holds model weights, temporary buffers and other memory.
 
+<a id="kv-batch-padding"></a>
+
+### Does the padding cost grow as two requests decode?
+
+On 2026-11-25 we paired “Water boils at” (3 tokens) with an 11-token prompt, and with another 3-token prompt as a control. For each pair, a single process advanced one left-padded batch and two independent, unpadded requests one step at a time. SmolLM2-135M has 30 layers, three KV heads per layer and 64 values per head [[9]](#ref-9). Summed across layers, the FP32 keys and values take 45 KiB per stored position.
+
+| Prompt lengths (tokens) | When measured | Dense batch (KiB) | Two separate caches combined (KiB) | Difference (KiB) |
+| --- | --- | ---: | ---: | ---: |
+| 3 and 11 | After prefill | 990 | 630 | 360 |
+| 3 and 11 | After four more tokens per request | 1,350 | 990 | 360 |
+| 3 and 3 | After prefill | 270 | 270 | 0 |
+| 3 and 3 | After four more tokens per request | 630 | 630 | 0 |
+
+Why do the eight padding positions cost anything if attention masks them? The mask keeps real tokens from attending to padding. The dense K and V tensors still store all 22 positions for 14 real tokens. Both layouts grow by 90 KiB as the two requests add one token each, so the initial 360 KiB gap persists. The equal-length pair needs no padding. Latency and throughput require separate measurements on the serving engine.
+
+Each request chose its next token greedily in both layouts. After prefill and after each of four appends, the real token IDs and their zero-based positions matched exactly. Every layer's K and V entries at those positions and the vocabulary logits at the last real position agreed within `atol=rtol=1e-4`. All 20 next-token choices matched. The largest absolute logit difference was $4.01 \times 10^{-5}$. We used one CPU thread and eager attention. The table excludes weights, allocator overhead and temporary buffers.
+
+Download the script, install the packages listed at the top, then run `python kv_batch_padding.py`. <a href={withBasePath('/labs/kv_batch_padding.py')} download="kv_batch_padding.py">Python script</a> · <a href={withBasePath('/labs/2026-11/kv-batch-padding-cpu.json')}>Measurements and token IDs by step (JSON)</a>.
+
 ## 6. Production Cache Contract
 
 An engine with a paged cache can reserve blocks and write new KV rows in place. PagedAttention applies virtual-memory-style block mapping so sequences do not require one contiguous allocation and blocks can be shared for common prefixes [[4]](#ref-4). [Section 12.2 explains how the block table maps each request to physical KV blocks](/chapter-12/paged-attention-vllm/#2-the-os-inspiration-paging-and-block-tables).
@@ -291,3 +312,4 @@ A capacity review needs three numbers from different places. Get the bytes per t
 6. <a id="ref-6"></a>Li, F. (2026). Validating Hybrid-State Cache Recovery for GLM-5.3-Flash with vLLM and LMCache. [Source](https://arxiv.org/abs/2609.15030).
 7. <a id="ref-7"></a>PyTorch Contributors. *Scaled Dot Product Attention*, PyTorch 2.15 documentation. [Mask and GQA API contract](https://docs.pytorch.org/docs/2.15/generated/torch.nn.functional.scaled_dot_product_attention.html).
 8. <a id="ref-8"></a>Hugging Face. *How caching works*. [Transformers documentation](https://huggingface.co/docs/transformers/cache_explanation).
+9. <a id="ref-9"></a>Hugging Face TB. *SmolLM2-135M checkpoint configuration*. [Model dimensions at revision `93efa2f`](https://huggingface.co/HuggingFaceTB/SmolLM2-135M/resolve/93efa2f097d58c2a74874c7e644dbc9b0cee75a2/config.json).

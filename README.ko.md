@@ -12,7 +12,7 @@
 
 | 궁금한 문제 | 읽을 곳 | 직접 확인할 내용 |
 | --- | --- | --- |
-| 가중치는 GPU에 들어가는데, 왜 다음 요청에서 메모리가 부족할까? | [KV 캐시 관리](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-12/kv-cache-management/#kv-cache-capacity) | [한국어 CPU 노트북](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-12/kv-cache-management/#kv-payload-notebook)에서 텐서 크기를 직접 재거나 [계산 시트(XLSX)](https://sungeuns.github.io/foundation-model-engineering/labs/kv-queue-ko.xlsx)로 길이가 다른 요청의 용량을 구합니다. |
+| 가중치는 GPU에 들어가는데, 왜 다음 요청에서 메모리가 부족할까? | [KV 캐시 관리](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-12/kv-cache-management/#kv-cache-capacity) | [패딩 여덟 칸이 차지한 용량](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-12/kv-cache-management/#kv-batch-padding)을 확인하고, [CPU 노트북](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-12/kv-cache-management/#kv-payload-notebook)에서 직접 측정하거나 [계산 시트(XLSX)](https://sungeuns.github.io/foundation-model-engineering/labs/kv-queue-ko.xlsx)로 대기 중인 요청에 필요한 용량을 구합니다. |
 | 어텐션 가중치는 실제 출력에 어떻게 쓰일까? | [셀프 어텐션의 수학](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-3/self-attention-mathematics/#attention-weight-example) | [두 쪽짜리 활동지와 풀이](https://sungeuns.github.io/foundation-model-engineering/labs/attention-worksheet-ko.pdf)로 직접 계산하고 브라우저에서 같은 입력으로 확인합니다. |
 | BERT는 일부러 그대로 둔 단어도 채점할까? | [다섯 토큰 예제](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-4/encoder-only/#mlm-target-example) | 두 손실값을 계산합니다. 이어서 [교차 어텐션의 패딩 값](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-4/encoder-decoder/#cross-attention-example)을 바꾸면 어떤 출력이 달라질지 확인합니다. |
 | 이미지 한 장은 문맥을 몇 자리 차지할까? | [시각 토큰 계산](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-11/vision-language-bridges/#visual-token-budget) | 이미지 크기와 장수를 바꾸며 패치 투영과 교차 어텐션의 디코더 자리 수를 비교합니다. |
@@ -56,6 +56,8 @@ python public/labs/paired_release.py --scenario missing
 - 도움이 된 설명이 있었다면 [GitHub Star](https://github.com/sungeuns/foundation-model-engineering)로 책을 저장하거나, 같은 문제를 겪는 동료에게 해당 절을 공유해주세요.
 
 Seongeun So가 AI의 도움을 받아 집필·편집하는 독립 프로젝트입니다.
+
+Data For Science는 2026년 9월 23일 발행한 [Data Science Briefing 337호](https://data4sci.com/newsletter/data-science-briefing-337)에서 이 책을 소개했습니다.
 
 ## 사이트를 로컬에서 수정하기
 

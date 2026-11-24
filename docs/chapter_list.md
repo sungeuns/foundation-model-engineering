@@ -102,7 +102,7 @@
 
 ### **Chapter 12: LLM Inference Optimization (Deep Tech)**
 
-* **12.1 KV Cache: How It Works and Memory Use:** KV 캐시의 원리와 GQA 메모리 공식. 한영 CPU 노트북으로 SmolLM2의 키·값 텐서 크기와 패딩 비용을 재고 캐시를 끈 계산과 로짓을 비교.
+* **12.1 KV Cache: How It Works and Memory Use:** KV 캐시의 원리와 GQA 메모리 공식. 한영 CPU 노트북으로 SmolLM2의 키·값 텐서와 로짓을 검사하고, 3토큰·11토큰 요청을 함께 처리할 때와 따로 처리할 때의 캐시 크기를 실측.
 * **12.2 PagedAttention (vLLM):** 다섯 토큰의 블록 주소를 따라가며 어텐션을 검산하고, 블록 재사용·꼬리 슬롯 낭비·쓰기 시 복사를 비교.
 * **12.3 Continuous Batching: Request Scheduling and Chunked Prefill:** 여섯 요청의 실행 순서로 연속 배칭을 따라가고 청크 프리필이 첫 토큰 지연과 토큰 간 지연에 미치는 영향을 비교.
 * **12.4 Speculative Decoding:** 작은 모델로 초안을 잡고 큰 모델로 검수하여 속도를 올리는 기법.

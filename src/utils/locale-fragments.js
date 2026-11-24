@@ -23,7 +23,7 @@ const lessonFragments = {
   '/chapter-9/parameter-efficient-fine-tuning-peft': ['lora-projection-count', 'lora-merge-check'],
   '/chapter-10/dpo': ['reference-relative-example'],
   '/chapter-11/vision-language-bridges': ['visual-token-budget'],
-  '/chapter-12/kv-cache-management': ['kv-cache-capacity', 'kv-calculator', 'mixed-request-budget', 'kv-payload-notebook'],
+  '/chapter-12/kv-cache-management': ['kv-cache-capacity', 'kv-calculator', 'mixed-request-budget', 'kv-payload-notebook', 'kv-batch-padding'],
   '/chapter-12/paged-attention-vllm': ['paged-kv-addresses'],
   '/chapter-12/speculative-decoding': ['speculative-sampling-example'],
   '/chapter-12/serving-policies-slos-and-fallbacks': ['streaming-latency-trace'],

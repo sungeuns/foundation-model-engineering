@@ -1,0 +1,198 @@
+{
+  "model": "HuggingFaceTB/SmolLM2-135M",
+  "revision": "93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
+  "torch": "2.15.0+cpu",
+  "transformers": "5.24.1",
+  "python": "3.12.14",
+  "machine": "x86_64",
+  "threads": 1,
+  "layers": 30,
+  "kv_heads": 3,
+  "head_dim": 64,
+  "unequal_lengths": {
+    "prompts": [
+      "Water boils at",
+      "When a kettle of water starts to boil, the steam"
+    ],
+    "lengths": [
+      3,
+      11
+    ],
+    "bytes_per_position": 46080,
+    "rows": [
+      {
+        "step": 0,
+        "dense_key": 506880,
+        "dense_value": 506880,
+        "solo_total": [
+          138240,
+          506880
+        ],
+        "padding_bytes": 368640,
+        "next_ids": [
+          253,
+          13685
+        ],
+        "max_logit_diff": 3.147125244140625e-05,
+        "max_valid_kv_diff": 7.62939453125e-06
+      },
+      {
+        "step": 1,
+        "dense_key": 552960,
+        "dense_value": 552960,
+        "solo_total": [
+          184320,
+          552960
+        ],
+        "padding_bytes": 368640,
+        "next_ids": [
+          2208,
+          614
+        ],
+        "max_logit_diff": 3.337860107421875e-05,
+        "max_valid_kv_diff": 9.5367431640625e-06
+      },
+      {
+        "step": 2,
+        "dense_key": 599040,
+        "dense_value": 599040,
+        "solo_total": [
+          230400,
+          599040
+        ],
+        "padding_bytes": 368640,
+        "next_ids": [
+          2779,
+          284
+        ],
+        "max_logit_diff": 3.719329833984375e-05,
+        "max_valid_kv_diff": 1.049041748046875e-05
+      },
+      {
+        "step": 3,
+        "dense_key": 645120,
+        "dense_value": 645120,
+        "solo_total": [
+          276480,
+          645120
+        ],
+        "padding_bytes": 368640,
+        "next_ids": [
+          670,
+          578
+        ],
+        "max_logit_diff": 3.147125244140625e-05,
+        "max_valid_kv_diff": 1.049041748046875e-05
+      },
+      {
+        "step": 4,
+        "dense_key": 691200,
+        "dense_value": 691200,
+        "solo_total": [
+          322560,
+          691200
+        ],
+        "padding_bytes": 368640,
+        "next_ids": [
+          260,
+          282
+        ],
+        "max_logit_diff": 4.00543212890625e-05,
+        "max_valid_kv_diff": 1.049041748046875e-05
+      }
+    ]
+  },
+  "equal_lengths": {
+    "prompts": [
+      "Water boils at",
+      "Snow melts at"
+    ],
+    "lengths": [
+      3,
+      3
+    ],
+    "bytes_per_position": 46080,
+    "rows": [
+      {
+        "step": 0,
+        "dense_key": 138240,
+        "dense_value": 138240,
+        "solo_total": [
+          138240,
+          138240
+        ],
+        "padding_bytes": 0,
+        "next_ids": [
+          253,
+          260
+        ],
+        "max_logit_diff": 2.8133392333984375e-05,
+        "max_valid_kv_diff": 9.5367431640625e-06
+      },
+      {
+        "step": 1,
+        "dense_key": 184320,
+        "dense_value": 184320,
+        "solo_total": [
+          184320,
+          184320
+        ],
+        "padding_bytes": 0,
+        "next_ids": [
+          2208,
+          20028
+        ],
+        "max_logit_diff": 2.86102294921875e-05,
+        "max_valid_kv_diff": 2.002716064453125e-05
+      },
+      {
+        "step": 2,
+        "dense_key": 230400,
+        "dense_value": 230400,
+        "solo_total": [
+          230400,
+          230400
+        ],
+        "padding_bytes": 0,
+        "next_ids": [
+          2779,
+          28
+        ],
+        "max_logit_diff": 3.910064697265625e-05,
+        "max_valid_kv_diff": 2.002716064453125e-05
+      },
+      {
+        "step": 3,
+        "dense_key": 276480,
+        "dense_value": 276480,
+        "solo_total": [
+          276480,
+          276480
+        ],
+        "padding_bytes": 0,
+        "next_ids": [
+          670,
+          284
+        ],
+        "max_logit_diff": 3.5762786865234375e-05,
+        "max_valid_kv_diff": 2.002716064453125e-05
+      },
+      {
+        "step": 4,
+        "dense_key": 322560,
+        "dense_value": 322560,
+        "solo_total": [
+          322560,
+          322560
+        ],
+        "padding_bytes": 0,
+        "next_ids": [
+          260,
+          260
+        ],
+        "max_logit_diff": 2.9802322387695312e-05,
+        "max_valid_kv_diff": 2.002716064453125e-05
+      }
+    ]
+  }
+}

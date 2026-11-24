@@ -12,7 +12,7 @@ A free textbook on training, serving, and evaluating foundation models. Work thr
 
 | Your question | Start here | What you can do |
 | --- | --- | --- |
-| The weights fit. Why does serving run out of memory? | [KV cache management](https://sungeuns.github.io/foundation-model-engineering/chapter-12/kv-cache-management/#kv-cache-capacity) | Measure the tensors in a [CPU notebook](https://sungeuns.github.io/foundation-model-engineering/chapter-12/kv-cache-management/#kv-payload-notebook) or [budget for requests of different lengths (XLSX)](https://sungeuns.github.io/foundation-model-engineering/labs/kv-queue-en.xlsx). |
+| The weights fit. Why does serving run out of memory? | [KV cache management](https://sungeuns.github.io/foundation-model-engineering/chapter-12/kv-cache-management/#kv-cache-capacity) | See [what eight padding positions cost](https://sungeuns.github.io/foundation-model-engineering/chapter-12/kv-cache-management/#kv-batch-padding), measure the tensors in a [CPU notebook](https://sungeuns.github.io/foundation-model-engineering/chapter-12/kv-cache-management/#kv-payload-notebook), or [budget for a request queue (XLSX)](https://sungeuns.github.io/foundation-model-engineering/labs/kv-queue-en.xlsx). |
 | What does an attention weight actually do? | [Self-attention mathematics](https://sungeuns.github.io/foundation-model-engineering/chapter-3/self-attention-mathematics/#attention-weight-example) | Calculate the weights by hand with the [two-page worksheet and solution](https://sungeuns.github.io/foundation-model-engineering/labs/attention-worksheet-en.pdf), then check the same inputs in the browser. |
 | Does BERT score a word it left untouched? | [A five-token example](https://sungeuns.github.io/foundation-model-engineering/chapter-4/encoder-only/#mlm-target-example) | Calculate both losses. Then [change a padding value in cross-attention](https://sungeuns.github.io/foundation-model-engineering/chapter-4/encoder-decoder/#cross-attention-example) and predict which outputs move. |
 | How many context positions does one image use? | [Visual token budget](https://sungeuns.github.io/foundation-model-engineering/chapter-11/vision-language-bridges/#visual-token-budget) | Change image size and count. Compare patch projection with a decoder that reads separate visual memory. |
@@ -54,6 +54,8 @@ Then try `uncertain` and `missing`. The [evaluation guide](https://sungeuns.gith
 - [Contribute](CONTRIBUTING.md): technical corrections, clearer examples, Korean phrasing, and accessible interactions are welcome.
 
 This is an independent project by Seongeun So, developed with AI assistance. English and Korean pages are maintained together. Review records describe what was actually inspected; they are not a guarantee that every claim or example is error-free.
+
+Data For Science featured the book in the September 23, 2026 edition of [Data Science Briefing, issue 337](https://data4sci.com/newsletter/data-science-briefing-337).
 
 ---
 
