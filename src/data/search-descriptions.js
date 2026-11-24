@@ -159,8 +159,8 @@ export const searchDescriptions = {
     ko: '정렬 과정에서 발생하는 능력 저하를 측정하고 원인 가설과 완화 방법을 비교하며, 데이터 하위 집합별 배포 기준을 설계합니다.',
   },
   '/chapter-11/vision-language-bridges': {
-    en: 'How does an image reach a language model? Compare CLIP retrieval, projected image patches, and Flamingo cross-attention. Calculate decoder positions and visual memory.',
-    ko: '이미지 한 장을 넣으면 언어 모델의 문맥은 얼마나 길어질까요? CLIP의 이미지 검색, 패치 투영, Flamingo의 교차 어텐션을 비교하고 디코더 자리 수와 시각 메모리를 계산합니다.',
+    en: 'How does a vision-language model read an image? Compare CLIP, projectors and cross-attention, then see what SmolVLM reads when a receipt’s total is erased.',
+    ko: '비전–언어 모델은 사진을 어떻게 읽을까요? CLIP 검색, 패치 투영, 교차 어텐션을 비교하고 영수증의 합계 줄을 지웠을 때 SmolVLM이 내놓은 답을 확인합니다.',
   },
   '/chapter-11/audio-and-speech-integration': {
     en: 'Explore neural audio codecs, discrete speech tokens, AudioLM, VALL-E, and the trade-offs of integrating speech into language-model systems.',
@@ -327,8 +327,8 @@ export const searchDescriptions = {
     ko: '불변 매니페스트, 평가 데이터 격리, 결정론적 샤딩, 재개 가능한 로딩과 인수 테스트를 갖춘 사전 학습 데이터 파이프라인을 설계합니다.',
   },
   '/chapter-6/tokenization-science': {
-    en: 'Explore subword and byte tokenization, vocabulary-compute trade-offs, normalization, special tokens, and tokenizer-checkpoint compatibility.',
-    ko: '서브워드·바이트 토큰화, 어휘 크기와 연산 비용, 정규화와 특수 토큰을 살펴보고 토크나이저와 체크포인트의 호환성을 점검합니다.',
+    en: 'Test a real tokenizer on a Korean character and an end-of-text marker. Inspect token IDs, Unicode offsets and the shared BOS, EOS and UNK identifier in SmolLM2.',
+    ko: 'SmolLM2에서 한글 ‘가’가 토큰 세 개로 나뉘는 이유와, ID 0이 문장 경계인지 미등록 토큰인지 구별하는 법을 파이썬으로 확인합니다.',
   },
   '/chapter-6/large-scale-training-stability': {
     en: 'Diagnose large-scale training instability with mask-correct loss, gradient and activation monitoring, loss-spike triage, and recovery criteria.',

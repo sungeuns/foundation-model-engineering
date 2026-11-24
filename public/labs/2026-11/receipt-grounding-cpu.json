@@ -1,0 +1,116 @@
+{
+  "model": "HuggingFaceTB/SmolVLM-256M-Instruct",
+  "revision": "d039ab0d4b9311b617e8ffec1d06c8464364aeb3",
+  "formatted_prompt": "<|im_start|>User:<image>Read the printed Total line. Copy that line exactly. If the Total line is missing, answer MISSING.<end_of_utterance>\nAssistant:",
+  "python": "3.12.14",
+  "torch": "2.15.0+cpu",
+  "transformers": "5.24.1",
+  "pillow": "13.0.0",
+  "device": "cpu",
+  "dtype": "float32",
+  "num_threads": 2,
+  "interop_threads": 1,
+  "attention_implementation": "eager",
+  "processor": "Idefics3ImageProcessorPil",
+  "preprocessing": {
+    "do_convert_rgb": true,
+    "do_image_splitting": true,
+    "do_normalize": true,
+    "do_pad": true,
+    "do_rescale": true,
+    "do_resize": true,
+    "image_mean": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "image_processor_type": "Idefics3ImageProcessor",
+    "image_std": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "max_image_size": {
+      "longest_edge": 512
+    },
+    "resample": 1,
+    "rescale_factor": 0.00392156862745098,
+    "size": {
+      "longest_edge": 2048
+    }
+  },
+  "image_tokens_per_view": 64,
+  "do_sample": false,
+  "num_beams": 1,
+  "max_new_tokens": 32,
+  "cases": [
+    {
+      "file": "receipt-a.png",
+      "sha256": "5f9fd133e921b14bbb7f82d59af4697b6e93de659e0af9d40c8bada904103036",
+      "pixel_values_shape": [
+        1,
+        13,
+        3,
+        512,
+        512
+      ],
+      "prompt_tokens": 893,
+      "image_tokens": 832,
+      "generated_ids": [
+        216,
+        35,
+        33,
+        30,
+        37,
+        32,
+        49279
+      ],
+      "raw_text": " 31.50",
+      "including_special_tokens": " 31.50<end_of_utterance>"
+    },
+    {
+      "file": "receipt-b.png",
+      "sha256": "62527f55cc9627dec22b26269619db8a5585c43ea6505e21d85df6035dd9586a",
+      "pixel_values_shape": [
+        1,
+        13,
+        3,
+        512,
+        512
+      ],
+      "prompt_tokens": 893,
+      "image_tokens": 832,
+      "generated_ids": [
+        216,
+        36,
+        34,
+        30,
+        32,
+        32,
+        49279
+      ],
+      "raw_text": " 42.00",
+      "including_special_tokens": " 42.00<end_of_utterance>"
+    },
+    {
+      "file": "receipt-missing.png",
+      "sha256": "8106a69caebad398297e4166b2ab1439bae74073705c233f9bb49c5396f71862",
+      "pixel_values_shape": [
+        1,
+        13,
+        3,
+        512,
+        512
+      ],
+      "prompt_tokens": 893,
+      "image_tokens": 832,
+      "generated_ids": [
+        216,
+        33,
+        49279
+      ],
+      "raw_text": " 1",
+      "including_special_tokens": " 1<end_of_utterance>"
+    }
+  ]
+}

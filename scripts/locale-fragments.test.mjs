@@ -38,6 +38,8 @@ test('shared exercise IDs belong to the same authored content in both translatio
     }
   }
   for (const [route, id] of [
+    ['/chapter-6/tokenization-science', 'tokenizer-acceptance-probes'],
+    ['/chapter-11/vision-language-bridges', 'receipt-grounding'],
     ['/chapter-3/self-attention-mathematics', 'attention-weight-example'],
     ['/chapter-3/self-attention-mathematics', 'batched-padding-example'],
     ['/chapter-3/layer-normalization-residuals', 'normalization-example'],

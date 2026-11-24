@@ -289,7 +289,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 5.4 | `/chapter-5/collapsing-load-balancing` | Inspected 2026-11-15 | 9eafbfd1e7b75ad8196d586895ed76c5c16b609fb3b6d7c3c6450331d3fbec83 | e882e33f29592a27d156efc7b998c7f7d1fa8a3f2e8f63179ad4319ef47ab56a |
 | 5.5 | `/chapter-5/case-study` | Inspected 2026-11-15 | f9e6e1c0fde57aac1cbcf9f3303676fb84e6e31a7b7f11e026ef961b61d8b0c8 | dd5217b2e0027bf27ea9b37275452ae728ce3a4f7471bf309303cf6888761297 |
 | 6.1 | `/chapter-6/data-engineering-at-scale` | Inspected 2026-11-15 | c962ed779370d70734cdc1d8dad26fd622732ab5add4b42eb33ca13d4e9e1978 | 196b5d2f730cb1450a5c68054444814151be61cda197d8cad6d5e761caf2e85e |
-| 6.2 | `/chapter-6/tokenization-science` | Inspected 2026-11-15 | a44817c410e5d865a65e9e9125ff9695fbe0929274162a12a59ae704df03aa73 | 84985d003c16025738d2ebfabc1a19ae0ac2fd4da81131f413a295f015725678 |
+| 6.2 | `/chapter-6/tokenization-science` | Inspected 2026-11-25 | 03294acc7ca109e3fed142bcff3754baecb663d9d849ec36774882333833e978 | d4eee208d2b4de687d045f3e745f9a8e4d63b573491deecad3c36dbee6020f31 |
 | 6.3 | `/chapter-6/large-scale-training-stability` | Inspected 2026-11-15 | 233421b292101c94f4746e41c29de6422c5c103333a5c1c6968cfe0cd3cc6604 | 149cc8e85a1db21731313a38038b3f3d23c5fdc16711b51534764c5e4fd2da89 |
 | 6.4 | `/chapter-6/infrastructure` | Inspected 2026-11-15 | db766374738bc9706d644b19fc1d6ff8dcddbe74bc265f21de02ac95efbffa6d | 04218b7b41cc9ee92416a1f69070eebbbb6afcb6994a1fff5c98fe3e8b5de264 |
 | 6.5 | `/chapter-6/synthetic-data-for-pre-training` | Mechanical only | 3d2bab63db26c5456f88eab0f51e2e7e70ac49d93d868427783f625e4ae166ee | dd5381b0b44cb0223b04f689d010f40ea3349d668ebf9e79c98fe3d3204af54c |
@@ -314,7 +314,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 10.3 | `/chapter-10/dpo` | Mechanical only | 61b39b4e59d60952d7a969476024a61f21223d09c62ae9e06e83559eaa04a855 | 5ea81a90b4a14be940d19dde889c28380e3b2198dcf6d9670a6adac402f21d2c |
 | 10.4 | `/chapter-10/kto-and-ipo` | Mechanical only | 61ac741df320db7fb3031414fdacaf5770fa28200d3f91f8d69cec83c273c046 | 6a539344952c0246f5777ddf9e6a1be24babe58b085a53cc1752efa3ea2be7c5 |
 | 10.5 | `/chapter-10/alignment-tax` | Inspected 2026-11-15 | e630460ac1b1a8620d753362e400c3bea18d69cff7a6265b3820b6ce7230c6f6 | 5041f746d84764553aecee5b114599a703cc2206889aa57838d5b2719b0bec7e |
-| 11.1 | `/chapter-11/vision-language-bridges` | Inspected 2026-11-25 | 24fb4f6155431bf716e88e29bceaa78cbb3a5631641da212c9e073d7d71a10b8 | d0eba2f44cf9745be286fba5bd051849ee0471874e6c208df815f5bc3da8ff9f |
+| 11.1 | `/chapter-11/vision-language-bridges` | Inspected 2026-11-25 | a02bb8b31255a61b3ad4fac756f6c5547001063bcffb21c0f37af66636b14ab9 | 933896d72135ca1369709ff247a2a84db201193d056023234add80635ec16f29 |
 | 11.2 | `/chapter-11/audio-and-speech-integration` | Mechanical only | 3c8de54d3316183f25505eea48298dc784a4b0a61b55390f944bbc0a60ffef91 | 22e94e2436f5521f61e09272972d1e6d45237c4bb02d987c49af7e99eb1e8df7 |
 | 11.3 | `/chapter-11/unified-multimodal-any-to-any` | Inspected 2026-11-15 | 63b49653980ac69e7662b92d1423aad27976789545651d8f21bb97c04a0993a2 | 05b4775ea2e63d295a8def6928b0a7280187755f1e95669da1a9db2ad9134158 |
 | 11.4 | `/chapter-11/image-diffusion-models` | Inspected 2026-11-24 | 5bb8bc33ff8adf86105e24018b03423e9f19e0d29739f64b843c0cbeadea05e8 | 308de426fdbc7b1c845a4d63be36b83988abe2eb36026affba1dd101194816b7 |
@@ -693,3 +693,9 @@ In §8.5, ran the published counting script on 140 work-order visits of 400 targ
 ### 2026-11-25 dense and unpadded SmolLM2 cache measurements
 
 In §12.1, ran the pinned FP32 CPU experiment from `public/labs/kv_batch_padding.py` and checked its JSON against both editions. A batch of 3- and 11-token prompts used 990 KiB after prefill, compared with 630 KiB summed across the individual requests. The 360 KiB difference persisted through four appends. The two 3-token prompts had no padding gap. Across the two prompt pairs, all 20 next-token choices agreed. A separate process reproduced the published JSON byte for byte.
+
+### 2026-11-25 tokenizer controls and visual evidence
+
+In §6.2, checked the SmolLM2-135M tokenizer’s declared aliases, token IDs, decoded strings and character offsets at revision `93efa2f`. A case that allows the literal end-of-text token at its exact source span accepts ID zero there. A small WordLevel tokenizer still rejects a genuine unknown in ordinary text. The English and Korean examples contain the same executable checks.
+
+In §11.1, rendered three 512 × 384 receipts with identical pixels outside the total line. With a fixed prompt and default processor, SmolVLM-256M-Instruct returned the two printed amounts but omitted the line label twice. It answered `1` when the line was absent. Both editions distinguish the amount, evidence and abstention checks.

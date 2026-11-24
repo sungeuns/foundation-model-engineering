@@ -360,6 +360,8 @@ if (currentIndex !== -1) {
       const toggle = document.getElementById('menuToggle');
       const sidebar = document.getElementById('sidebar');
       const backdrop = document.getElementById('sidebarBackdrop');
+      const content = document.querySelector<HTMLElement>('.content-wrapper')!;
+      const skipLink = document.querySelector<HTMLAnchorElement>('.skip-link')!;
       const localeLink = document.querySelector<HTMLAnchorElement>('#localeLink');
       const headings = document.querySelectorAll<HTMLElement>('main > h2[id], main > h3[id]');
       const fragments: string[] = JSON.parse(localeLink?.dataset.sharedFragments || '[]');
@@ -380,13 +382,16 @@ if (currentIndex !== -1) {
       const mobile = window.matchMedia('(max-width: 900px)');
       const setMenu = (open: boolean, restoreFocus = false) => {
         if (!sidebar || !toggle || !backdrop) return;
+        const overlayOpen = open && mobile.matches;
         sidebar.classList.toggle('open', open);
         sidebar.inert = mobile.matches && !open;
+        content.inert = overlayOpen;
+        skipLink.inert = overlayOpen;
         toggle.setAttribute('aria-expanded', String(open));
         toggle.textContent = isKo ? (open ? '목차 닫기' : '목차') : (open ? 'Close contents' : 'Contents');
-        backdrop.hidden = !open || !mobile.matches;
-        document.body.classList.toggle('menu-open', open && mobile.matches);
-        if (open && mobile.matches) document.getElementById('chapterSearch')?.focus();
+        backdrop.hidden = !overlayOpen;
+        document.body.classList.toggle('menu-open', overlayOpen);
+        if (overlayOpen) document.getElementById('chapterSearch')?.focus();
         if (restoreFocus) toggle.focus();
       };
       setMenu(false);
@@ -396,7 +401,12 @@ if (currentIndex !== -1) {
       }
       toggle?.addEventListener('click', () => setMenu(!sidebar?.classList.contains('open'), sidebar?.classList.contains('open')));
       backdrop?.addEventListener('click', () => setMenu(false, true));
-      mobile.addEventListener('change', () => setMenu(false));
+      mobile.addEventListener('change', () => {
+        const focusInSidebar = sidebar?.contains(document.activeElement);
+        const focusOnMobileControl = document.activeElement === toggle || document.activeElement === backdrop;
+        setMenu(false, mobile.matches && focusInSidebar);
+        if (!mobile.matches && focusOnMobileControl) document.getElementById('chapterSearch')?.focus();
+      });
       document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape' && sidebar?.classList.contains('open')) setMenu(false, true);
         if (event.key === 'Tab' && mobile.matches && sidebar?.classList.contains('open')) {

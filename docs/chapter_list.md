@@ -47,7 +47,7 @@
 ### **Chapter 6: Foundation Model Pre-training (The Engineering)**
 
 * **6.1 Data Engineering at Scale:** Common Crawl 정제, Deduplication, 중복 제거 알고리즘.
-* **6.2 Tokenization Science:** Byte-level BPE, WordPiece, 그리고 토큰 최적화가 성능에 미치는 영향.
+* **6.2 Tokenization Science:** 바이트 수준 BPE와 WordPiece, 어휘 크기의 비용. SmolLM2에서 한글 한 글자의 토큰과 원문 위치, BOS·EOS·UNK가 ID를 공유할 때의 검사 방법을 확인.
 * **6.3 Large-scale Training Stability:** Loss Spike 대응, Gradient Clipping, z-loss 등 학습 기법.
 * **6.4 Infrastructure:** TPU(Pod) vs GPU(H100/B200) 클러스터 구성, NVLink/InfiniBand 및 네트워킹(NCCL).
 * **6.5 Synthetic Data for Pre-training:** 데이터 고갈 문제와 AI 생성 데이터의 활용 가능성.
@@ -92,7 +92,7 @@
 
 ### **Chapter 11: Multimodal Learning**
 
-* **11.1 Vision-Language Models: CLIP, Projectors, and Cross-Attention:** CLIP 검색, 패치 투영, Flamingo의 교차 어텐션을 비교하고 디코더 시퀀스와 별도 시각 메모리의 크기를 계산.
+* **11.1 Vision-Language Models: CLIP, Projectors, and Cross-Attention:** CLIP 검색, 패치 투영, 교차 어텐션의 시각 토큰 예산. 합계만 바꾼 영수증 이미지 세 장으로 SmolVLM의 금액 판독과 근거 줄 복사를 평가.
 * **11.2 Audio & Speech Integration:** 코덱·RVQ·연속 잠재 표현과 스트리밍 음성의 예산·중단·행동 권한 계약.
 * **11.3 Unified Multimodal (Any-to-Any):** 입출력 지원 범위, 시간 정렬, 공개된 표현·생성 경로와 native의 의미.
 * **11.4 Image Diffusion Models:** 확산(Diffusion) 모델의 원리와 Stable Diffusion, Flux 등 대표적인 이미지 생성 모델 소개.

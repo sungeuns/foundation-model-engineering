@@ -45,45 +45,59 @@ Reserve BOS, EOS, padding, unknown/fallback, mask, role, tool, and document-boun
 
 Build the acceptance corpus before training the tokenizer. It should be a fixed, licensed, human-audited sample from every supported language/domain plus adversarial inputs: empty strings, whitespace variants, combining characters, emoji, invalid bytes under the declared policy, long identifiers, code indentation, formulas, URLs, and every special token. Keep public benchmarks and private release prompts in **evaluation quarantine**; acceptance examples should test the same phenomena without copying protected evaluation items.
 
-The following deliberately small test checks interface invariants for an already loaded tokenizer. Production acceptance also needs large slice reports and manual inspection.
+<a id="tokenizer-acceptance-probes"></a>
+
+### When does token ID 0 indicate an unknown word?
+
+The SmolLM2-135M tokenizer assigns BOS, EOS and UNK to the same ID, `0`. Give it the literal string `A<|endoftext|>B` with `add_special_tokens=False` and it returns `[49, 0, 50]`. The middle token covers characters 1 through 13, exactly the registered marker. Turning off automatic BOS/EOS insertion still lets the tokenizer recognize a marker spelled out in the input. Flagging every `0` as an unknown would reject this correctly encoded test case. [[6]](#ref-6)
+
+Decide which markers each test input is supposed to contain. The checker below accepts that one marker at the declared source span. For ordinary text, the default is an empty list, so a genuine UNK or an unexpected control token fails. Give template-inserted boundaries their own tests against the rendered conversation. Copy this example into a Python file and run it with `transformers==5.24.1` and `tokenizers==0.23.3` (tested 2026-11-25). It loads only tokenizer files.
 
 ```python
-from collections import Counter
+from transformers import AutoTokenizer
 
-def audit_tokenizer(tokenizer, samples):
-    lengths = []
-    token_counts = Counter()
-    unk_id = tokenizer.unk_token_id
+tokenizer = AutoTokenizer.from_pretrained(
+    "HuggingFaceTB/SmolLM2-135M",
+    revision="93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
+)
 
-    for sample in samples:
-        encoded = tokenizer(
-            sample,
-            add_special_tokens=False,
-            return_offsets_mapping=True,
-        )
-        ids = encoded["input_ids"]
-        offsets = encoded["offset_mapping"]
-        decoded = tokenizer.decode(ids, skip_special_tokens=False)
+def audit_case(tokenizer, text, *, expected_text, control_spans=()):
+    encoded = tokenizer(text, add_special_tokens=False, return_offsets_mapping=True)
+    ids, offsets = encoded["input_ids"], encoded["offset_mapping"]
+    assert len(ids) == len(offsets)
+    assert all(0 <= start <= end <= len(text) for start, end in offsets)
 
-        assert len(ids) == len(offsets)
-        assert all(0 <= start <= end <= len(sample) for start, end in offsets)
-        assert unk_id is None or unk_id not in ids, f"unexpected UNK: {sample!r}"
-        # Compare after the tokenizer's documented normalization, not blindly.
-        assert decoded == sample, (sample, decoded)
+    expected_controls = []
+    for start, end, literal in control_spans:
+        assert literal in tokenizer.all_special_tokens and text[start:end] == literal
+        expected_controls.append((start, end, tokenizer.convert_tokens_to_ids(literal)))
 
-        lengths.append(len(ids))
-        token_counts.update(ids)
+    special_ids = set(tokenizer.all_special_ids)
+    actual_controls = [
+        (start, end, token_id) for token_id, (start, end) in zip(ids, offsets)
+        if token_id in special_ids
+    ]
+    assert actual_controls == expected_controls, (text, actual_controls, expected_controls)
 
-    assert lengths and max(lengths) > 0
-    return {"lengths": lengths, "token_counts": token_counts}
+    decoded = tokenizer.decode(ids, skip_special_tokens=False,
+                               clean_up_tokenization_spaces=False)
+    assert decoded == expected_text, (text, decoded, expected_text)
+    return ids, offsets
 
-samples = ["한국어와 English", "def f(x):\n    return x + 1", "é é 🙂"]
-# report = audit_tokenizer(tokenizer, samples)
+marker = "<|endoftext|>"
+probe = "A" + marker + "B"
+assert audit_case(tokenizer, probe, expected_text=probe,
+                  control_spans=[(1, 14, marker)])[0] == [49, 0, 50]
+assert audit_case(tokenizer, "\uac00", expected_text="\uac00") == (
+    [181, 125, 218], [(0, 1), (0, 1), (0, 1)]
+)
+for sample in ["", "def f(x):\n    return x + 1", "\u00e9", "e\u0301", "🙂"]:
+    audit_case(tokenizer, sample, expected_text=sample)
 ```
 
-Some tokenizers intentionally normalize text, so the exact round-trip assertion must be replaced with a comparison against the documented normalized form. Do not weaken the test silently; encode the policy explicitly. Verify offsets using the framework's exact offset unit, which may be characters or bytes.
+Read offsets as half-open spans into the **original** Python string for this fast tokenizer. The Hangul syllable `가` (U+AC00) is one Unicode code point and takes three bytes in UTF-8. All three token IDs for it point to the same span `(0, 1)`. A highlighter should mark that one character once. With this tokenizer, precomposed `é` (U+00E9) uses one token and `e` followed by a combining acute accent (U+0065 U+0301) uses three. Both decode to their original spelling. For a tokenizer that deliberately normalizes them, set `expected_text` to the independently specified result for each case. [[5]](#ref-5)
 
-Set slice-specific gates before choosing a vocabulary. Compare candidate tokenizers on the same corpus and include uncertainty or multiple samples where the corpus is small. Reject a candidate for unexpected unknowns/fallback failures, special-token collision, unacceptable critical-slice truncation, missing offsets, excessive tail fertility, or vocabulary rows with implausibly low exposure.
+Set slice-specific gates before choosing a vocabulary. Compare candidate tokenizers on the same corpus and include uncertainty or multiple samples where the corpus is small. Reject a candidate for unexpected unknowns/fallback failures, undeclared special-token aliases, unacceptable critical-slice truncation, missing offsets, excessive tail fertility, or vocabulary rows with implausibly low exposure.
 
 ## 5. Checkpoint Compatibility Contract
 
@@ -105,7 +119,7 @@ Before a large run:
 6. Freeze the chosen tokenizer hash before producing final tokenized shards.
 7. Gate every model load and deployment on the tokenizer/template artifact identity.
 
-Abort or re-tokenize before scale if a critical domain depends on unknown tokens, special IDs collide, source reconstruction fails under the declared normalization, the token budget materially violates the compute plan, or the serving artifact cannot prove compatibility. Once a large model has learned token identities, replacement is normally more expensive and risky than accepting a modestly imperfect tokenizer.
+Abort or re-tokenize before scale if a critical domain depends on unknown tokens, special IDs overlap outside their declared roles, source reconstruction fails under the declared normalization, the token budget materially violates the compute plan, or the serving artifact cannot prove compatibility. Once a large model has learned token identities, replacement is normally more expensive and risky than accepting a modestly imperfect tokenizer.
 
 ## Quizzes
 
@@ -141,3 +155,4 @@ Abort or re-tokenize before scale if a critical domain depends on unknown tokens
 3. <a id="ref-3"></a>Kudo, T., & Richardson, J. (2018). *SentencePiece: A Simple and Language Independent Subword Tokenizer and Detokenizer for Neural Text Processing*. [ACL Anthology](https://aclanthology.org/D18-2012/).
 4. <a id="ref-4"></a>Yu, L., et al. (2023). *MEGABYTE: Predicting Million-byte Sequences with Multiscale Transformers*. [arXiv:2305.07185](https://arxiv.org/abs/2305.07185).
 5. <a id="ref-5"></a>Hugging Face. *Tokenizer documentation*. [Transformers documentation](https://huggingface.co/docs/transformers/main_classes/tokenizer).
+6. <a id="ref-6"></a>Hugging Face TB. *SmolLM2-135M*, revision `93efa2f`. [Tokenizer configuration and special-token IDs](https://huggingface.co/HuggingFaceTB/SmolLM2-135M/resolve/93efa2f097d58c2a74874c7e644dbc9b0cee75a2/tokenizer_config.json). [Vocabulary and merge rules](https://huggingface.co/HuggingFaceTB/SmolLM2-135M/resolve/93efa2f097d58c2a74874c7e644dbc9b0cee75a2/tokenizer.json).

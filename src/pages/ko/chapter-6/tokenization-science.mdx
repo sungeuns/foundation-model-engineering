@@ -45,45 +45,59 @@ BOS, EOS, 패딩, 미등록/폴백, 마스크, 역할, 도구, 문서 경계 토
 
 토크나이저를 학습하기 전에 수용 말뭉치를 만듭니다. 지원하는 모든 언어·도메인에서 라이선스가 확인되고 사람이 감사한 고정 표본과 빈 문자열, 공백 변형, 결합 문자, 이모지, 선언한 정책 아래의 잘못된 바이트, 긴 식별자, 코드 들여쓰기, 수식, URL, 모든 특수 토큰을 포함합니다. 공개 벤치마크와 비공개 릴리스 프롬프트는 **평가 격리** 영역에 둡니다. 보호된 평가 항목을 복사하지 않고 같은 현상을 시험하는 예제를 사용해야 합니다.
 
-다음의 의도적으로 작은 테스트는 이미 로드한 토크나이저의 인터페이스 불변식을 확인합니다. 프로덕션 수용 시험에는 큰 슬라이스 보고서와 수동 검사도 필요합니다.
+<a id="tokenizer-acceptance-probes"></a>
+
+### 토큰 ID가 0이면 미등록 단어일까?
+
+SmolLM2-135M 토크나이저는 BOS, EOS, UNK에 같은 ID `0`을 씁니다. `add_special_tokens=False`로 문자열 `A<|endoftext|>B`를 인코딩하면 `[49, 0, 50]`이 나옵니다. 가운데 토큰의 원문 범위는 인덱스 1부터 13까지로, 등록된 표기와 정확히 일치합니다. BOS나 EOS를 자동으로 붙이는 기능을 꺼도 입력에 직접 적힌 표기는 특수 토큰으로 인식합니다. ID가 0이라는 이유만으로 미등록 단어로 판정하면 이 정상 사례까지 탈락합니다. [[6]](#ref-6)
+
+입력마다 어떤 특수 토큰을 어느 위치에서 기대하는지 정해 두세요. 아래 예제는 원문에서 지정한 자리에 그 표기가 나왔을 때만 통과시킵니다. 일반 텍스트의 기본값은 빈 목록이므로 실제 미등록 단어나 예상 밖의 제어 토큰이 나오면 실패합니다. 채팅 템플릿이 삽입하는 경계 토큰은 템플릿을 적용한 대화에서 따로 검사합니다. 다음 코드를 파이썬 파일에 복사해 `transformers==5.24.1`, `tokenizers==0.23.3` 환경에서 실행할 수 있습니다(2026-11-25 확인). 토크나이저 파일만 불러옵니다.
 
 ```python
-from collections import Counter
+from transformers import AutoTokenizer
 
-def audit_tokenizer(tokenizer, samples):
-    lengths = []
-    token_counts = Counter()
-    unk_id = tokenizer.unk_token_id
+tokenizer = AutoTokenizer.from_pretrained(
+    "HuggingFaceTB/SmolLM2-135M",
+    revision="93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
+)
 
-    for sample in samples:
-        encoded = tokenizer(
-            sample,
-            add_special_tokens=False,
-            return_offsets_mapping=True,
-        )
-        ids = encoded["input_ids"]
-        offsets = encoded["offset_mapping"]
-        decoded = tokenizer.decode(ids, skip_special_tokens=False)
+def audit_case(tokenizer, text, *, expected_text, control_spans=()):
+    encoded = tokenizer(text, add_special_tokens=False, return_offsets_mapping=True)
+    ids, offsets = encoded["input_ids"], encoded["offset_mapping"]
+    assert len(ids) == len(offsets)
+    assert all(0 <= start <= end <= len(text) for start, end in offsets)
 
-        assert len(ids) == len(offsets)
-        assert all(0 <= start <= end <= len(sample) for start, end in offsets)
-        assert unk_id is None or unk_id not in ids, f"unexpected UNK: {sample!r}"
-        # 토크나이저가 명시한 정규화 결과와 비교해야 합니다.
-        assert decoded == sample, (sample, decoded)
+    expected_controls = []
+    for start, end, literal in control_spans:
+        assert literal in tokenizer.all_special_tokens and text[start:end] == literal
+        expected_controls.append((start, end, tokenizer.convert_tokens_to_ids(literal)))
 
-        lengths.append(len(ids))
-        token_counts.update(ids)
+    special_ids = set(tokenizer.all_special_ids)
+    actual_controls = [
+        (start, end, token_id) for token_id, (start, end) in zip(ids, offsets)
+        if token_id in special_ids
+    ]
+    assert actual_controls == expected_controls, (text, actual_controls, expected_controls)
 
-    assert lengths and max(lengths) > 0
-    return {"lengths": lengths, "token_counts": token_counts}
+    decoded = tokenizer.decode(ids, skip_special_tokens=False,
+                               clean_up_tokenization_spaces=False)
+    assert decoded == expected_text, (text, decoded, expected_text)
+    return ids, offsets
 
-samples = ["한국어와 English", "def f(x):\n    return x + 1", "é é 🙂"]
-# report = audit_tokenizer(tokenizer, samples)
+marker = "<|endoftext|>"
+probe = "A" + marker + "B"
+assert audit_case(tokenizer, probe, expected_text=probe,
+                  control_spans=[(1, 14, marker)])[0] == [49, 0, 50]
+assert audit_case(tokenizer, "\uac00", expected_text="\uac00") == (
+    [181, 125, 218], [(0, 1), (0, 1), (0, 1)]
+)
+for sample in ["", "def f(x):\n    return x + 1", "\u00e9", "e\u0301", "🙂"]:
+    audit_case(tokenizer, sample, expected_text=sample)
 ```
 
-일부 토크나이저는 의도적으로 텍스트를 정규화하므로 정확한 왕복 단언을 문서화된 정규화 결과와의 비교로 바꿔야 합니다. 테스트를 조용히 약화하지 말고 정책을 명시적으로 코드화합니다. 프레임워크가 오프셋을 문자와 바이트 중 어떤 단위로 반환하는지도 확인합니다.
+이 fast 토크나이저의 오프셋은 **원래 파이썬 문자열** 의 시작 인덱스와 끝 인덱스(끝 제외)입니다. `가`(U+AC00)는 유니코드 코드 포인트 하나이고 UTF-8로는 3바이트입니다. 이를 인코딩한 토큰 ID 세 개가 모두 같은 범위 `(0, 1)`을 가리킵니다. 원문을 강조해 보여줄 때도 글자 하나만 표시하면 됩니다. 같은 토크나이저에서 완성형 `é`(U+00E9)는 토큰 하나, `e` 뒤에 결합 악센트를 붙인 표기(U+0065 U+0301)는 토큰 세 개가 됩니다. 각각 디코딩하면 원래 표기로 돌아갑니다. 두 표기를 의도적으로 정규화하는 토크나이저라면 각 입력에서 기대하는 결과를 별도로 정해 `expected_text`에 넣으세요. [[5]](#ref-5)
 
-어휘를 선택하기 전에 슬라이스별 게이트를 정합니다. 같은 말뭉치에서 후보 토크나이저를 비교하고, 표본이 적으면 불확실성이나 여러 표본을 포함합니다. 예상하지 못한 미등록/폴백 실패, 특수 토큰 충돌, 중요 슬라이스의 과도한 절단, 오프셋 부재, 심각한 꼬리 fertility, 노출이 지나치게 적은 어휘 행이 있으면 후보를 거부합니다.
+어휘를 선택하기 전에 슬라이스별 게이트를 정합니다. 같은 말뭉치에서 후보 토크나이저를 비교하고, 표본이 적으면 불확실성이나 여러 표본을 포함합니다. 예상하지 못한 미등록/폴백 실패, 명세에 없는 특수 토큰 ID 중복, 중요 슬라이스의 과도한 절단, 오프셋 부재, 심각한 꼬리 fertility, 노출이 지나치게 적은 어휘 행이 있으면 후보를 거부합니다.
 
 ## 5. 체크포인트 호환성 계약
 
@@ -105,7 +119,7 @@ samples = ["한국어와 English", "def f(x):\n    return x + 1", "é é 🙂"]
 6. 최종 토큰화 샤드를 만들기 전에 선택한 토크나이저 해시를 고정합니다.
 7. 모든 모델 로드·배포를 토크나이저/템플릿 아티팩트 식별자로 게이트합니다.
 
-중요 도메인이 미등록 토큰에 의존하거나, 특수 ID가 충돌하거나, 선언한 정규화 아래에서 원문 복원이 실패하거나, 토큰 예산이 연산 계획을 크게 위반하거나, 서비스 아티팩트의 호환성을 증명할 수 없으면 확장 전에 중단하고 다시 토큰화합니다. 대형 모델이 토큰 식별자를 학습한 뒤에는 토크나이저 교체가 다소 불완전한 토크나이저를 유지하는 것보다 대개 더 비싸고 위험합니다.
+중요 도메인이 미등록 토큰에 의존하거나, 특수 토큰 ID가 명세에 없는 역할까지 겸하거나, 선언한 정규화 아래에서 원문 복원이 실패하거나, 토큰 예산이 연산 계획을 크게 위반하거나, 서비스 아티팩트의 호환성을 증명할 수 없으면 확장 전에 중단하고 다시 토큰화합니다. 대형 모델이 토큰 식별자를 학습한 뒤에는 토크나이저 교체가 다소 불완전한 토크나이저를 유지하는 것보다 대개 더 비싸고 위험합니다.
 
 ## Quizzes
 
@@ -141,3 +155,4 @@ samples = ["한국어와 English", "def f(x):\n    return x + 1", "é é 🙂"]
 3. <a id="ref-3"></a>Kudo, T., & Richardson, J. (2018). *SentencePiece: A Simple and Language Independent Subword Tokenizer and Detokenizer for Neural Text Processing*. [ACL Anthology](https://aclanthology.org/D18-2012/).
 4. <a id="ref-4"></a>Yu, L., et al. (2023). *MEGABYTE: Predicting Million-byte Sequences with Multiscale Transformers*. [arXiv:2305.07185](https://arxiv.org/abs/2305.07185).
 5. <a id="ref-5"></a>Hugging Face. *Tokenizer documentation*. [Transformers 문서](https://huggingface.co/docs/transformers/main_classes/tokenizer).
+6. <a id="ref-6"></a>Hugging Face TB. *SmolLM2-135M*, 리비전 `93efa2f`. [토크나이저 설정 및 특수 토큰 ID](https://huggingface.co/HuggingFaceTB/SmolLM2-135M/resolve/93efa2f097d58c2a74874c7e644dbc9b0cee75a2/tokenizer_config.json). [어휘 및 병합 규칙](https://huggingface.co/HuggingFaceTB/SmolLM2-135M/resolve/93efa2f097d58c2a74874c7e644dbc9b0cee75a2/tokenizer.json).

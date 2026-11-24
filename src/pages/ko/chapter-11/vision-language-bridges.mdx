@@ -5,6 +5,10 @@ lang: ko
 ---
 
 import VisionLanguageBridgeVisualizer from '../../../components/chapter-11/VisionLanguageBridgeVisualizer.tsx';
+import receiptA from '../../../assets/images/chapter-11/receipt-a.png';
+import receiptB from '../../../assets/images/chapter-11/receipt-b.png';
+import receiptMissing from '../../../assets/images/chapter-11/receipt-missing.png';
+import { withBasePath } from '../../../utils/paths.js';
 
 # 11.1 비전–언어 모델: CLIP·프로젝터·교차 어텐션
 
@@ -18,7 +22,7 @@ import VisionLanguageBridgeVisualizer from '../../../components/chapter-11/Visio
 | 프로젝터 + 디코더 | 이미지 특징 시퀀스와 질문 → 답변 토큰 | 투영된 이미지 특징이 디코더 시퀀스의 자리를 차지 |
 | 리샘플러 + 교차 어텐션 | 이미지 특징과 질문 → 답변 토큰 | 텍스트 상태가 별도의 시각 메모리를 조회 |
 
-먼저 [시각 토큰 계산기](#visual-token-budget)에서 같은 224픽셀 이미지가 어디에 배치되는지 비교한 뒤, 아래의 원리를 따라가 보세요.
+먼저 [시각 토큰 계산기](#visual-token-budget)에서 224픽셀 이미지 한 장이 차지하는 자리를 구해 보세요. 이어서 [영수증의 합계를 바꾸거나 지웠을 때 실제 모델이 내놓은 세 답변](#receipt-grounding)을 비교해 봅니다.
 
 ## 1. CLIP: 이미지와 설명의 짝을 학습하기
 
@@ -181,20 +185,34 @@ $224\times224$ 이미지 한 장이면 $P=16^2=256$ 이므로 디코더 시퀀�
 
 영수증을 읽는 모델이라면 시각 예산을 줄이기 전에 작은 글씨의 합계와 세부 항목을 검사해야 합니다. “영수증이다”라는 큰 범주는 보존하면서 정답에 필요한 숫자는 잃을 수 있기 때문입니다. 이 관계를 측정할 때 이미지 전처리, 크롭 수, 프롬프트, 디코딩, 채점 기준을 고정하세요. 시각 토큰을 이어 붙이는 방식에서는 늘어난 위치를 [KV 캐시 예산](../../chapter-12/kv-cache-management/)에 포함해야 합니다. 별도의 교차 어텐션 메모리는 따로 계산합니다.
 
+<a id="receipt-grounding"></a>
+
 ## 5. 브리지가 어떤 정보를 보존하는지 검사하기
 
-연결 모듈이나 시각 예산을 바꾸기 전에 작은 영수증 테스트를 만들어 봅시다. 직접 만든 영수증 A에는 `Total 31.50`, B에는 `Total 42.00`이라는 줄을 넣습니다. 원본 이미지, 이미지 ID, 프롬프트, 전처리 설정, 정답 줄을 함께 보관합니다. 이는 제안하는 진단 실험이며, 실제 모델의 측정 결과가 아닙니다.
+영수증에서 합계 줄을 지우면 모델도 금액을 알 수 없다고 답할까요? 512 × 384픽셀짜리 영수증을 세 가지로 만들어 SmolVLM-256M-Instruct에 한 장씩 보여 줬습니다. 합계 줄의 픽셀만 바꾸고 세 번 모두 같은 질문을 썼습니다.
 
-두 작업을 따로 실행하세요. 이미지–텍스트 유사도로 “영수증 사진”이라는 설명과 고정된 다른 문서 설명들의 순위를 비교하고, 생성 모델에는 인쇄된 합계와 그 근거 줄을 답하게 합니다. 큰 범주를 올바르게 검색했다는 사실만으로 시각 인터페이스가 숫자까지 보존했다고 볼 수는 없습니다.
+<figure style={{ margin: '1rem 0' }}>
+  <img src={receiptA.src} width="512" height="384" loading="lazy" alt="도화지 한 묶음과 연필 한 상자가 적힌 영수증. 마지막 줄에는 Total 31.50이라고 쓰여 있다." />
+  <figcaption>이 실험을 위해 Pillow로 그린 영수증 A입니다. 품목별로 수량만 적혀 있어 합계 줄을 지우면 가격을 더해 답을 구할 수도 없습니다.</figcaption>
+</figure>
 
-| 통제해서 바꿀 입력 | 확인할 동작 |
-| :--- | :--- |
-| 원본 영수증 A | 영수증 설명을 검색하고 `31.50`과 근거 줄 `Total 31.50`을 답하는지 확인 |
-| 합계 줄을 흐리게 만들거나 잘라내기 | 큰 범주 검색이 유지되는지 기록하고, 보이는 근거를 지어내지 않고 줄을 읽을 수 없거나 줄이 없다고 답하는지 확인 |
-| 질문은 그대로 두고 A를 B로 교체 | 답이 `42.00`으로 바뀌고 B의 합계 줄을 근거로 드는지 확인 |
-| A·B 표시를 붙여 두 장을 주고 순서를 뒤집기 | 영수증 A를 묻는 질문에는 계속 A를 인용하는지 확인. 표시와 실제 첨부 이미지의 대응은 유지 |
+모델에는 ‘인쇄된 합계 줄을 그대로 옮기고, 그 줄이 없으면 MISSING이라고 답하라’고 영어로 요청했습니다.
 
-이 입력과 디코딩 설정을 고정하고 시각 예산만 바꾸어 봅니다. 검색 정확도와 정확한 금액 응답률, 올바른 근거 줄 인용률, 적절한 답변 보류 비율을 구분해 보고하세요. 첫 토큰 지연과 최대 메모리도 측정합니다. 이 작은 진단에서는 근거 줄을 하나라도 지어내면 더 큰 평가에 앞서 조사할 실패로 봅니다. 몇 개의 예제를 통과했다고 출시 기준을 만족한 것은 아닙니다.
+> Read the printed Total line. Copy that line exactly. If the Total line is missing, answer MISSING.
+
+| 입력 이미지(PNG) | 기대한 답 | 모델의 답 |
+| --- | --- | --- |
+| <a href={receiptA.src} download="receipt-a.png">영수증 A</a> | `Total 31.50` | `31.50` |
+| <a href={receiptB.src} download="receipt-b.png">영수증 B</a> | `Total 42.00` | `42.00` |
+| <a href={receiptMissing.src} download="receipt-missing.png">합계 줄을 지운 영수증</a> | `MISSING` | `1` |
+
+금액만 채점하면 합계가 보이는 두 장은 모두 정답입니다. **인쇄된 줄 전체** 를 채점하면 두 장 모두 오답입니다. 모델은 두 번 다 `Total`을 빠뜨렸고, 줄을 지운 뒤에도 숫자를 답했습니다. 표에서는 답 맨 앞의 공백 한 칸을 생략했습니다. <a href={withBasePath('/labs/2026-11/receipt-grounding-cpu.json')}>원본 출력과 토큰 ID</a>에서 공백까지 확인할 수 있습니다.
+
+2026-11-25에 CPU에서 실행한 결과, 이 체크포인트의 전처리기는 PNG 한 장을 512 × 512픽셀 이미지 13개로 변환했습니다. 이미지 하나당 시각 토큰 자리가 64개이므로, 전체 입력 893자리 중 832자리가 이미지 몫입니다. 나머지 61자리에는 질문과 전처리기가 붙인 형식 토큰이 들어갑니다. FP32에서 그리디 디코딩을 사용하고 출력은 최대 32토큰으로 제한했습니다. 앞의 계산기는 이미지를 쪼개지 않고 패치 격자 하나로 처리한다고 가정합니다. 실제 입력 길이를 알려면 전처리기가 이미지를 몇 개로 나누는지부터 확인해야 합니다. [[5]](#ref-5)
+
+<a href={withBasePath('/labs/2026-11/receipt-grounding.zip')} download="receipt-grounding.zip">PNG 세 장과 파이썬 코드, 실행 기록 내려받기(ZIP)</a>. 압축을 풀고 코드 첫머리에 적힌 패키지를 설치한 뒤 그 디렉터리에서 `python receipt_grounding.py .`을 실행하세요. 첫 실행 때 약 513 MB의 모델 가중치를 내려받습니다.
+
+이 세 장은 한 종류의 영수증에서 근거 줄을 베끼고, 줄이 없을 때 답을 보류하는지 검사합니다. 이미지 검색을 평가하려면 영수증 설명과 다른 문서 설명의 순위를 따로 비교하세요. 이미지 순서가 영향을 주는지 보려면 A와 B를 표시해 함께 보여 주고, 순서를 뒤집은 뒤 같은 영수증을 물어보세요. 시각 예산을 바꿔 지연 시간이나 최대 메모리를 비교할 때도 이미지와 디코딩 설정은 고정합니다.
 
 적응 학습이 필요하면 [SFT 절차](../../chapter-9/sft-fundamentals/)의 학습 계약을 적용하세요. 멀티모달에서 특히 확인할 것은 이미지 프로세서와 특징을 뽑는 층, 모델 고유 채팅 템플릿의 이미지 표시자, 잘라내기 이후 이미지–답변 대응, 답변 손실에서 시각 위치를 제외하는 처리입니다. LM 가중치를 고정하면 그래디언트·옵티마이저 상태가 줄지만, 앞단 프로젝터를 학습하려면 LM을 거쳐 역전파하고 활성값을 보관해야 할 수 있습니다. 이 평가용 영수증은 학습에 넣지 말고, 더 큰 규모의 배포 판단에는 [평가와 출시 기준](../../chapter-17/production-evaluation-and-release-gates/)을 사용하세요.
 
@@ -239,3 +257,4 @@ $224\times224$ 이미지 한 장이면 $P=16^2=256$ 이므로 디코더 시퀀�
 2. <a id="ref-2"></a>Alayrac, J. B., et al. (2022). *Flamingo: a Visual Language Model for Few-Shot Learning*. 아키텍처·마스크·게이트 블록: 2.1–2.3절 및 부록 A.1. [arXiv:2204.14198](https://arxiv.org/abs/2204.14198).
 3. <a id="ref-3"></a>Liu, H., et al. (2023). *Visual Instruction Tuning*. 원래 선형 연결 모듈과 2단계 학습: 4절. [arXiv:2304.08485](https://arxiv.org/abs/2304.08485).
 4. <a id="ref-4"></a>Brown, E., et al. (2026). *Unbundling Multimodal Vision Encoding*, v1. Verified 2026-11-25. [arXiv:2611.17334v1](https://arxiv.org/abs/2611.17334v1).
+5. <a id="ref-5"></a>Hugging Face TB. *SmolVLM-256M-Instruct*, 리비전 `d039ab0`. [모델 카드](https://huggingface.co/HuggingFaceTB/SmolVLM-256M-Instruct/blob/d039ab0d4b9311b617e8ffec1d06c8464364aeb3/README.md) · [이미지 전처리 설정](https://huggingface.co/HuggingFaceTB/SmolVLM-256M-Instruct/blob/d039ab0d4b9311b617e8ffec1d06c8464364aeb3/preprocessor_config.json).

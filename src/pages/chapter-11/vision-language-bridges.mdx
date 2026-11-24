@@ -5,6 +5,10 @@ lang: en
 ---
 
 import VisionLanguageBridgeVisualizer from '../../components/chapter-11/VisionLanguageBridgeVisualizer.tsx';
+import receiptA from '../../assets/images/chapter-11/receipt-a.png';
+import receiptB from '../../assets/images/chapter-11/receipt-b.png';
+import receiptMissing from '../../assets/images/chapter-11/receipt-missing.png';
+import { withBasePath } from '../../utils/paths.js';
 
 # 11.1 Vision-Language Models: CLIP, Projectors, and Cross-Attention
 
@@ -18,7 +22,7 @@ Consider a photograph of a receipt. “Find receipts among these photographs” 
 | Projector + decoder | Image feature sequence and prompt → answer tokens | Projected image features occupy decoder positions |
 | Resampler + cross-attention | Image features and prompt → answer tokens | Text states query a separate visual memory |
 
-Compare what happens to the same 224-pixel image in the [visual token calculator](#visual-token-budget), then follow the mechanisms below.
+Try the [visual token calculator](#visual-token-budget) for a 224-pixel image. Then [read the three answers a small model gave](#receipt-grounding) when the total on a receipt changed or disappeared.
 
 ## 1. CLIP: Learning Which Image and Text Belong Together
 
@@ -181,20 +185,32 @@ Change resolution and image count below. The two routes share the same illustrat
 
 For a receipt reader, test small-font totals and line items before choosing a smaller visual budget. A model may preserve the coarse fact “this is a receipt” while losing the digits needed for the answer. Keep image preprocessing, crop count, prompt, decoding, and answer rubric fixed when measuring that trade-off. For concatenated visual tokens, include the extra positions in the [KV-cache budget](../../chapter-12/kv-cache-management/); separate cross-attention memory needs its own accounting.
 
+<a id="receipt-grounding"></a>
+
 ## 5. Test What the Bridge Preserves
 
-Build a small receipt test before changing the connector or visual budget. Use two authored receipts: A has a printed line `Total 31.50`, B has `Total 42.00`. Keep the source images, their IDs, the prompt, preprocessing settings, and expected answer lines together. This is a proposed diagnostic, not a reported model result.
+Can a model tell when a receipt has no printed total? We gave SmolVLM-256M-Instruct three versions of this 512 × 384 image, one at a time. Only the pixels on the total line changed. The prompt was identical each time.
 
-Run two separate tasks: rank “a receipt” against fixed non-receipt descriptions using image–text similarity, and ask a generative model to return the printed total plus the line supporting it. A correct coarse retrieval match does not establish that the digits survived the visual interface.
+<figure style={{ margin: '1rem 0' }}>
+  <img src={receiptA.src} width="512" height="384" loading="lazy" alt="Receipt for one pack of drawing paper and one box of pencils. The last line reads Total 31.50." />
+  <figcaption>Receipt A, drawn for this experiment with Pillow. The item lines give quantities but no prices from which to reconstruct a missing total.</figcaption>
+</figure>
 
-| Controlled input change | What to check |
-| :--- | :--- |
-| Original receipt A | Retrieve the receipt description; return `31.50` with `Total 31.50` as evidence |
-| Blur or crop away the total line | Record whether coarse retrieval still works; the answer must acknowledge an unreadable/missing line instead of inventing visible evidence |
-| Replace A with B, keeping the question fixed | The answer must change to `42.00`, supported by B's total line |
-| Provide labeled A and B, then reverse their order | A question about receipt A must still cite A; keep labels bound to the correct image attachments |
+> Read the printed Total line. Copy that line exactly. If the Total line is missing, answer MISSING.
 
-Sweep the visual budget while keeping those fixtures and decoding settings fixed. Report retrieval accuracy separately from exact-amount accuracy, correct source-line attribution, and appropriate abstention. Also measure time to first token and peak memory. For this small diagnostic, any fabricated source line is a failure to investigate before trying a larger evaluation; passing a handful of fixtures is not a release claim.
+| Input PNG | Expected answer | Model answer |
+| --- | --- | --- |
+| <a href={receiptA.src} download="receipt-a.png">Receipt A</a> | `Total 31.50` | `31.50` |
+| <a href={receiptB.src} download="receipt-b.png">Receipt B</a> | `Total 42.00` | `42.00` |
+| <a href={receiptMissing.src} download="receipt-missing.png">Total line removed</a> | `MISSING` | `1` |
+
+Scoring only the amounts gives the model two correct answers on the two receipts with totals. Scoring the **printed line** gives it zero on those same receipts because it omitted the word `Total` both times. With the line removed it still returned a number. The table trims one leading space from each answer. The <a href={withBasePath('/labs/2026-11/receipt-grounding-cpu.json')}>raw outputs and token IDs</a> preserve it.
+
+In the 2026-11-25 CPU run, the checkpoint's image processor turned each PNG into 13 views of 512 × 512 pixels. Each view contributed 64 image placeholders. That accounts for 832 of the 893 input positions. The other 61 came from the prompt and the processor’s formatting. We used FP32, greedy decoding and a 32-token output cap. Those 13 views illustrate why the toy calculator's one unbroken patch grid cannot predict this checkpoint's actual input length. [[5]](#ref-5)
+
+<a href={withBasePath('/labs/2026-11/receipt-grounding.zip')} download="receipt-grounding.zip">Download the three PNGs, Python script and recorded run (ZIP)</a>. After extracting the files, install the packages listed in the script and run `python receipt_grounding.py .`. The first run downloads about 513 MB of model weights.
+
+These three cases test copying and abstention on one layout. To test retrieval, separately rank the receipt description against descriptions of other documents. To test image order, present both labeled receipts, reverse them and ask about the same label. Hold the images and decoding settings fixed when measuring changes in visual budget, latency or peak memory.
 
 If adaptation is needed, use the [SFT procedure](../../chapter-9/sft-fundamentals/) for the training contract. The multimodal details to verify are the image processor and selected feature layer, native chat-template image markers, image–answer alignment after truncation, and exclusion of visual positions from answer loss. Frozen LM weights reduce gradient/optimizer state, but an upstream projector may still need gradients through the LM and its activation memory. Keep these evaluation receipts out of training and use the [evaluation and release gates](../../chapter-17/production-evaluation-and-release-gates/) for a larger deployment decision.
 
@@ -239,3 +255,4 @@ Choose the interface by the required output, then count the features it introduc
 2. <a id="ref-2"></a>Alayrac, J. B., et al. (2022). *Flamingo: a Visual Language Model for Few-Shot Learning*. Architecture, masking, and gated blocks: Sections 2.1–2.3 and Appendix A.1. [arXiv:2204.14198](https://arxiv.org/abs/2204.14198).
 3. <a id="ref-3"></a>Liu, H., et al. (2023). *Visual Instruction Tuning*. Original linear connector and two-stage training: Section 4. [arXiv:2304.08485](https://arxiv.org/abs/2304.08485).
 4. <a id="ref-4"></a>Brown, E., et al. (2026). *Unbundling Multimodal Vision Encoding*, v1. Verified 2026-11-25. [arXiv:2611.17334v1](https://arxiv.org/abs/2611.17334v1).
+5. <a id="ref-5"></a>Hugging Face TB. *SmolVLM-256M-Instruct*, revision `d039ab0`. [Model card](https://huggingface.co/HuggingFaceTB/SmolVLM-256M-Instruct/blob/d039ab0d4b9311b617e8ffec1d06c8464364aeb3/README.md) and [image processor configuration](https://huggingface.co/HuggingFaceTB/SmolVLM-256M-Instruct/blob/d039ab0d4b9311b617e8ffec1d06c8464364aeb3/preprocessor_config.json).
