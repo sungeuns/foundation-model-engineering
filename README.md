@@ -36,7 +36,7 @@ The November 24 comparison includes direct links to each profile. Check [GLM-5.4
 
 **Train, break, and resume a tiny decoder:** open the [English notebook](https://colab.research.google.com/github/sungeuns/foundation-model-engineering/blob/main/public/labs/tiny-decoder-lab.ipynb) or [Korean notebook](https://colab.research.google.com/github/sungeuns/foundation-model-engineering/blob/main/public/labs/tiny-decoder-lab-ko.ipynb) in Colab. Use a CPU runtime. Predict what removing context will do, train the model, and inspect causal and checkpoint-replay checks. Colab execution requires Google sign-in; [download the notebooks](public/labs/) for local Jupyter instead. No model download or API key is needed. The [guide](https://sungeuns.github.io/foundation-model-engineering/chapter-7/tiny-decoder-lab/) explains Python/PyTorch setup and the experiment's limits.
 
-**Test a release decision without extra packages:** from a checkout, run:
+[Run the release decision lab in your browser](https://sungeuns.github.io/foundation-model-engineering/chapter-17/experimental-design-and-uncertainty/#release-lab). Two candidates gain 15 percentage points on the target task. Which clears the release criteria? You can also run the same script from a checkout with Python 3.10+.
 
 ```bash
 python public/labs/paired_release.py --scenario gain

@@ -4,7 +4,7 @@ export const searchDescriptions = {
   '/chapter-1/learning-path-and-mastery': { en: 'Check your prerequisites, choose a foundation-model learning path, and build a portfolio with causal tests, fair comparisons, and release decisions.', ko: '선수 지식을 점검하고 파운데이션 모델 학습 경로를 고르세요. 인과성 검사·공정한 비교·출시 판단을 재현 가능한 포트폴리오로 연결합니다.' },
   '/chapter-6/optimization-mechanics': { en: 'Derive AdamW updates, fix unequal-token gradient weighting, and compare optimizers with matched data, token budgets, and held-out evaluations.', ko: 'AdamW 갱신과 토큰 수가 다른 배치의 기울기 가중을 계산하고, 데이터·토큰 예산·보류 평가를 맞춰 옵티마이저를 비교합니다.' },
   '/chapter-7/tiny-decoder-lab': { en: 'Train a tiny PyTorch decoder on CPU, test causal masking, remove context access, and replay a checkpoint. Includes English and Korean notebooks.', ko: 'CPU에서 작은 PyTorch 디코더를 학습하고 인과적 마스킹·문맥 제한·체크포인트 재개를 검증합니다. 영문·한국어 실행 노트북을 제공합니다.' },
-  '/chapter-17/experimental-design-and-uncertainty': { en: 'Run a Python evaluation lab with no extra packages: paired cluster bootstrap, missing outcomes, retention regressions, and Pass/Review/Block decisions.', ko: '추가 패키지 없이 Python 평가 실습을 실행합니다. 대응 집단 부트스트랩·누락 결과·성능 회귀를 확인하고 통과·재검토·차단을 판단합니다.' },
+  '/chapter-17/experimental-design-and-uncertainty': { en: 'Run a paired evaluation in your browser. Use cluster bootstrap bounds to explain why a target gain of 15 percentage points can still block a release.', ko: '브라우저에서 대응 평가를 실행하세요. 목표 과제 점수가 15%p 올라도 배포가 차단되는 이유를 집단 부트스트랩과 기존 능력의 변화로 확인합니다.' },
 
   '/chapter-15/chain-of-thought': {
     en: 'Understand chain-of-thought prompting, compare zero-shot and example-based reasoning prompts, and examine when added reasoning helps or hurts.',
@@ -367,8 +367,8 @@ export const searchDescriptions = {
     ko: '유효 데이터 전이, 그로킹, 약한 모델에서 강한 모델로의 감독을 살펴보고 전이 평가표로 일반화 주장을 검증하는 방법을 배웁니다.',
   },
   '/chapter-8/continued-pretraining-and-domain-adaptation': {
-    en: 'Choose between continued pre-training, RAG, and SFT, then plan domain adaptation with checkpoint selection, data mixtures, and tokenizer checks.',
-    ko: '지속 사전 학습·RAG·SFT 중 적합한 방법을 선택하고, 체크포인트·데이터 혼합·토크나이저 점검을 바탕으로 도메인 적응을 계획합니다.',
+    en: 'Choose between continued pre-training (CPT), RAG, and SFT. Calculate how document sampling changes the token budget, then check replay and capability retention.',
+    ko: '지속 사전 학습(CPT)·RAG·SFT의 선택 기준을 살펴봅니다. 문서 비율과 학습 토큰 비율의 차이를 계산하고, 리플레이·토크나이저 호환성·복구·배포 기준을 설계합니다.',
   },
   '/chapter-3/self-attention-mathematics': {
     en: 'Understand self-attention through Q, K, V projections, scaled dot products, attention weights, and a PyTorch implementation.',

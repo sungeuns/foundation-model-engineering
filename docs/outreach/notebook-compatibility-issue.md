@@ -1,5 +1,17 @@
 # Verify the tiny-decoder notebook on Colab CPU and Windows Jupyter
 
+## Current status — 2026-11-25
+
+This is an unpublished issue draft. The original 2026-11-18 text is preserved below; its unchecked Windows item reflects the evidence available on that date, not the current status. No external issue was posted during this update.
+
+- [x] Local Linux CPU: both current notebooks passed all ten code cells in separate fresh Jupyter kernels with Python 3.12.14 and PyTorch 2.15.0+cpu.
+- [x] Native Windows CPU: [GitHub Actions run 45434214223](https://github.com/sungeuns/foundation-model-engineering/actions/runs/45434214223) passed on the `windows-2025` runner with Python 3.12.10 and PyTorch 2.15.0+cpu, at commit `b7c174368b1d755eeb7980f1550cd5b16228e071`. Both notebooks completed all ten code cells in separate fresh Jupyter kernels. Source/checkpoint integrity, causal invariance, exact replay, broken-mask leakage detection, corrupted-checkpoint rejection, and the exact seven-file result ZIP passed. This verifies native kernel execution in CI; it does not record an interactive desktop Jupyter session.
+- [ ] Hosted Colab CPU: still unverified. Opening a notebook link or rendering its HTML does not establish execution in a hosted runtime.
+
+For the remaining Colab check, use the current [English notebook](https://colab.research.google.com/github/sungeuns/foundation-model-engineering/blob/main/public/labs/tiny-decoder-lab.ipynb) or [Korean notebook](https://colab.research.google.com/github/sungeuns/foundation-model-engineering/blob/main/public/labs/tiny-decoder-lab-ko.ipynb) and record the tested commit/source hash. The pinned links below preserve the original draft and are not the updated verification target. The original reporting questions remain useful; no claim of matching loss values across platforms is required.
+
+## Original issue draft — 2026-11-18
+
 Status: not published. The attempt to create this issue in the project repository on 2026-11-18 returned GitHub API 403, `Resource not accessible by integration`. This file preserves the attempted request body. No issue number or public thread exists.
 
 The English and Korean notebooks completed all ten code cells in local Linux/Jupyter with Python 3.12.14 and PyTorch 2.15.0+cpu. **Hosted Colab and native Windows execution have not yet been verified.** This issue tracks those two concrete gaps.

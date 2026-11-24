@@ -19,7 +19,7 @@ import { withBasePath, withPagePath } from '../utils/paths.js';
   <LearningRoutes lang="en" />
 
   <h2>Build something you can test</h2>
-  <p>The <a href={withPagePath('/chapter-7/tiny-decoder-lab')}>tiny decoder lab</a> runs on a CPU. Train a causal model, remove its access to earlier tokens, and test whether a resumed run follows the same trajectory. The <a href={withPagePath('/chapter-17/experimental-design-and-uncertainty')}>evaluation lab</a> asks a different question: is a measured improvement strong enough to justify a release?</p>
+  <p>In the <a href={withPagePath('/chapter-7/tiny-decoder-lab')}>tiny decoder lab</a>, train a model on a CPU, remove its access to earlier tokens, then check whether it can still copy a sequence. In the <a href={withPagePath('/chapter-17/experimental-design-and-uncertainty') + '#release-lab'}>browser evaluation lab</a>, two candidates gain 15 percentage points on the target task. Run both and find out why only one passes.</p>
   <p>Start the decoder experiment: <a href="https://colab.research.google.com/github/sungeuns/foundation-model-engineering/blob/main/public/labs/tiny-decoder-lab.ipynb">open the notebook in Colab</a> or <a href={withBasePath('/labs/tiny-decoder-lab.ipynb')}>download it for Jupyter</a>. It uses CPU PyTorch and generates its own data. No model download or API key is needed; Colab execution requires Google sign-in.</p>
   <p>The {chapters.reduce((total, chapter) => total + chapter.subs.length, 0)} lessons connect architectures, training, inference, retrieval, agents, evaluation, and safety. Short quizzes ask you to explain a failure or choose a trade-off. Illustrative calculations and authored simulations are labeled; they are not measurements of a production model.</p>
 

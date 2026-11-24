@@ -30,7 +30,7 @@
 
 Colab 실행에는 Google 로그인이 필요합니다. 로컬에서 실행할 때 필요한 Python·PyTorch 환경과 실험의 한계는 [실습 안내](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-7/tiny-decoder-lab/)에 있습니다. 실행 코드는 [causal_lab.py](public/labs/causal_lab.py)에서도 읽을 수 있습니다.
 
-평가 결과로 배포 여부를 판단하는 실험에는 Python 3.10 이상과 표준 라이브러리만 있으면 됩니다. 저장소를 내려받은 뒤 루트 폴더에서 다음 명령을 실행하세요.
+[브라우저에서 배포 판단 실습 실행](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-17/experimental-design-and-uncertainty/#release-lab) · 목표 과제에서 똑같이 15%p 개선된 두 후보 중 어느 쪽을 배포할지 판단해 보세요. 저장소를 내려받았다면 Python 3.10 이상에서 같은 실험을 실행할 수 있습니다.
 
 ```bash
 python public/labs/paired_release.py --scenario gain

@@ -10,26 +10,38 @@ Attention formulas become useful engineering knowledge when you can assemble a m
 
 ## Start with the Notebook
 
-[Open the English notebook in Colab](https://colab.research.google.com/github/sungeuns/foundation-model-engineering/blob/main/public/labs/tiny-decoder-lab.ipynb), or [download it for Jupyter](../../labs/tiny-decoder-lab.ipynb). Use a CPU runtime. The exercise generates its own symbolic data and needs no model download or API key. For local execution, install Python and PyTorch as described below; the notebook contains the same lab source as the script.
+[Open the English notebook in Colab](https://colab.research.google.com/github/sungeuns/foundation-model-engineering/blob/main/public/labs/tiny-decoder-lab.ipynb), or [download it for Jupyter](../../labs/tiny-decoder-lab.ipynb). Use a CPU runtime. The exercise generates its own symbolic data and needs no model download or API key. In local Jupyter, select a Python 3.12+ kernel with CPU PyTorch installed. The notebook contains the same lab source as the standalone script, whose setup is shown below.
 
 Before running, predict two results: will changing future symbols alter earlier predictions, and will removing access to previous symbols hurt copying? Run the cells in order, inspect the measured results, then check whether checkpoint replay reproduces the remaining updates. The notebook explains each result without requiring you to read the whole chapter first. The details below define exactly what the experiment tests.
 
 Colab loads notebooks from GitHub and uses a hosted runtime; Google sign-in is needed to run there. Its resources and session lifetime are limited. The downloaded notebook also works in a local Jupyter environment. Launch guidance checked **as of 2026-11-18**. [[3]](#ref-3)
 
+**Execution verified as of 2026-11-25:** both notebooks completed all ten code cells in separate fresh Jupyter kernels on Linux (Python 3.12.14) and a native Windows `windows-2025` GitHub Actions runner (Python 3.12.10), both with PyTorch 2.15.0+cpu. Causal invariance, exact checkpoint replay, the deliberately broken-mask and corrupted-checkpoint diagnostics, and the seven-file result ZIP checks passed. The [Windows run](https://github.com/sungeuns/foundation-model-engineering/actions/runs/45434214223) records the result. Hosted Colab execution remains unverified. [[4]](#ref-4)
+
 ## Scope and Input Contract
 
 **Deliberately simplified, smoke-tested educational implementation.** This is a one-layer synthetic copying task, not language pretraining or SFT. It omits distributed execution, mixed precision, chat templates, natural-language data, packed samples, remote checkpoint replication, and serving. It does not establish frontier-model scalability. Reference checkpoint: none. There is no teacher or judge model.
 
-Download [causal_lab.py](../../labs/causal_lab.py) and use an isolated environment with Python 3.12+ and CPU PyTorch. The verification environment used PyTorch 2.15.0+cpu on 2026-11-17; exact trajectories are not promised across releases or hardware [[1]](#ref-1).
+To run the standalone script, download [causal_lab.py](../../labs/causal_lab.py) and open a terminal in its folder. Use an isolated environment with Python 3.12+ and CPU PyTorch. Exact trajectories are not promised across releases or hardware [[1]](#ref-1).
+
+On Linux, with `python3` pointing to Python 3.12 or newer:
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install torch==2.15.0 --index-url https://download.pytorch.org/whl/cpu
-python causal_lab.py --output /tmp/causal-lab --steps 160 --seed 7
+python causal_lab.py --output ./runs/causal-lab --steps 160 --seed 7
 ```
 
-The setup commands target Linux CPU wheels; for another platform use the [official installer](https://pytorch.org/get-started/locally/). The multiplicative schedule does not reach exactly 0.003.
+On Windows PowerShell, with Python 3.12 and the `py` launcher installed:
+
+```powershell
+py -3.12 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install torch==2.15.0+cpu --index-url https://download.pytorch.org/whl/cpu
+.\.venv\Scripts\python.exe causal_lab.py --output .\runs\causal-lab --steps 160 --seed 7
+```
+
+The Windows commands call the environment's interpreter directly. Both examples write results under `runs/causal-lab`; use a new output folder for each experiment. For another platform, follow the [official PyTorch installer](https://pytorch.org/get-started/locally/).
 
 The local generator samples four distinct symbols from IDs 1–16 and repeats that motif to create a 17-token sequence. Rotations belong to the same semantic group; canonicalization happens **before** the 128/16/16 train/validation/test split. No external text, PII, secrets, or third-party dataset rights are involved. The immutable manifest records generator version, seed, grouping rule, mixture, integer-tokenizer version, and every group's symbols. Group IDs can be reconstructed from their hashes. The checkpoint binds the manifest, configuration, code hash, and PyTorch version.
 
@@ -46,6 +58,8 @@ The ablation leaves parameters, initialization, data sampling, optimizer, and st
 ## Training and Resource Contract
 
 AdamW uses learning-rate scale 0.003, betas `(0.9,0.95)`, epsilon `1e-8`, decay 0.01 on all parameters, batch 16, a ten-update linear warmup envelope multiplied by a cosine envelope approaching a 10% floor over the full budget, and global gradient clipping at 1.0. There are 160 updates and 33,280 supervised training tokens. The loss mask and training budget are identical in the ablation.
+
+Because the warmup and cosine envelopes are multiplied, the learning rate does not reach exactly 0.003.
 
 The model has 10,161 trainable parameters. FP32 parameters, gradients, and two Adam moments require approximately **158.8 KiB together**, excluding small optimizer counters. This is not total process memory: embeddings/residuals, attention scores, backward buffers, optimizer temporaries, Python/PyTorch runtime, dataset tensors, checkpoint copies, and evaluation consume additional memory. There is no sharding, recomputation, collective communication, or active-expert distinction. A CPU with 1 GiB of free memory is a conservative planning allowance for this tiny run, not a measured peak. Measure peak RSS before extrapolating.
 
@@ -90,3 +104,4 @@ Submit the manifest, script hash, trace, results, one failed hypothesis, and a p
 1. <a id="ref-1"></a>PyTorch. *Reproducibility*. [Documentation](https://docs.pytorch.org/docs/stable/notes/randomness.html).
 2. <a id="ref-2"></a>PyTorch. *Saving and Loading Models*. [Documentation](https://docs.pytorch.org/tutorials/beginner/saving_loading_models.html).
 3. <a id="ref-3"></a>Google. *Colaboratory FAQ*. [GitHub notebooks, runtimes, and resource limits](https://research.google.com/colaboratory/faq.html).
+4. <a id="ref-4"></a>Foundation Model Engineering. *Verify decoder notebooks on Windows*. [Successful CPU notebook run](https://github.com/sungeuns/foundation-model-engineering/actions/runs/45434214223), checked 2026-11-25.

@@ -67,6 +67,15 @@ $$
 
 where $\lambda$ is a tunable sampling weight, not the physical fraction of bytes on disk. Record realized tokens by source after filtering, tokenization, packing, and sampling. A mixture configured as 80/20 at the document level may not remain 80/20 at the token level.
 
+**How can 80% domain documents yield only 28.6% domain tokens?** Suppose a training batch contains 80 domain documents and 20 replay documents. Each domain document contributes 400 loss-bearing tokens, while each replay document contributes 4,000. Assume every token is retained. The domain share of the training tokens is
+
+$$
+\frac{80\times400}{80\times400+20\times4000}
+=\frac{32000}{112000}\approx28.6\%.
+$$
+
+To apply this calculation, check whether each sampler draw selects a document, a sequence, or a fixed token block. In Hugging Face Datasets, `interleave_datasets` samples a source for each **example** (as of 2026-11-25) [[7]](#ref-7). If each example is a whole document, the lengths above matter. If examples are equal-length blocks with equal loss masks, the same sampling proportions have a different token interpretation. Before scaling, compare the intended token budget with source-tagged counts of tokens that actually contribute to the loss, then adjust sampling weights or preprocessing.
+
 The immutable dataset manifest should contain source URI or internal ID, license or consent basis, collection time, PII/secrets policy, deletion lineage, language/domain labels, filter versions, exact and near-duplicate cluster IDs, shard checksum, tokenizer hash, and sample ID. Perform deduplication and semantic clustering **before** assigning train/dev/test splits. Quarantine public benchmarks, private release prompts, rubrics, semantic neighbors, and synthetic variants from both domain and replay corpora.
 
 Choose $\lambda$ with a pilot sweep. Compare at least a domain-heavy mixture, a balanced mixture, and a replay-heavy control. The goal is a Pareto point: required domain gain with acceptable base-capability and safety retention. Replay is not a guarantee against forgetting, and very aggressive replay may prevent useful adaptation.
@@ -183,3 +192,4 @@ The deliverable from CPT is therefore not a weight file. It is a versioned artif
 5. <a id="ref-5"></a>PyTorch. *Reproducibility*. [PyTorch developer notes](https://docs.pytorch.org/docs/stable/notes/randomness.html).
 
 6. <a id="ref-6"></a>Singhal, S., et al. (2026). *Priming Base Models for Agentic Post-Training: An Open Midtraining Recipe*. Preprint. [Source](https://arxiv.org/abs/2610.22019).
+7. <a id="ref-7"></a>Hugging Face. *Datasets: interleave_datasets*. [Example-level source sampling and stopping strategies](https://huggingface.co/docs/datasets/package_reference/main_classes#datasets.interleave_datasets). Checked 2026-11-25.

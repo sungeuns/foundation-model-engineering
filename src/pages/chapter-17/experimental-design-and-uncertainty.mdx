@@ -4,9 +4,14 @@ title: 17.7 Experimental Design and Uncertainty
 lang: en
 ---
 
+import PairedReleaseLab from '../../components/chapter-17/PairedReleaseLab.tsx';
+import { withBasePath } from '../../utils/paths.js';
+
 # 17.7 Experimental Design and Uncertainty
 
-A candidate wins 56% of cases and the champion wins 54%. Before calling that progress, ask: which population, which independent units, which paired observations, and which decision threshold? Statistical machinery cannot repair a contaminated test set or a changed scaffold.
+A candidate succeeds on 56% of cases and the champion on 54%. Does that two-point gap establish progress? First identify the population, the independent units, the paired observations, and the improvement required for a decision. Statistical machinery cannot repair a contaminated test set or an inconsistent evaluation setup.
+
+In the [browser experiment](#release-lab), the `gain` and `regression` scenarios both improve target-task accuracy by 15 percentage points. Only one passes. Compare them to see why retaining existing capabilities changes the decision.
 
 ## Define the Claim Before Measuring It
 
@@ -18,11 +23,23 @@ $$
 \widehat\Delta=\frac{1}{C}\sum_{c=1}^{C}\left(\frac{1}{n_c}\sum_{i=1}^{n_c}d_{ci}\right).
 $$
 
-The model revision, prompt, scaffold, tools, decoding budget, and grader remain fixed. Resample whole clusters with replacement, preserving each pair and all its siblings; then recompute the same statistic. Independent row resampling falsely increases the effective sample size when siblings are correlated. Paired resampling means using the same sampled units for both systems [[1]](#ref-1).
+For example, the target task in both `gain` and `regression` has 80 clusters of four cases. The candidate gets one more case right in 64 clusters and one fewer right in the other 16. Because every cluster has the same size, the mean difference is
 
-## Run a Complete Decision Exercise
+$$
+\widehat\Delta=\frac{64-16}{80\times4}=0.15,
+$$
 
-**Simplified, smoke-tested statistical lab.** Download [paired_release.py](../../labs/paired_release.py); Python 3.10+ and the standard library are sufficient. The outcomes are authored synthetic fixtures, not measurements of named models. The transparent percentile bootstrap is approximate and can behave poorly with small samples, rare outcomes, or degenerate empirical distributions. Validate coverage for the intended design before a consequential application.
+or **15 percentage points**. What separates these two candidates is their performance on the retention task.
+
+For each system, hold the model revision, prompt, scaffold, tools, decoding budget, and grader fixed. Resample whole clusters with replacement, and keep each pair and all its siblings together. Recompute the same statistic on each sample. Resampling correlated siblings as independent rows exaggerates the effective sample size. Paired resampling means using the same sampled units for both systems [[1]](#ref-1).
+
+## Run the Release Decision Experiment
+
+The exercise uses authored outcomes for two models on the same cases. It resamples whole clusters to estimate uncertainty in the difference. To pass, the target task's lower bound must exceed +5 percentage points, and the retention task's lower bound must exceed −2 points.
+
+<PairedReleaseLab client:visible lang="en" workerUrl={withBasePath('/labs/paired-release-worker.js')} />
+
+To run the same experiment locally, download [paired_release.py](../../labs/paired_release.py) and run these commands in its directory. It requires Python 3.10+ and the standard library.
 
 ```bash
 python paired_release.py --scenario gain
@@ -31,7 +48,7 @@ python paired_release.py --scenario regression
 python paired_release.py --scenario missing
 ```
 
-Each quality slice has 80 independent clusters with four sibling cases each. The script excludes exposed incident clusters, rejects duplicate case IDs and missing pairs, and produces a JSON decision packet using 4,000 bootstrap replicates with seed 23. In a real harness, predeclare whether a timeout counts as failure; never silently drop an unobserved outcome. Here unresolved missing evidence produces **Review**.
+The target and retention tasks each use the 80-cluster, four-case design above. The script excludes exposed incident clusters, rejects duplicate case IDs and missing pairs, and produces a JSON decision packet using 4,000 bootstrap replicates with seed 23. In a real harness, predeclare whether a timeout counts as failure; never silently drop an unobserved outcome. Here unresolved missing evidence produces **Review**.
 
 | Scenario | Result | Reason |
 |---|---|---|
@@ -40,7 +57,7 @@ Each quality slice has 80 independent clusters with four sibling cases each. The
 | `regression` | Block | The retention slice loses 25 points despite the target gain. |
 | `missing` | Review | A paired outcome is unresolved. |
 
-The retention fixture deliberately has identical paired outcomes, so its bootstrap distribution is zero-width. This describes the empirical fixture; it does not prove the population has no uncertainty. Do not use a degenerate bootstrap to claim a real safety guarantee.
+Why does the retention interval have zero width? In `regression`, the candidate gets one fewer case right in **every four-case cluster**. Every resample therefore has a mean difference of −25 points. In `gain`, every cluster difference is zero. Both intervals have zero width, but only one clears the retention threshold. This property of the synthetic data does not establish zero population uncertainty. A percentile bootstrap can have poor coverage with small samples or degenerate empirical distributions like these.
 
 A lower bound above zero establishes evidence of improvement under the method's assumptions; above 0.05 supports the stronger five-point gate. Noninferiority instead asks whether the lower bound exceeds a prespecified tolerated loss, here −0.02. “No significant degradation” does not establish noninferiority. The script uses separate one-sided bounds; the displayed lower and upper bounds together are a central 90% interval, not a two-sided 95% interval. Pass covers these synthetic offline gates only, not authorization to deploy.
 
