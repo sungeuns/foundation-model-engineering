@@ -3,10 +3,10 @@ export const chapters = [
     id: 1,
     title: { en: "1. The Evolution of Intelligence", ko: "1. 지능의 진화" },
     subs: [
-      { id: "1-1", title: { en: "1.1 Symbolism vs. Connectionism", ko: "1.1 기호주의 vs. 연결주의" }, path: "/chapter-1/symbolism-vs-connectionism" },
+      { id: "1-1", title: { en: "1.1 Symbolism vs. Connectionism", ko: "1.1 기호주의와 연결주의" }, path: "/chapter-1/symbolism-vs-connectionism" },
       { id: "1-2", title: { en: "1.2 The Power of Representation", ko: "1.2 표현의 힘" }, path: "/chapter-1/power-of-representation" },
-      { id: "1-3", title: { en: "1.3 Deep Learning Paradigms", ko: "1.3 딥러닝 패러다임" }, path: "/chapter-1/deep-learning-paradigms" },
-      { id: "1-4", title: { en: "1.4 The Bitter Lesson", ko: "1.4 쓴 교훈" }, path: "/chapter-1/bitter-lesson" },
+      { id: "1-3", title: { en: "1.3 Deep Learning Paradigms", ko: "1.3 딥러닝의 세 가지 학습 방식" }, path: "/chapter-1/deep-learning-paradigms" },
+      { id: "1-4", title: { en: "1.4 The Bitter Lesson", ko: "1.4 리처드 서튼의 ‘쓴 교훈’" }, path: "/chapter-1/bitter-lesson" },
       { id: "1-5", title: { en: "1.5 Learning Paths and Evidence of Mastery", ko: "1.5 학습 경로와 숙련도 입증" }, path: "/chapter-1/learning-path-and-mastery" },
     ]
   },
@@ -35,10 +35,10 @@ export const chapters = [
     id: 4,
     title: { en: "4. LLM Architectures & Paradigms", ko: "4. LLM 아키텍처 및 패러다임" },
     subs: [
-      { id: "4-1", title: { en: "4.1 Encoder-only (BERT-style)", ko: "4.1 Encoder-only (BERT-style)" }, path: "/chapter-4/encoder-only" },
-      { id: "4-2", title: { en: "4.2 Decoder-only (GPT-style)", ko: "4.2 Decoder-only (GPT-style)" }, path: "/chapter-4/decoder-only" },
-      { id: "4-3", title: { en: "4.3 Encoder-Decoder (T5/BART)", ko: "4.3 Encoder-Decoder (T5/BART)" }, path: "/chapter-4/encoder-decoder" },
-      { id: "4-4", title: { en: "4.4 Hybrid & Prefix LM", ko: "4.4 Hybrid & Prefix LM" }, path: "/chapter-4/hybrid-prefix-lm" },
+      { id: "4-1", title: { en: "4.1 Encoder-only (BERT-style)", ko: "4.1 BERT와 인코더 전용 트랜스포머" }, path: "/chapter-4/encoder-only" },
+      { id: "4-2", title: { en: "4.2 Decoder-only (GPT-style)", ko: "4.2 GPT와 디코더 전용 트랜스포머" }, path: "/chapter-4/decoder-only" },
+      { id: "4-3", title: { en: "4.3 Encoder-Decoder (T5/BART)", ko: "4.3 T5와 BART의 인코더-디코더 구조" }, path: "/chapter-4/encoder-decoder" },
+      { id: "4-4", title: { en: "4.4 Hybrid & Prefix LM", ko: "4.4 하이브리드 언어 모델과 접두사 언어 모델(Prefix LM)" }, path: "/chapter-4/hybrid-prefix-lm" },
       { id: "4-5", title: { en: "4.5 Various LLM Architectures & Latest Trends", ko: "4.5 다양한 LLM 아키텍처와 최신 트렌드" }, path: "/chapter-4/various-llm-architectures" },
     ]
   },
@@ -69,10 +69,10 @@ export const chapters = [
     id: 7,
     title: { en: "7. Training Optimization & Systems", ko: "7. 학습 최적화 및 시스템" },
     subs: [
-      { id: "7-1", title: { en: "7.1 Data Parallelism (DP/DDP)", ko: "7.1 데이터 병렬화 (DP/DDP)" }, path: "/chapter-7/data-parallelism" },
-      { id: "7-2", title: { en: "7.2 ZeRO (Zero Redundancy Optimizer)", ko: "7.2 ZeRO (Zero Redundancy Optimizer)" }, path: "/chapter-7/zero-redundancy-optimizer" },
+      { id: "7-1", title: { en: "7.1 Data Parallelism (DP/DDP)", ko: "7.1 데이터 병렬 학습(DP와 DDP)" }, path: "/chapter-7/data-parallelism" },
+      { id: "7-2", title: { en: "7.2 ZeRO (Zero Redundancy Optimizer)", ko: "7.2 ZeRO로 학습 상태 분할하기" }, path: "/chapter-7/zero-redundancy-optimizer" },
       { id: "7-3", title: { en: "7.3 Model & Pipeline Parallelism", ko: "7.3 모델 및 파이프라인 병렬화" }, path: "/chapter-7/model-and-pipeline-parallelism" },
-      { id: "7-4", title: { en: "7.4 Flash Attention 1, 2, 3", ko: "7.4 Flash Attention 1, 2, 3" }, path: "/chapter-7/flash-attention" },
+      { id: "7-4", title: { en: "7.4 Flash Attention 1, 2, 3", ko: "7.4 FlashAttention 1·2·3의 메모리 접근과 병렬화" }, path: "/chapter-7/flash-attention" },
       { id: "7-5", title: { en: "7.5 Build, Break, and Resume a Tiny Decoder", ko: "7.5 작은 디코더 실습과 재개 검증" }, path: "/chapter-7/tiny-decoder-lab" },
     ]
   },
@@ -91,21 +91,21 @@ export const chapters = [
     id: 9,
     title: { en: "9. Post-training: SFT & Instruction Tuning", ko: "9. 사후 학습: SFT 및 인스트럭션 튜닝" },
     subs: [
-      { id: "9-1", title: { en: "9.1 SFT Fundamentals", ko: "9.1 SFT 기본 개념" }, path: "/chapter-9/sft-fundamentals" },
-      { id: "9-2", title: { en: "9.2 Dataset Quality vs Quantity", ko: "9.2 데이터셋 품질 vs 양" }, path: "/chapter-9/dataset-quality-vs-quantity" },
-      { id: "9-3", title: { en: "9.3 Parameter-Efficient Fine-Tuning (PEFT)", ko: "9.3 매개변수 효율적 미세 조정 (PEFT)" }, path: "/chapter-9/parameter-efficient-fine-tuning-peft" },
+      { id: "9-1", title: { en: "9.1 SFT Fundamentals", ko: "9.1 지도 미세 조정(SFT)의 기본 원리" }, path: "/chapter-9/sft-fundamentals" },
+      { id: "9-2", title: { en: "9.2 Dataset Quality vs Quantity", ko: "9.2 미세 조정 데이터의 품질과 양" }, path: "/chapter-9/dataset-quality-vs-quantity" },
+      { id: "9-3", title: { en: "9.3 Parameter-Efficient Fine-Tuning (PEFT)", ko: "9.3 매개변수 효율적 미세 조정(PEFT)" }, path: "/chapter-9/parameter-efficient-fine-tuning-peft" },
       { id: "9-4", title: { en: "9.4 Prompting, ICL, and Prompt Optimization", ko: "9.4 프롬프팅·ICL·프롬프트 최적화" }, path: "/chapter-9/prompt-engineering-as-sft" },
-      { id: "9-5", title: { en: "9.5 Synthetic Instructions & Self-Instruct", ko: "9.5 합성 인스트럭션 및 Self-Instruct" }, path: "/chapter-9/synthetic-instructions-and-self-instruct" },
+      { id: "9-5", title: { en: "9.5 Synthetic Instructions & Self-Instruct", ko: "9.5 합성 지시문과 Self-Instruct" }, path: "/chapter-9/synthetic-instructions-and-self-instruct" },
     ]
   },
   {
     id: 10,
     title: { en: "10. Alignment: RLHF & Direct Preference", ko: "10. 정렬: RLHF 및 직접 선호도 최적화" },
     subs: [
-      { id: "10-1", title: { en: "10.1 Human Feedback Loop", ko: "10.1 인간 피드백 루프" }, path: "/chapter-10/human-feedback-loop" },
-      { id: "10-2", title: { en: "10.2 PPO (Proximal Policy Optimization)", ko: "10.2 PPO (근사 정책 최적화)" }, path: "/chapter-10/ppo-proximal-policy-optimization" },
-      { id: "10-3", title: { en: "10.3 DPO (Direct Preference Optimization)", ko: "10.3 DPO (Direct Preference Optimization)" }, path: "/chapter-10/dpo" },
-      { id: "10-4", title: { en: "10.4 KTO & IPO", ko: "10.4 KTO 및 IPO" }, path: "/chapter-10/kto-and-ipo" },
+      { id: "10-1", title: { en: "10.1 Human Feedback Loop", ko: "10.1 사람의 피드백을 학습에 반영하는 과정" }, path: "/chapter-10/human-feedback-loop" },
+      { id: "10-2", title: { en: "10.2 PPO (Proximal Policy Optimization)", ko: "10.2 PPO를 이용한 언어 모델 정렬" }, path: "/chapter-10/ppo-proximal-policy-optimization" },
+      { id: "10-3", title: { en: "10.3 DPO (Direct Preference Optimization)", ko: "10.3 직접 선호 최적화(DPO)" }, path: "/chapter-10/dpo" },
+      { id: "10-4", title: { en: "10.4 KTO & IPO", ko: "10.4 KTO, IPO와 선호 학습의 손실 함수" }, path: "/chapter-10/kto-and-ipo" },
       { id: "10-5", title: { en: "10.5 Alignment Tax", ko: "10.5 정렬 세금" }, path: "/chapter-10/alignment-tax" },
     ]
   },
@@ -118,7 +118,7 @@ export const chapters = [
       { id: "11-3", title: { en: "11.3 Unified Multimodal (Any-to-Any)", ko: "11.3 통합 멀티모달 (Any-to-Any)" }, path: "/chapter-11/unified-multimodal-any-to-any" },
       { id: "11-4", title: { en: "11.4 Image Diffusion Models", ko: "11.4 이미지 확산 모델" }, path: "/chapter-11/image-diffusion-models" },
       { id: "11-5", title: { en: "11.5 Video Generation Foundations", ko: "11.5 비디오 생성의 기초" }, path: "/chapter-11/video-generation-foundations" },
-      { id: "11-6", title: { en: "11.6 Commercial Video Models & Future Directions", ko: "11.6 상업용 비디오 모델 및 향후 방향" }, path: "/chapter-11/commercial-video-models" },
+      { id: "11-6", title: { en: "11.6 Commercial Video Models & Future Directions", ko: "11.6 상용 영상 생성 모델과 월드 모델" }, path: "/chapter-11/commercial-video-models" },
     ]
   },
   {
@@ -126,7 +126,7 @@ export const chapters = [
     title: { en: "12. LLM Inference Optimization", ko: "12. LLM 추론 최적화" },
     subs: [
       { id: "12-1", title: { en: "12.1 KV Cache: How It Works and Memory Use", ko: "12.1 KV 캐시 원리와 메모리 계산" }, path: "/chapter-12/kv-cache-management" },
-      { id: "12-2", title: { en: "12.2 PagedAttention (vLLM)", ko: "12.2 PagedAttention (vLLM)" }, path: "/chapter-12/paged-attention-vllm" },
+      { id: "12-2", title: { en: "12.2 PagedAttention (vLLM)", ko: "12.2 vLLM의 PagedAttention과 KV 캐시 관리" }, path: "/chapter-12/paged-attention-vllm" },
       { id: "12-3", title: { en: "12.3 Continuous Batching: Request Scheduling and Chunked Prefill", ko: "12.3 연속 배칭: 요청 교체와 청크 프리필" }, path: "/chapter-12/continuous-batching" },
       { id: "12-4", title: { en: "12.4 Speculative Decoding", ko: "12.4 투기적 디코딩" }, path: "/chapter-12/speculative-decoding" },
       { id: "12-5", title: { en: "12.5 Long Context Serving", ko: "12.5 롱 컨텍스트 서빙" }, path: "/chapter-12/long-context-serving" },
@@ -137,7 +137,7 @@ export const chapters = [
     id: 13,
     title: { en: "13. Model Compression & Quantization", ko: "13. 모델 압축 및 양자화" },
     subs: [
-      { id: "13-1", title: { en: "13.1 PTQ vs QAT", ko: "13.1 PTQ vs QAT" }, path: "/chapter-13/ptq-vs-qat" },
+      { id: "13-1", title: { en: "13.1 PTQ vs QAT", ko: "13.1 학습 후 양자화(PTQ)와 양자화 인식 학습(QAT)" }, path: "/chapter-13/ptq-vs-qat" },
       { id: "13-2", title: { en: "13.2 Quantization Methods", ko: "13.2 양자화 방법" }, path: "/chapter-13/quantization-methods" },
       { id: "13-3", title: { en: "13.3 Weight Sparsification", ko: "13.3 가중치 희소화" }, path: "/chapter-13/weight-sparsification" },
       { id: "13-4", title: { en: "13.4 Knowledge Distillation", ko: "13.4 지식 증류" }, path: "/chapter-13/knowledge-distillation" },
@@ -162,7 +162,7 @@ export const chapters = [
     subs: [
       { id: "15-1", title: { en: "15.1 Chain of Thought (CoT)", ko: "15.1 사고의 사슬 (CoT)" }, path: "/chapter-15/chain-of-thought" },
       { id: "15-2", title: { en: "15.2 Tree/Graph of Thoughts", ko: "15.2 생각의 트리/그래프" }, path: "/chapter-15/tree-graph-of-thoughts" },
-      { id: "15-3", title: { en: "15.3 Search-time Compute", ko: "15.3 탐색 시간 컴퓨팅" }, path: "/chapter-15/search-time-compute" },
+      { id: "15-3", title: { en: "15.3 Search-time Compute", ko: "15.3 추론 시점의 연산 예산과 탐색" }, path: "/chapter-15/search-time-compute" },
       { id: "15-4", title: { en: "15.4 Verifiers & Reward Models", ko: "15.4 검증기 및 보상 모델" }, path: "/chapter-15/verifiers-and-reward-models" },
       { id: "15-5", title: { en: "15.5 Reasoning Post-training with Verifiable Rewards", ko: "15.5 검증 가능한 보상을 이용한 추론 사후 학습" }, path: "/chapter-15/reasoning-post-training-rlvr" },
     ]
@@ -184,11 +184,11 @@ export const chapters = [
     id: 17,
     title: { en: "17. AI Evaluation & Benchmarking", ko: "17. AI 평가 및 벤치마킹" },
     subs: [
-      { id: "17-1", title: { en: "17.1 Academic Benchmarks", ko: "17.1 학술적 벤치마크" }, path: "/chapter-17/academic-benchmarks" },
-      { id: "17-2", title: { en: "17.2 LLM-as-a-Judge", ko: "17.2 LLM-as-a-Judge" }, path: "/chapter-17/llm-as-a-judge" },
+      { id: "17-1", title: { en: "17.1 Academic Benchmarks", ko: "17.1 학술 벤치마크" }, path: "/chapter-17/academic-benchmarks" },
+      { id: "17-2", title: { en: "17.2 LLM-as-a-Judge", ko: "17.2 LLM을 이용한 평가(LLM-as-a-Judge)" }, path: "/chapter-17/llm-as-a-judge" },
       { id: "17-3", title: { en: "17.3 Elo Rating & Leaderboards", ko: "17.3 Elo 레이팅 및 리더보드" }, path: "/chapter-17/elo-rating-and-leaderboards" },
-      { id: "17-4", title: { en: "17.4 Contamination Issues", ko: "17.4 오염 문제" }, path: "/chapter-17/contamination-issues" },
-      { id: "17-5", title: { en: "17.5 Production Evaluation and Release Gates", ko: "17.5 프로덕션 평가와 릴리스 게이트" }, path: "/chapter-17/production-evaluation-and-release-gates" },
+      { id: "17-4", title: { en: "17.4 Contamination Issues", ko: "17.4 평가 데이터 오염의 탐지와 예방" }, path: "/chapter-17/contamination-issues" },
+      { id: "17-5", title: { en: "17.5 Production Evaluation and Release Gates", ko: "17.5 프로덕션 평가와 모델 배포 기준" }, path: "/chapter-17/production-evaluation-and-release-gates" },
       { id: "17-6", title: { en: "17.6 Commercial and Open-weight Model Benchmarks", ko: "17.6 상용 및 오픈 웨이트 모델 벤치마크" }, path: "/chapter-17/commercial-model-benchmarks" },
       { id: "17-7", title: { en: "17.7 Experimental Design and Uncertainty", ko: "17.7 실험 설계와 불확실성" }, path: "/chapter-17/experimental-design-and-uncertainty" },
     ]
@@ -197,8 +197,8 @@ export const chapters = [
     id: 18,
     title: { en: "18. AI Safety & Alignment Research", ko: "18. AI 안전 및 정렬 연구" },
     subs: [
-      { id: "18-1", title: { en: "18.1 Red Teaming", ko: "18.1 레드 티밍" }, path: "/chapter-18/red-teaming" },
-      { id: "18-2", title: { en: "18.2 Jailbreaking & Defense", ko: "18.2 탈옥 및 방어" }, path: "/chapter-18/jailbreaking-and-defense" },
+      { id: "18-1", title: { en: "18.1 Red Teaming", ko: "18.1 언어 모델 레드 티밍" }, path: "/chapter-18/red-teaming" },
+      { id: "18-2", title: { en: "18.2 Jailbreaking & Defense", ko: "18.2 언어 모델 탈옥과 방어" }, path: "/chapter-18/jailbreaking-and-defense" },
       { id: "18-3", title: { en: "18.3 Hallucination Detection", ko: "18.3 환각 탐지" }, path: "/chapter-18/hallucination-detection" },
       { id: "18-4", title: { en: "18.4 Scalable Oversight", ko: "18.4 확장 가능한 감독" }, path: "/chapter-18/scalable-oversight" },
     ]
@@ -208,9 +208,9 @@ export const chapters = [
     title: { en: "19. Interpretability & Science of LLMs", ko: "19. 해석 가능성 및 LLM의 과학" },
     subs: [
       { id: "19-1", title: { en: "19.1 Mechanistic Interpretability", ko: "19.1 기계론적 해석 가능성" }, path: "/chapter-19/mechanistic-interpretability" },
-      { id: "19-2", title: { en: "19.2 Logit Lens & Attention Visualization", ko: "19.2 로짓 렌즈 및 어텐션 시각화" }, path: "/chapter-19/logit-lens-and-attention-visualization" },
-      { id: "19-3", title: { en: "19.3 Probing Classifiers", ko: "19.3 프로빙 분류기" }, path: "/chapter-19/probing-classifiers" },
-      { id: "19-4", title: { en: "19.4 Sparse Autoencoders (SAE)", ko: "19.4 희소 오토인코더 (SAE)" }, path: "/chapter-19/sparse-autoencoders-sae" },
+      { id: "19-2", title: { en: "19.2 Logit Lens & Attention Visualization", ko: "19.2 로짓 렌즈와 어텐션 시각화" }, path: "/chapter-19/logit-lens-and-attention-visualization" },
+      { id: "19-3", title: { en: "19.3 Probing Classifiers", ko: "19.3 프로빙 분류기로 은닉 상태 읽기" }, path: "/chapter-19/probing-classifiers" },
+      { id: "19-4", title: { en: "19.4 Sparse Autoencoders (SAE)", ko: "19.4 희소 오토인코더(SAE)" }, path: "/chapter-19/sparse-autoencoders-sae" },
     ]
   },
   {

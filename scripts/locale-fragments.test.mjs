@@ -40,6 +40,7 @@ test('shared exercise IDs belong to the same authored content in both translatio
     ['/chapter-7/tiny-decoder-lab', 'decoder-copy-trace'],
     ['/chapter-7/tiny-decoder-lab', 'local-decoder-setup'],
     ['/chapter-10/dpo', 'reference-relative-example'],
+    ['/chapter-12/kv-cache-management', 'kv-cache-capacity'],
     ['/chapter-12/serving-policies-slos-and-fallbacks', 'streaming-latency-trace'],
     ['/chapter-14/rag-failure-modes-and-operational-design', 'trace-a-rag-answer'],
   ]) {

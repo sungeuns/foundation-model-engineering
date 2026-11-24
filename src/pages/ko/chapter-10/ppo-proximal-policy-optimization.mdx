@@ -1,12 +1,14 @@
 ---
 layout: ../../../layouts/BookLayout.astro
-title: 10.2 PPO for Language-Model Alignment
+title: 10.2 PPO를 이용한 언어 모델 정렬
 lang: ko
 ---
 
 import PPOClippingVisualizer from '../../../components/chapter-10/PPOClippingVisualizer.tsx';
 
-# 10.2 PPO for Language-Model Alignment
+<a id="102-ppo-for-language-model-alignment"></a>
+
+# 10.2 PPO를 이용한 언어 모델 정렬
 
 Proximal Policy Optimization (PPO)은 고전적인 RLHF system에서 사용된 online reinforcement-learning 방법입니다 [[1]](#ref-1) [[2]](#ref-2). Language-model PPO에서는 policy가 response를 생성하고, 보상 모델(reward model)이 점수를 주고, value 헤드(value head)가 return을 추정하며, frozen reference policy가 drift를 제한합니다. 이 중 하나를 빼면 다른 알고리즘이 됩니다.
 

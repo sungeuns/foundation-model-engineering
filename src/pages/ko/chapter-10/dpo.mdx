@@ -1,10 +1,12 @@
 ---
 layout: ../../../layouts/BookLayout.astro
-title: 10.3 Direct Preference Optimization (DPO)
+title: 10.3 직접 선호 최적화(DPO)
 lang: ko
 ---
 
-# 10.3 Direct Preference Optimization (DPO)
+<a id="103-direct-preference-optimization-dpo"></a>
+
+# 10.3 직접 선호 최적화(DPO)
 
 직접 선호도 최적화(DPO)는 별도의 스칼라 보상 모델이나 온라인 롤아웃 없이 응답 쌍으로 정책을 학습합니다 [[1]](#ref-1). 손실은 고정된 기준 모델과 비교해 두 응답의 확률 비율이 얼마나 달라졌는지를 봅니다. 따라서 쌍 구성, 템플릿, 응답 길이, 기준 모델의 정체는 구현뿐 아니라 목적함수에도 영향을 줍니다.
 

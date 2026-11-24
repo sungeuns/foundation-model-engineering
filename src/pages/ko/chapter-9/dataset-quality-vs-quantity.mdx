@@ -1,12 +1,14 @@
 ---
 layout: ../../../layouts/BookLayout.astro
-title: 9.2 Dataset Quality vs Quantity
+title: 9.2 미세 조정 데이터의 품질과 양
 lang: ko
 ---
 
 import DataQualityVisualizer from '../../../components/chapter-9/DataQualityVisualizer.tsx';
 
-# 9.2 Dataset Quality vs Quantity
+<a id="92-dataset-quality-vs-quantity"></a>
+
+# 9.2 미세 조정 데이터의 품질과 양
 
 Post-training 데이터는 단순한 예시 모음이 아니라 모델 행동을 조절하는 제어면입니다. LIMA와 AlpaGasus처럼 일부 조건에서는 작고 엄선한 데이터가 크고 노이즈가 많은 데이터보다 좋을 수 있습니다 [[1]](#ref-1) [[2]](#ref-2). 그러나 이는 보편적인 역스케일링 법칙이 아닙니다. 결과는 base model capability, task coverage, diversity, label process, optimization, evaluation에 따라 달라집니다. 같은 패턴의 반복이 아니라 빠진 분포를 채운다면 데이터 양도 중요합니다.
 

@@ -61,13 +61,19 @@ $$
 
 This is the aggregate for 32 equal-length sequences, not one request. Nor does the cache always exceed the weights. It can do so at large concurrency or context length, so both weights and peak live-cache occupancy belong in the capacity plan.
 
+<a id="kv-cache-capacity"></a>
+
 ### Worked Example: The Tenth Request Does Not Fit
 
 With the same geometry, one cached token costs 327,680 bytes, or 320 KiB, across all 80 layers. One 8,192-token request therefore needs **2.5 GiB**. Suppose the serving pool has **24 GiB left for KV payload** after reserving weights, activations, workspaces, allocator overhead, and a failure margin. Nine such requests consume 22.5 GiB; ten require 25 GiB. This is a payload bound for that pool, not a measured GPU concurrency limit. If the cache is sharded, apply the actual per-device layout and account for any replicated heads.
 
 Now admit nine requests whose prompts are already 8,192 tokens long and allow each to generate another 2,048 tokens. Each can grow to 3.125 GiB, so the batch can reach **28.125 GiB**. The prompts fit, but the allowed continuations do not. Reserving for the full 10,240-token length permits only seven requests under this simplified budget. A dynamic allocator can admit more initially, but it then needs an explicit queueing, preemption, or output-limit policy. Prefix sharing can reduce the physical payload only when those exact cached prefixes are reusable.
 
-Try the calculator with an 8,192-token length and a 24 GiB cache budget, then increase the length to 10,240. The useful quantity is the maximum live cached length, including generated tokens—not just the prompt length supplied at admission.
+![KV payload against a 24 GiB budget. Nine prompts use 22.5 GiB, ten use 25 GiB, and nine requests at their output limit use 28.125 GiB.](../../assets/images/chapter-12/kv-budget-en.svg)
+
+*Calculated from the lesson's 320 KiB per token and 24 GiB net KV budget.* [Open the full-size chart](../../social/kv-budget-en.png)
+
+Select **Load the nine-request example**. Prompt caching leaves 1.5 GiB free. Before looking at the maximum-length result, predict how much extra memory the pool would need if every request added 2,048 tokens. To try a different budget, you can enter total memory, weights and other reservations for the same pool. For example, 80 GiB total minus 48 GiB of weights and 8 GiB reserved for other costs leaves 24 GiB for KV.
 
 <KVCacheCalculator client:load lang="en" />
 

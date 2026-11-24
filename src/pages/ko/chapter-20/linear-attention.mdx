@@ -1,12 +1,14 @@
 ---
 layout: ../../../layouts/BookLayout.astro
-title: 20.3 Linear Attention
+title: 20.3 선형 어텐션
 lang: ko
 ---
 
 import LinearAttentionVisualizer from '../../../components/chapter-20/LinearAttentionVisualizer.tsx';
 
-# 20.3 Linear Attention
+<a id="203-linear-attention"></a>
+
+# 20.3 선형 어텐션
 
 앞 절의 Mamba는 “어텐션 대신 상태를 업데이트하자”는 방향이었습니다. Linear Attention은 조금 다른 길을 택합니다. 어텐션이라는 인터페이스는 유지하되, 모든 토큰 쌍을 명시적으로 계산하는 softmax attention을 더 싼 형태로 바꾸려는 시도입니다. 즉, SSM이 순환 상태의 언어로 문제를 푼다면, Linear Attention은 어텐션을 **연관적으로 다시 묶을 수 있는 커널 계산** 으로 바꿉니다.
 

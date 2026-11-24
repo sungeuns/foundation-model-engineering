@@ -1,12 +1,14 @@
 ---
 layout: ../../../layouts/BookLayout.astro
-title: 9.3 Parameter-Efficient Fine-Tuning (PEFT)
+title: 9.3 매개변수 효율적 미세 조정(PEFT)
 lang: ko
 ---
 
 import LoRAParameterVisualizer from '../../../components/chapter-9/LoRAParameterVisualizer.tsx';
 
-# 9.3 Parameter-Efficient Fine-Tuning (PEFT)
+<a id="93-parameter-efficient-fine-tuning-peft"></a>
+
+# 9.3 매개변수 효율적 미세 조정(PEFT)
 
 Parameter-Efficient Fine-Tuning (PEFT)은 사전 학습 weight 대부분을 고정하고 작은 과업별 state만 학습합니다. gradient와 optimizer state 비용을 낮추고, 하나의 베이스 모델에 여러 adapter를 운영하며, rollback을 단순화할 수 있습니다. 그러나 activation memory가 사라지는 것은 아니며 베이스 모델, 토크나이저, 템플릿, 어댑터, 런타임은 하나의 호환 단위입니다.
 

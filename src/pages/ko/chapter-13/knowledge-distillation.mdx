@@ -1,12 +1,14 @@
 ---
 layout: ../../../layouts/BookLayout.astro
-title: 13.4 Knowledge Distillation
+title: 13.4 지식 증류
 lang: ko
 ---
 
 import KDVisualizer from '../../../components/chapter-13/KDVisualizer.tsx';
 
-# 13.4 Knowledge Distillation
+<a id="134-knowledge-distillation"></a>
+
+# 13.4 지식 증류
 
 양자화가 기존 모델의 무게를 줄이는 작업이라면, **지식 증류(Knowledge Distillation, KD)** 는 아예 짐을 다시 싸는 일에 가깝습니다. 원래 모델 구조를 유지한 채 가중치만 압축하는 대신, 더 큰 **교사(teacher)** 모델의 행동을 따라 하도록 더 작은 **학생(student)** 모델을 새로 학습시키기 때문입니다.
 

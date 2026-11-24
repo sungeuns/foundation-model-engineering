@@ -1,12 +1,14 @@
 ---
 layout: ../../../layouts/BookLayout.astro
-title: 13.1 PTQ vs QAT
+title: 13.1 학습 후 양자화(PTQ)와 양자화 인식 학습(QAT)
 lang: ko
 ---
 
 import QuantizationErrorVisualizer from '../../../components/chapter-13/QuantizationErrorVisualizer.tsx';
 
-# 13.1 PTQ vs QAT
+<a id="131-ptq-vs-qat"></a>
+
+# 13.1 학습 후 양자화(PTQ)와 양자화 인식 학습(QAT)
 
 이전 장에서 우리는 긴 컨텍스트(Long Context) 추론 시 발생하는 동적 메모리(KV Cache) 오버헤드를 Chunked Prefill과 분리형 서빙(Disaggregated Serving) 같은 시스템 엔지니어링으로 해결하는 방법을 살펴보았습니다. 하지만 컨텍스트 윈도우를 최적화하더라도, 모델의 정적 가중치(Static Weights) 자체가 차지하는 거대한 메모리 장벽은 그대로 남아있습니다. 16비트 정밀도(BF16)를 사용하는 70B(700억 개) 파라미터 모델은 가중치를 메모리에 올리는 데만 140GB 이상의 VRAM을 요구하며, 이는 소비자용 하드웨어에서의 구동을 원천적으로 차단하고 기업의 서빙 인프라 비용을 기하급수적으로 증가시킵니다.
 

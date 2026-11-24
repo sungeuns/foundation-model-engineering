@@ -403,8 +403,8 @@ export const searchDescriptions = {
     ko: 'IPO, KTO, 보수적 DPO의 차이를 비교합니다. 유한한 선호 마진, 짝이 없는 피드백, 레이블 불확실성과 공통 학습 조건을 다룹니다.',
   },
   '/chapter-12/kv-cache-management': {
-    en: 'Learn how KV caching speeds up LLM decoding, calculate memory with a worked GQA example and interactive calculator, and verify a PyTorch cache.',
-    ko: 'KV 캐시가 키와 값을 재사용하는 원리, GQA 메모리 계산 공식과 예제를 설명합니다. 용량 계산기로 확인하고 PyTorch 캐시를 전체 재계산과 비교합니다.',
+    en: 'Calculate how many requests fit a 24 GiB KV cache. Compare prompt and generation lengths, change the number of KV heads, and verify the cache in PyTorch.',
+    ko: '24 GiB의 KV 캐시에 요청을 몇 개 넣을 수 있을까요? 프롬프트와 생성 길이, KV 헤드 수를 바꾸며 메모리를 계산하고 PyTorch 구현을 검증합니다.',
   },
   '/chapter-12/continuous-batching': {
     en: 'Trace six requests through static and continuous batching, run a Python scheduler, and compare chunked-prefill token budgets, first-token latency, and inter-token delay.',

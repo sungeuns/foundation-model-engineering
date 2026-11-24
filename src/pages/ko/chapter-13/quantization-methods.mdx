@@ -1,12 +1,14 @@
 ---
 layout: ../../../layouts/BookLayout.astro
-title: 13.2 Quantization Methods
+title: 13.2 양자화 방법
 lang: ko
 ---
 
 import QuantizationMethodVisualizer from '../../../components/chapter-13/QuantizationMethodVisualizer.tsx';
 
-# 13.2 Quantization Methods
+<a id="132-quantization-methods"></a>
+
+# 13.2 양자화 방법
 
 80억 개 가중치를 4비트로 저장하면 가중치 자체는 4 GB입니다. 그렇다고 4 GB 메모리에서 전체 모델을 서빙할 수 있다는 뜻은 아닙니다. 스케일, 양자화하지 않은 텐서, 활성화, KV 캐시도 공간이 필요합니다. 같은 4비트 모델 두 개가 같은 답을 내는 것도 아닙니다. 반올림 오차의 크기뿐 아니라 오차가 생기는 위치가 중요합니다.
 

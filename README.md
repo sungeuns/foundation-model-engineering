@@ -16,7 +16,7 @@ You do not need to read the whole book first.
 
 | Your question | Start here | What you can do |
 | --- | --- | --- |
-| The weights fit. Why does serving run out of memory? | [KV cache management](https://sungeuns.github.io/foundation-model-engineering/chapter-12/kv-cache-management/#worked-example-the-tenth-request-does-not-fit) | Calculate memory as context, batch size, and KV heads change. |
+| The weights fit. Why does serving run out of memory? | [KV cache management](https://sungeuns.github.io/foundation-model-engineering/chapter-12/kv-cache-management/#kv-cache-capacity) | Calculate memory as context, batch size, and KV heads change. |
 | What does an attention weight actually do? | [Self-attention mathematics](https://sungeuns.github.io/foundation-model-engineering/chapter-3/self-attention-mathematics/#attention-weight-example) | Calculate the weights by hand with the [two-page worksheet and solution](https://sungeuns.github.io/foundation-model-engineering/labs/attention-worksheet-en.pdf), then check the same inputs in the browser. |
 | How many context positions does one image use? | [Visual token budget](https://sungeuns.github.io/foundation-model-engineering/chapter-11/vision-language-bridges/#visual-token-budget) | Change image size and count. Compare patch projection with a decoder that reads separate visual memory. |
 | My RAG answer is wrong. Where did the evidence go? | [Trace one answer](https://sungeuns.github.io/foundation-model-engineering/chapter-14/rag-failure-modes-and-operational-design/#trace-a-rag-answer) | Use chunk IDs to distinguish a retrieval miss, omitted context, and an unsupported citation across six cases. |

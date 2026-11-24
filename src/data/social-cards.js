@@ -21,6 +21,16 @@ export const socialCards = {
       alt: '224 × 224픽셀 이미지 한 장, 14 × 14픽셀 패치, 프롬프트 32자리로 계산한 예제입니다. 패치별 투영은 디코더 288자리를, 리샘플링과 교차 어텐션은 디코더 32자리와 별도 시각 메모리 64슬롯을 사용합니다.',
     },
   },
+  '/chapter-12/kv-cache-management': {
+    en: {
+      image: '/social/kv-budget-en.png',
+      alt: 'Dense KV payload under a 24 GiB cache budget. Nine prompts of 8,192 tokens need 22.5 GiB, ten need 25 GiB, and nine sequences grown to 10,240 tokens need 28.125 GiB.',
+    },
+    ko: {
+      image: '/social/kv-budget-ko.png',
+      alt: 'KV 캐시 예산은 24 GiB입니다. 8,192토큰 프롬프트 9개에는 22.5 GiB, 10개에는 25 GiB가 필요합니다. 9개가 각각 10,240토큰까지 늘어나면 28.125 GiB입니다.',
+    },
+  },
   '/chapter-12/serving-policies-slos-and-fallbacks': {
     en: {
       image: '/social/streaming-latency-en.png',

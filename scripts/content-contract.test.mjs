@@ -173,8 +173,8 @@ test('current review inventory matches navigation order and inspected file hashe
   const rows = [...ledger.matchAll(/^\| (\d+\.\d+) \| `(\/chapter-\d+\/[^`]+)` \| (Inspected \d{4}-\d{2}-\d{2}|Mechanical only) \| ([a-f0-9]{64}|—) \| ([a-f0-9]{64}|—) \|$/mg)];
   assert.deepEqual(rows.map(([, number, route]) => [number, route]), expected);
   for (const [, , route, evidence, enHash, koHash] of rows) {
-    if (evidence === 'Mechanical only') continue;
     for (const [root, hash] of [[PAGES_ROOT, enHash], [koreanRoot, koHash]]) {
+      if (evidence === 'Mechanical only' && hash === '—') continue;
       const actual = createHash('sha256').update(read(path.join(root, `${route.slice(1)}.mdx`))).digest('hex');
       assert.equal(actual, hash, `${route} changed after the recorded inspection`);
     }

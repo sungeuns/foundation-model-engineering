@@ -1,13 +1,15 @@
 ---
 layout: ../../../layouts/BookLayout.astro
-title: 19.2 Logit Lens & Attention Visualization
+title: 19.2 로짓 렌즈와 어텐션 시각화
 lang: ko
 ---
 
 import LogitLensVisualizer from '../../../components/chapter-19/LogitLensVisualizer.tsx';
 import LogitLensPipeline from '../../../components/chapter-19/LogitLensPipeline.astro';
 
-# 19.2 Logit Lens & Attention Visualization
+<a id="192-logit-lens--attention-visualization"></a>
+
+# 19.2 로짓 렌즈와 어텐션 시각화
 
 두 중간 상태를 읽었더니 최대 토큰이 모두 `Paris`였습니다. 가장 큰 항목이 같다는 사실만으로 나머지 계산도 같다고 할 수는 없습니다. 아래 예제에서는 최대 토큰이 그대로인데도 그 확률이 약 67.52%에서 54.05%로 달라집니다.
 

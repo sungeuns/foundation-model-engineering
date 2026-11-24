@@ -1,10 +1,12 @@
 ---
 layout: ../../../layouts/BookLayout.astro
-title: 10.4 KTO, IPO, and Preference-Loss Variants
+title: 10.4 KTO, IPO와 선호 학습의 손실 함수
 lang: ko
 ---
 
-# 10.4 KTO, IPO, and Preference-Loss Variants
+<a id="104-kto-ipo-and-preference-loss-variants"></a>
+
+# 10.4 KTO, IPO와 선호 학습의 손실 함수
 
 DPO는 paired preference를 가정합니다. 실제 feedback에는 단일 desirable/undesirable label, tie, noisy pair가 자주 섞입니다. KTO, IPO, conservative DPO는 통계적 가정과 loss를 바꾸지만 고정한 tokenizer, completion mask, reference policy, held-out evaluation의 필요성은 바꾸지 않습니다.
 

@@ -264,10 +264,10 @@ This maintained table is in navigation order. Each inspected row binds its own i
 
 | Number | Route | October review evidence | EN SHA-256 | KO SHA-256 |
 |---|---|---|---|---|
-| 1.1 | `/chapter-1/symbolism-vs-connectionism` | Inspected 2026-11-15 | 19edbaf2e43d8b24c55efaf3223deb73b85a88a1cd4b2fb5833658311331f991 | db6c3d195dc45b38d3c92d60d574c59f3f54cc11f8d6dfac02c1373887f1635d |
+| 1.1 | `/chapter-1/symbolism-vs-connectionism` | Mechanical only | 19edbaf2e43d8b24c55efaf3223deb73b85a88a1cd4b2fb5833658311331f991 | 2978c7ef0138a549763c11b391787aabec1fbc4c941cec01146675b80852ef23 |
 | 1.2 | `/chapter-1/power-of-representation` | Inspected 2026-11-25 | 594cb7c0c43d5e5ed15a129a3d067bb6076a8a51c9a325fba642f5b85fcbb9d0 | 1d914327b1d0f84d6af190450901d013b3dee6ecc439156f61209203c220c6da |
-| 1.3 | `/chapter-1/deep-learning-paradigms` | Inspected 2026-11-15 | f373b59e6d5782c6150b3b363f1d61ba9d3a4ecab555ade160773d88a2489ff5 | 942a6ebe78204301a370fab8741dfd51ef3a63c274cfba57ca39a9ba18852aea |
-| 1.4 | `/chapter-1/bitter-lesson` | Inspected 2026-11-15 | f69188e38bc792ee461c83466da32354065ebdff52e5a7197d8a2d81743e92e3 | 6aa556b9971b28ccd3103e40dc174142ffe1fdf73673b64467fd0ef8dbd0baf1 |
+| 1.3 | `/chapter-1/deep-learning-paradigms` | Mechanical only | f373b59e6d5782c6150b3b363f1d61ba9d3a4ecab555ade160773d88a2489ff5 | 73265363881ee05ce8f60d1e80ab001c55ff58d7207f386e7f50a5b0b63353ac |
+| 1.4 | `/chapter-1/bitter-lesson` | Mechanical only | f69188e38bc792ee461c83466da32354065ebdff52e5a7197d8a2d81743e92e3 | d44863149ee015e681a6439ed6e9ff3771e74199015814dbcbc352b61fc0a850 |
 | 1.5 | `/chapter-1/learning-path-and-mastery` | Inspected 2026-11-17 | 0f8f04bb12ad70521b3c701fae89e83133b936a5d28d74a07b17d6a0f9d55c12 | 7afd35142e5986833e81c484c1c3d7fe0b717d7d728be32693fb4ec93a0ff029 |
 | 2.1 | `/chapter-2/markov-chains-to-rnns` | Inspected 2026-11-15 | 0ce137827271786ce59fbb687ede850189b1842843a7e11d9420e8d51da672c8 | 0d4b5440f58a02205e9c981af00a3d028f6e7081b2923f0a609a0f0f9e581e2a |
 | 2.2 | `/chapter-2/vanishing-exploding-gradients` | Inspected 2026-11-15 | f883974659fb302e235151e51e0cffb5a6f9418089342fa6be149d94c207ffac | 7a4baf6b5be2bf9ff72621f15581483e6595c47296cb169d5d1c03395b882385 |
@@ -278,10 +278,10 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 3.3 | `/chapter-3/position-encoding-strategy` | Inspected 2026-11-15 | 63c3645268727e12760f56b1748a44bbac8afd1c7f66f9d49329e76e39130fb8 | 17d34127b63e936f20ca9f2440fa2aed52e5291548cf18a9dcf8b4f3fdf7463e |
 | 3.4 | `/chapter-3/layer-normalization-residuals` | Inspected 2026-11-15 | d9c2b8dbee0ba9d5c365d0395014e3e9d6fe06e7f58387401fd6ae625584825f | 7571b6552563c1bc6c771e9a1cb3acc1163645b179e7bb7e6a3dc2769e2cfe5e |
 | 3.5 | `/chapter-3/complexity-analysis` | Inspected 2026-11-15 | 528f765af0e658c5d7116b5d3651be5a3ec6496b5651970285143831e0344b2c | d5da6dea75982e92dc97033508aacd582e677911caa2afbfb61f1356fbf12537 |
-| 4.1 | `/chapter-4/encoder-only` | Inspected 2026-11-15 | 0c3d099ec9bb466a4cc1a22bd17ff1608388e3ac87ea1da233382efe081e63cd | 4249ee2b102f7901df4b3ddd84aa38912669a5dc4841351e3c518d5347896a24 |
-| 4.2 | `/chapter-4/decoder-only` | Inspected 2026-11-15 | c0c4d6a6c3109423997c9d58d65f923f6e2375445577a79054e871947dd2a372 | 61354f7957d28e3c4f40faa53d541b7c03b3e48206976b5f84834ce814f89d83 |
-| 4.3 | `/chapter-4/encoder-decoder` | Inspected 2026-11-15 | c0372544843683d2e7b80936ba33fd4c343a4b6850c40844ae59ccc34362f918 | d1c77e9b87235b6e7d00b7350a01d5d813567221ce8ca91edf14e5241f400905 |
-| 4.4 | `/chapter-4/hybrid-prefix-lm` | Inspected 2026-11-15 | ebe7194bc50255772200359bc604906d56494def1f09ca586850109416062cec | 69e056f6690ea2345e02be5001a87a64f7bcfe902add9d9ae759071d38bb7ae1 |
+| 4.1 | `/chapter-4/encoder-only` | Mechanical only | 0c3d099ec9bb466a4cc1a22bd17ff1608388e3ac87ea1da233382efe081e63cd | a594d06325d22f53605f35a62a4e7031f6ef626832e2e8ea43d0352e496e7ea5 |
+| 4.2 | `/chapter-4/decoder-only` | Mechanical only | c0c4d6a6c3109423997c9d58d65f923f6e2375445577a79054e871947dd2a372 | da46705e79b232e46f7d0a0fb4e21a7c8ee6b4d49554290f5b931c21b4222bdd |
+| 4.3 | `/chapter-4/encoder-decoder` | Mechanical only | c0372544843683d2e7b80936ba33fd4c343a4b6850c40844ae59ccc34362f918 | 58320112ec9f19b8f62065ae1a140df644263abfdce47911ee04fda8ea0ff5d0 |
+| 4.4 | `/chapter-4/hybrid-prefix-lm` | Mechanical only | ebe7194bc50255772200359bc604906d56494def1f09ca586850109416062cec | e03163e41d634bc7d775fa56494f3ea67a781c4c6f3f11610edc9f5123dabd91 |
 | 4.5 | `/chapter-4/various-llm-architectures` | Inspected 2026-11-24 | 028ebccee02c3a1b30297a6c43b9ed91806975ff737f33e8a5ccd5ea26f26a30 | 5d9fb05bb56198c702831691a20832099bac533ece95857c22101dfb884863a8 |
 | 5.1 | `/chapter-5/sparse-vs-dense-models` | Inspected 2026-11-25 | 01f8735ffcc52bb919dfea3402cb6fbdb0313849c20a83c447820f04e5bb6c08 | 7908d7d81bd30342d4223623ac332bf1d17f91a47e55e1deb8ba8d3ee2b88c37 |
 | 5.2 | `/chapter-5/routing-algorithms` | Inspected 2026-11-15 | 3b83671dec53a4a69ee8c357d810ac48b3b2b069f1b54fdb76a8e567ae6ed3e7 | 436d75fa19297b28084c3bf55cb2e92e341e86d33370e1843de1c263a8f9d356 |
@@ -292,44 +292,44 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 6.2 | `/chapter-6/tokenization-science` | Inspected 2026-11-15 | a44817c410e5d865a65e9e9125ff9695fbe0929274162a12a59ae704df03aa73 | 84985d003c16025738d2ebfabc1a19ae0ac2fd4da81131f413a295f015725678 |
 | 6.3 | `/chapter-6/large-scale-training-stability` | Inspected 2026-11-15 | 233421b292101c94f4746e41c29de6422c5c103333a5c1c6968cfe0cd3cc6604 | 149cc8e85a1db21731313a38038b3f3d23c5fdc16711b51534764c5e4fd2da89 |
 | 6.4 | `/chapter-6/infrastructure` | Inspected 2026-11-15 | db766374738bc9706d644b19fc1d6ff8dcddbe74bc265f21de02ac95efbffa6d | 04218b7b41cc9ee92416a1f69070eebbbb6afcb6994a1fff5c98fe3e8b5de264 |
-| 6.5 | `/chapter-6/synthetic-data-for-pre-training` | Inspected 2026-11-15 | 3d2bab63db26c5456f88eab0f51e2e7e70ac49d93d868427783f625e4ae166ee | c00d1ac3c7345b301c837f4065a2f62187a9a7d8ddc6210604d6861a1228206e |
+| 6.5 | `/chapter-6/synthetic-data-for-pre-training` | Mechanical only | 3d2bab63db26c5456f88eab0f51e2e7e70ac49d93d868427783f625e4ae166ee | dd5381b0b44cb0223b04f689d010f40ea3349d668ebf9e79c98fe3d3204af54c |
 | 6.6 | `/chapter-6/optimization-mechanics` | Inspected 2026-11-17 | 942111c9629675b61e7af38dd1e0bb94a0dbe0aeff5c9d142fd7c7d0cc167b3e | 948f68b51e05f15a67755538714f595ff03ec214fe3c5d518eb6ebbff8000c22 |
-| 7.1 | `/chapter-7/data-parallelism` | Inspected 2026-11-15 | 8c37d63a720ee64a8c4f37ac09c3062f12df4870500f1ee54d598637de7e8b8c | 92eda4cd1e42afb32a5f74183fb6f59c15c4fe8ab85070464b0fd553ce2db987 |
-| 7.2 | `/chapter-7/zero-redundancy-optimizer` | Inspected 2026-11-15 | b126180d4c8d978f8925ed51d7ace338f8cdf2e7c7ecc1309ef2301714bd4e47 | 27d8e5e67bf17cd5ddd308bffd01bac2f6ed7b1b11bcfea218dd52e9924cd43d |
+| 7.1 | `/chapter-7/data-parallelism` | Mechanical only | 8c37d63a720ee64a8c4f37ac09c3062f12df4870500f1ee54d598637de7e8b8c | 7b3a07ce3c7c5ba3deb802af571117fcae1656b049e6b412614823b96c01b65d |
+| 7.2 | `/chapter-7/zero-redundancy-optimizer` | Mechanical only | b126180d4c8d978f8925ed51d7ace338f8cdf2e7c7ecc1309ef2301714bd4e47 | e2b4c48bc0c2d11efbc40f02c428883a3f92d462adf354587b96bc5de42d1b06 |
 | 7.3 | `/chapter-7/model-and-pipeline-parallelism` | Inspected 2026-11-15 | 0832cffc306946b61c817850cb07cdbebf0d06aadfe607b6b7dfe75d14d010bf | b645ef818ecb8e33702468b9dcacf90a130b6c229ed8603d055736e2e62f5db4 |
-| 7.4 | `/chapter-7/flash-attention` | Inspected 2026-11-18 | f305f222c5d296652a665982d6148449b7cebebdd7073ee35ef221b39b750c4c | 4281c70f6433b16e06b9f82fcb6190a5c1d8276ee87e79285ca7ad9cb4b3fcbd |
+| 7.4 | `/chapter-7/flash-attention` | Mechanical only | f305f222c5d296652a665982d6148449b7cebebdd7073ee35ef221b39b750c4c | 7c296161f2a6d17d2c88531884e7a2ffb62021cfaf28828e9166c201a8df5184 |
 | 7.5 | `/chapter-7/tiny-decoder-lab` | Inspected 2026-11-25 | 7c160ef525f9a15ee038febf92bfe2d7470ce1126fd565713003f049fd201fbe | 2c6db6829a15ced3552d7159932596c3dcba11ee031067240f1c6a9d921bf9e2 |
 | 8.1 | `/chapter-8/power-law` | Inspected 2026-11-18 | 4a7985e2e292146826fa76fc39706838e6e5246fcb507f4fec94dc263ef2ba8a | 5d01ec1c25346796843c2fe7b635968a64b28f6333b2925a32884fb9364b884e |
 | 8.2 | `/chapter-8/chinchilla-optimality` | Inspected 2026-11-15 | a5c303a07cd048a5700ec4cf86eeb44387cdcc43775eb4a2c5678f4aed6250d1 | 113d3edaa8047c8e5b5455f712a931429e550d22c1d260be5947dab80f4ef2a6 |
 | 8.3 | `/chapter-8/over-training-vs-optimal-training` | Inspected 2026-11-15 | 0cd59dc676f0efe54f93a85775af740fc13bd689502b3ead940bf61212f2d83c | 21d9ca8bfbe9e711f63a75a24d0760d53ffdd87d8f22954f7ac911f7c0a18248 |
 | 8.4 | `/chapter-8/transfer-learning-and-generalization` | Inspected 2026-11-15 | 6149872f6cc783dadf7e47acf48874d9abc6519c56fc7757b4d90f038decb547 | 0ac5c5ffb3ff08bc0fdf8fdde2e69bf8bdc9e69674d6e97a2b7cc3ee5c286290 |
 | 8.5 | `/chapter-8/continued-pretraining-and-domain-adaptation` | Inspected 2026-11-25 | d43889ce49aed35a4e5b3982f6ee4aef31c3fb53a76d93a773bed33340ec92fa | 8aa4be2b3dfb29f978b103918a9e32089630026f57214432fcd24bfdf9534812 |
-| 9.1 | `/chapter-9/sft-fundamentals` | Inspected 2026-11-15 | b2dbb035ab6f20f9feb26b00ddd7c7682a87073a963c6c684070bd7c7f1bcfe0 | 00cd30e2e1770e958c977cfdee65e70657b65ab09a994059d6709c72af83fe07 |
-| 9.2 | `/chapter-9/dataset-quality-vs-quantity` | Inspected 2026-11-15 | c1fbbd7fb05803bfad44ce38dbb967c1be944c928bea80897aa0756dc4ac28d6 | 4332f4d0804b6dfce324a5800be9907766526cd2299a2ee73a862326b97a7c98 |
-| 9.3 | `/chapter-9/parameter-efficient-fine-tuning-peft` | Inspected 2026-11-15 | c51b6e408c85486d3438fda48d4165cd1cfc8ae7d251662f0033e80726ddc580 | 9eccd68716b3029e867170b3c16e37a14bedf0433e57b0a90d32a2a226424086 |
+| 9.1 | `/chapter-9/sft-fundamentals` | Mechanical only | b2dbb035ab6f20f9feb26b00ddd7c7682a87073a963c6c684070bd7c7f1bcfe0 | 862868e98d4f3041ce06b9738bc2fc3ddeb8ab262d21f9248abe5b2831f0fcc2 |
+| 9.2 | `/chapter-9/dataset-quality-vs-quantity` | Mechanical only | c1fbbd7fb05803bfad44ce38dbb967c1be944c928bea80897aa0756dc4ac28d6 | 9818a5430db861e431fa0fc861105c64cd5749eb7661fa4b9bbd7891fc486b13 |
+| 9.3 | `/chapter-9/parameter-efficient-fine-tuning-peft` | Mechanical only | c51b6e408c85486d3438fda48d4165cd1cfc8ae7d251662f0033e80726ddc580 | 5e2052d35216a2a367fd9233ddbe9255b68cbbf1f0edaab5cd9e337f3311c04c |
 | 9.4 | `/chapter-9/prompt-engineering-as-sft` | Inspected 2026-11-15 | a0d054e1053d08fb0459c941fc7b54a7935c42315c12fb0534d6adc5978c2f66 | a8eb98f41ea974270f2121a28d2e2478d1b6f34c5682172c52036eaf58e79a61 |
-| 9.5 | `/chapter-9/synthetic-instructions-and-self-instruct` | Inspected 2026-11-15 | ffbd735a54153fd69c5c1a0717da310c2cc58903b0a34fee751f67e9db76ba0e | e396d07c260c417ec97e423b3f9d66181531b29e3b9b04bce9e1846b56ab5aea |
-| 10.1 | `/chapter-10/human-feedback-loop` | Inspected 2026-11-15 | c721f614debefbefa2a90afe0f4dbc41425deb1e332f9ca1fda7ea4349e85668 | 03b0927817d2d44ff6ca3839f69b222e6d79bc46c025870a15bdc38666c253a3 |
-| 10.2 | `/chapter-10/ppo-proximal-policy-optimization` | Inspected 2026-11-15 | 731530d0c49a2d72aceb412ad7635b834d3c04341f5fe838a11788e92127896f | 1fcb9bfc07577cdb119d6ab1b65e170688aed9607300713f36b9ac7fee04ca5d |
-| 10.3 | `/chapter-10/dpo` | Inspected 2026-11-25 | 61b39b4e59d60952d7a969476024a61f21223d09c62ae9e06e83559eaa04a855 | eeee156d856860a2f4879e65c670e5935312f70ec95aeb4dac955d022a145680 |
-| 10.4 | `/chapter-10/kto-and-ipo` | Inspected 2026-11-15 | 61ac741df320db7fb3031414fdacaf5770fa28200d3f91f8d69cec83c273c046 | a4efc7610bf213a07fe5fcabf60033b2ab28a12d8fb257270bd9900a69e5a4e3 |
+| 9.5 | `/chapter-9/synthetic-instructions-and-self-instruct` | Mechanical only | ffbd735a54153fd69c5c1a0717da310c2cc58903b0a34fee751f67e9db76ba0e | e2ba9a38024cd3fcaab7c042fb6300bce232e0b4ff9f22ce7698ec3456a93cb3 |
+| 10.1 | `/chapter-10/human-feedback-loop` | Mechanical only | c721f614debefbefa2a90afe0f4dbc41425deb1e332f9ca1fda7ea4349e85668 | 04484c7249da48a808d45b3a79161557f6ddcd14cd3082c6c336097564f45612 |
+| 10.2 | `/chapter-10/ppo-proximal-policy-optimization` | Mechanical only | 731530d0c49a2d72aceb412ad7635b834d3c04341f5fe838a11788e92127896f | 2aa2a123b0740c73c99d7e1c5c495669e81eb1ca2b113335b2fd0fe90196da50 |
+| 10.3 | `/chapter-10/dpo` | Mechanical only | 61b39b4e59d60952d7a969476024a61f21223d09c62ae9e06e83559eaa04a855 | 5ea81a90b4a14be940d19dde889c28380e3b2198dcf6d9670a6adac402f21d2c |
+| 10.4 | `/chapter-10/kto-and-ipo` | Mechanical only | 61ac741df320db7fb3031414fdacaf5770fa28200d3f91f8d69cec83c273c046 | 6a539344952c0246f5777ddf9e6a1be24babe58b085a53cc1752efa3ea2be7c5 |
 | 10.5 | `/chapter-10/alignment-tax` | Inspected 2026-11-15 | e630460ac1b1a8620d753362e400c3bea18d69cff7a6265b3820b6ce7230c6f6 | 5041f746d84764553aecee5b114599a703cc2206889aa57838d5b2719b0bec7e |
 | 11.1 | `/chapter-11/vision-language-bridges` | Inspected 2026-11-25 | 24fb4f6155431bf716e88e29bceaa78cbb3a5631641da212c9e073d7d71a10b8 | d0eba2f44cf9745be286fba5bd051849ee0471874e6c208df815f5bc3da8ff9f |
 | 11.2 | `/chapter-11/audio-and-speech-integration` | Inspected 2026-11-24 | 3c8de54d3316183f25505eea48298dc784a4b0a61b55390f944bbc0a60ffef91 | 150f266fee7ca8b40ccdc495d9f7898048b2d7d54991e2d51bbd40978ff03629 |
 | 11.3 | `/chapter-11/unified-multimodal-any-to-any` | Inspected 2026-11-15 | 63b49653980ac69e7662b92d1423aad27976789545651d8f21bb97c04a0993a2 | 05b4775ea2e63d295a8def6928b0a7280187755f1e95669da1a9db2ad9134158 |
 | 11.4 | `/chapter-11/image-diffusion-models` | Inspected 2026-11-24 | 5bb8bc33ff8adf86105e24018b03423e9f19e0d29739f64b843c0cbeadea05e8 | 308de426fdbc7b1c845a4d63be36b83988abe2eb36026affba1dd101194816b7 |
 | 11.5 | `/chapter-11/video-generation-foundations` | Inspected 2026-11-15 | b34544d0352be5feafdfc0d30ac23092d50edf3a3af5f3e4d37cc62531230c20 | 55c0488a07c962041cdbb0cdb945d18c8e136b23dba2aed6f6970f1c33cb4b4b |
-| 11.6 | `/chapter-11/commercial-video-models` | Inspected 2026-11-24 | 12216aad67ffc900bcfe437f20a7fcf9be618ccc5d617f698f4466ef15ff33cb | 482a6137c8a368e2d9bab31367b349357ab6f294e86318a2aee303bc9c120f57 |
-| 12.1 | `/chapter-12/kv-cache-management` | Inspected 2026-11-25 | 78b62f45004de02e623ea86b97a99cbc4714d3f9e950e07c7d6b27a50c9b5f18 | e9f72fdadd6e55917722bbff5dcf8c13e460aac8ed68fd2baea3a0376feb1b3f |
-| 12.2 | `/chapter-12/paged-attention-vllm` | Inspected 2026-11-18 | 75d76b30c45ca44edbb56072df6f91209343c7d8ad5c69270cd6b6c4e9700dba | e824df912502a5ce75dde4c69fc80d44259c9e9229b55374ba32eb06ba5e0b6a |
+| 11.6 | `/chapter-11/commercial-video-models` | Mechanical only | 12216aad67ffc900bcfe437f20a7fcf9be618ccc5d617f698f4466ef15ff33cb | f1062aaf3252f602074e1ffaafe79f0e2bb3f8f4c5aa06d1acfcee29dc009660 |
+| 12.1 | `/chapter-12/kv-cache-management` | Inspected 2026-11-25 | 6eb5663c2aecea3ce2a7fd4931c17af5deac5265962d058a039cfb74e9915bef | 211c2ee9a2d70f58742acdfd72b6caab6fbc89d3fd5f50262c07ab84b8168c95 |
+| 12.2 | `/chapter-12/paged-attention-vllm` | Mechanical only | 75d76b30c45ca44edbb56072df6f91209343c7d8ad5c69270cd6b6c4e9700dba | 2446c00fd36edfd6fda8dc1aaf18805e0de0af19615ad504eb4e9acac8356917 |
 | 12.3 | `/chapter-12/continuous-batching` | Inspected 2026-11-25 | 6ef1bf606cdf836c97703e2c9518a7f395f6c7242f614fb7e24f7a44ed301b28 | 4c9be3e2b663d439d85799a0f93db2a485fbca65eb945328789a188afd3b65db |
 | 12.4 | `/chapter-12/speculative-decoding` | Inspected 2026-11-15 | c211bce7483db5699601fe8743d1686ab5b645e7c574072d3cd8f2d8daaf0c70 | a3c7a599410b1ee428f27865bd9dbd1979703192f108984ae5fb522cd9ab3bb2 |
 | 12.5 | `/chapter-12/long-context-serving` | Inspected 2026-11-15 | 82f413a5a2e2731fe01603c7036b42dee434b010cc76410eba7e0807d73742e8 | 59933e962b9f0bef0f8b50e9889ec628fd92ade6d7d0fb91636981793bd83052 |
 | 12.6 | `/chapter-12/serving-policies-slos-and-fallbacks` | Inspected 2026-11-25 | 8222c69fc753a073f358acef599ad825d1193693daa931acbd774081c82f2b46 | 35067207b0e514380e54bb373c7b545a075fc1999f3e039eb327edb1e13ba1a5 |
-| 13.1 | `/chapter-13/ptq-vs-qat` | Inspected 2026-11-18 | 6961419a7297e663a0894db1a8fd075b0153ae00ca4a904bbf5137dde68f3eda | 955b46bf42c872bd7857f3540012dfdc10b418008246ad5de0f6d42bc333c1c0 |
-| 13.2 | `/chapter-13/quantization-methods` | Inspected 2026-11-18 | 9939109a4f7a49939655429be92e41c75f5db0a9ee7fc29ce17765313d2f8778 | 5e79bd98352c5f72d6d4c28cbb11ce46ef369cc6d5a60c108df129bc0803d6cc |
-| 13.3 | `/chapter-13/weight-sparsification` | Inspected 2026-11-18 | cef7eea23f21faf8a4719bc13b2f3e28a8743ba0230c67b01438dbac642a6530 | bf555f470f962f689ad1442496cf669946e7933df2f1527b8832a0199f5f5f0c |
-| 13.4 | `/chapter-13/knowledge-distillation` | Inspected 2026-11-15 | f184dcb71820a852dee1c7b2d640412cec7cad8a6f765ee912da00daf6b337f0 | 746c5f3377c1ebb75acf6c8ca4aaa46761ee0883ac7e94da3d79597d3c39b3a3 |
+| 13.1 | `/chapter-13/ptq-vs-qat` | Mechanical only | 6961419a7297e663a0894db1a8fd075b0153ae00ca4a904bbf5137dde68f3eda | 20342b8f4e7499012cbd810bd0e9cb2781a3c0537b308a95abf74bd334ca88e5 |
+| 13.2 | `/chapter-13/quantization-methods` | Mechanical only | 9939109a4f7a49939655429be92e41c75f5db0a9ee7fc29ce17765313d2f8778 | 78f4edd801cb0c8d9fdf32434fb962d8e2dde7b063a1706a219b29b2ba21d8d0 |
+| 13.3 | `/chapter-13/weight-sparsification` | Mechanical only | cef7eea23f21faf8a4719bc13b2f3e28a8743ba0230c67b01438dbac642a6530 | 4d1291c234050b189b7f5c66be305966e3fadd57ef521d171ca9283131987aed |
+| 13.4 | `/chapter-13/knowledge-distillation` | Mechanical only | f184dcb71820a852dee1c7b2d640412cec7cad8a6f765ee912da00daf6b337f0 | 7c19030da7fe737ad78f41f6d09a1aa1107040bbb7cedcf7176b24e5db8dfccb |
 | 13.5 | `/chapter-13/advanced-quantization` | Inspected 2026-11-15 | 27a364583a8df29cdea48119e65184594a4c27ab9f8f22437778a330596d4a3b | b55fe9860d8cf44911a1bf6508787d6c865bfbdf548adff861878ccdf10fd691 |
 | 14.1 | `/chapter-14/lexical-to-semantic-search` | Inspected 2026-11-15 | 14b58e7aaf9ebe7914bbdc7dcb6de1b48eee71d893d20e58039dce184d55b9cd | 80983723429f788bbd719d8ac7ce5235fa89888ad9bd39aaf7ade613b32f7bb5 |
 | 14.2 | `/chapter-14/vector-indexing-and-db-solutions` | Inspected 2026-11-15 | 9cd80b8fa316923b8db209981294ea15b991ef55851416fb72455a0f12d92783 | 7f9a5d85dde7cb1d91679e64a99760562b8640003062593ded9483faf4af35c4 |
@@ -339,34 +339,34 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 14.6 | `/chapter-14/rag-failure-modes-and-operational-design` | Inspected 2026-11-25 | c72856114d2cb84479aafdc3b30c627c29b5aef1166e94797f37f2694fdf81ac | 8087cbcf0189649a93b9ae5cd534eebce28cb31bbfdeed8359f7cd5d1d4583f5 |
 | 15.1 | `/chapter-15/chain-of-thought` | Inspected 2026-11-18 | dfa755568cbd54f3636f06ca66bc5a279f0d5f54f81d0589f4293abdabc5979b | 217a9074408e2c33d9405b96de888fd38d7b46a996ca24cffb9ce5056c16bf55 |
 | 15.2 | `/chapter-15/tree-graph-of-thoughts` | Inspected 2026-11-15 | 7e8547ebde4982cf4cbab76343d088ceef6b39d22ad8b6d1403ddb292b381251 | 59780614eb21ba3c945f22c3defcd3ff49c762ef1b1c2b9c686d68660ef9147f |
-| 15.3 | `/chapter-15/search-time-compute` | Inspected 2026-11-15 | 31e0f131da5e3af9e46feebd7fc7546e01faeaa7e7372ae8ca06c0c51a1470de | c476bc382f0f1f97fdc787a8b2afb8b60b6d9e139becb4dace83d077444397ba |
+| 15.3 | `/chapter-15/search-time-compute` | Mechanical only | 31e0f131da5e3af9e46feebd7fc7546e01faeaa7e7372ae8ca06c0c51a1470de | cf70e949b5f4a0088301170a03dc7b6981b8334e20b34a2f96412fd6b53a62f7 |
 | 15.4 | `/chapter-15/verifiers-and-reward-models` | Inspected 2026-11-15 | 1df2f83671fe99369f93970e14964d76e87f0b4c5eae9ae80431f19b20e9ec4b | d8fb58ecaa2190024660cee06381a0d2ab5c04f4ef830ef6ddad789603be1063 |
 | 15.5 | `/chapter-15/reasoning-post-training-rlvr` | Inspected 2026-11-15 | 5d7b0b2af95b466bfd3261c57d4597e27ec2abc2c2dca49a750cefa2ff7e4c7f | ad356581811918d430e3f75ddb4fab33d944cbe31a1a87ce59eeefaaaf02d7fd |
 | 16.1 | `/chapter-16/function-calling-and-tool-use` | Inspected 2026-11-15 | 2c1926ca9a765c43ce7cef9a2ae1e9a6ba7ce2e27419c81e91f94ee274d0367c | 495ad575c567acc70c086386aebbc5ce1013f711d2a54735c4291f7c05a87b86 |
 | 16.2 | `/chapter-16/autonomous-agents` | Inspected 2026-11-15 | 1cd74977e816829cc79cec624a2ec7bac64a3097a9d99709a3bc885efc82fd47 | 4374e8a8045f50d5bc4b473e01247fbfa596dd1215225d93d5e1d7753d422cda |
 | 16.3 | `/chapter-16/self-improving-agents` | Inspected 2026-11-15 | cdbdde227c5a7dc74ca2bdfc2c54f0b62d8d659b72ff06e7832e2cf0b4566719 | 82c98f13a708cfe27d97f74869cad8cfae0c7b7ce490e24447cdf38b8c21a282 |
-| 16.4 | `/chapter-16/multi-agent-collaboration` | Inspected 2026-11-15 | a155d11e7c31a3c47f3b5a6ecbc02c54c5a3d638c70aac59e5fa0a48af1953df | c776a31e30d0851450a5d6d71f49b5b06418f3f71774a80395975b215629ca93 |
+| 16.4 | `/chapter-16/multi-agent-collaboration` | Mechanical only | a155d11e7c31a3c47f3b5a6ecbc02c54c5a3d638c70aac59e5fa0a48af1953df | 2dca3cc2d271f458117b44c0110ea8762a1416ab4f1554e10a4a87253e7a983a |
 | 16.5 | `/chapter-16/long-term-memory-for-agents` | Inspected 2026-11-15 | 282f35343780e2c45555ff63e389a1335a91ec8c00f22085e8f8bbd8b97d3f0e | 79672d19b29964f0947323500cb64c26b5519868ef3a550fb71117b6ed33539a |
 | 16.6 | `/chapter-16/agent-reliability-recovery-and-guardrails` | Inspected 2026-11-15 | cd83fc417cb7950d6d24116d1492925a16694aa596d897d0cb4cc7be3f18ca7e | 482fba3bba250ed2809c19f0acb31acc9d97fcf9d99b2088f72d33ec92ccf79c |
 | 16.7 | `/chapter-16/decision-models-and-selective-prediction` | Inspected 2026-11-15 | 11804b8958ee5bad618e14856a0e49b1f47fbb6c47168b58d910d0d796833ce4 | 4e60990227ed403274365841e57f7a71228610ce244d226c2d1077dd515d3c50 |
-| 17.1 | `/chapter-17/academic-benchmarks` | Inspected 2026-11-15 | 2949edf4e9fe1e16fda3f118fa009854dbb67b9501b7989aece12379a4df2686 | 68c20de93679d7182f7813dbdb81fcacfeba0b5da7fa7cd25f2b210281858f9b |
+| 17.1 | `/chapter-17/academic-benchmarks` | Mechanical only | 2949edf4e9fe1e16fda3f118fa009854dbb67b9501b7989aece12379a4df2686 | 1b13ad1b53dafd3bc3d45f8253913244a7c02ed8336963afc3b707ab4607a567 |
 | 17.2 | `/chapter-17/llm-as-a-judge` | Inspected 2026-11-18 | b3a6cd38fea260a08812c4a3a8f29bc76f30267c3d95247827eda51cb867c7e3 | 630473d35f271219ecf4ae6dc5fc37e897b051893a8f0ad3b9d6fede80c2d0d2 |
 | 17.3 | `/chapter-17/elo-rating-and-leaderboards` | Inspected 2026-11-15 | 14f931df5e4641c576c1763d446b2c663d1f282abf438767e5a330d49b31a9b9 | 1e78f5819e5452372109f72327dad0f7831b3b9ce66750000c9378a906744c30 |
-| 17.4 | `/chapter-17/contamination-issues` | Inspected 2026-11-17 | 38a0cad52c7504804a57a8cc2deed94a3ac2fe68f7648809261abad1cf6b4fa5 | c84e9e5b241d9c3cc9b97275c090011f12a10ebef18b8a7e4e0ff71e7d263cf4 |
-| 17.5 | `/chapter-17/production-evaluation-and-release-gates` | Inspected 2026-11-17 | 60ddb6057d61fb19bdcbbed9bdb165b892e506e549dbe2b985e976bab1ef60f4 | f3d34678eed1bb32eb0eb28f1c7537c781107e7beada12aa3d5ddba8092b30e0 |
+| 17.4 | `/chapter-17/contamination-issues` | Mechanical only | 38a0cad52c7504804a57a8cc2deed94a3ac2fe68f7648809261abad1cf6b4fa5 | ad7b87426dcdde29f69a6921696a462359e7681d7d3b5ee5c11f3d80ec0a71c7 |
+| 17.5 | `/chapter-17/production-evaluation-and-release-gates` | Mechanical only | 60ddb6057d61fb19bdcbbed9bdb165b892e506e549dbe2b985e976bab1ef60f4 | 25e04ba235e259243c4df62f67886f8ae54283189fc0e32334e31f2e2a1d582e |
 | 17.6 | `/chapter-17/commercial-model-benchmarks` | Inspected 2026-11-25 | c1d386fd6f2d988a2289bad48c420d509161e4832cb5b7a16355c6de2b44462a | f05522b450f74c8cae22b8fd7d496bd357af9c079987eda4171ffb137d26839e |
 | 17.7 | `/chapter-17/experimental-design-and-uncertainty` | Inspected 2026-11-25 | 15572b32598a7c488cd3930fe29d3dd54f54ebd5521257817788e039253cdf1d | 00b4ea5b58d4ec986eee7b8d4ed7fbb61749c27a0c9c1c77aced73a4d86f14b1 |
-| 18.1 | `/chapter-18/red-teaming` | Inspected 2026-11-15 | fa815b07490b4a1039a2e91d2c98e9f1f212d6479f534afa5f09020cc8f93598 | fb6f4167f16906d882401b58a001a0ff0e3a4912cd5142852c7c26b84d547b0b |
-| 18.2 | `/chapter-18/jailbreaking-and-defense` | Inspected 2026-11-15 | caff93966e1d1a925120d696bf37a09fa46cc63cd9378c818ac9f1d489348afd | 520c11ef550bc2ca4ca9675449ce923a1b0ef2968b59cab0ba1dbdd85597f6be |
+| 18.1 | `/chapter-18/red-teaming` | Mechanical only | fa815b07490b4a1039a2e91d2c98e9f1f212d6479f534afa5f09020cc8f93598 | 5aa628372d20829e842ce6b3fad0133fee7c40e63c345e76f0b823b351df6f59 |
+| 18.2 | `/chapter-18/jailbreaking-and-defense` | Mechanical only | caff93966e1d1a925120d696bf37a09fa46cc63cd9378c818ac9f1d489348afd | 165303014a71dfa4ec8e28c0ac7f38712f5d97fbcd551510aa5539cb33c33ac1 |
 | 18.3 | `/chapter-18/hallucination-detection` | Inspected 2026-11-15 | d3a1ee8ab17c7b845363483dd7b3112556523b0df6d833116a334717d79bdea3 | 85d58b77dcac5ff08bbdb13964faff2e93d8223760b0b46f4055337515d5162f |
 | 18.4 | `/chapter-18/scalable-oversight` | Inspected 2026-11-15 | ddc4e57280940d9f2de2d5e5f551b035d60ae4feeb324a2a84256e798feb9c7f | 5536d313417dd89e9909d73ed8762c85d7450129338432d8a05ea21c7ee99f3b |
-| 19.1 | `/chapter-19/mechanistic-interpretability` | Inspected 2026-11-15 | e78ed254abbd08dcc580e5d937948f89757d22138640f21b47a48ef61b6769c4 | fae2f16d1ef936dafbbe54ff2d8896e6110a4a9ecf1d33d5c29e0fd3599aff63 |
-| 19.2 | `/chapter-19/logit-lens-and-attention-visualization` | Inspected 2026-11-18 | 8f6a64cbb90f5881b4fda6b927ecbdb6a9fe1fcf319cb3bdb5c873bce37a80e5 | c0814be5b0d9a6032c38f113c2196e45512fda93d9947d5943b8905809feadf7 |
-| 19.3 | `/chapter-19/probing-classifiers` | Inspected 2026-11-15 | ff555220f028dcfb555ef1730dbcd13126125884b4b81d97723d546b0156ce69 | ed5f87d45843638897fbd4786fd1a16ee25318fb596e7c2b0f31f6f379f5a773 |
-| 19.4 | `/chapter-19/sparse-autoencoders-sae` | Inspected 2026-11-15 | 1c9eeb21d547629108ec41532289a1de144a79897f4e85d20b421ac6603187fd | 4763fcd0d43195c1223ef37565a0b73eddca2e151e840d151b78302339bbab40 |
+| 19.1 | `/chapter-19/mechanistic-interpretability` | Mechanical only | e78ed254abbd08dcc580e5d937948f89757d22138640f21b47a48ef61b6769c4 | 146df874ff1cb000e3684a35ed34035a22b496a75e3fbe70e205b649ec302ee4 |
+| 19.2 | `/chapter-19/logit-lens-and-attention-visualization` | Mechanical only | 8f6a64cbb90f5881b4fda6b927ecbdb6a9fe1fcf319cb3bdb5c873bce37a80e5 | e8c6c59743939cc2e865e2b40d86cfd76e6139a553fd10b7f5e46bcd71324f4b |
+| 19.3 | `/chapter-19/probing-classifiers` | Mechanical only | ff555220f028dcfb555ef1730dbcd13126125884b4b81d97723d546b0156ce69 | ce3910c423dc09e77e395dabc340a4387d0c06021bd34f35616bf205efccce6d |
+| 19.4 | `/chapter-19/sparse-autoencoders-sae` | Mechanical only | 1c9eeb21d547629108ec41532289a1de144a79897f4e85d20b421ac6603187fd | 223a4aa84b4b0a99a418e04aae959b76c0b804a2ca4a1eb0fe600388a503b075 |
 | 20.1 | `/chapter-20/state-space-models-ssm` | Inspected 2026-11-15 | 62c29a98f3b7b0a6ec6474bcb6d941c649a324cb4c28be9a9f6c7938f0a939a5 | 21d0a1a63ca16d7a1777695359d7abc310d56a9d594b70b0097af63e11def139 |
 | 20.2 | `/chapter-20/mamba-and-s6` | Inspected 2026-11-18 | a89134b1f0ca60b397d0fd46c4bcfa0a1ce045cd294ff4895af664f745a59255 | f4805c489887aa69e2c78a4c55b8d10219d9a37aecdcf070a4b5f7d1b10ec988 |
-| 20.3 | `/chapter-20/linear-attention` | Inspected 2026-11-15 | fa24114e779a597a2e5337fbdfd4578973ed02167d343d554d3e87eb46afdd95 | 17360d727061bc8eb1a020397c813ed547f5f92c84759e955b565b38ed600485 |
+| 20.3 | `/chapter-20/linear-attention` | Mechanical only | fa24114e779a597a2e5337fbdfd4578973ed02167d343d554d3e87eb46afdd95 | 20a4f1b50a1fdf248d15a5ba1e421f02b4db55c4bf90f1b430c2865a4c17ca85 |
 | 20.4 | `/chapter-20/neural-networks-as-programs` | Inspected 2026-11-15 | 55b5f77c413bfd3de7fa682467ff500d07887f4dabafbb79903beccf9b5c4759 | e88b792d77ef04624e0dee7e78480fadde710c80d0f3c1cdc729c60f56e765bf |
 | 20.5 | `/chapter-20/multi-token-prediction` | Inspected 2026-11-18 | e6f6d2d7bcefe3b290e7c0d81c7612e000d2bcfe5dc3593a29a285e27416f560 | d407bab93f7b3b6e03c5ec9d36bced5d4df7e538fe6083aadd5d636b14fe80a9 |
 | 20.6 | `/chapter-20/diffusion-based-llms` | Inspected 2026-11-15 | f2236899fbf327ac90e1c1edae9c77a4173fb6721102a7364fbf85542541d836 | 0d5a117e60a90c1f8d746e5b29f01a13cc4929aa7a0e729e93fc003611ef22ed |
@@ -590,3 +590,7 @@ Inspected 20.2 and 20.5 EN/KO pairs after replacing misleading generated figures
 Six EN/KO pairs (4.5, 11.2, 11.4, 11.6, 17.6, 20.7) were inspected in this pass; the current inventory hashes above bind that evidence to the text. The November 24 comparison replaces the November 15 chart and November 17 supplement with 43 selected profiles, separating primary-source verification from matched evaluation evidence. Architecture, speech, image, video and world-model changes preserve their disclosure boundaries. An independent read-only reviewer checked the comparison and sampled primary claims, and reported no unresolved significant findings after the GLM API wording correction. See `review-2026-11-24.md` and its architecture, multimodal and benchmark companion reports for scope and final validation. This is a focused update, not a new exhaustive review of all 107 pairs.
 
 The November 24 follow-up added native fragment links to all 43 model rows in both editions of 17.6. Each link identifies the same source record as the chart. The current 17.6 hashes include these links.
+
+### 2026-11-25 Korean lesson titles
+
+The Korean title, frontmatter and former heading anchor were inspected on 37 lessons. In the inventory these title-only edits carry the current file hashes and the scope `Mechanical only`. The previous full-page inspection dates and hashes remain in this ledger at commit `d6eeb78`. Reversing the three title edits reproduced every original Korean manuscript byte for byte; the 37 English manuscripts also matched their previous hashes. This pass checked the headings and navigation rather than repeating those earlier technical reviews.

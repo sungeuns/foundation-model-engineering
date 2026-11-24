@@ -1,12 +1,14 @@
 ---
 layout: ../../../layouts/BookLayout.astro
-title: 7.2 ZeRO (Zero Redundancy Optimizer)
+title: 7.2 ZeRO로 학습 상태 분할하기
 lang: ko
 ---
 
 import ZeROMemoryVisualizer from '../../../components/chapter-7/ZeROMemoryVisualizer.tsx';
 
-# 7.2 ZeRO (Zero Redundancy Optimizer)
+<a id="72-zero-zero-redundancy-optimizer"></a>
+
+# 7.2 ZeRO로 학습 상태 분할하기
 
 이전 장에서 우리는 Distributed Data Parallel (DDP) 이 데이터셋을 여러 GPU에 분할하여 연산량을 선형적으로 확장하는 방법을 살펴보았습니다. 하지만 DDP는 치명적인 물리적 한계를 내포하고 있습니다: **클러스터 내의 모든 GPU는 모델과 학습 상태(Training states)의 완벽하고 동일한 복제본을 유지해야 합니다.**
 

@@ -1,12 +1,14 @@
 ---
 layout: ../../../layouts/BookLayout.astro
-title: 12.2 PagedAttention (vLLM)
+title: 12.2 vLLM의 PagedAttention과 KV 캐시 관리
 lang: ko
 ---
 
 import PagedAttentionVisualizer from '../../../components/chapter-12/PagedAttentionVisualizer.tsx';
 
-# 12.2 PagedAttention (vLLM)
+<a id="122-pagedattention-vllm"></a>
+
+# 12.2 vLLM의 PagedAttention과 KV 캐시 관리
 
 앞 절에서는 요청에 필요한 KV 상태의 크기를 계산했습니다. 이제 그 상태가 늘어날 때 어디에 저장할지 살펴봅니다. 전체 데이터 용량은 충분하더라도, 끝내 쓰지 않을 공간을 미리 예약하거나 할당기가 재사용하지 못하는 틈을 남기면 실제 처리 용량이 줄어듭니다.
 

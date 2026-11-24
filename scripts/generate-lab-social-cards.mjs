@@ -10,6 +10,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 import { socialCards } from '../src/data/social-cards.js';
+import { GiB, kvCapacity } from '../src/components/chapter-12/kv-capacity.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const escape = value => String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
@@ -90,6 +91,24 @@ const copy = {
       note: '계산 예제 · 프롬프트에 이미지 표시 토큰 포함',
     },
   },
+  'kv-budget': {
+    path: '/chapter-12/kv-cache-management', number: '12.1', render: kvBudgetSvg,
+    figureDir: 'src/assets/images/chapter-12',
+    en: {
+      title: 'What fits in a 24 GiB KV cache?',
+      setup: '80 layers · 8 KV heads · head width 128 · BF16 → 320 KiB/token',
+      rows: ['9 prompts', '10 prompts', '9 at full length'],
+      length: ['8,192 tokens each', '8,192 tokens each', '10,240 tokens each'],
+      limit: '24 GiB available', axis: 'Dense KV payload (GiB)',
+    },
+    ko: {
+      title: '24 GiB KV 캐시에 요청을 몇 개 넣을 수 있을까?',
+      setup: '80층 · KV 헤드 8개 · 헤드 차원 128 · BF16 → 토큰당 320 KiB',
+      rows: ['프롬프트 9개', '프롬프트 10개', '최대 길이 요청 9개'],
+      length: ['요청당 8,192토큰', '요청당 8,192토큰', '요청당 10,240토큰'],
+      limit: '캐시 예산 24 GiB', axis: '조밀 KV 캐시 용량 (GiB)',
+    },
+  },
   'streaming-latency': {
     path: '/chapter-12/serving-policies-slos-and-fallbacks', number: '12.6', render: streamingLatencySvg,
     figureDir: 'src/assets/images/chapter-12',
@@ -144,6 +163,48 @@ ${text(c.note, 64, 529, korean ? 21 : 22, `fill="${muted}"`)}
 <path d="M64 554H1136" stroke="#bbc8c1" stroke-width="2"/>
 ${text(korean ? '무료 온라인 교재 · 한국어 / 영어' : 'Free online textbook · English / Korean', 64, 597, 20, `fill="${teal}"`)}
 ${text('sungeuns.github.io', 1136, 597, 20, `fill="${muted}" text-anchor="end"`)}
+</g></svg>\n`;
+}
+
+function kvBudgetSvg(lesson, lang, card) {
+  const labels = lesson[lang];
+  const ko = lang === 'ko';
+  const budget = 24;
+  const x = gib => 346 + 21 * gib;
+  const shape = { layers: 80, heads: 8, dimension: 128, precision: 2, sequence: 8192 };
+  const cases = [[9, 0], [10, 0], [9, 2048]];
+  const rows = cases.map(([batch, generated], index) => {
+    const { peak } = kvCapacity({ ...shape, batch, generated }, budget * GiB);
+    const payload = peak.requested / GiB;
+    const y = 238 + 94 * index;
+    const within = Math.min(payload, budget);
+    const excess = payload > budget
+      ? `<rect x="${x(budget)}" y="${y}" width="${x(payload) - x(budget)}" height="30" fill="#a54c2a"/>`
+      : '';
+    return `<g id="kv-case-${index + 1}">
+      ${text(labels.rows[index], 58, y + 10, 31, 'font-weight="700"')}
+      ${text(labels.length[index], 59, y + 43, 23, `fill="${muted}"`)}
+      <rect x="${x(0)}" y="${y}" height="30" width="${x(within) - x(0)}" fill="${teal}"/>${excess}
+      ${text(payload + ' GiB', 1144, y + 26, 32, 'text-anchor="end" font-weight="700"')}
+    </g>`;
+  }).join('');
+  const axis = [0, 8, 16, 24, 32].map(value =>
+    `<path d="M${x(value)} 500v8" stroke="${muted}" stroke-width="2"/>${text(value, x(value), 541, 26, 'text-anchor="middle"')}`
+  ).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" xml:lang="${lang}" role="img" aria-labelledby="card-title card-description">
+<title id="card-title">${escape(labels.title)}</title><desc id="card-description">${escape(card.alt)}</desc>
+<rect width="1200" height="630" fill="#f5f2eb"/>
+<g font-family="${ko ? 'Noto Sans CJK KR, DejaVu Sans' : 'DejaVu Sans'}, sans-serif" fill="${ink}">
+${text(labels.title, 56, 90, ko ? 54 : 52, 'font-weight="700"')}
+${text(labels.setup, 58, 148, 29, `fill="${muted}"`)}
+${rows}
+<path d="M${x(budget)} 201V496" fill="none" stroke="${ink}" stroke-dasharray="7 5" stroke-width="3"/>
+${text(labels.limit, x(budget), 189, 27, 'text-anchor="middle" font-weight="700"')}
+<path d="M${x(0)} 500H${x(32)}" stroke="${muted}" stroke-width="2"/>
+${axis}
+<path d="M58 563H1144" stroke="#bbc8c1" stroke-width="2"/>
+${text(labels.axis, 58, 603, 24, `fill="${muted}"`)}
+${text(ko ? `파운데이션 모델 엔지니어링 · ${lesson.number}` : `Foundation Model Engineering · ${lesson.number}`, 1144, 603, 21, `text-anchor="end" fill="${teal}"`)}
 </g></svg>\n`;
 }
 

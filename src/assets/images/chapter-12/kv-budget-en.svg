@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" xml:lang="en" role="img" aria-labelledby="card-title card-description">
+<title id="card-title">What fits in a 24 GiB KV cache?</title><desc id="card-description">Dense KV payload under a 24 GiB cache budget. Nine prompts of 8,192 tokens need 22.5 GiB, ten need 25 GiB, and nine sequences grown to 10,240 tokens need 28.125 GiB.</desc>
+<rect width="1200" height="630" fill="#f5f2eb"/>
+<g font-family="DejaVu Sans, sans-serif" fill="#192a30">
+<text x="56" y="90" font-size="52" font-weight="700">What fits in a 24 GiB KV cache?</text>
+<text x="58" y="148" font-size="29" fill="#4e5d61">80 layers · 8 KV heads · head width 128 · BF16 → 320 KiB/token</text>
+<g id="kv-case-1">
+      <text x="58" y="248" font-size="31" font-weight="700">9 prompts</text>
+      <text x="59" y="281" font-size="23" fill="#4e5d61">8,192 tokens each</text>
+      <rect x="346" y="238" height="30" width="472.5" fill="#256257"/>
+      <text x="1144" y="264" font-size="32" text-anchor="end" font-weight="700">22.5 GiB</text>
+    </g><g id="kv-case-2">
+      <text x="58" y="342" font-size="31" font-weight="700">10 prompts</text>
+      <text x="59" y="375" font-size="23" fill="#4e5d61">8,192 tokens each</text>
+      <rect x="346" y="332" height="30" width="504" fill="#256257"/><rect x="850" y="332" width="21" height="30" fill="#a54c2a"/>
+      <text x="1144" y="358" font-size="32" text-anchor="end" font-weight="700">25 GiB</text>
+    </g><g id="kv-case-3">
+      <text x="58" y="436" font-size="31" font-weight="700">9 at full length</text>
+      <text x="59" y="469" font-size="23" fill="#4e5d61">10,240 tokens each</text>
+      <rect x="346" y="426" height="30" width="504" fill="#256257"/><rect x="850" y="426" width="86.625" height="30" fill="#a54c2a"/>
+      <text x="1144" y="452" font-size="32" text-anchor="end" font-weight="700">28.125 GiB</text>
+    </g>
+<path d="M850 201V496" fill="none" stroke="#192a30" stroke-dasharray="7 5" stroke-width="3"/>
+<text x="850" y="189" font-size="27" text-anchor="middle" font-weight="700">24 GiB available</text>
+<path d="M346 500H1018" stroke="#4e5d61" stroke-width="2"/>
+<path d="M346 500v8" stroke="#4e5d61" stroke-width="2"/><text x="346" y="541" font-size="26" text-anchor="middle">0</text><path d="M514 500v8" stroke="#4e5d61" stroke-width="2"/><text x="514" y="541" font-size="26" text-anchor="middle">8</text><path d="M682 500v8" stroke="#4e5d61" stroke-width="2"/><text x="682" y="541" font-size="26" text-anchor="middle">16</text><path d="M850 500v8" stroke="#4e5d61" stroke-width="2"/><text x="850" y="541" font-size="26" text-anchor="middle">24</text><path d="M1018 500v8" stroke="#4e5d61" stroke-width="2"/><text x="1018" y="541" font-size="26" text-anchor="middle">32</text>
+<path d="M58 563H1144" stroke="#bbc8c1" stroke-width="2"/>
+<text x="58" y="603" font-size="24" fill="#4e5d61">Dense KV payload (GiB)</text>
+<text x="1144" y="603" font-size="21" text-anchor="end" fill="#256257">Foundation Model Engineering · 12.1</text>
+</g></svg>

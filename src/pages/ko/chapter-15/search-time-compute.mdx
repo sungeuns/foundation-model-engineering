@@ -1,12 +1,14 @@
 ---
 layout: ../../../layouts/BookLayout.astro
-title: 15.3 Search-time Compute
+title: 15.3 추론 시점의 연산 예산과 탐색
 lang: ko
 ---
 
 import InferenceScalingVisualizer from '../../../components/chapter-15/InferenceScalingVisualizer.tsx';
 
-# 15.3 Search-time Compute
+<a id="153-search-time-compute"></a>
+
+# 15.3 추론 시점의 연산 예산과 탐색
 
 앞 절은 reasoning을 명시적인 search graph로 다뤘습니다. Test-time compute는 더 넓은 시스템 문제입니다. Prompt와 latency 또는 비용 budget이 주어졌을 때 어떤 inference 절차를 실행할지, 얼마나 계산할지, 언제 멈출지를 결정해야 합니다.
 

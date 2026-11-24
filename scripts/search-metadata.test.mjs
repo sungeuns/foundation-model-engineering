@@ -21,6 +21,24 @@ test('search descriptions have real routes and equivalent language coverage', ()
   }
 });
 
+test('localized Korean lesson names reach the page title and the visible main heading', () => {
+  for (const { subs } of chapters) {
+    for (const { path, title } of subs) {
+      const html = readFileSync(`${outputDir}/ko${path}/index.html`, 'utf8');
+      const pageTitle = html.match(/<title>([^<]*)<\/title>/)?.[1];
+      assert.ok(pageTitle?.includes(escape(title.ko)), path);
+      // A native name such as FlashAttention is valid in either locale. If the
+      // Korean inventory describes it in Korean, the main heading should too.
+      if (/[가-힣]/u.test(title.ko)) {
+        const main = html.match(/<main\b[^>]*>([\s\S]*?)<\/main>/)?.[1];
+        const headings = [...(main ?? '').matchAll(/<h1\b[^>]*>([\s\S]*?)<\/h1>/g)];
+        assert.equal(headings.length, 1, path);
+        assert.match(headings[0][1].replace(/<[^>]+>/g, ''), /[가-힣]/u, path);
+      }
+    }
+  }
+});
+
 // Run after the GitHub Pages build, not against the production site's old HTML.
 test('every built page has canonical, reciprocal language links, and a local social image', () => {
   const seenDescriptions = new Set();

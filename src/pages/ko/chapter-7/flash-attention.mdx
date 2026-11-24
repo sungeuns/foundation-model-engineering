@@ -1,10 +1,12 @@
 ---
 layout: ../../../layouts/BookLayout.astro
-title: "7.4 Flash Attention 1, 2, 3"
+title: "7.4 FlashAttention 1·2·3의 메모리 접근과 병렬화"
 lang: "ko"
 ---
 
-# 7.4 Flash Attention 1, 2, 3
+<a id="74-flash-attention-1-2-3"></a>
+
+# 7.4 FlashAttention 1·2·3의 메모리 접근과 병렬화
 
 4,096개 토큰을 처리하는 attention 헤드 하나는 $4,096^2$개의 쌍별 점수를 만듭니다. 이 행렬 하나를 FP32로 저장하면 **64 MiB** 가 필요합니다. 배치 크기 2, 헤드 수 8이면 점수 행렬만 **1 GiB** 입니다. 점수를 계산하는 연산과, 곧 버릴 전체 행렬을 메모리에 쓰고 다시 읽는 작업은 별개의 비용입니다.
 
