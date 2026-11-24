@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" xml:lang="ko" role="img" aria-labelledby="card-title card-description">
+  <title id="card-title">7일 환불 규정은 어디서 빠졌을까?</title>
+  <desc id="card-description">가상의 갱신 환불 사례입니다. 검색 후보 20개 중 현행 v3의 7일 규정은 8위였습니다. 모델은 상위 5개만 받아 그 안에 남은 v2의 옛 30일 규정을 인용했습니다.</desc>
+  <rect width="1200" height="630" fill="#f5f2eb"/>
+  <rect width="12" height="630" fill="#256257"/>
+  <g font-family="Noto Sans CJK KR, DejaVu Sans, sans-serif" fill="#192a30">
+    <text x="64" y="61" font-size="19" fill="#256257" font-weight="600">파운데이션 모델 엔지니어링</text>
+    <text x="1136" y="61" font-size="18" fill="#256257" text-anchor="end">14.6 · RAG 실패 유형</text>
+    <text x="61" y="142" font-size="54" font-weight="700">7일 환불 규정은 어디서 빠졌을까?</text>
+    <text x="64" y="192" font-size="26" fill="#4e5d61">가상의 RAG 사례 · 연간 요금제 갱신 후 환불 문의</text>
+
+    <rect x="64" y="232" width="666" height="280" rx="18" fill="#fff" stroke="#c5cec6"/>
+    <text x="90" y="287" font-size="33" font-weight="700">검색 후보 20개</text>
+    <text x="90" y="329" font-size="23" fill="#4e5d61">검색 결과에는 두 버전의 규정이 모두 있었다.</text>
+    <g transform="translate(0 355)" fill="#e8ece7" stroke="#a6b5ac">
+    <rect x="90" width="22" height="40" rx="3" fill="#4e6067" stroke="#4e6067"/>
+    <rect x="121" width="22" height="40" rx="3" fill="#4e6067" stroke="#4e6067"/>
+    <rect x="152" width="22" height="40" rx="3" fill="#4e6067" stroke="#4e6067"/>
+    <rect x="183" width="22" height="40" rx="3" fill="#4e6067" stroke="#4e6067"/>
+    <rect x="214" width="22" height="40" rx="3" fill="#4e6067" stroke="#4e6067"/>
+    <rect x="245" width="22" height="40" rx="3"/>
+    <rect x="276" width="22" height="40" rx="3"/>
+    <rect x="307" width="22" height="40" rx="3" fill="#d7ebe2" stroke="#256257" stroke-width="3"/>
+    <rect x="338" width="22" height="40" rx="3"/>
+    <rect x="369" width="22" height="40" rx="3"/>
+    <rect x="400" width="22" height="40" rx="3"/>
+    <rect x="431" width="22" height="40" rx="3"/>
+    <rect x="462" width="22" height="40" rx="3"/>
+    <rect x="493" width="22" height="40" rx="3"/>
+    <rect x="524" width="22" height="40" rx="3"/>
+    <rect x="555" width="22" height="40" rx="3"/>
+    <rect x="586" width="22" height="40" rx="3"/>
+    <rect x="617" width="22" height="40" rx="3"/>
+    <rect x="648" width="22" height="40" rx="3"/>
+    <rect x="679" width="22" height="40" rx="3"/>
+    </g>
+    <path d="M90 404v10h146v-10" fill="none" stroke="#4e6067" stroke-width="3"/>
+    <text x="90" y="455" font-size="24" font-weight="700" fill="#4e6067">상위 5개 전달</text>
+    <path d="M318 404v42h23" fill="none" stroke="#256257" stroke-width="3"/>
+    <text x="354" y="455" font-size="24" font-weight="700" fill="#256257">8위 · 현행 v3 조항 제외</text>
+
+    <rect x="754" y="232" width="382" height="280" rx="18" fill="#fff" stroke="#c5cec6"/>
+    <text x="780" y="279" font-size="22" fill="#4e5d61">문맥에 남은 옛 v2를 인용한 답변</text>
+    <text x="778" y="350" font-size="68" font-weight="700" fill="#82491f">30일</text>
+    <path d="M780 374h330" stroke="#c5cec6"/>
+    <text x="780" y="413" font-size="22" fill="#4e5d61">현행 v3의 갱신 환불 기간</text>
+    <text x="778" y="484" font-size="68" font-weight="700" fill="#256257">7일</text>
+
+    <path d="M64 554h1072" stroke="#bbc8c1" stroke-width="2"/>
+    <text x="64" y="597" font-size="20" fill="#256257">무료 온라인 교재 · 한국어 / 영어</text>
+    <text x="1136" y="597" font-size="20" fill="#4e5d61" text-anchor="end">sungeuns.github.io</text>
+  </g>
+</svg>

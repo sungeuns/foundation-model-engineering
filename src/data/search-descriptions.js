@@ -307,8 +307,8 @@ export const searchDescriptions = {
     ko: '어텐션, 희소성, 공개된 설계 정보를 기준으로 LLM 아키텍처를 비교하고, 단순화한 MLA 예제로 구조적 차이를 이해합니다.',
   },
   '/chapter-5/sparse-vs-dense-models': {
-    en: 'Compare dense models and mixture-of-experts (MoE) models through active versus total parameters, conditional computation, and systems trade-offs.',
-    ko: '활성 파라미터와 전체 파라미터, 조건부 연산을 기준으로 밀집 모델과 전문가 혼합(MoE) 모델의 비용 및 시스템 트레이드오프를 비교합니다.',
+    en: 'Calculate top-k mixture-of-experts (MoE) routing, then use active and total parameter counts to budget memory for dense and sparse models. Includes a CPU PyTorch example.',
+    ko: '전문가 혼합(MoE)에서 토큰이 고른 전문가와 출력 가중치를 직접 계산합니다. 활성 파라미터와 전체 가중치로 메모리 예산을 구하고 CPU PyTorch 예제로 확인하세요.',
   },
   '/chapter-5/expert-parallelism': {
     en: 'Explore MoE expert parallelism, token dispatch, all-to-all communication, grouped matrix multiplication, and communication-compute overlap.',
@@ -411,8 +411,8 @@ export const searchDescriptions = {
     ko: '여섯 요청을 처리하는 순서로 연속 배칭을 익히고 Python 스케줄러를 실행합니다. 프리필 청크를 나누면 첫 토큰까지의 시간과 토큰 간 지연이 어떻게 달라지는지 살펴보세요.',
   },
   '/chapter-14/rag-failure-modes-and-operational-design': {
-    en: 'Diagnose RAG failures across retrieval, routing, and generation. Design confidence thresholds, timeouts, degraded modes, and pipeline evaluations.',
-    ko: 'RAG의 검색·라우팅·생성 단계별 실패를 진단하고 신뢰도 임계값, 타임아웃, 기능 축소 운영과 파이프라인 평가를 설계합니다.',
+    en: 'Trace an incorrect RAG answer through retrieval, reranking, context packing, and citation. Run six Python cases to see where the evidence disappears.',
+    ko: '잘못된 RAG 답변의 근거를 청크 ID로 추적하세요. 여섯 가지 Python 사례로 검색 누락, 재순위화, 문맥 구성, 잘못된 인용을 구분합니다.',
   },
   '/chapter-17/production-evaluation-and-release-gates': {
     en: 'Design LLM release gates with immutable artifacts, statistical evaluation, shadow traffic, canary rollouts, and a rehearsed rollback runbook.',

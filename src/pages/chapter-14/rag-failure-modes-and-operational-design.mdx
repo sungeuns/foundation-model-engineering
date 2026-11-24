@@ -41,6 +41,67 @@ These are diagnostic interventions, not independent scores to add together. Seve
 
 Measure the stage boundaries explicitly. In an **authored 100-question example**, suppose required evidence is found for 90 questions, survives the context budget for 72, and leads to a supported correct answer for 60. The question-level evidence hit rate is 90%; evidence retention among hits is 72/90 = 80%; supported-answer success among retained cases is 60/72 ≈ 83.3%. End-to-end success is 60%, not 90%. Those nested counts assume these are the only successful cases; they are not a universal factorization of RAG accuracy. Multi-document tasks also need coverage of the *full* required evidence set, not just one relevant chunk.
 
+<a id="trace-a-rag-answer"></a>
+
+### Run a Trace Audit with Stable Chunk IDs
+
+The same wrong number can arise at different boundaries. Run the following example and compare `ranking-selection` with `context-packing`: both have the correct candidate, but only the second still has it after the reranker's cutoff. Keeping only the final answer and its citation would hide that difference.
+
+> **Runnable diagnostic, not a RAG implementation:** This Python 3 example checks six authored stage traces for the fictional renewal question. It uses hand-labeled source facts and the required evidence ID; retrieval, reranking, packing, and generation outputs are supplied fixtures. There are no dependencies, API calls, learned scores, or semantic entailment checks. Each retained ID represents an entire unchanged chunk.
+
+```python
+# Python 3, standard library only. Authored traces; no model or network call.
+RENEWAL = "refund:v3:renewal"
+FIRST = "refund:v3:first-purchase"
+OLD = "refund:v2:renewal"
+# Human-labeled facts for this fictional question, not extracted semantics.
+chunks = {
+    RENEWAL: {"days": 7, "scope": "renewal", "current": True},
+    FIRST: {"days": 30, "scope": "first-purchase", "current": True},
+    OLD: {"days": 30, "scope": "renewal", "current": False},
+}
+required = {RENEWAL}
+
+def audit(candidates, selected, packed, answer_days, citation):
+    # selected is the reranker's cutoff; packed is the final intact context.
+    assert set(candidates) <= chunks.keys()
+    assert set(selected) <= set(candidates)
+    assert set(packed) <= set(selected)
+    for stage, ids in [("retrieval", candidates),
+                       ("ranking-selection", selected),
+                       ("context-packing", packed)]:
+        if not required <= set(ids):
+            return stage
+    if answer_days != chunks[RENEWAL]["days"]:
+        return "answer-value"
+    cited = chunks.get(citation)
+    supported = (citation in packed and cited is not None
+                 and cited["current"] and cited["scope"] == "renewal"
+                 and cited["days"] == answer_days)
+    return "pass" if supported else "citation-attribution"
+
+# Each trace stores candidate IDs, selected IDs, packed IDs, answer, citation.
+cases = {
+    "retrieval": ([FIRST, OLD], [FIRST], [FIRST], 30, FIRST),
+    "ranking-selection": ([RENEWAL, FIRST], [FIRST], [FIRST], 30, FIRST),
+    "context-packing": ([RENEWAL, FIRST], [RENEWAL, FIRST], [FIRST], 30, FIRST),
+    "answer-value": ([RENEWAL], [RENEWAL], [RENEWAL], 30, RENEWAL),
+    "citation-attribution": ([RENEWAL, FIRST], [RENEWAL, FIRST],
+                             [RENEWAL, FIRST], 7, FIRST),
+    "pass": ([RENEWAL], [RENEWAL], [RENEWAL], 7, RENEWAL),
+}
+for expected, trace in cases.items():
+    result = audit(*trace)
+    assert result == expected, (expected, result)
+    print(f"{result}: packed={trace[2]}, cited={trace[4]}")
+```
+
+The program prints `retrieval`, `ranking-selection`, `context-packing`, `answer-value`, `citation-attribution`, and `pass`, with the exact context and citation IDs. In the `answer-value` case, the correct seven-day clause reached the generator but the recorded answer says 30. In `citation-attribution`, the answer is seven days but its citation points to the first-purchase clause: the answer value is correct and the attribution is false. Replacing that citation with `RENEWAL` repairs this fixture; merely linking to an existing chunk does not.
+
+**What this does not establish:** The first missing boundary is an observation, not proof that its component caused the defect. An ingestion omission, access filter, wrong evidence label, or earlier source-version decision can produce a retrieval miss. With evidence present, a wrong answer warrants checks of the prompt, serialization, generation, and grading; it does not isolate model weights. Multiple defects can coexist, while this auditor returns only the first failed check.
+
+In real traces, bind each ID to an immutable document revision and content hash. Log which text spans actually survived packing: retaining an ID while cutting away its exception would fool this toy check. Hand-labeled numeric fields cannot establish entailment for arbitrary claims, and a required-ID set can reject valid alternative evidence if the labels are incomplete. Use this audit to select the controlled intervention above, then inspect the cited text and test the repair.
+
 ## 3. A Similarity Score Is Not an Answer Probability
 
 A cosine similarity of 0.82 does not mean an answer has an 82% chance of being correct. Score distributions change with the embedding model, corpus, query type, and candidate filtering. Rankers may also emit uncalibrated logits. Choose any threshold using labeled examples and the cost of a wrong answer, then measure the resulting coverage and error rate on a separate holdout.
@@ -67,7 +128,7 @@ Maintain separate measures for citation coverage (which claims have citations), 
 
 A repair should include the failing question, allowed source versions, expected evidence, the old and new context traces, and the resulting answer. Keep related questions and source revisions together when splitting evaluation data so paraphrases of the incident do not become a misleading “unseen” release set.
 
-Compare the change on a sealed set containing renewals, first purchases, missing dates, conflicting versions, unauthorized documents, and deliberately unavailable evidence. Record accuracy, supported answers, abstention coverage, critical errors, latency, and cost by slice. Apply predeclared release thresholds with uncertainty as described in [production evaluation and release gates](/chapter-17/production-evaluation-and-release-gates). Retain the previous index snapshot, ingestion/filter configuration, retriever/reranker versions, and prompt/model bundle so rollback restores one coherent pipeline.
+Compare the change on a sealed set containing renewals, first purchases, missing dates, conflicting versions, unauthorized documents, and deliberately unavailable evidence. Record accuracy, supported answers, abstention coverage, critical errors, latency, and cost by slice. Apply predeclared release thresholds with uncertainty as described in [production evaluation and release gates](../../chapter-17/production-evaluation-and-release-gates/). Retain the previous index snapshot, ingestion/filter configuration, retriever/reranker versions, and prompt/model bundle so rollback restores one coherent pipeline.
 
 The practical debugging question is: **at which boundary did the required evidence disappear or become invalid?** Answering it usually produces a more specific change than “use a better model.”
 

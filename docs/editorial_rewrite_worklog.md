@@ -283,7 +283,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 4.3 | `/chapter-4/encoder-decoder` | Inspected 2026-11-15 | c0372544843683d2e7b80936ba33fd4c343a4b6850c40844ae59ccc34362f918 | d1c77e9b87235b6e7d00b7350a01d5d813567221ce8ca91edf14e5241f400905 |
 | 4.4 | `/chapter-4/hybrid-prefix-lm` | Inspected 2026-11-15 | ebe7194bc50255772200359bc604906d56494def1f09ca586850109416062cec | 69e056f6690ea2345e02be5001a87a64f7bcfe902add9d9ae759071d38bb7ae1 |
 | 4.5 | `/chapter-4/various-llm-architectures` | Inspected 2026-11-24 | 028ebccee02c3a1b30297a6c43b9ed91806975ff737f33e8a5ccd5ea26f26a30 | 5d9fb05bb56198c702831691a20832099bac533ece95857c22101dfb884863a8 |
-| 5.1 | `/chapter-5/sparse-vs-dense-models` | Inspected 2026-11-15 | 34f083166e4d9b6677c4c18ddc372048f6f252450ca7265cfa555d03c11deb09 | 890d84a1b6c8fc59a601463209724beb86d21ef4fdf31eb5d5620831522a2117 |
+| 5.1 | `/chapter-5/sparse-vs-dense-models` | Inspected 2026-11-25 | 01f8735ffcc52bb919dfea3402cb6fbdb0313849c20a83c447820f04e5bb6c08 | 7908d7d81bd30342d4223623ac332bf1d17f91a47e55e1deb8ba8d3ee2b88c37 |
 | 5.2 | `/chapter-5/routing-algorithms` | Inspected 2026-11-15 | 3b83671dec53a4a69ee8c357d810ac48b3b2b069f1b54fdb76a8e567ae6ed3e7 | 436d75fa19297b28084c3bf55cb2e92e341e86d33370e1843de1c263a8f9d356 |
 | 5.3 | `/chapter-5/expert-parallelism` | Inspected 2026-11-18 | b068ad369a94f058c7e7c63ac3072bb7be023481ba3566cec292cb0da234f210 | 29dfe7ecd4340bf4c209b4985b485765dd7af91bca8ad96be8a9712dc22e2fa4 |
 | 5.4 | `/chapter-5/collapsing-load-balancing` | Inspected 2026-11-15 | 9eafbfd1e7b75ad8196d586895ed76c5c16b609fb3b6d7c3c6450331d3fbec83 | e882e33f29592a27d156efc7b998c7f7d1fa8a3f2e8f63179ad4319ef47ab56a |
@@ -336,7 +336,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 14.3 | `/chapter-14/advanced-retrieval` | Inspected 2026-11-15 | 185df747656780bb8c6e973099be638e6be05625deb78c043f84cf0c73c321ba | 168067b55836a797166e7bb7e17a6c36b19c39950c10fb72f58814054b45dc05 |
 | 14.4 | `/chapter-14/rag-orchestration` | Inspected 2026-11-15 | c0415652280790508493840235e671903d660547416bc0bf3a73aba796039dd8 | 71eb996863fcf49fa62bc979e9167173c39fec0312811f89ac3095eca414b283 |
 | 14.5 | `/chapter-14/graphrag-and-ontology` | Inspected 2026-11-18 | 6a6bfb305a399dd26588c20193a52bd7fa3f5a127b5ef766c5f235a265bc2b6f | 0d8e5a5ead4ce3e1ec71dac8a9daf62373947617248ec254d23bffb65c670e50 |
-| 14.6 | `/chapter-14/rag-failure-modes-and-operational-design` | Inspected 2026-11-18 | 1364fc4216d2199a6bd5150aded52a2ee443c13f2ef48c4cb46a2760ef903beb | 1650265565ca8a03b3f6d3544a12989e7a93b337274db941152d3457171fcd3f |
+| 14.6 | `/chapter-14/rag-failure-modes-and-operational-design` | Inspected 2026-11-25 | c72856114d2cb84479aafdc3b30c627c29b5aef1166e94797f37f2694fdf81ac | 8087cbcf0189649a93b9ae5cd534eebce28cb31bbfdeed8359f7cd5d1d4583f5 |
 | 15.1 | `/chapter-15/chain-of-thought` | Inspected 2026-11-18 | dfa755568cbd54f3636f06ca66bc5a279f0d5f54f81d0589f4293abdabc5979b | 217a9074408e2c33d9405b96de888fd38d7b46a996ca24cffb9ce5056c16bf55 |
 | 15.2 | `/chapter-15/tree-graph-of-thoughts` | Inspected 2026-11-15 | 7e8547ebde4982cf4cbab76343d088ceef6b39d22ad8b6d1403ddb292b381251 | 59780614eb21ba3c945f22c3defcd3ff49c762ef1b1c2b9c686d68660ef9147f |
 | 15.3 | `/chapter-15/search-time-compute` | Inspected 2026-11-15 | 31e0f131da5e3af9e46feebd7fc7546e01faeaa7e7372ae8ca06c0c51a1470de | c476bc382f0f1f97fdc787a8b2afb8b60b6d9e139becb4dace83d077444397ba |

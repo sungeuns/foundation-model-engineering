@@ -8,218 +8,119 @@ import { MoERouterVisualizer } from '../../components/chapter-5/MoERouterVisuali
 
 # 5.1 Sparse vs Dense Models
 
-The LLM inference economy has bifurcated. On one end, **Mixture of Experts (MoE)** models like DeepSeek-V3 and Qwen3 are the default choice for cloud-scale batch operations, code synthesis, and reasoning-heavy workloads. On the other end, **Dense models** remain the immovable standard for edge devices, mobile phones, and ultra-low-latency APIs where memory capacity is strictly capped.
+An engineer budgets 74 GB for the weights of DeepSeek-V3 because its report says 37 billion parameters are active per token. The multiplication is right for two bytes per parameter. Why would the main model alone need about **1.34 TB** at that same precision? The report gives a second number, 671 billion parameters in the main model. A different token can call on a different set of weights [[3]](#ref-3).
 
-To understand why sparsity has become a defining paradigm, we must first deconstruct the fundamental difference between dense and sparse architectures. This is not just a minor architectural tweak; it is a fundamental shift in how we allocate computational resources.
+<span id="the-analogy-the-generalist-vs-the-specialist-hospital"></span>
+<span id="the-scaling-crisis-and-the-moe-revival"></span>
 
----
+## Follow one token through the layer
 
-## The Analogy: The Generalist vs. The Specialist Hospital
+Consider the word `bank` at the end of “We sat on the river bank” and “For a loan, I visited the bank.” A causal decoder has already seen the words before `bank` when it chooses a route at that position. Earlier layers can give the token different hidden vectors in these two contexts. A dense feed-forward network (FFN) applies the same matrices to both vectors and can produce different outputs. A sparsely gated **mixture of experts** (MoE) also uses the vector to choose which FFNs to execute. The shared attention layer still runs.
 
-Imagine a **Dense Model** as a traditional, albeit highly capable, rural hospital. There is one brilliant "Super-Doctor" on staff. Whether a patient comes in with a paper cut, a broken leg, or a complex neurological disorder, this single Super-Doctor must examine the patient, consult their entire vast medical knowledge, and prescribe a treatment. As the hospital grows (scaling the model), the Super-Doctor learns more, but the line of patients out the door grows longer. Every patient requires the doctor's full attention (all parameters are activated).
+An **expert** is a learned network identified by an index. The designer need not assign it a subject such as finance. Shazeer et al. used conditional computation in a recurrent language model before sparse Transformers became common [[1]](#ref-1). In Mixtral 8x7B, each layer's router chooses two of its eight expert FFNs for each token [[2]](#ref-2). Across a batch, different pairs can collectively use all eight.
 
-Now, imagine a **Sparse MoE Model** as a modern mega-hospital. When a patient walks in, they do not see the doctors immediately. Instead, they are greeted by a highly efficient Triage Nurse (the **Router**). The nurse takes one look at the patient's symptoms and instantly routes them to the exact specialists needed—perhaps the Cardiologist and the Neurologist (the **Experts**). 
-The hospital employs hundreds of doctors (massive total parameter count), but for any given patient, only two doctors are actively working (small active parameter count). This allows the hospital to process thousands of patients simultaneously with unparalleled specialized knowledge, without the computational bottleneck of a single doctor doing everything.
+<span id="the-mathematics-of-sparsity"></span>
+<span id="the-routing-mechanism-top-k"></span>
+<span id="interactive-visualization-token-routing"></span>
 
----
+## Calculate a top-2 route
 
-## The Scaling Crisis and the MoE Revival
+Let $x$ be one token's hidden vector, $z=xW_g$ the router logits, and $S$ the indices of the $k$ largest logits. In the Mixtral-style gate used here, expert $i$ receives weight $w_i$. The selected outputs $E_i(x)$ have the same shape and are added coordinate by coordinate [[2]](#ref-2).
 
-Historically, Dense Transformer models dominated due to their simplicity and predictable scaling laws. If you wanted a smarter model, you trained a larger dense network. However, this single-minded pursuit of scale led directly to a computational cliff. 
+$$
+w_i=\begin{cases}
+\frac{\exp(z_i)}{\sum_{j\in S}\exp(z_j)} & i\in S,\\
+0 & i\notin S,
+\end{cases}
+\qquad y=\sum_{i\in S}w_iE_i(x).
+$$
 
-Training and serving a state-of-the-art dense model—where every single parameter is activated to process every single token—is an undertaking of astronomical proportions. A 400-billion parameter dense model requires computing 400 billion multiply-accumulate operations *per token*.
+Suppose the river example has logits `[3, 2, 0, −1]`. With $k=2$, experts 0 and 1 receive weights about 0.731 and 0.269. If their first output coordinates are 2 and −2, the combined coordinate is about **0.924**. Switch to the loan example below. The logits change, but we keep the four example coordinates fixed so you can isolate what the gate does.
 
-The concept of MoE actually predates the Transformer. The true watershed moment arrived in 2017 with a Google Brain paper by Noam Shazeer et al., titled *"Outrageously Large Neural Networks: The Sparsely-Gated Mixture-of-Experts Layer"* [[1]](#ref-1). However, the hardware of 2017 was not ready for the complex memory access patterns of MoE. It remained a fascinating academic curiosity until Mistral AI released **Mixtral 8x7B** in early 2024, proving that sparse open-weight models could destroy dense models of similar compute classes [[2]](#ref-2). 
+<MoERouterVisualizer lang="en" client:visible />
 
-Recent models like **DeepSeek-V3** (671B total parameters, 37B active) and **Llama 4 Maverick** (400B total, 17B active) have made MoE a common design choice among frontier-scale models, especially when capacity and inference compute need to be decoupled [[3]](#ref-3).
+<span id="total-vs-active-parameters-the-efficiency-arithmetic"></span>
+<span id="dense-vs-sparse-engineering-trade-offs"></span>
 
----
+## Budget the weights before estimating latency
 
-## The Mathematics of Sparsity
+Suppose a model has 200 million shared weights used by every token and eight routed experts with 100 million weights each. Count the following quantities separately.
 
-In a standard Dense Transformer, the Feed-Forward Network (FFN) applies the same massive weight matrices to every token in the sequence:
+| Quantity | Calculation | What it tells you |
+| --- | --- | --- |
+| Total weights | 200M + 8 × 100M = **1B** | All weights together occupy **2 GB** at two bytes each. |
+| Weights active for one top-2 token | 200M + 2 × 100M = **400M** | The dense projections on that path determine much of its arithmetic. |
+| Distinct weights used by two tokens choosing disjoint pairs | 200M + 4 × 100M = **600M** | The shared weights count once in storage even though both tokens use them. |
 
-$$ h_{out} = \text{FFN}(h_{in}) = \sigma(h_{in} W_1) W_2 $$
+These are decimal GB of weights only. Budget KV cache, activations, communication buffers, allocator overhead and any quantization metadata separately. The 1.34 TB opening figure makes the same uniform two-byte assumption. The released checkpoint also includes 14B multi-token prediction parameters, which the publisher counts separately. Its actual file sizes depend on the stored precision [[6]](#ref-6). Experts can be distributed across devices or loaded from host memory. Offloading trades device capacity for transfer time, as Eliseev and Mazur demonstrate with Mixtral [[4]](#ref-4).
 
-In a Sparse MoE architecture, the dense FFN is replaced by a set of $E$ independent FFNs, called **Experts**, and a **Gating Network** (or Router) that determines which experts process which tokens.
+For a matrix-vector multiply, one multiply-add per used weight costs about two floating-point operations. Turning an active-parameter count into a latency estimate also requires knowing how many tokens reuse each matrix, whether experts sit on different devices, and how long dispatch takes. In a 2026 preprint, Alfarizy et al. compared OLMoE and dense models with `llama.cpp` on an M2 Pro and a Jetson Orin Nano. Their dense Llama-3.2-1B baseline decoded faster than OLMoE on both devices, with a larger gap on the Jetson. That result covers one MoE family and those configurations. On your hardware, measure prompt processing and decoding separately, at the context lengths and concurrency you intend to serve [[5]](#ref-5).
 
-The output of the MoE layer for a given token $x$ is the weighted sum of the outputs of the selected experts:
+<span id="implementation-building-a-sparse-moe-layer-in-pytorch"></span>
 
-$$ y = \sum_{i=1}^{E} G(x)_i \cdot E_i(x) $$
+## Dispatch only the selected rows in PyTorch
 
-Where:
-*   $E$ is the total number of experts.
-*   $E_i(x)$ is the output of the $i$-th expert network.
-*   $G(x)_i$ is the gating value (routing weight) for the $i$-th expert.
-
-### The Routing Mechanism (Top-K)
-To achieve sparsity, the gating network $G(x)$ must output a sparse vector (mostly zeros). The most common approach is **Top-K Routing**. The router projects the token representation into $E$ logits, applies a Softmax, and keeps only the top $K$ values, setting the rest to zero:
-
-$$ \text{Logits} = x \cdot W_{gate} $$
-$$ \text{Scores} = \text{Softmax}(\text{Logits}) $$
-$$ G(x) = \text{TopK}(\text{Scores}, K) $$
-
-If $K=2$ (as in many top-2 MoE designs such as Mixtral), only the top 2 experts out of $E$ are activated for that specific token.
-
-![Dense Transformer vs. Sparse MoE Architecture](../../assets/images/chapter-5/dense-vs-moe-arch.png)
-*Source: AI-generated illustration*
-
----
-
-## Total vs. Active Parameters: The Efficiency Arithmetic
-
-The most misunderstood aspect of MoE models is the parameter count. When you read that DeepSeek-V3 is a "671B parameter model," you must split this into two metrics:
-
-1.  **Total Parameters (Capacity)**: The sheer volume of knowledge the model has memorized. All 671 billion parameters must reside in VRAM.
-2.  **Active Parameters (Compute)**: The number of parameters used during the forward pass for a single token. For DeepSeek-V3, this is only 37 billion.
-
-**Why does this matter?**
-In large-batch inference (e.g., processing a massive prompt or serving thousands of users simultaneously), the bottleneck is **arithmetic (FLOPs)**. A dense 671B model would require ~1.34 teraFLOPs per token. DeepSeek-V3 only requires ~74 gigaFLOPs per token. This translates to a ~94% reduction in compute cost per token, allowing cloud providers to serve massive models at a fraction of the cost.
-
----
-
-## Dense vs. Sparse: Engineering Trade-offs
-
-Neither architecture is universally superior. The optimal choice depends entirely on your deployment constraints.
-
-| Feature | Dense Models (e.g., Llama 3 70B) | Sparse MoE Models (e.g., DeepSeek-V3, Qwen3) |
-| :--- | :--- | :--- |
-| **Compute (FLOPs)** | High (Proportional to total size) | Low (Proportional to active size) |
-| **Memory (VRAM)** | High (Proportional to total size) | **Extremely High** (Must store all experts in VRAM) |
-| **Inference Latency** | Highly predictable | Variable (Depends on routing overhead and batch size) |
-| **VRAM Bandwidth** | Efficient (Sequential reads) | Bottlenecked (Random access to scattered experts) |
-| **Training Stability** | Very stable | Prone to "Expert Collapse" (requires load-balancing) |
-| **Best Use Case** | Edge devices, mobile, latency-critical APIs | Cloud-scale batch inference, complex reasoning, coding |
-
----
-
-## Implementation: Building a Sparse MoE Layer in PyTorch
-
-To truly understand the mechanics, let's implement a standard Top-2 MoE layer. While production models use highly optimized custom CUDA kernels (like Triton or Megatron-LM's scatter/gather operations) to avoid moving memory around, this PyTorch implementation demonstrates the exact mathematical forward pass.
+**CPU forward-pass example.** This uses supplied logits, four small linear experts and two tokens in FP32. A full MoE block would learn the router and nonlinear FFNs. The example omits training, capacity limits and cross-device dispatch. Indexing matters here because one token can receive two contributions.
 
 ```python
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
+from torch import nn
 
-class Expert(nn.Module):
-    """A standard Feed-Forward Network acting as a single expert."""
-    def __init__(self, d_model, d_ff):
-        super().__init__()
-        self.w1 = nn.Linear(d_model, d_ff, bias=False)
-        self.w2 = nn.Linear(d_ff, d_model, bias=False)
-        self.act = nn.SiLU()
 
-    def forward(self, x):
-        return self.w2(self.act(self.w1(x)))
+def dispatch(x, logits, experts, k):
+    # x: [tokens, width], logits: [tokens, experts]
+    scores, choices = logits.topk(k, dim=-1)
+    weights = scores.softmax(dim=-1)
+    combined = torch.zeros_like(x)
+    for expert_id, expert in enumerate(experts):
+        token, slot = torch.where(choices == expert_id)
+        if token.numel():
+            values = expert(x[token])
+            combined.index_add_(0, token, weights[token, slot, None] * values)
+    return combined, choices, weights
 
-class SparseMoELayer(nn.Module):
-    """A Top-K Sparse Mixture of Experts Layer."""
-    def __init__(self, d_model, d_ff, num_experts, top_k):
-        super().__init__()
-        self.num_experts = num_experts
-        self.top_k = top_k
-        
-        # The Router (Gating Network)
-        self.router = nn.Linear(d_model, num_experts, bias=False)
-        
-        # The Experts
-        self.experts = nn.ModuleList([
-            Expert(d_model, d_ff) for _ in range(num_experts)
-        ])
 
-    def forward(self, x):
-        # x shape: (batch_size, seq_len, d_model)
-        batch_size, seq_len, d_model = x.shape
-        x_flat = x.view(-1, d_model) # Flatten to (batch * seq_len, d_model)
-        
-        # 1. Calculate Routing Logits
-        router_logits = self.router(x_flat) # (batch * seq_len, num_experts)
-        routing_weights = F.softmax(router_logits, dim=-1)
-        
-        # 2. Select Top-K Experts
-        top_k_weights, top_k_indices = torch.topk(routing_weights, self.top_k, dim=-1)
-        
-        # Normalize weights among the selected top-k experts so they sum to 1
-        top_k_weights = top_k_weights / top_k_weights.sum(dim=-1, keepdim=True)
-        
-        # 3. Dispatch tokens to experts and aggregate
-        final_output = torch.zeros_like(x_flat)
-        
-        # Iterate through each expert (Pedagogical approach; slow in pure PyTorch)
-        for i, expert in enumerate(self.experts):
-            # Find which tokens were routed to expert `i`
-            expert_mask = (top_k_indices == i).any(dim=-1)
-            
-            if not expert_mask.any():
-                continue # Skip if no tokens were routed to this expert
-                
-            # Extract the actual tokens
-            expert_tokens = x_flat[expert_mask]
-            
-            # Forward pass through the specific expert
-            expert_out = expert(expert_tokens)
-            
-            # Extract the corresponding routing weights for these tokens
-            # We need to find the exact position (0 to top_k-1) where this expert was selected
-            weight_mask = top_k_indices[expert_mask] == i
-            expert_weights = top_k_weights[expert_mask][weight_mask].unsqueeze(-1)
-            
-            # Scale output by the routing weight and add to the final output tensor
-            token_indices = expert_mask.nonzero(as_tuple=True)[0]
-            final_output[token_indices] += expert_out * expert_weights
-            
-        return final_output.view(batch_size, seq_len, d_model)
-
-# Example Usage
-d_model = 1024
-layer = SparseMoELayer(d_model=d_model, d_ff=4096, num_experts=8, top_k=2)
-dummy_input = torch.randn(2, 128, d_model) # Batch 2, Seq 128
-output = layer(dummy_input)
-print(f"Output shape: {output.shape}") # Expected: [2, 128, 1024]
+# Two contextual representations of "bank", four toy expert projections.
+x = torch.tensor([[1., 1.], [1., -1.]])
+logits = torch.tensor([[3., 2., 0., -1.], [0., -1., 2., 3.]])
+experts = nn.ModuleList(nn.Linear(2, 2, bias=False) for _ in range(4))
+with torch.no_grad():
+    for expert, scale in zip(experts, [2., -2., 6., 10.]):
+        expert.weight.copy_(scale * torch.eye(2))
+    y, choices, weights = dispatch(x, logits, experts, k=2)
+    print(choices.tolist())       # [[0, 1], [3, 2]] at k=2
+    torch.testing.assert_close(weights.sum(dim=1), torch.ones(2))
+    print(y[:, 0].tolist())  # approximately [0.9242, 8.9242]
 ```
 
----
+In `torch.where`, `token` identifies a row of the input and `slot` identifies a column in that row's top-$k$ result. A weight belongs to a particular **token and slot**. `index_add_` sends each weighted output back to its source row and sums contributions from different experts. Try changing `k` to 1 or 4 in both the widget and the function call. Which change alters the result more for the river example?
 
-## Interactive Visualization: Token Routing
+<span id="looking-ahead"></span>
 
-To conceptualize how tokens scatter across experts, consider the following interactive visualizer. Observe how different semantic tokens are routed to specific experts.
-
-<MoERouterVisualizer client:load />
-
-*(Note: In a real engineering environment, you would log the `top_k_indices` from the PyTorch model and pipe them into a visualization dashboard to ensure no single expert is being overloaded.)*
-
----
-
-## Looking Ahead
-
-We have established that MoE decouples *model capacity* from *inference compute*. However, the code implementation above hides a massive systemic risk: **What happens if the router sends 99% of the tokens to Expert 0?** 
-
-If one expert receives all the traffic, the hardware executing that expert will bottleneck, while the GPUs holding the other experts sit idle. This catastrophic failure mode is known as *Expert Collapse*. In the next section, **5.2 Routing Algorithms**, we will explore the advanced loss functions and auxiliary-loss-free routing mechanisms designed to keep the experts perfectly balanced.
-
----
+For a batch of $T$ tokens that each select two distinct experts without dropping any assignments, the per-expert counts must sum to $2T$. If one expert receives all $T$ tokens, every token still has a second route. The busy expert can slow down its peers even when everything fits in memory. [Routing algorithms](../routing-algorithms/) examines how training changes that distribution, and [expert parallelism](../expert-parallelism/) follows the tokens across devices.
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: If an MoE model has 671B total parameters and only 37B active parameters per token, why can't we run it on a single 80GB GPU, given that 37B parameters in FP16 easily fit into 80GB of VRAM?</summary>
-*Because the routing mechanism is dynamic and unpredictable at the sequence level. The router decides which experts to activate on a per-token basis at runtime. Therefore, the weights for all 671B parameters must reside in VRAM simultaneously so they are instantly available when called upon. Swapping experts from CPU RAM to GPU VRAM on the fly would introduce unacceptable PCIe latency overhead. MoE reduces compute (FLOPs) and activation memory, but it does not reduce the static model weight VRAM requirements.*
+<summary>Quiz 1: Two tokens choose the same two experts. How many distinct weights do they use in the 1B example?</summary>
+*They use 400M distinct weights. Both tokens still require their own outputs. A batched matrix multiplication may reuse the weights while computing both.*
 </details>
 
 <details>
-<summary>Quiz 2: In a Top-2 routing setup, what happens if the router assigns an overwhelming majority of tokens in a sequence to Expert 1, leaving the other experts completely idle?</summary>
-*This phenomenon is known as "expert collapse" or a load-balancing failure. If Expert 1 processes all tokens, it becomes a severe computational bottleneck, destroying the parallelization benefits of MoE. In a distributed setup (Expert Parallelism), the GPU hosting Expert 1 will be overloaded and OOM (Out of Memory), while other GPUs sit idle waiting for synchronization. This is why modern MoE architectures require sophisticated load-balancing algorithms, which we will cover in the next section.*
+<summary>Quiz 2: Why does multiplying by the full softmax weights and simply dropping the other outputs change this example?</summary>
+*The retained weights would generally sum to less than one. This gate normalizes over the selected experts, so discarding the other terms without renormalization also shrinks the output.*
 </details>
 
 <details>
-<summary>Quiz 3: For a mobile phone deployment (e.g., an on-device AI assistant), would you prefer a 7B Dense model or a 40B MoE model with 7B active parameters? Justify your engineering choice.</summary>
-*The 7B Dense model is heavily preferred for edge deployment. Edge devices (like smartphones) are severely constrained by RAM capacity and memory bandwidth, not just compute. A 40B MoE model requires storing 40B parameters in memory, which exceeds the unified RAM capacity of almost all mobile devices. Furthermore, the dynamic routing overhead and unpredictable memory access patterns of MoE are hostile to the constrained, highly deterministic architectures of mobile NPUs (Neural Processing Units).*
+<summary>Quiz 3: A top-2 router sends 100 tokens to expert 0. Does that mean all other experts are idle?</summary>
+*No. Those 100 tokens each have another distinct destination. Inspect all 200 assignments and their device placement before attributing a latency spike to one expert.*
 </details>
-
----
 
 ## References
 
-1. <a id="ref-1"></a>Shazeer, N., et al. (2017). *Outrageously Large Neural Networks: The Sparsely-Gated Mixture-of-Experts Layer*. [arXiv:1701.06538](https://arxiv.org/abs/1701.06538).
-2. <a id="ref-2"></a>Jiang, A. Q., et al. (2024). *Mixtral of Experts*. [arXiv:2401.04088](https://arxiv.org/abs/2401.04088).
-3. <a id="ref-3"></a>DeepSeek-AI. (2024). *DeepSeek-V3 Technical Report*. [arXiv:2412.19437](https://arxiv.org/abs/2412.19437).
+1. <a id="ref-1"></a>Shazeer, N., et al. (2017). [Outrageously Large Neural Networks: The Sparsely-Gated Mixture-of-Experts Layer](https://arxiv.org/abs/1701.06538).
+2. <a id="ref-2"></a>Jiang, A. Q., et al. (2024). [Mixtral of Experts, §2.1](https://arxiv.org/html/2401.04088).
+3. <a id="ref-3"></a>DeepSeek-AI. (2024). [DeepSeek-V3 Technical Report](https://arxiv.org/abs/2412.19437).
+4. <a id="ref-4"></a>Eliseev, A., and Mazur, D. (2023). [Fast Inference of Mixture-of-Experts Language Models with Offloading](https://arxiv.org/abs/2312.17238).
+5. <a id="ref-5"></a>Alfarizy, A., et al. (2026). [Does Mixture-of-Experts Actually Help Inference on Consumer and Edge Hardware? An Empirical Study (v3)](https://arxiv.org/abs/2606.21428v3).
+6. <a id="ref-6"></a>DeepSeek-AI. [DeepSeek-V3 model card, Model Downloads](https://huggingface.co/deepseek-ai/DeepSeek-V3#3-model-downloads).

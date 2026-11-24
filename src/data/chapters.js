@@ -46,7 +46,7 @@ export const chapters = [
     id: 5,
     title: { en: "5. Scaling Mixture of Experts (MoE)", ko: "5. 전문가 혼합(MoE) 스케일링" },
     subs: [
-      { id: "5-1", title: { en: "5.1 Sparse vs Dense Models", ko: "5.1 희소 vs 밀집 모델" }, path: "/chapter-5/sparse-vs-dense-models" },
+      { id: "5-1", title: { en: "5.1 Sparse vs Dense Models", ko: "5.1 희소 모델과 밀집 모델" }, path: "/chapter-5/sparse-vs-dense-models" },
       { id: "5-2", title: { en: "5.2 Routing Algorithms", ko: "5.2 라우팅 알고리즘" }, path: "/chapter-5/routing-algorithms" },
       { id: "5-3", title: { en: "5.3 Expert Parallelism", ko: "5.3 전문가 병렬화" }, path: "/chapter-5/expert-parallelism" },
       { id: "5-4", title: { en: "5.4 Collapsing & Load Balancing", ko: "5.4 전문가 붕괴와 부하 분산" }, path: "/chapter-5/collapsing-load-balancing" },

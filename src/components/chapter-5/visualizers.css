@@ -171,98 +171,61 @@
 
 /* MoERouterVisualizer */
 .moe-container {
-  padding: 1rem;
-  border: 1px solid #e2e8f0;
-  border-radius: 0.5rem;
-  background-color: #f9fafb;
-  margin-top: 1.5rem;
-  margin-bottom: 1.5rem;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  font-family: sans-serif;
+  padding: clamp(.75rem, 2vw, 1.25rem);
+  margin-block: 1.5rem;
+  border: 1px solid #c5d5d1;
+  border-radius: .6rem;
+  background: #f6f9f8;
+  color: #172e29;
+  font-family: inherit;
 }
 
-.moe-title {
-  font-size: 1.125rem;
-  font-weight: 700;
-  margin-bottom: 1rem;
-  color: #1e293b;
-}
+.moe-title { margin: 0; font-size: 1.2rem; }
+.moe-description, .moe-note { margin: .55rem 0; line-height: 1.5; }
+.moe-note { font-size: .87rem; color: #41574f; }
+.moe-controls { display: flex; flex-wrap: wrap; gap: .75rem 1.5rem; margin-block: 1rem; }
+.moe-group { min-width: 0; margin: 0; padding: 0; border: 0; }
+.moe-group legend { padding: 0; margin-bottom: .35rem; font-weight: 650; font-size: .9rem; }
 
-.moe-description {
-  font-size: 0.875rem;
-  color: #475569;
-  margin-bottom: 1rem;
-}
-
-.moe-token-group {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 2rem;
-  flex-wrap: wrap;
-}
-
-.moe-token {
-  padding: 0.25rem 0.75rem;
-  border-radius: 0.25rem;
-  transition: all 0.2s;
-  border: none;
+.moe-group button {
+  display: inline-block;
+  min-width: 2.65rem;
+  min-height: 2.65rem;
+  margin: 0 .3rem .15rem 0;
+  padding: .28rem .65rem;
+  color: #204f43;
+  background: white;
+  border: 1px solid #789c91;
+  border-radius: .35rem;
+  font: inherit;
+  font-size: .92rem;
   cursor: pointer;
-  font-size: 0.875rem;
 }
 
-.moe-token-inactive {
-  background-color: #dbeafe;
-  color: #1e40af;
-}
+.moe-group button[aria-pressed="true"] { color: white; background: #235746; border-color: #235746; font-weight: 700; }
+.moe-group:disabled button { cursor: default; }
+.moe-group button:focus-visible { outline: 3px solid #995522; outline-offset: 2px; }
+.moe-example { margin: .6rem 0; font-size: 1.05rem; }
+.moe-example strong { color: #235746; }
 
-.moe-token-inactive:hover {
-  background-color: #bfdbfe;
-}
+.moe-table { width: 100%; margin: .5rem 0; border-collapse: collapse; box-shadow: none; font-size: .9rem; font-variant-numeric: tabular-nums; }
+.moe-table th, .moe-table td { padding: .45rem clamp(.2rem, 1vw, .65rem); text-align: left; line-height: 1.35; }
+.moe-table tbody th { background: transparent; }
+.moe-table tr.moe-selected { background: #e5f0eb; }
+.moe-skipped { display: inline-block; color: #485b54; font-size: .78rem; }
 
-.moe-token-active {
-  background-color: #2563eb;
-  color: #ffffff;
+.moe-result {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: .2rem .6rem;
+  padding: .55rem .7rem;
+  color: white;
+  background: #235746;
+  border-radius: .3rem;
 }
-
-.moe-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
-}
-
-@media (min-width: 640px) {
-  .moe-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-}
-
-.moe-card {
-  padding: 1rem;
-  border-radius: 0.25rem;
-  border: 1px solid #e2e8f0;
-  text-align: center;
-  transition: all 0.3s;
-  background-color: #ffffff;
-  color: #94a3b8;
-}
-
-.moe-card-active {
-  background-color: #22c55e;
-  color: #ffffff;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  transform: scale(1.05);
-  border-color: #16a34a;
-  z-index: 10;
-}
-
-.moe-card-title {
-  font-weight: 700;
-}
-
-.moe-card-status {
-  font-size: 0.75rem;
-  margin-top: 0.25rem;
-}
+.moe-result strong { font-size: 1.2rem; font-variant-numeric: tabular-nums; }
 
 /* RoutingVisualizer */
 .rv-container {

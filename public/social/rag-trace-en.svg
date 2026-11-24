@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" xml:lang="en" role="img" aria-labelledby="card-title card-description">
+  <title id="card-title">Where did the 7-day refund rule go?</title>
+  <desc id="card-description">Fictional refund case. The current 7-day renewal rule in v3 ranked eighth among 20 retrieved passages. The model received only the top five and cited the old 30-day rule from v2.</desc>
+  <rect width="1200" height="630" fill="#f5f2eb"/>
+  <rect width="12" height="630" fill="#256257"/>
+  <g font-family="DejaVu Sans, sans-serif" fill="#192a30">
+    <text x="64" y="61" font-size="19" fill="#256257" font-weight="600" letter-spacing="1.6">FOUNDATION MODEL ENGINEERING</text>
+    <text x="1136" y="61" font-size="18" fill="#256257" text-anchor="end">14.6 / RAG FAILURE MODES</text>
+    <text x="61" y="142" font-size="51" font-weight="700">Where did the 7-day refund rule go?</text>
+    <text x="64" y="192" font-size="26" fill="#4e5d61">Fictional RAG incident · Annual plan renewal</text>
+
+    <rect x="64" y="232" width="666" height="280" rx="18" fill="#fff" stroke="#c5cec6"/>
+    <text x="90" y="287" font-size="33" font-weight="700">20 passages retrieved</text>
+    <text x="90" y="329" font-size="23" fill="#4e5d61">Both policy versions appeared in the results.</text>
+    <g transform="translate(0 355)" fill="#e8ece7" stroke="#a6b5ac">
+    <rect x="90" width="22" height="40" rx="3" fill="#4e6067" stroke="#4e6067"/>
+    <rect x="121" width="22" height="40" rx="3" fill="#4e6067" stroke="#4e6067"/>
+    <rect x="152" width="22" height="40" rx="3" fill="#4e6067" stroke="#4e6067"/>
+    <rect x="183" width="22" height="40" rx="3" fill="#4e6067" stroke="#4e6067"/>
+    <rect x="214" width="22" height="40" rx="3" fill="#4e6067" stroke="#4e6067"/>
+    <rect x="245" width="22" height="40" rx="3"/>
+    <rect x="276" width="22" height="40" rx="3"/>
+    <rect x="307" width="22" height="40" rx="3" fill="#d7ebe2" stroke="#256257" stroke-width="3"/>
+    <rect x="338" width="22" height="40" rx="3"/>
+    <rect x="369" width="22" height="40" rx="3"/>
+    <rect x="400" width="22" height="40" rx="3"/>
+    <rect x="431" width="22" height="40" rx="3"/>
+    <rect x="462" width="22" height="40" rx="3"/>
+    <rect x="493" width="22" height="40" rx="3"/>
+    <rect x="524" width="22" height="40" rx="3"/>
+    <rect x="555" width="22" height="40" rx="3"/>
+    <rect x="586" width="22" height="40" rx="3"/>
+    <rect x="617" width="22" height="40" rx="3"/>
+    <rect x="648" width="22" height="40" rx="3"/>
+    <rect x="679" width="22" height="40" rx="3"/>
+    </g>
+    <path d="M90 404v10h146v-10" fill="none" stroke="#4e6067" stroke-width="3"/>
+    <text x="90" y="455" font-size="25" font-weight="700" fill="#4e6067">Top 5 sent</text>
+    <path d="M318 404v42h23" fill="none" stroke="#256257" stroke-width="3"/>
+    <text x="354" y="455" font-size="24" font-weight="700" fill="#256257">Rank 8 · v3 omitted</text>
+
+    <rect x="754" y="232" width="382" height="280" rx="18" fill="#fff" stroke="#c5cec6"/>
+    <text x="780" y="279" font-size="21" fill="#4e5d61">Old v2 rule retained and cited</text>
+    <text x="778" y="350" font-size="68" font-weight="700" fill="#82491f">30 days</text>
+    <path d="M780 374h330" stroke="#c5cec6"/>
+    <text x="780" y="413" font-size="21" fill="#4e5d61">Current v3 renewal rule</text>
+    <text x="778" y="484" font-size="68" font-weight="700" fill="#256257">7 days</text>
+
+    <path d="M64 554h1072" stroke="#bbc8c1" stroke-width="2"/>
+    <text x="64" y="597" font-size="20" fill="#256257">Free online textbook · English / Korean</text>
+    <text x="1136" y="597" font-size="20" fill="#4e5d61" text-anchor="end">sungeuns.github.io</text>
+  </g>
+</svg>

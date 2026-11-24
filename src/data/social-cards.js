@@ -21,6 +21,16 @@ export const socialCards = {
       alt: '224 × 224픽셀 이미지 한 장, 14 × 14픽셀 패치, 프롬프트 32자리로 계산한 예제입니다. 패치별 투영은 디코더 288자리를, 리샘플링과 교차 어텐션은 디코더 32자리와 별도 시각 메모리 64슬롯을 사용합니다.',
     },
   },
+  '/chapter-14/rag-failure-modes-and-operational-design': {
+    en: {
+      image: '/social/rag-trace-en.png',
+      alt: 'Fictional refund case. The current 7-day renewal rule in v3 ranked eighth among 20 retrieved passages. The model received only the top five and cited the old 30-day rule from v2.',
+    },
+    ko: {
+      image: '/social/rag-trace-ko.png',
+      alt: '가상의 갱신 환불 사례입니다. 검색 후보 20개 중 현행 v3의 7일 규정은 8위였습니다. 모델은 상위 5개만 받아 그 안에 남은 v2의 옛 30일 규정을 인용했습니다.',
+    },
+  },
   '/chapter-17/experimental-design-and-uncertainty': {
     en: {
       image: '/social/paired-evaluation-en.png',

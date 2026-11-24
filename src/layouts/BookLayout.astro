@@ -3,6 +3,8 @@ import { chapters } from '../data/chapters.js';
 import { site } from '../data/site.js';
 import { searchDescriptions } from '../data/search-descriptions.js';
 import { socialCards } from '../data/social-cards.js';
+import modelSnapshot from '../data/commercial-model-snapshot.json';
+import { sharedLocaleFragments } from '../utils/locale-fragments.js';
 import { getBasePath, normalizePathname, stripBasePath, withBasePath, withPagePath } from '../utils/paths.js';
 import '../styles/book.css';
 
@@ -40,6 +42,7 @@ const homePath = getLocalePath('/', lang);
 const currentSub = chapters
   .flatMap((chapter) => chapter.subs)
   .find((sub) => currentPath === normalizePathname(getLocalePath(sub.path, lang)));
+const localeFragments = sharedLocaleFragments(currentSub?.path, modelSnapshot.models.map(model => model.id));
 const contentTitle = currentSub?.title?.[lang] || title;
 const pageTitle = isHomePage ? siteTitle : `${contentTitle} | ${siteTitle}`;
 const toHref = (pagePath) => withPagePath(pagePath, basePath);
@@ -221,7 +224,7 @@ if (currentIndex !== -1) {
             </a>
             <div class="dropdown" id="localeDropdown">
               <button class="dropbtn" id="localeButton" type="button" aria-haspopup="true" aria-expanded="false">{lang.toUpperCase()}</button>
-              <div class="dropdown-content" id="localeMenu">
+              <div class="dropdown-content" id="localeMenu" data-shared-fragments={JSON.stringify(localeFragments)}>
                 <a href={toHref(enTarget)}>English (EN)</a>
                 <a href={toHref(koTarget)}>Korean (KO)</a>
               </div>
@@ -275,11 +278,31 @@ if (currentIndex !== -1) {
     </div>
 
     <script>
+      import { localeHref } from '../utils/locale-fragments.js';
+
       const toggle = document.getElementById('menuToggle');
       const sidebar = document.getElementById('sidebar');
       const backdrop = document.getElementById('sidebarBackdrop');
       const localeDropdown = document.getElementById('localeDropdown');
       const localeButton = document.getElementById('localeButton');
+      const localeMenu = document.getElementById('localeMenu');
+      const sharedFragments: string[] = JSON.parse(localeMenu?.dataset.sharedFragments || '[]');
+      const localeLinks = [...(localeMenu?.querySelectorAll<HTMLAnchorElement>('a[href]') || [])]
+        .map(link => ({ link, baseHref: link.getAttribute('href') || '' }));
+      const updateLocaleLinks = () => {
+        localeLinks.forEach(({ link, baseHref }) => {
+          link.setAttribute('href', localeHref(baseHref, window.location.hash, sharedFragments));
+        });
+      };
+      // Update actual hrefs so copying a link or opening a new tab works too.
+      // Page-only hrefs remain a useful fallback when JavaScript is unavailable.
+      updateLocaleLinks();
+      window.addEventListener('hashchange', updateLocaleLinks);
+      window.addEventListener('popstate', updateLocaleLinks);
+      window.addEventListener('pageshow', updateLocaleLinks);
+      localeDropdown?.addEventListener('pointerenter', updateLocaleLinks);
+      localeDropdown?.addEventListener('focusin', updateLocaleLinks);
+      localeDropdown?.addEventListener('contextmenu', updateLocaleLinks);
 
       const isKo = document.documentElement.lang === 'ko';
       const mobile = window.matchMedia('(max-width: 900px)');
@@ -358,6 +381,7 @@ if (currentIndex !== -1) {
 
       if (localeDropdown && localeButton) {
         localeButton.addEventListener('click', () => {
+          updateLocaleLinks();
           const isOpen = localeDropdown.classList.toggle('open');
           localeButton.setAttribute('aria-expanded', String(isOpen));
         });

@@ -41,6 +41,67 @@ RAG는 생성 모델과 검색한 정보를 결합합니다 [[1]](#ref-1). 이�
 
 단계 사이의 경계도 측정합니다. **교육용으로 만든 질문 100개 예시** 에서 90개는 필요한 근거를 검색하고, 72개는 그 근거가 문맥 예산 안에 남으며, 60개는 근거가 뒷받침하는 정답으로 이어졌다고 합시다. 질문 단위 근거 적중률은 90%, 적중한 사례 중 근거 보존율은 72/90 = 80%, 근거를 보존한 사례 중 정답 비율은 60/72 ≈ 83.3%입니다. 최종 성공률은 90%가 아니라 60%입니다. 이 계산은 다른 경로로 성공한 사례가 없다는 가정에 따른 것이며, 모든 RAG 정확도에 적용되는 보편적인 분해식은 아닙니다. 여러 문서가 필요한 과제라면 관련 청크 하나가 아니라 *필요한 근거 전체* 가 확보됐는지도 봐야 합니다.
 
+<a id="trace-a-rag-answer"></a>
+
+### 고정된 청크 ID로 추적 기록 검사하기
+
+같은 오답 숫자라도 문제가 드러나는 경계는 다를 수 있습니다. 아래 예제를 실행하고 `ranking-selection`과 `context-packing`을 비교해 보세요. 둘 다 올바른 후보를 검색했지만, 두 번째만 재순위화의 선택 범위를 통과한 뒤에도 그 근거가 남아 있습니다. 최종 답변과 인용만 보관하면 이 차이가 보이지 않습니다.
+
+> **실행 가능한 진단 예제이며 RAG 구현은 아님:** Python 3으로 가상의 갱신 질문에 대한 추적 기록 여섯 개를 검사합니다. 원본의 사실과 필수 근거 ID는 사람이 표시한 값이며, 검색·재순위화·문맥 구성·생성의 출력은 직접 만든 입력 사례입니다. 외부 의존성, API 호출, 학습한 점수, 의미적 함의 검사는 없습니다. 남아 있는 ID 하나는 내용이 바뀌지 않은 청크 전체를 뜻합니다.
+
+```python
+# Python 3, standard library only. Authored traces; no model or network call.
+RENEWAL = "refund:v3:renewal"
+FIRST = "refund:v3:first-purchase"
+OLD = "refund:v2:renewal"
+# Human-labeled facts for this fictional question, not extracted semantics.
+chunks = {
+    RENEWAL: {"days": 7, "scope": "renewal", "current": True},
+    FIRST: {"days": 30, "scope": "first-purchase", "current": True},
+    OLD: {"days": 30, "scope": "renewal", "current": False},
+}
+required = {RENEWAL}
+
+def audit(candidates, selected, packed, answer_days, citation):
+    # selected is the reranker's cutoff; packed is the final intact context.
+    assert set(candidates) <= chunks.keys()
+    assert set(selected) <= set(candidates)
+    assert set(packed) <= set(selected)
+    for stage, ids in [("retrieval", candidates),
+                       ("ranking-selection", selected),
+                       ("context-packing", packed)]:
+        if not required <= set(ids):
+            return stage
+    if answer_days != chunks[RENEWAL]["days"]:
+        return "answer-value"
+    cited = chunks.get(citation)
+    supported = (citation in packed and cited is not None
+                 and cited["current"] and cited["scope"] == "renewal"
+                 and cited["days"] == answer_days)
+    return "pass" if supported else "citation-attribution"
+
+# Each trace stores candidate IDs, selected IDs, packed IDs, answer, citation.
+cases = {
+    "retrieval": ([FIRST, OLD], [FIRST], [FIRST], 30, FIRST),
+    "ranking-selection": ([RENEWAL, FIRST], [FIRST], [FIRST], 30, FIRST),
+    "context-packing": ([RENEWAL, FIRST], [RENEWAL, FIRST], [FIRST], 30, FIRST),
+    "answer-value": ([RENEWAL], [RENEWAL], [RENEWAL], 30, RENEWAL),
+    "citation-attribution": ([RENEWAL, FIRST], [RENEWAL, FIRST],
+                             [RENEWAL, FIRST], 7, FIRST),
+    "pass": ([RENEWAL], [RENEWAL], [RENEWAL], 7, RENEWAL),
+}
+for expected, trace in cases.items():
+    result = audit(*trace)
+    assert result == expected, (expected, result)
+    print(f"{result}: packed={trace[2]}, cited={trace[4]}")
+```
+
+실행하면 `retrieval`, `ranking-selection`, `context-packing`, `answer-value`, `citation-attribution`, `pass`와 함께 정확한 문맥·인용 ID가 출력됩니다. `answer-value`에서는 7일이라는 올바른 조항이 생성 모델에 전달됐지만 기록된 답은 30일입니다. `citation-attribution`에서는 답은 7일인데 최초 구매 조항을 인용합니다. 답의 숫자가 맞아도 출처를 잘못 연결한 것입니다. 이 사례의 인용을 `RENEWAL`로 바꾸면 검사를 통과합니다. 존재하는 청크에 연결하는 것만으로는 부족합니다.
+
+**이 검사로 단정할 수 없는 것:** 근거가 처음 사라진 경계는 관찰 결과이지 해당 구성 요소가 원인이라는 증명이 아닙니다. 수집 누락, 접근 필터, 잘못된 근거 라벨, 앞선 문서 버전 선택도 검색 누락을 만들 수 있습니다. 근거가 있는데 답이 틀리면 프롬프트·직렬화·생성·채점을 살펴봐야 하며, 모델 가중치만의 문제라고 분리할 수는 없습니다. 여러 결함이 함께 있을 수 있지만 이 검사기는 처음 실패한 조건만 반환합니다.
+
+실제 기록에서는 ID를 변경 불가능한 문서 개정판과 내용 해시에 연결하세요. 문맥 구성 뒤 실제로 남은 텍스트 범위도 기록해야 합니다. ID만 유지한 채 예외 조항을 잘라내면 이 간단한 검사를 속일 수 있습니다. 사람이 표시한 숫자 필드로 임의의 주장이 원문에서 도출되는지 판정할 수는 없으며, 필수 ID 라벨이 불완전하면 타당한 다른 근거를 오답으로 처리할 수도 있습니다. 이 검사는 앞서 설명한 개입 실험을 고르는 데 쓰고, 인용 원문을 확인한 뒤 수정 결과를 검증하세요.
+
 ## 3. 유사도 점수는 답이 맞을 확률이 아니다
 
 코사인 유사도 0.82는 정답일 확률 82%를 뜻하지 않습니다. 점수 분포는 임베딩 모델, 문서 집합, 질문 유형, 후보 필터에 따라 바뀝니다. 순위 모델이 출력하는 로짓도 보정되지 않았을 수 있습니다. 라벨이 있는 사례와 오답의 비용을 기준으로 임계값을 정한 뒤, 별도 평가셋에서 자동 처리율과 오류율을 측정합니다.
@@ -67,7 +128,7 @@ Self-RAG는 reflection token으로 검색과 비평 결정을 학습하며 [[3]]
 
 수정에는 실패한 질문, 허용한 원본 버전, 기대하는 근거, 수정 전후의 문맥 기록, 결과 답변이 함께 있어야 합니다. 평가 데이터를 나눌 때는 관련 질문과 원본 문서의 개정판을 같은 집단에 둡니다. 사고 사례를 바꿔 말한 질문을 “처음 보는” 출시 평가셋처럼 취급하지 않기 위해서입니다.
 
-갱신, 최초 구매, 날짜 누락, 버전 충돌, 권한 없는 문서, 의도적으로 근거가 없는 질문을 포함한 봉인 평가셋에서 변경 전후를 비교합니다. 정확도, 근거가 있는 답변, 답변 보류와 자동 처리율, 치명적 오류, 지연 시간, 비용을 유형별로 기록합니다. [프로덕션 평가와 출시 게이트](/ko/chapter-17/production-evaluation-and-release-gates)에서 설명한 대로 불확실성을 함께 보고 사전에 정한 출시 기준을 적용합니다. 이전 인덱스 스냅샷, 수집·필터 설정, 검색기·재순위 모델 버전, 프롬프트·모델 묶음을 보존해야 롤백할 때 일관된 파이프라인으로 돌아갈 수 있습니다.
+갱신, 최초 구매, 날짜 누락, 버전 충돌, 권한 없는 문서, 의도적으로 근거가 없는 질문을 포함한 봉인 평가셋에서 변경 전후를 비교합니다. 정확도, 근거가 있는 답변, 답변 보류와 자동 처리율, 치명적 오류, 지연 시간, 비용을 유형별로 기록합니다. [프로덕션 평가와 출시 게이트](../../chapter-17/production-evaluation-and-release-gates/)에서 설명한 대로 불확실성을 함께 보고 사전에 정한 출시 기준을 적용합니다. 이전 인덱스 스냅샷, 수집·필터 설정, 검색기·재순위 모델 버전, 프롬프트·모델 묶음을 보존해야 롤백할 때 일관된 파이프라인으로 돌아갈 수 있습니다.
 
 실제 디버깅 질문은 **“어느 경계에서 필요한 근거가 사라지거나 유효하지 않게 됐는가?”** 입니다. 이 질문에 답하면 “더 좋은 모델을 쓰자”보다 구체적인 수정안을 찾을 수 있습니다.
 

@@ -37,7 +37,7 @@
 
 ### **Chapter 5: Scaling Mixture of Experts (MoE)**
 
-* **5.1 Sparse vs Dense Models:** 파라미터 수와 연산량의 비동기화 전략.
+* **5.1 Sparse vs Dense Models:** Top-k 경로와 가중합을 계산하고, 토큰당 활성 가중치와 전체 가중치의 저장 공간을 구분하는 실습.
 * **5.2 Routing Algorithms:** Top-k routing, Noisy Top-k, Expert choice routing.
 * **5.3 Expert Parallelism:** 대규모 MoE 모델을 여러 GPU에 분산하는 기술.
 * **5.4 Collapsing & Load Balancing:** 특정 전문가에게 연산이 쏠리는 문제와 해결책(Auxiliary Loss).
