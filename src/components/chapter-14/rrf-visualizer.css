@@ -1,0 +1,49 @@
+.rrf-container {
+  box-sizing: border-box;
+  margin: 1.5rem 0;
+  padding: clamp(.75rem, 3vw, 1.5rem);
+  background: #f7f8fa;
+  color: #263546;
+  border: 1px solid #cbd3da;
+  border-radius: .6rem;
+}
+.rrf-container h3 { margin: 0; }
+.rrf-container .rrf-inputs, .rrf-controls {
+  display: grid;
+  gap: .75rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
+}
+.rrf-inputs > div { padding: .65rem; background: #fff; border: 1px solid #cbd3da; }
+.rrf-container .rrf-inputs ol, .rrf-container .rrf-ranking {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rrf-inputs ol { display: flex; flex-wrap: wrap; gap: .2rem .65rem; }
+.rrf-inputs li { font-variant-numeric: tabular-nums; }
+.rrf-inputs strong { font-size: .9rem; }
+.rrf-excluded { text-decoration: line-through; color: #5a6874; }
+.rrf-controls { margin: 1rem 0; }
+.rrf-controls label { display: flex; align-items: start; flex-direction: column; font-weight: 600; gap: .2rem; }
+.rrf-controls label:last-child { display: block; }
+.rrf-controls label span { white-space: nowrap; }
+.rrf-controls :is(input, select) { box-sizing: border-box; display: block; width: 100%; min-height: 2rem; margin: 0; font: inherit; }
+.rrf-controls :is(input, select):focus-visible { outline: 3px solid #684286; outline-offset: 2px; }
+.rrf-container .rrf-summary { margin: 1rem 0 .5rem; font-weight: 650; }
+.rrf-ranking > li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: .2rem .6rem;
+  border-top: 1px solid #cbd3da;
+  padding: .55rem 0;
+}
+.rrf-place, .rrf-total, .rrf-terms { font-variant-numeric: tabular-nums; }
+.rrf-place, .rrf-total { color: #56346d; }
+.rrf-terms { display: flex; gap: 0 .35rem; flex-wrap: wrap; color: #435362; font-size: .9rem; }
+.rrf-container .rrf-note { font-size: .88rem; margin: .65rem 0 0; }
+.rrf-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+@media (max-width: 560px) {
+  .rrf-ranking > li { grid-template-columns: auto minmax(0, 1fr); }
+  .rrf-total { grid-column: 2; }
+}

@@ -9,7 +9,9 @@ const lessonFragments = {
   '/chapter-11/vision-language-bridges': ['visual-token-budget'],
   '/chapter-12/kv-cache-management': ['kv-cache-capacity'],
   '/chapter-12/serving-policies-slos-and-fallbacks': ['streaming-latency-trace'],
+  '/chapter-14/advanced-retrieval': ['rrf-candidate-cutoff'],
   '/chapter-14/rag-failure-modes-and-operational-design': ['trace-a-rag-answer'],
+  '/chapter-17/commercial-model-benchmarks': ['long-context-cost'],
   '/chapter-17/experimental-design-and-uncertainty': ['release-lab'],
 };
 

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" xml:lang="ko" role="img" aria-labelledby="card-title card-description">
+<title id="card-title">404 장애 로그는 언제 1위가 될까?</title><desc id="card-description">가중치가 같고 k = 60인 역순위 융합 예제입니다. 검색기마다 한 건씩 받으면 A와 B가 공동 1위이고 장애 로그 C는 빠집니다. 두 건씩 받으면 양쪽에서 2위인 C가 2/62점을 얻어 1/61점인 A와 B를 앞섭니다.</desc>
+<rect width="1200" height="630" fill="#f5f2eb"/>
+<g font-family="Noto Sans CJK KR, DejaVu Sans, sans-serif" fill="#192a30">
+<text x="56" y="88" font-size="56" font-weight="700">404 장애 로그는 언제 1위가 될까?</text>
+<text x="60" y="145" font-size="32" fill="#4e5d61">역순위 융합 · 두 목록의 가중치는 동일 · k = 60</text>
+<g transform="translate(60 0)">
+<rect y="184" width="526" height="348" rx="18" fill="#fff" stroke="#c3cec8" stroke-width="2"/>
+<text x="26" y="238" font-size="37" font-weight="700">검색기마다 1건</text>
+<text x="26" y="306" font-size="29" fill="#4e5d61">밀집 검색</text><text x="260" y="306" font-size="40" font-weight="700">B</text><text x="26" y="364" font-size="29" fill="#4e5d61">BM25</text><text x="260" y="364" font-size="40" font-weight="700">A</text>
+<path d="M26 393H500" stroke="#c3cec8" stroke-width="2"/>
+<text x="26" y="456" font-size="48" font-weight="700" fill="#256257">A·B 공동 1위</text>
+<text x="26" y="504" font-size="32" fill="#4e5d61">두 목록에서 모두 빠진 C</text>
+</g><g transform="translate(614 0)">
+<rect y="184" width="526" height="348" rx="18" fill="#fff" stroke="#c3cec8" stroke-width="2"/>
+<text x="26" y="238" font-size="37" font-weight="700">검색기마다 2건</text>
+<text x="26" y="306" font-size="29" fill="#4e5d61">밀집 검색</text><text x="260" y="306" font-size="40" font-weight="700">B → C</text><text x="26" y="364" font-size="29" fill="#4e5d61">BM25</text><text x="260" y="364" font-size="40" font-weight="700">A → C</text>
+<path d="M26 393H500" stroke="#c3cec8" stroke-width="2"/>
+<text x="26" y="456" font-size="48" font-weight="700" fill="#256257">C가 1위</text>
+<text x="26" y="504" font-size="32" fill="#4e5d61">2/62 &gt; 1/61</text>
+</g>
+<path d="M60 557H1140" stroke="#bbc8c1" stroke-width="2"/>
+<text x="60" y="601" font-size="25" fill="#4e5d61">학습용 예제 · C는 404 장애 로그</text>
+<text x="1140" y="601" font-size="22" text-anchor="end" fill="#256257">파운데이션 모델 엔지니어링 · 14.3</text>
+</g></svg>

@@ -3,35 +3,13 @@ import './visualizers.css';
 import snapshot from '../../data/commercial-model-snapshot.json';
 
 type Locale = 'en' | 'ko';
-type CompanyKey =
-  | 'All'
-  | 'OpenAI'
-  | 'Google'
-  | 'Anthropic'
-  | 'Kimi'
-  | 'DeepSeek'
-  | 'Alibaba'
-  | 'MiniMax'
-  | 'Mistral'
-  | 'xAI'
-  | 'Z AI'
-  | 'Cohere'
-  | 'Reflection'
-  | 'Meta'
-  | 'NVIDIA'
-  | 'StepFun'
-  | 'InclusionAI'
-  | 'Abacus AI'
-  | 'Thinking Machines'
-  | 'Meituan'
-  | 'Agnes AI';
 type MetricKey = 'aaIndex' | 'contextK';
 type AxisMode = 'timeline' | 'price' | 'context' | 'taskCost';
 type ReleaseStatus = 'released' | 'preview' | 'announced' | 'restricted';
 
 type ModelSnapshot = {
   id: string;
-  company: Exclude<CompanyKey, 'All'>;
+  company: string;
   model: string;
   release: string;
   access: string;
@@ -138,7 +116,7 @@ const releaseStatusLabels: Record<Locale, Record<ReleaseStatus, string>> = {
   ko: { released: '공개 완료', preview: '프리뷰', announced: '가중치/리포트 공개 예정', restricted: '제한 공개' },
 };
 
-const companyOptions: CompanyKey[] = ['All', ...Array.from(new Set(MODEL_SNAPSHOTS.map(row => row.company))).sort()];
+const companyOptions = ['All', ...Array.from(new Set(MODEL_SNAPSHOTS.map(row => row.company))).sort()];
 
 const metricOptions: MetricKey[] = ['aaIndex', 'contextK'];
 
@@ -222,7 +200,7 @@ function formatSetting(setting: string, locale: Locale) {
 export default function CommercialModelBenchmarkExplorer({ locale = 'en' }: { locale?: Locale }) {
   const [metric, setMetric] = useState<MetricKey>('aaIndex');
   const [axisMode, setAxisMode] = useState<AxisMode>('taskCost');
-  const [company, setCompany] = useState<CompanyKey>('All');
+  const [company, setCompany] = useState('All');
   const [selectedId, setSelectedId] = useState('gpt-62-sol');
   const text = labels[locale];
 
@@ -261,7 +239,7 @@ export default function CommercialModelBenchmarkExplorer({ locale = 'en' }: { lo
   const xTicks = [0, 0.25, 0.5, 0.75, 1].map((ratio) => xMin + (xMax - xMin) * ratio);
   const yTicks = [0, 0.25, 0.5, 0.75, 1].map((ratio) => yMin + (yMax - yMin) * ratio);
 
-  const handleCompanyChange = (nextCompany: CompanyKey) => {
+  const handleCompanyChange = (nextCompany: string) => {
     setCompany(nextCompany);
     if (nextCompany === 'All' || selected.company === nextCompany) return;
     const latest = MODEL_SNAPSHOTS
@@ -300,7 +278,7 @@ export default function CommercialModelBenchmarkExplorer({ locale = 'en' }: { lo
           </label>
           <label>
             <span>{text.company}</span>
-            <select value={company} onChange={(event) => handleCompanyChange(event.target.value as CompanyKey)}>
+            <select value={company} onChange={(event) => handleCompanyChange(event.target.value)}>
               {companyOptions.map((option) => (
                 <option key={option} value={option}>
                   {option === 'All' ? text.all : option}

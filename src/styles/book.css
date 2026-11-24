@@ -7,7 +7,7 @@
   --sidebar-width: 290px;
 }
 body {
-  font-family: 'Pretendard', 'Noto Sans CJK', 'Noto Sans KR', 'Noto Sans JP', 'Noto Sans SC', sans-serif;
+  font-family: 'Pretendard', system-ui, 'Apple SD Gothic Neo', 'Malgun Gothic', 'Noto Sans CJK KR', 'Noto Sans CJK JP', 'Noto Sans CJK SC', sans-serif;
   background-color: var(--bg-color);
   color: var(--text-color);
   line-height: 1.8;
@@ -251,7 +251,7 @@ pre, .astro-code {
 }
 
 code {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
   font-size: 1.05rem;
   padding: 0.2rem 0.4rem;
   background-color: #eaebed;

@@ -5,12 +5,13 @@ lang: en
 ---
 
 import CommercialModelBenchmarkExplorer from '../../components/chapter-17/CommercialModelBenchmarkExplorer.tsx';
+import RequestCostExample from '../../components/chapter-17/RequestCostExample.astro';
 
 # 17.6 Commercial and Open-weight Model Benchmarks
 
 Suppose a model is cheaper per token but takes twice as many tool turns to finish your task. Has your system become cheaper? A leaderboard cannot answer that by itself. You need the evaluated configuration, the billing rules and a definition of a successful task.
 
-**As of 2026-11-24.** This static snapshot covers 43 selected profiles, including GLM-5.4, GPT-6.2 Astra/Sol and Gemini 4 Neon/Carbon. It is a checked selection, not a complete release feed. Dates in the table identify a launch, weight-publication milestone or checked artifact revision; they do not all mean first launch. Release evidence and independently measured results are separate records. Reverify the linked sources before a later publication or deployment.
+**As of 2026-11-24.** This static snapshot covers 45 selected profiles, including GLM-5.4, Ling-3.2-air, GPT-6.2 Astra/Sol and Gemini 4 Neon/Carbon. A row dates the event its source establishes, such as an API launch, publication of weights or a checkpoint revision. The last two numerical columns give the Artificial Analysis index and estimated cost per task where available. Reverify access and pricing before using a row to budget a deployment.
 
 ## 1. Know What the Number Measures
 
@@ -25,7 +26,9 @@ Copy a model name’s link to share its row, including access, evaluation settin
 | Model | Release / revision milestone | Access as of 2026-11-24 | AA reasoning configuration | Index | $/AA task | Sources |
 |---|---|---|---|---:|---:|---|
 | <a id="model-glm-54" href="#model-glm-54">GLM-5.4</a> | 2026-11-23 | released/hosted plans; pay-as-you-go API and weights planned | not reported | not reported | not reported | [[5]](#ref-5) [[6]](#ref-6) [[7]](#ref-7) |
+| <a id="model-ling-32-air" href="#model-ling-32-air">Ling-3.2-air</a> | 2026-11-23 | released/open-weight | reasoning; effort not reported | 23 | not reported | [[112]](#ref-112) [[113]](#ref-113) [[114]](#ref-114) |
 | <a id="model-inkling-2-mini" href="#model-inkling-2-mini">Inkling 2 Mini</a> | 2026-11-20 | released/open-weight | reasoning; effort not reported | 20 | 0.59 | [[108]](#ref-108) [[109]](#ref-109) |
+| <a id="model-tencent-hy4" href="#model-tencent-hy4">Tencent Hy4</a> | 2026-11-20 | released/open-weight + API | reasoning; effort not reported | 35 | 1.03 | [[118]](#ref-118) [[119]](#ref-119) [[120]](#ref-120) [[121]](#ref-121) [[122]](#ref-122) |
 | <a id="model-gemini-4-neon" href="#model-gemini-4-neon">Gemini 4 Neon</a> | 2026-11-18 | released/API-only | xhigh | 61 | 6.44 | [[11]](#ref-11) [[12]](#ref-12) [[99]](#ref-99) [[100]](#ref-100) |
 | <a id="model-gpt-62-astra" href="#model-gpt-62-astra">GPT-6.2 Astra</a> | 2026-11-17 | released/API-only | max | 62 | 4.00 | [[9]](#ref-9) [[94]](#ref-94) [[95]](#ref-95) |
 | <a id="model-gpt-62-sol" href="#model-gpt-62-sol">GPT-6.2 Sol</a> | 2026-11-17 | released/API-only | max | 57 | 1.01 | [[10]](#ref-10) [[94]](#ref-94) [[96]](#ref-96) |
@@ -70,7 +73,7 @@ Copy a model name’s link to share its row, including access, evaluation settin
 
 **Read the cost column carefully.** AA computes a weighted cost per task using its workload, provider prices and typical cache-hit assumptions. It is not a captured invoice for your deployment. Prices can change without changing the model's score. On this snapshot, AA's Argon and Carbon profiles use \$4/\$20 per million input/output tokens, while Google's official introductory rates are \$2/\$10 through November 30, with \$4/\$20 scheduled from December 1. The table preserves AA's published calculation; the token-price explorer uses the dated provider rates. Do not silently mix them [[2]](#ref-2) [[3]](#ref-3) [[4]](#ref-4).
 
-Several gaps are deliberate. The September DeepSeek entry and Bolt 74B lack a verified current index here. Ling's evaluated 1019 variant is not established as the listed checkpoint. Agnes's public configuration specifies 262,144 tokens, while the hosted AA profile advertises a different context contract; that score is not transferred to the local artifact. GLM-5.4 has no verified matching AA measurement in this snapshot. Wonder Full has an index but no verified public API task cost.
+Several gaps are deliberate. The September DeepSeek entry and Bolt 74B lack a verified current index here. Ling 3.1 Flash's evaluated 1019 variant is not established as the listed checkpoint. Agnes's public configuration specifies 262,144 tokens, while the hosted AA profile advertises a different context contract; that score is not transferred to the local artifact. GLM-5.4 has no verified matching AA measurement in this snapshot. Wonder Full has an index but no verified public API task cost.
 
 ## 3. What the Latest Releases Change
 
@@ -86,6 +89,8 @@ The disclosed design reuses a 28-layer block twice in a 750B-scale model, with g
 
 OpenAI released **GPT-6.2 Astra and Sol** on November 17. Both are hosted text/image-to-text models; public weights and architectural details are not supplied. The API separates a 1,050,000-token context window, 922,000 maximum input tokens and 128,000 maximum output tokens. Tool calling uses Responses, and reasoning effort `none` is rejected. Those contracts matter when migrating an existing agent [[8]](#ref-8) [[9]](#ref-9) [[10]](#ref-10).
 
+On November 23, OpenAI began rolling out a version of GPT-6.2 optimized for the **ChatGPT chat tab** to Plus, Pro, Business and Enterprise. The system card calls it “GPT-6.2 (November 23).” Suppose a support team sees better answers in chat and wants to reproduce them in its API service. The chat release notes do not identify a corresponding API checkpoint. Record the chat date, plan and tools, then rerun the same support cases against the API model ID and effort you deploy. The Astra and Sol scores above describe their respective API evaluation profiles. [[115]](#ref-115) [[116]](#ref-116)
+
 The chart's Max-effort profiles do not tell you the best effort for a latency-sensitive application. Compare at the effort and service tier you intend to operate. The cost example below shows why even a correctly copied base token price is insufficient.
 
 ### Gemini 4: shared context and dated prices
@@ -98,9 +103,15 @@ The chart's Max-effort profiles do not tell you the best effort for a latency-se
 
 **Qwen4-Max** is API-only in the checked sources. Its November 16 general release is distinct from its earlier preview. The protocol distinguishes readable reasoning summaries from encrypted reasoning history required by later tool turns; a summary is not a substitute for that history [[14]](#ref-14) [[15]](#ref-15).
 
+**Ling-3.2-air** illustrates what to check before replaying a benchmark locally. InclusionAI published MIT-licensed weights on November 23. The model card reports 124B total parameters and 5.5B active per token. AA links to those weights and reports 23 index points, with no task cost. Now try budgeting a 300,000-token prompt. The AA profile lists a one-million-token window, but the released configuration and the model card’s serving recipe specify 262,144. The prompt already exceeds that local limit before the first output token. The explorer leaves the context field empty so you can select a serving configuration before sizing the request. [[112]](#ref-112) [[113]](#ref-113) [[114]](#ref-114) [[117]](#ref-117)
+
+**Tencent Hy4** has two release dates that matter for deployment. On November 4, Tencent announced hosted access through TokenHub and other products. On November 20 it published the BF16 instruction-tuned checkpoint. AA links that checkpoint and reports 35 points and USD 1.03 per task for its evaluated service. A team downloading the weights must still estimate its own GPU hours. It must also check the Tencent Hy License. Section 10 describes when a model-as-a-service operator needs a separate written license and specifies an exception for solely internal use. [[118]](#ref-118) [[119]](#ref-119) [[120]](#ref-120) [[121]](#ref-121) [[122]](#ref-122)
+
 **LongCat-2.5, Agnes 2.5 Pro Theta and Inkling 2 Mini** broaden the public-weight options in the table. Downloadability permits inspection, but a local run still depends on the exact template, quantization, runtime, memory and license. Pin these artifacts before comparing them with a hosted profile. The same applies to Kimi K3.1 Pro and Mistral Large 4: public weights do not establish hosted/local equivalence, and Mistral's custom license includes conditions for Model-as-a-Service businesses [[16]](#ref-16) [[17]](#ref-17) [[18]](#ref-18).
 
 Text-agent indices also cannot rank the new speech, image or interactive-world systems. See [speech integration](/chapter-11/audio-and-speech-integration), [image generation](/chapter-11/image-diffusion-models) and [video/world models](/chapter-11/commercial-video-models) for their distinct interfaces and evaluation limits.
+
+<a id="long-context-cost"></a>
 
 ## 4. A Worked Cost Example: Crossing 272K Input Tokens
 
@@ -108,32 +119,11 @@ Text-agent indices also cannot rank the new speech, image or interactive-world s
 
 Imagine a repository review with 300,000 uncached input tokens and 10,000 billed output tokens. Using Sol's base rates gives \$0.70. Applying the long-context rule gives **\$1.35**. Astra's corresponding amount is **\$5.40**. Reducing the input can affect both token count and the applicable rate; whether it preserves quality needs a separate evaluation.
 
-**Scope of this example:** executable Python standard-library arithmetic for one uncached, Standard-tier text request. `billed_output_tokens` must include billed reasoning tokens, not just visible text. This is not a billing engine: it excludes caching, images, tools, other processing tiers and taxes. Use actual usage records for a real workload.
+Now compare two pairs of Sol requests. Each pair sends 544,000 input tokens and produces 20,000 billed output tokens in total. Split the input evenly and both calls qualify for the short rate: the pair costs **\$1.288000**. Move just one input token from the first call to the second, keeping output fixed at 10,000 each, and the pair costs **\$1.882002**. Applying the rate to the average request hides the extra \$0.594002. Price individual requests before you aggregate.
 
-```python
-from decimal import Decimal as D
+Run `python request_cost.py` to reproduce both totals with the standard library. The example uses uncached Standard-tier text requests. Count billed reasoning tokens in the output and keep cache, tool, image, tax and other processing-tier charges separate. [[9]](#ref-9) [[10]](#ref-10)
 
-RATES = {
-    "gpt-6.2-astra": (D("8"), D("40")),
-    "gpt-6.2-sol": (D("2"), D("10")),
-}
-
-def text_request_usd(model, input_tokens, billed_output_tokens):
-    if any(type(n) is not int or n < 0
-           for n in (input_tokens, billed_output_tokens)):
-        raise ValueError("Token counts must be nonnegative integers")
-    if input_tokens > 922_000 or billed_output_tokens > 128_000:
-        raise ValueError("Exceeds this example's documented model limits")
-    pin, pout = RATES[model]
-    if input_tokens > 272_000:
-        pin *= 2
-        pout *= D("1.5")
-    return (input_tokens * pin + billed_output_tokens * pout) / D("1000000")
-
-assert text_request_usd("gpt-6.2-sol", 300_000, 10_000) == D("1.35")
-assert text_request_usd("gpt-6.2-astra", 300_000, 10_000) == D("5.40")
-print(text_request_usd("gpt-6.2-sol", 300_000, 10_000))  # 1.35
-```
+<RequestCostExample lang="en" />
 
 For an agent, sum every request, including failed attempts and retries. Then divide by the number of successfully completed tasks. A lower price per request can still produce a higher cost per successful task.
 
@@ -165,7 +155,7 @@ Keep weights or API revision, tokenizer/template, quantization, runtime, generat
 
 <details>
 <summary>Quiz 3: Why not copy an AA score onto every checkpoint with a similar name?</summary>
-*Model revision, context contract, safeguards and serving configuration identify the evaluated system. The Ling and Agnes gaps illustrate why a family-name match alone is insufficient.*
+*Model revision, context contract, safeguards and serving configuration identify the evaluated system. The Ling 3.1 Flash and Agnes gaps illustrate why a family-name match alone is insufficient.*
 </details>
 
 <details>
@@ -296,3 +286,14 @@ Keep weights or API revision, tokenizer/template, quantization, runtime, generat
 109. <a id="ref-109"></a>Inkling 2 Mini: evaluated system profile. [Source](https://artificialanalysis.ai/models/inkling-2-mini).
 110. <a id="ref-110"></a>Muse Ember: primary documentation / artifact evidence. [Source](https://research.meta.ai/blog/muse-ember).
 111. <a id="ref-111"></a>Muse Ember: evaluated system profile. [Source](https://artificialanalysis.ai/models/muse-ember).
+112. <a id="ref-112"></a>[InclusionAI, Ling-3.2-air model card](https://huggingface.co/inclusionAI/Ling-3.2-air).
+113. <a id="ref-113"></a>[InclusionAI, checkpoint files at the November 23 revision](https://huggingface.co/inclusionAI/Ling-3.2-air/tree/1613b1a4dcc6aa0d8f346606628cd9a92061a525).
+114. <a id="ref-114"></a>[Artificial Analysis, Ling-3.2-air evaluation profile](https://artificialanalysis.ai/models/ling-3-2-air).
+115. <a id="ref-115"></a>[OpenAI, ChatGPT release notes for November 23](https://help.openai.com/en/articles/6825453-chatgpt-release-notes).
+116. <a id="ref-116"></a>[OpenAI, GPT-6.2 in ChatGPT system card](https://deploymentsafety.openai.com/gpt-6-2-chatgpt/gpt-6-2-chatgpt.pdf).
+117. <a id="ref-117"></a>[InclusionAI, Ling-3.2-air configuration at the November 23 revision](https://huggingface.co/inclusionAI/Ling-3.2-air/blob/1613b1a4dcc6aa0d8f346606628cd9a92061a525/config.json).
+118. <a id="ref-118"></a>[Tencent, November 4 Hy4 launch announcement](https://www.tencent.com/tencent-launches-hy4-joining-the-ranks-of-the-worlds-leading-open-source-ai-models/).
+119. <a id="ref-119"></a>[Tencent, Hy4 model card and checkpoint variants](https://huggingface.co/tencent/Hy4).
+120. <a id="ref-120"></a>[Tencent, files at the November 20 weight revision](https://huggingface.co/tencent/Hy4/tree/c10c0de5b6f850703fb0a90e65d1c32b558b9167).
+121. <a id="ref-121"></a>[Artificial Analysis, Tencent Hy4 evaluation profile](https://artificialanalysis.ai/models/tencent-hy4).
+122. <a id="ref-122"></a>[Tencent Hy License, section 10](https://huggingface.co/tencent/Hy4/blob/c10c0de5b6f850703fb0a90e65d1c32b558b9167/LICENSE).

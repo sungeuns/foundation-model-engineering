@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" xml:lang="en" role="img" aria-labelledby="card-title card-description">
+<title id="card-title">When does the 404 log rank first?</title><desc id="card-description">Constructed RRF example with equal weights and k = 60. One hit per retriever leaves A and B tied and the 404 log C absent. At two hits, both return C second. Its 2/62 beats the 1/61 from either first-place hit.</desc>
+<rect width="1200" height="630" fill="#f5f2eb"/>
+<g font-family="DejaVu Sans, sans-serif" fill="#192a30">
+<text x="56" y="88" font-size="56" font-weight="700">When does the 404 log rank first?</text>
+<text x="60" y="145" font-size="32" fill="#4e5d61">Reciprocal rank fusion · Equal weights · k = 60</text>
+<g transform="translate(60 0)">
+<rect y="184" width="526" height="348" rx="18" fill="#fff" stroke="#c3cec8" stroke-width="2"/>
+<text x="26" y="238" font-size="37" font-weight="700">1 hit per retriever</text>
+<text x="26" y="306" font-size="29" fill="#4e5d61">Dense</text><text x="260" y="306" font-size="40" font-weight="700">B</text><text x="26" y="364" font-size="29" fill="#4e5d61">BM25</text><text x="260" y="364" font-size="40" font-weight="700">A</text>
+<path d="M26 393H500" stroke="#c3cec8" stroke-width="2"/>
+<text x="26" y="456" font-size="48" font-weight="700" fill="#256257">A and B tie</text>
+<text x="26" y="504" font-size="32" fill="#4e5d61">C is outside both lists</text>
+</g><g transform="translate(614 0)">
+<rect y="184" width="526" height="348" rx="18" fill="#fff" stroke="#c3cec8" stroke-width="2"/>
+<text x="26" y="238" font-size="37" font-weight="700">2 hits per retriever</text>
+<text x="26" y="306" font-size="29" fill="#4e5d61">Dense</text><text x="260" y="306" font-size="40" font-weight="700">B → C</text><text x="26" y="364" font-size="29" fill="#4e5d61">BM25</text><text x="260" y="364" font-size="40" font-weight="700">A → C</text>
+<path d="M26 393H500" stroke="#c3cec8" stroke-width="2"/>
+<text x="26" y="456" font-size="48" font-weight="700" fill="#256257">C ranks first</text>
+<text x="26" y="504" font-size="32" fill="#4e5d61">2/62 &gt; 1/61</text>
+</g>
+<path d="M60 557H1140" stroke="#bbc8c1" stroke-width="2"/>
+<text x="60" y="601" font-size="25" fill="#4e5d61">Constructed example · C = the 404 log</text>
+<text x="1140" y="601" font-size="22" text-anchor="end" fill="#256257">Foundation Model Engineering · 14.3</text>
+</g></svg>

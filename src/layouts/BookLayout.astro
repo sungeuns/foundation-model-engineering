@@ -9,6 +9,7 @@ import modelSnapshot from '../data/commercial-model-snapshot.json';
 import { sharedLocaleFragments } from '../utils/locale-fragments.js';
 import { getManuscriptTimestamp } from '../utils/content-dates.js';
 import { getBasePath, normalizePathname, stripBasePath, withBasePath, withPagePath } from '../utils/paths.js';
+import 'katex/dist/katex.min.css';
 import '../styles/book.css';
 
 const { title, lang = 'en', description } = Astro.props.frontmatter || Astro.props;
@@ -192,13 +193,6 @@ if (currentIndex !== -1) {
     <script type="application/ld+json" set:html={JSON.stringify(structuredData)}></script>
     {!isHomePage && <script type="application/ld+json" set:html={JSON.stringify(breadcrumbData)}></script>}
     <link rel="icon" type="image/svg+xml" href={withBasePath('/favicon.svg', basePath)} />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Noto+Sans+JP:wght@300;400;500;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
-
   </head>
   <body>
     <a class="skip-link" href="#main-content">{isKo ? '본문으로 바로가기' : 'Skip to content'}</a>

@@ -333,7 +333,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 13.5 | `/chapter-13/advanced-quantization` | Inspected 2026-11-15 | 27a364583a8df29cdea48119e65184594a4c27ab9f8f22437778a330596d4a3b | b55fe9860d8cf44911a1bf6508787d6c865bfbdf548adff861878ccdf10fd691 |
 | 14.1 | `/chapter-14/lexical-to-semantic-search` | Inspected 2026-11-15 | 14b58e7aaf9ebe7914bbdc7dcb6de1b48eee71d893d20e58039dce184d55b9cd | 80983723429f788bbd719d8ac7ce5235fa89888ad9bd39aaf7ade613b32f7bb5 |
 | 14.2 | `/chapter-14/vector-indexing-and-db-solutions` | Inspected 2026-11-15 | 9cd80b8fa316923b8db209981294ea15b991ef55851416fb72455a0f12d92783 | 7f9a5d85dde7cb1d91679e64a99760562b8640003062593ded9483faf4af35c4 |
-| 14.3 | `/chapter-14/advanced-retrieval` | Inspected 2026-11-15 | 185df747656780bb8c6e973099be638e6be05625deb78c043f84cf0c73c321ba | 168067b55836a797166e7bb7e17a6c36b19c39950c10fb72f58814054b45dc05 |
+| 14.3 | `/chapter-14/advanced-retrieval` | Inspected 2026-11-25 | fd676e72ba325694456b7af3214c7177f84c17ccd0950d236a3a9a77792c3db3 | 98f84e5697250182a78d98cc7675ddd954df32eb3b3f36e315b581de4126155b |
 | 14.4 | `/chapter-14/rag-orchestration` | Inspected 2026-11-15 | c0415652280790508493840235e671903d660547416bc0bf3a73aba796039dd8 | 71eb996863fcf49fa62bc979e9167173c39fec0312811f89ac3095eca414b283 |
 | 14.5 | `/chapter-14/graphrag-and-ontology` | Inspected 2026-11-18 | 6a6bfb305a399dd26588c20193a52bd7fa3f5a127b5ef766c5f235a265bc2b6f | 0d8e5a5ead4ce3e1ec71dac8a9daf62373947617248ec254d23bffb65c670e50 |
 | 14.6 | `/chapter-14/rag-failure-modes-and-operational-design` | Inspected 2026-11-25 | c72856114d2cb84479aafdc3b30c627c29b5aef1166e94797f37f2694fdf81ac | 8087cbcf0189649a93b9ae5cd534eebce28cb31bbfdeed8359f7cd5d1d4583f5 |
@@ -354,7 +354,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 17.3 | `/chapter-17/elo-rating-and-leaderboards` | Inspected 2026-11-15 | 14f931df5e4641c576c1763d446b2c663d1f282abf438767e5a330d49b31a9b9 | 1e78f5819e5452372109f72327dad0f7831b3b9ce66750000c9378a906744c30 |
 | 17.4 | `/chapter-17/contamination-issues` | Mechanical only | 38a0cad52c7504804a57a8cc2deed94a3ac2fe68f7648809261abad1cf6b4fa5 | ad7b87426dcdde29f69a6921696a462359e7681d7d3b5ee5c11f3d80ec0a71c7 |
 | 17.5 | `/chapter-17/production-evaluation-and-release-gates` | Mechanical only | 60ddb6057d61fb19bdcbbed9bdb165b892e506e549dbe2b985e976bab1ef60f4 | 25e04ba235e259243c4df62f67886f8ae54283189fc0e32334e31f2e2a1d582e |
-| 17.6 | `/chapter-17/commercial-model-benchmarks` | Inspected 2026-11-25 | c1d386fd6f2d988a2289bad48c420d509161e4832cb5b7a16355c6de2b44462a | f05522b450f74c8cae22b8fd7d496bd357af9c079987eda4171ffb137d26839e |
+| 17.6 | `/chapter-17/commercial-model-benchmarks` | Inspected 2026-11-25 | 48a826465c1ec483f43c1ebdf0a5f7a7a77a581287fc7ac478621f885716869d | ff430c9ebfa914e0f2508ee6f51ce4efed099d192bedbba7267a3d596591f0e5 |
 | 17.7 | `/chapter-17/experimental-design-and-uncertainty` | Inspected 2026-11-25 | 15572b32598a7c488cd3930fe29d3dd54f54ebd5521257817788e039253cdf1d | 00b4ea5b58d4ec986eee7b8d4ed7fbb61749c27a0c9c1c77aced73a4d86f14b1 |
 | 18.1 | `/chapter-18/red-teaming` | Mechanical only | fa815b07490b4a1039a2e91d2c98e9f1f212d6479f534afa5f09020cc8f93598 | 5aa628372d20829e842ce6b3fad0133fee7c40e63c345e76f0b823b351df6f59 |
 | 18.2 | `/chapter-18/jailbreaking-and-defense` | Mechanical only | caff93966e1d1a925120d696bf37a09fa46cc63cd9378c818ac9f1d489348afd | 165303014a71dfa4ec8e28c0ac7f38712f5d97fbcd551510aa5539cb33c33ac1 |
@@ -594,3 +594,9 @@ The November 24 follow-up added native fragment links to all 43 model rows in bo
 ### 2026-11-25 Korean lesson titles
 
 The Korean title, frontmatter and former heading anchor were inspected on 37 lessons. In the inventory these title-only edits carry the current file hashes and the scope `Mechanical only`. The previous full-page inspection dates and hashes remain in this ledger at commit `d6eeb78`. Reversing the three title edits reproduced every original Korean manuscript byte for byte; the 37 English manuscripts also matched their previous hashes. This pass checked the headings and navigation rather than repeating those earlier technical reviews.
+
+### 2026-11-25 retrieval and model comparison
+
+The 14.3 revision follows the same ordered document IDs in the English and Korean prose, Python example and browser exercise. The candidate cutoff determines whether the incident log can be considered at all. Equal-weight fusion, the explicit dense-weight variation and tied ranks each have a calculation readers can reproduce.
+
+The 17.6 revision matches the November 23 Ling-3.2-air and November 20 Tencent Hy4 checkpoints with their evaluation profiles. The November 23 ChatGPT rollout has its own product note. The source-backed November 24 comparison now has 45 profiles from 19 providers, 34 matched AA indices and 32 reported task costs. The downloadable cost example shows why two pairs of calls with identical total token counts can have different prices. The current inventory hashes above cover both revised lesson pairs.

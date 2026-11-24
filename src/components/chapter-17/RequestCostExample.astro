@@ -1,0 +1,12 @@
+---
+import { readFileSync } from 'node:fs';
+import { Code } from 'astro:components';
+import { withBasePath } from '../../utils/paths.js';
+
+const path = '/labs/request_cost.py';
+const source = readFileSync(`public${path}`, 'utf8').trimEnd();
+const label = Astro.props.lang === 'ko' ? 'Python 예제 내려받기' : 'Download the Python example';
+---
+
+<p><a href={withBasePath(path)} download="request_cost.py">{label} (request_cost.py)</a></p>
+<Code code={source} lang="python" theme="github-dark" />

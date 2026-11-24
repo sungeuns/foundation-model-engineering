@@ -10,6 +10,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 import { socialCards } from '../src/data/social-cards.js';
+import { denseResults, bm25Results, fuseRanks } from '../src/components/chapter-14/rank-fusion.mjs';
 import { GiB, kvCapacity } from '../src/components/chapter-12/kv-capacity.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -109,6 +110,23 @@ const copy = {
       limit: '캐시 예산 24 GiB', axis: '조밀 KV 캐시 용량 (GiB)',
     },
   },
+  'rrf-cutoff': {
+    path: '/chapter-14/advanced-retrieval', number: '14.3', render: rrfCutoffSvg,
+    en: {
+      title: 'When does the 404 log rank first?',
+      setup: 'Reciprocal rank fusion · Equal weights · k = 60',
+      depths: ['1 hit per retriever', '2 hits per retriever'], dense: 'Dense',
+      first: ids => ids.length === 1 ? ids[0] + ' ranks first' : ids.join(' and ') + ' tie',
+      absence: 'C is outside both lists', note: 'Constructed example · C = the 404 log',
+    },
+    ko: {
+      title: '404 장애 로그는 언제 1위가 될까?',
+      setup: '역순위 융합 · 두 목록의 가중치는 동일 · k = 60',
+      depths: ['검색기마다 1건', '검색기마다 2건'], dense: '밀집 검색',
+      first: ids => ids.length === 1 ? ids[0] + '가 1위' : ids.join('·') + ' 공동 1위',
+      absence: '두 목록에서 모두 빠진 C', note: '학습용 예제 · C는 404 장애 로그',
+    },
+  },
   'streaming-latency': {
     path: '/chapter-12/serving-policies-slos-and-fallbacks', number: '12.6', render: streamingLatencySvg,
     figureDir: 'src/assets/images/chapter-12',
@@ -205,6 +223,38 @@ ${axis}
 <path d="M58 563H1144" stroke="#bbc8c1" stroke-width="2"/>
 ${text(labels.axis, 58, 603, 24, `fill="${muted}"`)}
 ${text(ko ? `파운데이션 모델 엔지니어링 · ${lesson.number}` : `Foundation Model Engineering · ${lesson.number}`, 1144, 603, 21, `text-anchor="end" fill="${teal}"`)}
+</g></svg>\n`;
+}
+
+function rrfCutoffSvg(lesson, lang, card) {
+  const c = lesson[lang], ko = lang === 'ko';
+  const panels = [1, 2].map((depth, i) => {
+    const x = 60 + i * 554;
+    const ranked = fuseRanks(denseResults, bm25Results, { depth, k: 60 });
+    const leaders = ranked.filter(row => row.place === 1).map(row => row.id);
+    return `<g transform="translate(${x} 0)">
+<rect y="184" width="526" height="348" rx="18" fill="#fff" stroke="#c3cec8" stroke-width="2"/>
+${text(c.depths[i], 26, 238, 37, 'font-weight="700"')}
+${[denseResults, bm25Results].map((ids, row) => {
+      const y = 306 + 58 * row;
+      return text(row ? 'BM25' : c.dense, 26, y, 29, `fill="${muted}"`) +
+        text(ids.slice(0, depth).join(' → '), 260, y, 40, 'font-weight="700"');
+    }).join('')}
+<path d="M26 393H500" stroke="#c3cec8" stroke-width="2"/>
+${text(c.first(leaders), 26, 456, 48, `font-weight="700" fill="${teal}"`)}
+${text(i ? '2/62 > 1/61' : c.absence, 26, 504, 32, `fill="${muted}"`)}
+</g>`;
+  }).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" xml:lang="${lang}" role="img" aria-labelledby="card-title card-description">
+<title id="card-title">${escape(c.title)}</title><desc id="card-description">${escape(card.alt)}</desc>
+<rect width="1200" height="630" fill="#f5f2eb"/>
+<g font-family="${ko ? 'Noto Sans CJK KR, DejaVu Sans' : 'DejaVu Sans'}, sans-serif" fill="${ink}">
+${text(c.title, 56, 88, 56, 'font-weight="700"')}
+${text(c.setup, 60, 145, 32, `fill="${muted}"`)}
+${panels}
+<path d="M60 557H1140" stroke="#bbc8c1" stroke-width="2"/>
+${text(c.note, 60, 601, 25, `fill="${muted}"`)}
+${text(ko ? '파운데이션 모델 엔지니어링 · ' + lesson.number : 'Foundation Model Engineering · ' + lesson.number, 1140, 601, 22, `text-anchor="end" fill="${teal}"`)}
 </g></svg>\n`;
 }
 

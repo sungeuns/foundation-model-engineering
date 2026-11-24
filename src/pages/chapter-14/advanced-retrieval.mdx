@@ -16,21 +16,46 @@ BM25 scores lexical matches with term-frequency saturation and document-length n
 
 SPLADE learns vocabulary-weighted sparse representations using a masked-language-model head, nonnegative log-saturated weights, pooling, and sparsity regularization [[1]](#ref-1). Expansion can assign weight to a term absent from the original passage. The actual sparsity and retrieval cost depend on the trained checkpoint and indexing policy; there is no universal “95% zero” guarantee. Audit postings volume, query expansion, latency, and relevance together.
 
+<a id="rrf-candidate-cutoff"></a>
+
 ## 2. Reciprocal Rank Fusion
 
-Dense similarity and BM25 scores use different scales. Score normalization or learned fusion can work, but calibration may shift across queries and domains. **Reciprocal rank fusion (RRF)** avoids directly comparing these score magnitudes [[2]](#ref-2):
+A support engineer searches for “404 error on legacy system X.” BM25 puts the manual with the exact product name first. The dense retriever prefers a guide about missing pages. Both put the same incident log second. Which document should the engineer open first?
+
+BM25 scores and embedding similarities use different scales. **Reciprocal rank fusion (RRF)** adds up contributions based on rank, which both retrievers supply [[2]](#ref-2). With a cutoff on each result list, let $M_d$ be the lists that retained document $d$ and $r_m(d)$ its one-based rank in list $m$. The fused score is
 
 $$
 \mathrm{RRF}(d)=\sum_{m\in M_d}\frac{1}{k+r_m(d)}.
 $$
 
-Here $d$ is a document, $M_d$ the retrieval lists containing it, $r_m(d)\ge1$ its rank in list $m$, and $k\ge0$ the smoothing constant. An absent document contributes **zero from that list**, rather than receiving an invented rank. Fix candidate depth and tie handling before comparing runs.
-
-The original study used $k=60$; this is a baseline, not a universal optimum. Increasing $k$ compresses rank differences, making repeated appearances relatively influential. It does not require a winner to occur in every list or guarantee that a bad hit cannot win. A document ranked first everywhere has score $|M|/(k+1)$; rank scores are not relevance probabilities.
-
-In the authored example, specialists have ranks $(1,4)$ and $(4,1)$, while the balanced candidate has $(2,2)$. They tie exactly at $k=2$. Below that value the specialists lead; above it the balanced candidate leads. The result follows from comparing $1/(k+1)+1/(k+4)$ with $2/(k+2)$.
+The score from a list that missed $d$ is zero. The original authors chose the smoothing constant $k=60$ in a pilot and kept it fixed in their experiments. Their rule gives every list equal weight. The optional dense weight in the example multiplies only the dense term, so you can try giving one retriever twice the influence.
 
 <RRFVisualizer client:load locale="en" />
+
+**Try the cutoff first.** Keep one hit per retriever. Only the manual A and the guide B reach fusion. The incident log C could answer the question perfectly and still be unavailable. Keep two hits instead. The log now gets one contribution from each retriever, and its single fused entry scores $2/62$ at $k=60$. Keeping four hits gives you five distinct documents from eight entries. Document D appears only in the dense list, in third place, so its score is $1/63+0$.
+
+**Then try the smoothing constant.** Keep all four hits and equal weights. A and B each score $1/(k+1)+1/(k+4)$, while C scores $2/(k+2)$. At $k=0$, A and B win. At $k=2$, all three tie at $0.5$. Above 2, C wins. Return to $k=60$ and double the dense weight. B just overtakes C because its dense hit is first, with $2/61+1/64>3/62$.
+
+The Python example takes ordered document IDs as input. Each retriever contributes at most once per ID. If the same ID occurs twice in one input, this implementation keeps its first occurrence and applies the cutoff to the distinct IDs. Use the same passage ID in both indexes so that the same passage can collect both contributions.
+
+```python
+def fuse(dense, bm25, depth=4, k=60, dense_weight=1):
+    scores = {}
+    for hits, weight in [(dense, dense_weight), (bm25, 1)]:
+        unique_ids = list(dict.fromkeys(hits))[:depth]
+        for rank, doc_id in enumerate(unique_ids, start=1):
+            scores[doc_id] = scores.get(doc_id, 0) + weight / (k + rank)
+    return sorted(scores.items(), key=lambda pair: (-pair[1], pair[0]))
+
+
+dense = ["B", "C", "D", "A"]
+bm25 = ["A", "C", "E", "B"]
+assert fuse(dense, bm25)[0] == ("C", 2 / 62)
+assert [doc for doc, _ in fuse(dense, bm25, depth=1)] == ["A", "B"]
+assert fuse(dense, bm25, dense_weight=2)[0][0] == "B"
+```
+
+These fixed lists show *how* fusion changes the answer order. To measure whether the new first result actually helps, judge passages for held-out support queries and compare BM25, dense search, and fusion on those same queries. Record recall at the candidate cutoff separately from relevance at the displayed rank. No choice of $k$ can recover a log that both retrievers missed.
 
 ## 3. Query Transformation Without Losing the Question
 
@@ -93,8 +118,8 @@ Apply tenant/ACL filters before evidence reaches the model, preserving authoriza
 </details>
 
 <details>
-<summary>Quiz 5: What happens at k = 2 in the interactive example?</summary>
-*The (1,4), (4,1), and (2,2) documents all score 0.5. An identifier tie-break affects display order, not relevance.*
+<summary>Quiz 5: With four hits per list and equal weights, who leads at k = 2?</summary>
+*A, B, and C share first place with 0.5. D and E each appear once in third place and receive 1/5. The ID determines the display order within each tie.*
 </details>
 
 ## References

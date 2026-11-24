@@ -71,8 +71,8 @@ export const searchDescriptions = {
     ko: '데이터 계보, 여러 표현 수준의 중복 탐지, 오염 제거 파이프라인과 비공개 평가셋으로 벤치마크 오염을 탐지하고 방지합니다.',
   },
   '/chapter-17/commercial-model-benchmarks': {
-    en: 'Compare 43 model profiles, including GLM-5.4, GPT-6.2 and Gemini 4. Explore dated benchmarks, release status and a Python cost example. Checked November 24, 2026.',
-    ko: 'GLM-5.4·GPT-6.2·Gemini 4를 포함한 43개 모델의 평가·비용·공개 상태를 비교하고 Python 비용 예제를 실행합니다. 2026년 11월 24일 확인 자료입니다.',
+    en: 'Compare 45 model profiles as of November 24, 2026. Check GLM-5.4 access, Ling-3.2-air weights and GPT-6.2 benchmarks, then price a long-context request in Python.',
+    ko: '2026년 11월 24일 기준 45개 모델을 비교합니다. GLM-5.4의 이용 경로, Ling-3.2-air의 공개 가중치, GPT-6.2의 평가 조건을 확인하고 Python으로 긴 문맥 요금을 계산하세요.',
   },
   '/chapter-18/red-teaming': {
     en: 'Explore LLM red teaming through threat taxonomies, automated testing, multi-turn attacks, and the gap between refusal behavior and robust safety.',
@@ -227,8 +227,8 @@ export const searchDescriptions = {
     ko: '정확 검색과 근사 최근접 이웃 인덱싱을 비교하며 HNSW, ScaNN, 메타데이터 필터링과 벡터 데이터베이스의 접근 제어를 살펴봅니다.',
   },
   '/chapter-14/advanced-retrieval': {
-    en: 'Improve retrieval pipelines with SPLADE, hybrid search, reciprocal rank fusion, HyDE, cross-encoder reranking, and ColBERT late interaction.',
-    ko: 'SPLADE, 하이브리드 검색, RRF, HyDE, 크로스 인코더 리랭킹과 ColBERT의 후기 상호작용으로 검색 파이프라인을 개선하는 방법을 배웁니다.',
+    en: 'Combine BM25 and dense search with reciprocal rank fusion. Change candidate depth, trace each document’s score and see which evidence reaches the reranker.',
+    ko: 'BM25와 밀집 검색의 순위를 RRF로 결합하세요. 각 검색기가 넘기는 후보 수를 바꾸면서 문서별 점수가 어떻게 변하고 어떤 근거가 재순위화 단계에 도달하는지 확인합니다.',
   },
   '/chapter-14/rag-orchestration': {
     en: 'Design RAG orchestration through query routing, context management, lost-in-the-middle effects, and agent-driven retrieval loops.',

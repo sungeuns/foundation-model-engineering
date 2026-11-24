@@ -41,6 +41,16 @@ export const socialCards = {
       alt: '두 예시 응답에서 토큰 다섯 개가 요청 후 100~500ms 사이에 도착합니다. 둘 다 첫 토큰 지연과 이후 평균 토큰 간격이 100ms입니다. A에서는 토큰이 100ms마다 도착합니다. B에서는 토큰 네 개가 10ms 간격으로 도착한 뒤 마지막 토큰까지 370ms를 기다립니다.',
     },
   },
+  '/chapter-14/advanced-retrieval': {
+    en: {
+      image: '/social/rrf-cutoff-en.png',
+      alt: 'Constructed RRF example with equal weights and k = 60. One hit per retriever leaves A and B tied and the 404 log C absent. At two hits, both return C second. Its 2/62 beats the 1/61 from either first-place hit.',
+    },
+    ko: {
+      image: '/social/rrf-cutoff-ko.png',
+      alt: '가중치가 같고 k = 60인 역순위 융합 예제입니다. 검색기마다 한 건씩 받으면 A와 B가 공동 1위이고 장애 로그 C는 빠집니다. 두 건씩 받으면 양쪽에서 2위인 C가 2/62점을 얻어 1/61점인 A와 B를 앞섭니다.',
+    },
+  },
   '/chapter-14/rag-failure-modes-and-operational-design': {
     en: {
       image: '/social/rag-trace-en.png',

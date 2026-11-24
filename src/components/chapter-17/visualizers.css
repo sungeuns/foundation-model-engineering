@@ -613,6 +613,7 @@ a[id^="model-"]:target {
 .provider-mistral { background: #ffedd5; color: #9a3412; }
 .provider-xai { background: #e2e8f0; color: #0f172a; }
 .provider-z-ai { background: #ccfbf1; color: #0f766e; }
+.provider-tencent { background: #cffafe; color: #155e75; }
 .provider-cohere { background: #ede9fe; color: #6d28d9; }
 
 .commercial-plot-layout {
@@ -713,6 +714,7 @@ a[id^="model-"]:target {
 .company-mistral { fill: #f97316; }
 .company-xai { fill: #334155; }
 .company-z-ai { fill: #0f766e; }
+.company-tencent { fill: #155e75; }
 .company-cohere { fill: #7c3aed; }
 
 .commercial-detail-panel {
