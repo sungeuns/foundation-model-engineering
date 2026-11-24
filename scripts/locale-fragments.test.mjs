@@ -44,6 +44,7 @@ test('shared exercise IDs belong to the same authored content in both translatio
     ['/chapter-7/tiny-decoder-lab', 'local-decoder-setup'],
     ['/chapter-10/dpo', 'reference-relative-example'],
     ['/chapter-12/kv-cache-management', 'kv-cache-capacity'],
+    ['/chapter-12/kv-cache-management', 'mixed-request-budget'],
     ['/chapter-12/speculative-decoding', 'speculative-sampling-example'],
     ['/chapter-12/serving-policies-slos-and-fallbacks', 'streaming-latency-trace'],
     ['/chapter-14/advanced-retrieval', 'rrf-candidate-cutoff'],

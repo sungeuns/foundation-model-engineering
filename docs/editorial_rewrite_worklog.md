@@ -320,7 +320,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 11.4 | `/chapter-11/image-diffusion-models` | Inspected 2026-11-24 | 5bb8bc33ff8adf86105e24018b03423e9f19e0d29739f64b843c0cbeadea05e8 | 308de426fdbc7b1c845a4d63be36b83988abe2eb36026affba1dd101194816b7 |
 | 11.5 | `/chapter-11/video-generation-foundations` | Inspected 2026-11-15 | b34544d0352be5feafdfc0d30ac23092d50edf3a3af5f3e4d37cc62531230c20 | 55c0488a07c962041cdbb0cdb945d18c8e136b23dba2aed6f6970f1c33cb4b4b |
 | 11.6 | `/chapter-11/commercial-video-models` | Mechanical only | 12216aad67ffc900bcfe437f20a7fcf9be618ccc5d617f698f4466ef15ff33cb | 6ee6e17876daa24bd17b8d709b7f541276019da545887510035b916819ae13a3 |
-| 12.1 | `/chapter-12/kv-cache-management` | Mechanical only | 328b3bb27441c78f0bf3b6998407c4da3374bb8ce00b98bc5d23d83d2706d51a | b01a4f5cb3560cb0e76c8555a6c65e08851bbf29f9df4ea6ea7f859a7cb8b9f7 |
+| 12.1 | `/chapter-12/kv-cache-management` | Inspected 2026-11-25 | ec127d530e0261df1f4302bec82f223602dd8550493d9641db109853c0fb908d | e910aed4aae80e3b25ae8c1a48a2dea019ef80f53f61eadce81a807abd5f7d4a |
 | 12.2 | `/chapter-12/paged-attention-vllm` | Mechanical only | 75d76b30c45ca44edbb56072df6f91209343c7d8ad5c69270cd6b6c4e9700dba | 2446c00fd36edfd6fda8dc1aaf18805e0de0af19615ad504eb4e9acac8356917 |
 | 12.3 | `/chapter-12/continuous-batching` | Inspected 2026-11-25 | 6ef1bf606cdf836c97703e2c9518a7f395f6c7242f614fb7e24f7a44ed301b28 | 4c9be3e2b663d439d85799a0f93db2a485fbca65eb945328789a188afd3b65db |
 | 12.4 | `/chapter-12/speculative-decoding` | Inspected 2026-11-25 | a5f93ea8411bab0fe68bf277224f8f19f111ac0f0fd73f6b4eda75739a8990b5 | 61986787b62bf6d99f59ab08a66d2ea6312e472faea94ded13c4a7d627d03cc4 |
@@ -617,3 +617,7 @@ Both editions of 4.4 show the source of the downloadable Python file. The CPU te
 
 Both editions of 12.4 now follow the same two-token distribution from proposal to rejection and replacement. The worked example accounts for the accepted mass, the residual, the biased result of redrawing from the original target and the case of no rejections. The cost example states its independence and stopping assumptions. The tree-decoding example was checked against the authors’ September preprint.
 The Python example was checked over 225 pairs of three-token distributions, every possible rejection depth in a three-token chain, the all-accepted case and trailing zero-probability tokens at the upper random-number boundary.
+
+### 2026-11-25 mixed-length KV caching
+
+Both editions of 12.1 now count the same causal query/key pairs across two decode steps and follow nine unequal-length requests through prefill, reserved output and an over-budget case. The printed PyTorch examples ran on CPU. Each localized workbook was recalculated in LibreOffice against 15 cases including exact fit, zero output, invalid input and a changed cache geometry. The linked SmolLM2 notebook measures padding bytes and compares cached logits with recomputation. The current 12.1 hashes record this review.

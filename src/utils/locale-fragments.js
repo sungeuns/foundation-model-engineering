@@ -11,7 +11,7 @@ const lessonFragments = {
   '/chapter-7/tiny-decoder-lab': ['decoder-copy-trace', 'local-decoder-setup'],
   '/chapter-10/dpo': ['reference-relative-example'],
   '/chapter-11/vision-language-bridges': ['visual-token-budget'],
-  '/chapter-12/kv-cache-management': ['kv-cache-capacity', 'kv-calculator'],
+  '/chapter-12/kv-cache-management': ['kv-cache-capacity', 'kv-calculator', 'mixed-request-budget'],
   '/chapter-12/speculative-decoding': ['speculative-sampling-example'],
   '/chapter-12/serving-policies-slos-and-fallbacks': ['streaming-latency-trace'],
   '/chapter-14/advanced-retrieval': ['rrf-candidate-cutoff'],

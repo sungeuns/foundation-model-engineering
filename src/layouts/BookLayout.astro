@@ -315,6 +315,11 @@ if (currentIndex !== -1) {
               <a href={githubUrl}>{isKo ? 'GitHub에서 Star로 책 저장하기' : 'Save the book with a GitHub star'}</a>
               {' · '}<a href={correctionUrl.toString()}>{isKo ? '수정 제안하기' : 'Suggest a correction'}</a>
             </p>
+            {currentSub && (
+              <noscript><p><a href={`https://raw.githubusercontent.com/sungeuns/foundation-model-engineering/main/src/pages${currentPath}.mdx`}>
+                {isKo ? '수식과 코드를 복사할 수 있는 이 절의 원고' : 'Chapter source with copyable LaTeX and code'}
+              </a></p></noscript>
+            )}
             <p><a href={feedPath}>{isKo ? '최근 수정한 장 구독하기 (RSS)' : 'Subscribe to chapter edits (RSS)'}</a></p>
             <p>{isKo ? '저자: ' : 'Created by '}<strong><a href="https://www.linkedin.com/in/sungeuns2" target="_blank" rel="noopener noreferrer">Seongeun So</a></strong></p>
             <small>{isKo ? 'AI의 도움을 받아 제작했습니다.' : 'Developed with AI assistance'}</small>
@@ -325,7 +330,10 @@ if (currentIndex !== -1) {
 
     <script>
       import { setupContentsSearch } from '../utils/contents-search';
+      import { copyBookMath } from '../utils/copy-book-math';
       import { localeHref } from '../utils/locale-fragments.js';
+
+      if (document.querySelector('main .katex')) document.addEventListener('copy', copyBookMath);
 
       const toggle = document.getElementById('menuToggle');
       const sidebar = document.getElementById('sidebar');

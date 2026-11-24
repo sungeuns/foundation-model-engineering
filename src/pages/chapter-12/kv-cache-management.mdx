@@ -4,6 +4,7 @@ title: "12.1 KV Cache: How It Works and Memory Use"
 lang: en
 ---
 
+import { withBasePath } from '../../utils/paths.js';
 import KVCacheCalculator from '../../components/chapter-12/KVCacheCalculator.tsx';
 
 # 12.1 KV Cache: How It Works and Memory Use
@@ -16,7 +17,7 @@ For example, after processing a four-token prompt, the model can reuse those fou
 
 ## 1. What the Cache Actually Saves
 
-At layer $l$, attention projects token state $x_t$ into
+At layer $l$, the matrices $W_Q$, $W_K$ and $W_V$ project the state $x_t$ of token $t$ into a query, key and value
 
 $$
 q_t=x_tW_Q,\qquad k_t=x_tW_K,\qquad v_t=x_tW_V.
@@ -30,7 +31,7 @@ o_{t+1}=\operatorname{softmax}\left(
 \right)V_{\le t+1},
 $$
 
-where $d_h$ is head dimension and $M$ is a causal or padding mask.
+Here $d_h$ is the head dimension, $K_{\le t+1}$ and $V_{\le t+1}$ include the new token, and $M$ masks positions the query cannot read.
 
 ### Why Cache K and V, but Not Q?
 
@@ -38,7 +39,9 @@ The current query asks which earlier positions matter for the current output. Fu
 
 Model weights are shared across requests; KV state depends on the processed token sequence. KV caching also differs from saving a completed answer: a new continuation still requires model computation. Sharing state between requests needs a compatible artifact configuration and an exactly reusable prefix, not merely similar text.
 
-Complexity needs careful wording. Without a cache, decode step $t$ reruns a length-$t$ forward pass: self-attention score work is $O(t^2)$. Summed across $N$ newly generated tokens, that attention work is $O(N^3)$, while projections and MLP work sum to $O(N^2)$. With a cache, attention at step $t$ is $O(t)$, so its total is $O(N^2)$. These expressions suppress model width and batch dimensions; wall-clock speed is usually governed by memory traffic and kernel utilization, not asymptotic notation alone.
+Start with four prompt tokens. Process a fifth token, then a sixth. With a cache, the two new queries read five and six keys respectively, for **11 query–key pairs** in one attention head. Recompute the whole sequence each time and the five-token pass covers $1+2+3+4+5=15$ pairs. The six-token pass covers another 21, for **36 pairs**. Both counts exclude the initial prefill and count only pairs the causal mask permits.
+
+For a prompt of length $P$ followed by $N$ single-token updates, cached attention reads $NP+N(N+1)/2$ pairs per head. At fixed $P$, this grows as $O(N^2)$. Recomputing all causal rows on every update takes $O(N^3)$ attention work and repeats token projections and MLP work for a total of $O(N^2)$. These counts describe the computation. Measured latency also depends on memory bandwidth and the kernel.
 
 ## 2. Capacity Model
 
@@ -50,7 +53,7 @@ $$
 
 where $B$ is concurrent sequences, $S$ cached tokens per sequence, $L$ layers, $H_{KV}$ KV heads, $d_h$ values per head, and $p$ bytes per value. The factor two accounts for keys and values.
 
-For heterogeneous traffic, replace $BS$ with actual allocated token count $\sum_i S_i^{\text{allocated}}$. Padding, block metadata, allocator slack, temporary workspaces, speculative branches, beam hypotheses, and tensor-parallel replication or sharding are separate costs.
+For requests of different lengths, sum the token positions they occupy. Count shared blocks once. To estimate physical allocation, include slots lost to padding or block rounding. Also account for block metadata, workspace, extra speculative branches or beams, and the actual split or replication across devices.
 
 For 32 sequences, 8,192 tokens each, 80 layers, 8 KV heads, $d_h=128$, and BF16:
 
@@ -76,6 +79,22 @@ Now admit nine requests whose prompts are already 8,192 tokens long and allow ea
 [Open the calculator with nine requests](?kv=1&batch=9&sequence=8192&generated=2048&layers=80&heads=8&dimension=128&precision=2&budget=24#kv-calculator). After changing the inputs, copy the link below the calculator to share the same workload and memory budget. Prompt caching leaves 1.5 GiB free. Before looking at the maximum-length result, predict how much extra memory the pool would need if every request added 2,048 tokens. To try a different budget, you can enter total memory, weights and other reservations for the same pool. For example, 80 GiB total minus 48 GiB of weights and 8 GiB reserved for other costs leaves 24 GiB for KV.
 
 <KVCacheCalculator client:load lang="en" />
+
+<a id="mixed-request-budget"></a>
+
+### What if the requests have different lengths?
+
+Keep the 24 GiB pool, but give it five long prompts and four short ones at the same time. Each token still costs 320 KiB. Add the prompt and output allowance for each request, then sum across the queue.
+
+| Request group | Count | Prompt per request | Output cap per request | KV for prompts | KV reserved through the caps |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Long | 5 | 8,192 tokens | 2,048 tokens | 12.5 GiB | 15.625 GiB |
+| Short | 4 | 4,096 tokens | 1,024 tokens | 5 GiB | 6.25 GiB |
+| Total | 9 | | | **17.5 GiB** | **21.875 GiB** |
+
+Raise the output cap of just **one** long request from 2,048 to 12,288 tokens. Its prompt has not changed, so the prompts still use 17.5 GiB. The extra 10,240 token positions need 3.125 GiB, bringing the reservation to **25 GiB**. The pool is **1 GiB short** even though it received the same nine prompts.
+
+<a href={withBasePath('/labs/kv-queue-en.xlsx')} download="kv-queue-en.xlsx">Download the mixed-request KV workbook (XLSX)</a>. It starts with nine equal-length requests. Edit the prompt and output cap in each row to reproduce the table or model a queue of up to 32 requests. The calculation reserves KV payload as if every request reached its cap at the same time. Actual allocation also depends on completion times, prefix sharing and [block rounding](/chapter-12/paged-attention-vllm).
 
 ## 3. Reducing KV Width
 
@@ -107,7 +126,7 @@ The DeepSeek-V2 report states a 93.3% KV-cache reduction and 5.76-times maximum 
 
 FP8 storage halves dense payload relative to FP16/BF16; four-bit storage quarters it. Capacity gains are deterministic, but latency and quality gains are not. A serving engine may spend instructions converting values, calculating scales, or moving metadata. Workloads that are not KV-bandwidth-bound may see little speedup.
 
-Quantization also changes the numerical contract. Scale granularity, calibration data, format such as E4M3 versus E5M2, outliers, and accumulation precision matter. **As of 2026-11-18,** vLLM's documentation recommends estimating scales with a calibration dataset [[3]](#ref-3). Workload accuracy still needs its own evaluation.
+Quantization also changes the numerical contract. Scale granularity, calibration data, format such as E4M3 versus E5M2, outliers, and accumulation precision matter. **As of 2026-11-25,** vLLM's documentation recommends estimating scales with a calibration dataset [[3]](#ref-3). Workload accuracy still needs its own evaluation.
 
 A sound rollout compares:
 
@@ -201,11 +220,13 @@ torch.testing.assert_close(changed_out[:, :5], full[:, :5])
 print("Full, token-wise, and chunked results agree; causality holds.")
 ~~~
 
-This example was smoke-tested on PyTorch 2.15.0 CPU. **API verification as of 2026-11-18:** PyTorch documents the boolean-mask convention and the upper-left causal alignment used when the attention matrix is not square [[7]](#ref-7). For a cached chunk, global query positions start at `past_tokens`; the explicit mask above encodes that offset. Extend the checks to padding, RoPE offsets, eviction, and each serving dtype before adapting the idea to a real engine.
+The example was tested with PyTorch 2.15.0 on CPU. **API verification as of 2026-11-25:** PyTorch documents the boolean-mask convention and the upper-left causal alignment used when the attention matrix is not square [[7]](#ref-7). For a cached chunk, global query positions start at `past_tokens`; the explicit mask above encodes that offset. Extend the checks to padding, RoPE offsets, eviction, and each serving dtype before adapting the idea to a real engine.
+
+To measure the padding cost on a real checkpoint, run the [CPU notebook for SmolLM2-135M](https://github.com/sungeuns/cookbook/blob/4640bbf5e5275380cf6a665e049378db30ae6d29/notebooks/en/measure_kv_cache_payload.ipynb). It puts a three-token prompt and an eleven-token prompt in the same dense batch. The eight padding positions account for 368,640 bytes of key/value tensors. The notebook then feeds four more tokens per request, measures the cache after each forward pass and checks the next-token logits against full recomputation.
 
 ## 6. Production Cache Contract
 
-A production engine preallocates blocks and writes new KV rows in place. PagedAttention applies virtual-memory-style block mapping so sequences do not require one contiguous allocation and blocks can be shared for common prefixes [[4]](#ref-4). The next section develops that allocator.
+An engine with a paged cache can reserve blocks and write new KV rows in place. PagedAttention applies virtual-memory-style block mapping so sequences do not require one contiguous allocation and blocks can be shared for common prefixes [[4]](#ref-4). The next section develops that allocator.
 
 Before launch, record:
 
@@ -215,16 +236,16 @@ Before launch, record:
 - **Failure policy:** stop admission or shed low-priority work before allocation failure; roll back a format when quality slices regress or latency tails exceed the declared window.
 - **Recovery:** verify token continuation after preemption or migration; do not assume a serialized KV tensor is portable across model or kernel revisions.
 
-## 7. Takeaway
-
-KV caching exchanges redundant computation for persistent memory traffic. MQA/GQA/MLA reduce width, lower precision reduces bytes per value, and paged allocation reduces waste. None is an isolated switch: quality, kernels, scheduling, and request-length distribution decide whether a smaller cache becomes a faster, reliable service.
-
 ## Architecture-Specific Cache State: The October Evidence
 
 **As of 2026-10-13.** DeepSeek V4.1 Flash's report gives a global HBM KV payload of **890 bytes per token**, using cross-layer reuse and FP4 cache storage [[5]](#ref-5). This is not the total memory of a request. Weights, local-window state, recurrent/lookup state where present, scales and allocator metadata, activations, workspaces, and speculative branches need separate accounting. Do not replace every architecture's cache estimate with this one model's reported payload.
 
 A September GLM-5.3-Flash integration study found that a successful external cache transfer could still restore a state inconsistent with the scheduler's credited token position. Its repaired serial experiments compare continuations against a modified recomputation control; the result is confined to the tested revision and configuration [[6]](#ref-6). This suggests a practical recovery contract: checkpoint **all** attention/recurrent state at the same logical prefix, verify the effective tail token and per-rank numerical configuration, and compare continuation logits or tokens against cold recomputation. A cache-hit counter alone does not validate recovery. Add concurrency, partial hits, eviction, and migration tests before extrapolating a serial repair to production.
 
+
+## 7. Takeaway
+
+A capacity review needs three numbers from different places. Get the bytes per token from the architecture and cache format, the token counts from the active requests, and the free KV budget from the serving pool. Compare the estimate with allocated blocks as requests arrive and finish. If the estimate fits but the allocator runs out of space, the difference tells you where to look next.
 
 ## Quizzes
 
@@ -234,8 +255,8 @@ A September GLM-5.3-Flash integration study found that a successful external cac
 </details>
 
 <details>
-<summary>Quiz 2: Why can equal logical token counts require different cache capacity?</summary>
-*Block rounding, length variance, speculative branches, padding, prefix sharing, replication, and fragmentation change allocated tokens and overhead.*
+<summary>Quiz 2: With 16-token blocks and no sharing, how many slots do two 16-token requests occupy? What if the same 32 tokens are split 1 and 31?</summary>
+*Two 16-token requests need two blocks, or 32 slots. The one-token request needs one block and the 31-token request needs two. The same 32 useful tokens now occupy 48 slots. Round each request separately when the blocks cannot be shared.*
 </details>
 
 <details>
