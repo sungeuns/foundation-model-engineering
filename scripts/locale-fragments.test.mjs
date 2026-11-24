@@ -43,6 +43,7 @@ test('shared exercise IDs belong to the same authored content in both translatio
     ['/chapter-4/hybrid-prefix-lm', 'prefix-mask-test'],
     ['/chapter-7/tiny-decoder-lab', 'decoder-copy-trace'],
     ['/chapter-7/tiny-decoder-lab', 'local-decoder-setup'],
+    ['/chapter-8/continued-pretraining-and-domain-adaptation', 'token-mixture-example'],
     ['/chapter-10/dpo', 'reference-relative-example'],
     ['/chapter-12/kv-cache-management', 'kv-cache-capacity'],
     ['/chapter-12/kv-cache-management', 'mixed-request-budget'],

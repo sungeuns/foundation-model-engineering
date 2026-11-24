@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -59,4 +61,24 @@ test('continued pre-training is registered and Chapter 9 cross-links instead of 
   assert.ok(koreanSynthetic.includes(`/ko${route}`));
   assert.doesNotMatch(englishSynthetic, /Enterprise Platforms.*OpenAI.*Anthropic.*Google/s);
   assert.doesNotMatch(koreanSynthetic, /엔터프라이즈 플랫폼.*OpenAI.*Anthropic.*Google/s);
+});
+
+test('the downloadable exposure audit distinguishes repeat visits from contributing documents', t => {
+  const script = path.join(ROOT, 'public/labs/token_exposure.py');
+  const audit = (...args) => execFileSync('python3', [script, ...args], { encoding: 'utf8' }).trimEnd().split('\n');
+  assert.deepEqual(audit().slice(1), [
+    'one_pass,domain,80,80,32000,28.6',
+    'one_pass,replay,20,20,80000,71.4',
+    'repeat_domain,domain,160,80,64000,57.1',
+    'repeat_domain,replay,12,12,48000,42.9',
+  ]);
+
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'fme-token-exposure-'));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const visits = path.join(directory, 'pilot.csv');
+  fs.writeFileSync(visits, 'source,document_id,loss_targets\ndomain,1,5\ndomain,1,7\ndomain,2,0\nreplay,1,12\n');
+  assert.deepEqual(audit(visits).slice(1), [
+    'pilot,domain,3,1,12,50.0',
+    'pilot,replay,1,1,12,50.0',
+  ]);
 });

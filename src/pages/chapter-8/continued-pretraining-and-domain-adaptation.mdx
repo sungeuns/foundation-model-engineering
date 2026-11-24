@@ -4,21 +4,23 @@ title: 8.5 Continued Pre-training & Domain Adaptation
 lang: en
 ---
 
+import { withBasePath } from '../../utils/paths.js';
+
 # 8.5 Continued Pre-training & Domain Adaptation
 
-Pre-training from random initialization is not the only way to change what a language model can represent. **Continued pre-training (CPT)** resumes the self-supervised next-token objective from an existing checkpoint, usually on a new domain, language, time period, or data mixture. It can be far cheaper than training a new foundation model, but it is still a training-system project: the data lineage, optimizer trajectory, tokenizer contract, distributed checkpoint, and regression gates matter as much as the loss curve.
+**Continued pre-training (CPT)** resumes a model's pre-training objective from an existing checkpoint. For a causal language model, that means predicting the next token in unlabeled text. If you are choosing a training mixture, [compare one pass with two passes through the same 80 work orders](#token-mixture-example).
 
-The useful mental model is not “CPT teaches knowledge and SFT teaches behavior.” That is only a heuristic. CPT changes the model's token distribution and representations; SFT can also teach factual patterns, and retrieval can supply changing facts without changing weights. The engineering question is which intervention produces the required behavior with the least irreversible risk.
+An equipment repair record says `OUT P17 / IN P19`. A technician asks which part is now installed. The assistant answers “P17.” Before training on a million repair records, give the model the right record and its notation key. In this shop, `OUT` marks the part removed and `IN` marks the replacement. What happens to the answer?
 
 ## Decision Gate: CPT, RAG, or SFT?
 
-Start from the failure observed on a private held-out set, not from the technique you want to deploy.
+If the model now picks P19, start with retrieval-augmented generation (RAG) and check whether retrieval supplies both pieces of evidence on unseen work orders. If it picks P19 but keeps putting it in the wrong output field, test a labeled example and then supervised fine-tuning (SFT). CPT becomes worth testing if the model still misreads the shorthand across many unseen orders after it sees relevant context and examples, and you have representative records to train on.
 
 | Observed gap | First intervention to test | Why | Escalate to CPT when |
 | :--- | :--- | :--- | :--- |
 | Facts change frequently or must be cited | Retrieval-augmented generation (RAG) | Updates are reversible and sources remain inspectable | The model cannot parse, rank, or synthesize the domain text even with good retrieval |
 | Output format, tool protocol, tone, or task policy is wrong | SFT | Directly supervises the desired input-output behavior | Errors trace to missing domain representations rather than response policy |
-| Domain language has unfamiliar syntax, jargon, or long-form structure | CPT | Exposes every token to the domain distribution | A retrieval or SFT pilot cannot close the representation gap |
+| Domain language has unfamiliar syntax, jargon, or long-form structure | Pilot CPT on unlabeled domain text | Repeatedly predicts domain text in context | The gap persists with good retrieval and a small supervised baseline |
 | Both domain fluency and interaction behavior are missing | CPT, then SFT | Separates distribution adaptation from behavioral supervision | Only after cheaper RAG/SFT baselines and retention gates are measured |
 
 Run a controlled baseline for each plausible intervention. A lower domain perplexity is not sufficient evidence that users will receive better answers; compare the downstream task, retrieval-grounded baseline, cost, latency, and regression risk.
@@ -36,7 +38,7 @@ Write the intended sequence in the run specification. “Base checkpoint → DAP
 
 ## Agentic Midtraining: Evaluate What Survives Post-training
 
-**Research snapshot as of 2026-10-18.** Singhal et al.'s October 15 preprint studies long-context midtraining on repositories, pull requests, commit histories, build logs, and agent traces before a fixed SFT stage. Their Nemotron experiments use 256K context, and base-model proxies do not reliably predict downstream agent results [[6]](#ref-6). The study is coding-focused, largely single-run, and does not establish superiority over spending the same extra tokens on pre-training or SFT.
+**Research snapshot as of 2026-11-25.** Singhal et al.'s October preprint trains Nemotron models at 256K context on repositories, pull requests, commit histories, build logs, and agent traces. The authors ran the same SFT stage on the starting checkpoint and on the midtrained checkpoint. Base-model metrics did not reliably predict which recipe would work better after SFT [[6]](#ref-6). The study focused on coding agents. Choosing where to spend a fixed token budget still requires a comparison with spending those extra tokens on pre-training or SFT.
 
 The engineering implication is to evaluate **post-trainability** as well as current loss. For a pilot, fork matched base checkpoints into a no-midtraining control and candidate mixtures, then run the same small SFT probe with fixed data, template, token budget, and harness. Reuse the operational contracts below; specifically record which tool-result tokens are supervised, repository-level split boundaries, agent-trace provenance, and packed-document attention policy. Compare task success, critical regressions, and total training cost. Stop if representation gains disappear after the fixed downstream stage. A better base perplexity alone is not a promotion gate.
 
@@ -59,22 +61,40 @@ Load the checkpoint and run the complete baseline evaluation before the first up
 
 ## Build the Data Mixture
 
-A domain-only stream maximizes adaptation pressure and often maximizes forgetting pressure. Define a mixture over domain data and representative general replay data:
+The repair records expose the model to shop shorthand. **Replay** mixes in text representative of capabilities the model should retain. Choosing the domain source with probability $\lambda$ and the replay source with probability $1-\lambda$ gives the mixture
 
 $$
 p(x) = \lambda p_{\text{domain}}(x) + (1-\lambda)p_{\text{replay}}(x),
 $$
 
-where $\lambda$ is a tunable sampling weight, not the physical fraction of bytes on disk. Record realized tokens by source after filtering, tokenization, packing, and sampling. A mixture configured as 80/20 at the document level may not remain 80/20 at the token level.
+Here $x$ is one draw and $p_{\text{domain}}$ and $p_{\text{replay}}$ are the source distributions. The unit of a draw matters. In Hugging Face Datasets, `interleave_datasets` with source probabilities chooses which dataset supplies the next **example** (as of 2026-11-25) [[7]](#ref-7). An example can be a short work order, an entire manual, or a block of tokens.
 
-**How can 80% domain documents yield only 28.6% domain tokens?** Suppose a training batch contains 80 domain documents and 20 replay documents. Each domain document contributes 400 loss-bearing tokens, while each replay document contributes 4,000. Assume every token is retained. The domain share of the training tokens is
+<a id="token-mixture-example"></a>
 
-$$
-\frac{80\times400}{80\times400+20\times4000}
-=\frac{32000}{112000}\approx28.6\%.
-$$
+### What does a second pass through the same 80 work orders buy?
 
-To apply this calculation, check whether each sampler draw selects a document, a sequence, or a fixed token block. In Hugging Face Datasets, `interleave_datasets` samples a source for each **example** (as of 2026-11-25) [[7]](#ref-7). If each example is a whole document, the lengths above matter. If examples are equal-length blocks with equal loss masks, the same sampling proportions have a different token interpretation. Before scaling, compare the intended token budget with source-tagged counts of tokens that actually contribute to the loss, then adjust sampling weights or preprocessing.
+First count the positions that contribute to next-token loss. This Python example has one right-padded document per row, a beginning token in the first position, a scored end token (ID 2), and padding labels set to `-100`. Each prediction is scored against the following position. The first label therefore drops out before we count.
+
+```python
+def loss_targets(labels):
+    return sum(target != -100 for target in labels[1:])
+
+assert loss_targets([1, 42, 73, 2, -100, -100]) == 3
+domain = loss_targets([1] + [42] * 399 + [2, -100])
+replay = loss_targets([1] + [73] * 3999 + [2])
+assert (domain, replay) == (400, 4000)
+```
+
+The repeated token IDs stand in for lengths. Suppose each of 80 distinct work orders contributes 400 targets and each replay document contributes 4,000. Compare two schedules with an identical budget of **112,000 targets**, giving every target equal weight in the loss.
+
+| Schedule | Work-order visits | Replay documents, each seen once | Domain targets | Replay targets | Domain share |
+| :--- | ---: | ---: | ---: | ---: | ---: |
+| Read each work order once | 80 | 20 | 32,000 | 80,000 | 28.6% |
+| Read each work order twice | 160 | 12 | 64,000 | 48,000 | 57.1% |
+
+In the first schedule, 80% of the documents supply only 32,000 / 112,000 of the targets. In the second, eight fewer long replay documents make room for another pass through the same 80 work orders. Domain exposure doubles while the number of distinct work orders stays at 80. The arithmetic tells you what the model sees. Whether the second pass improves performance on a *new* work order is an evaluation question.
+
+<a href={withBasePath('/labs/token_exposure.py')} download="token_exposure.py">Download the Python token-count audit</a>. Run `python token_exposure.py` to reproduce both schedules, or `python token_exposure.py visits.csv` for your own run. Each CSV row records one document visit as `source,document_id,loss_targets`. Count targets after truncation, packing, and label masking. If a visit spans several blocks, add their contributions and reuse the document ID on later visits.
 
 The immutable dataset manifest should contain source URI or internal ID, license or consent basis, collection time, PII/secrets policy, deletion lineage, language/domain labels, filter versions, exact and near-duplicate cluster IDs, shard checksum, tokenizer hash, and sample ID. Perform deduplication and semantic clustering **before** assigning train/dev/test splits. Quarantine public benchmarks, private release prompts, rubrics, semantic neighbors, and synthetic variants from both domain and replay corpora.
 
@@ -142,6 +162,8 @@ Evaluate checkpoints during training, not only at the end. Keep generation seeds
 
 Use paired comparisons and uncertainty intervals where possible. Define minimum samples for critical slices; a global average must not offset a privacy or safety failure. Promote the CPT artifact only if it meets the domain target and every retention/release gate. Otherwise keep the last-known-good bundle.
 
+For a hypothetical pilot, score the exact installed-part ID on the same 100 held-out work orders, with identical retrieved context. Suppose the one-pass schedule gets 82 right. The two-pass schedule fixes eight mistakes and introduces three new ones, for 87 right. Inspect those three regressions and check the general retention suite before deciding whether to spend 32,000 of the budgeted targets on repeat visits.
+
 ## Failure Modes and Runbook
 
 **Domain loss improves while downstream quality does not.** Check contamination, tokenization, and whether the task needs retrieval or labeled behavior rather than more language modeling. Compare against the frozen RAG and SFT baselines.
@@ -164,8 +186,8 @@ The deliverable from CPT is therefore not a weight file. It is a versioned artif
 </details>
 
 <details>
-<summary>Quiz 2: Why is an 80/20 document mixture not necessarily an 80/20 training mixture?</summary>
-*Documents have different lengths and may be filtered, tokenized, packed, or resampled differently. Engineers must record realized tokens by source; the sampling weight $\lambda$ and the physical corpus fraction are not interchangeable.*
+<summary>Quiz 2: How can the domain share reach 57.1% without collecting another work order?</summary>
+*Read the same 80 orders twice. They now contribute 64,000 scored targets, leaving room for 48,000 replay targets within the fixed budget. Record both the target count and the distinct document IDs to tell repetition from broader coverage.*
 </details>
 
 <details>
@@ -188,8 +210,7 @@ The deliverable from CPT is therefore not a weight file. It is a versioned artif
 1. <a id="ref-1"></a>Gururangan, S., et al. (2020). *Don't Stop Pretraining: Adapt Language Models to Domains and Tasks*. [ACL Anthology](https://aclanthology.org/2020.acl-main.740/).
 2. <a id="ref-2"></a>Cossu, A., et al. (2022). *Continual Pre-training Mitigates Forgetting in Language and Vision*. [arXiv:2205.09357](https://arxiv.org/abs/2205.09357).
 3. <a id="ref-3"></a>Hugging Face. *Tokenizer documentation: adding tokens and resizing embeddings*. [Transformers documentation](https://huggingface.co/docs/transformers/main_classes/tokenizer).
-4. <a id="ref-4"></a>PyTorch. *Distributed Checkpoint documentation*. [PyTorch documentation](https://docs.pytorch.org/docs/main/distributed.checkpoint.html).
-5. <a id="ref-5"></a>PyTorch. *Reproducibility*. [PyTorch developer notes](https://docs.pytorch.org/docs/stable/notes/randomness.html).
-
+4. <a id="ref-4"></a>PyTorch. *Distributed Checkpoint*. [PyTorch 2.15 documentation](https://docs.pytorch.org/docs/2.15/distributed.checkpoint.html).
+5. <a id="ref-5"></a>PyTorch. *Reproducibility*. [PyTorch 2.15 developer notes](https://docs.pytorch.org/docs/2.15/notes/randomness.html).
 6. <a id="ref-6"></a>Singhal, S., et al. (2026). *Priming Base Models for Agentic Post-Training: An Open Midtraining Recipe*. Preprint. [Source](https://arxiv.org/abs/2610.22019).
 7. <a id="ref-7"></a>Hugging Face. *Datasets: interleave_datasets*. [Example-level source sampling and stopping strategies](https://huggingface.co/docs/datasets/package_reference/main_classes#datasets.interleave_datasets). Checked 2026-11-25.

@@ -1,6 +1,6 @@
 # 파운데이션 모델 엔지니어링
 
-**[한국어 책 읽기](https://sungeuns.github.io/foundation-model-engineering/ko/)** · [English edition](https://sungeuns.github.io/foundation-model-engineering/) · [English README](README.md)
+**[한국어 책 읽기](https://sungeuns.github.io/foundation-model-engineering/ko/)** · [English edition](https://sungeuns.github.io/foundation-model-engineering/) · [English README](README.md) · [서빙 세 절을 전자책으로 읽기(EPUB)](https://github.com/sungeuns/foundation-model-engineering/releases/download/serving-guide-2026-11/llm-serving-ko.epub)
 
 모델 학습부터 서빙과 평가까지 다루는 무료 한영 교재입니다. 브라우저 실습과 CPU에서 실행할 수 있는 PyTorch 예제를 제공합니다.
 

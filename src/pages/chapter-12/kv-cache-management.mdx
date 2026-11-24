@@ -94,7 +94,7 @@ Keep the 24 GiB pool, but give it five long prompts and four short ones at the s
 
 Raise the output cap of just **one** long request from 2,048 to 12,288 tokens. Its prompt has not changed, so the prompts still use 17.5 GiB. The extra 10,240 token positions need 3.125 GiB, bringing the reservation to **25 GiB**. The pool is **1 GiB short** even though it received the same nine prompts.
 
-<a href={withBasePath('/labs/kv-queue-en.xlsx')} download="kv-queue-en.xlsx">Download the mixed-request KV workbook (XLSX)</a>. It starts with nine equal-length requests. Edit the prompt and output cap in each row to reproduce the table or model a queue of up to 32 requests. The calculation reserves KV payload as if every request reached its cap at the same time. Actual allocation also depends on completion times, prefix sharing and [block rounding](/chapter-12/paged-attention-vllm).
+<a href={withBasePath('/labs/kv-queue-en.xlsx')} download="kv-queue-en.xlsx">Download the mixed-request KV workbook (XLSX)</a>. It starts with nine equal-length requests. Edit the prompt and output cap in each row to reproduce the table or model a queue of up to 32 requests. The calculation reserves KV payload as if every request reached its cap at the same time. Actual allocation also depends on completion times, prefix sharing and [block rounding](/chapter-12/paged-attention-vllm/#2-the-os-inspiration-paging-and-block-tables).
 
 ## 3. Reducing KV Width
 
@@ -226,7 +226,7 @@ To measure the padding cost on a real checkpoint, run the [CPU notebook for Smol
 
 ## 6. Production Cache Contract
 
-An engine with a paged cache can reserve blocks and write new KV rows in place. PagedAttention applies virtual-memory-style block mapping so sequences do not require one contiguous allocation and blocks can be shared for common prefixes [[4]](#ref-4). The next section develops that allocator.
+An engine with a paged cache can reserve blocks and write new KV rows in place. PagedAttention applies virtual-memory-style block mapping so sequences do not require one contiguous allocation and blocks can be shared for common prefixes [[4]](#ref-4). [Section 12.2 explains how the block table maps each request to physical KV blocks](/chapter-12/paged-attention-vllm/#2-the-os-inspiration-paging-and-block-tables).
 
 Before launch, record:
 

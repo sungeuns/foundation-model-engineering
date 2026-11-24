@@ -367,8 +367,8 @@ export const searchDescriptions = {
     ko: '유효 데이터 전이, 그로킹, 약한 모델에서 강한 모델로의 감독을 살펴보고 전이 평가표로 일반화 주장을 검증하는 방법을 배웁니다.',
   },
   '/chapter-8/continued-pretraining-and-domain-adaptation': {
-    en: 'Choose between continued pre-training (CPT), RAG, and SFT. Calculate how document sampling changes the token budget, then check replay and capability retention.',
-    ko: '지속 사전 학습(CPT)·RAG·SFT의 선택 기준을 살펴봅니다. 문서 비율과 학습 토큰 비율의 차이를 계산하고, 리플레이·토크나이저 호환성·복구·배포 기준을 설계합니다.',
+    en: 'Choose between continued pre-training, RAG, and SFT for a support ticket. Count how often 80 records are reused and which tokens actually contribute to training.',
+    ko: '정비 기록을 잘못 읽는 모델에는 지속 사전 학습(CPT), RAG, SFT 중 무엇이 필요할까요? 같은 기록 80건을 다시 읽을 때의 토큰 비율을 계산하고 Python으로 자신의 학습 로그를 확인합니다.',
   },
   '/chapter-3/self-attention-mathematics': {
     en: 'Trace four tokens through Q, K, V, softmax and a causal mask. Download the PyTorch example to reproduce the browser output and check it against SDPA.',

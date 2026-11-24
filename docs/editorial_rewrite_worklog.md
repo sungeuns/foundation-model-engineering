@@ -303,7 +303,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 8.2 | `/chapter-8/chinchilla-optimality` | Inspected 2026-11-15 | a5c303a07cd048a5700ec4cf86eeb44387cdcc43775eb4a2c5678f4aed6250d1 | 113d3edaa8047c8e5b5455f712a931429e550d22c1d260be5947dab80f4ef2a6 |
 | 8.3 | `/chapter-8/over-training-vs-optimal-training` | Inspected 2026-11-15 | 0cd59dc676f0efe54f93a85775af740fc13bd689502b3ead940bf61212f2d83c | 21d9ca8bfbe9e711f63a75a24d0760d53ffdd87d8f22954f7ac911f7c0a18248 |
 | 8.4 | `/chapter-8/transfer-learning-and-generalization` | Inspected 2026-11-15 | 6149872f6cc783dadf7e47acf48874d9abc6519c56fc7757b4d90f038decb547 | 0ac5c5ffb3ff08bc0fdf8fdde2e69bf8bdc9e69674d6e97a2b7cc3ee5c286290 |
-| 8.5 | `/chapter-8/continued-pretraining-and-domain-adaptation` | Inspected 2026-11-25 | d43889ce49aed35a4e5b3982f6ee4aef31c3fb53a76d93a773bed33340ec92fa | 8aa4be2b3dfb29f978b103918a9e32089630026f57214432fcd24bfdf9534812 |
+| 8.5 | `/chapter-8/continued-pretraining-and-domain-adaptation` | Inspected 2026-11-25 | a05fce7aa246ca02074f01e86a35fc4535a5f81889953eb35dff00a4cd73bc61 | c456d2b4ee41ac376ffd24ba79b8d45f1c95dfccaefffbbb8b7ea4de8de17217 |
 | 9.1 | `/chapter-9/sft-fundamentals` | Mechanical only | b2dbb035ab6f20f9feb26b00ddd7c7682a87073a963c6c684070bd7c7f1bcfe0 | 862868e98d4f3041ce06b9738bc2fc3ddeb8ab262d21f9248abe5b2831f0fcc2 |
 | 9.2 | `/chapter-9/dataset-quality-vs-quantity` | Mechanical only | c1fbbd7fb05803bfad44ce38dbb967c1be944c928bea80897aa0756dc4ac28d6 | 9818a5430db861e431fa0fc861105c64cd5749eb7661fa4b9bbd7891fc486b13 |
 | 9.3 | `/chapter-9/parameter-efficient-fine-tuning-peft` | Mechanical only | c51b6e408c85486d3438fda48d4165cd1cfc8ae7d251662f0033e80726ddc580 | 5e2052d35216a2a367fd9233ddbe9255b68cbbf1f0edaab5cd9e337f3311c04c |
@@ -320,9 +320,9 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 11.4 | `/chapter-11/image-diffusion-models` | Inspected 2026-11-24 | 5bb8bc33ff8adf86105e24018b03423e9f19e0d29739f64b843c0cbeadea05e8 | 308de426fdbc7b1c845a4d63be36b83988abe2eb36026affba1dd101194816b7 |
 | 11.5 | `/chapter-11/video-generation-foundations` | Inspected 2026-11-15 | b34544d0352be5feafdfc0d30ac23092d50edf3a3af5f3e4d37cc62531230c20 | 55c0488a07c962041cdbb0cdb945d18c8e136b23dba2aed6f6970f1c33cb4b4b |
 | 11.6 | `/chapter-11/commercial-video-models` | Mechanical only | 12216aad67ffc900bcfe437f20a7fcf9be618ccc5d617f698f4466ef15ff33cb | 6ee6e17876daa24bd17b8d709b7f541276019da545887510035b916819ae13a3 |
-| 12.1 | `/chapter-12/kv-cache-management` | Inspected 2026-11-25 | ec127d530e0261df1f4302bec82f223602dd8550493d9641db109853c0fb908d | e910aed4aae80e3b25ae8c1a48a2dea019ef80f53f61eadce81a807abd5f7d4a |
+| 12.1 | `/chapter-12/kv-cache-management` | Inspected 2026-11-25 | 366a6909bf401478c9abf17c66dfcc45c68685517d1fe347309299c8d1cff0fa | f5f19b3d52ee8665be584d640185d8abb206334e99f549dd7ae50462df529865 |
 | 12.2 | `/chapter-12/paged-attention-vllm` | Mechanical only | 75d76b30c45ca44edbb56072df6f91209343c7d8ad5c69270cd6b6c4e9700dba | 2446c00fd36edfd6fda8dc1aaf18805e0de0af19615ad504eb4e9acac8356917 |
-| 12.3 | `/chapter-12/continuous-batching` | Inspected 2026-11-25 | 6ef1bf606cdf836c97703e2c9518a7f395f6c7242f614fb7e24f7a44ed301b28 | 4c9be3e2b663d439d85799a0f93db2a485fbca65eb945328789a188afd3b65db |
+| 12.3 | `/chapter-12/continuous-batching` | Inspected 2026-11-25 | 588de002d211758e1fbb83af67004497e5280cad3512efc790f73f9b3d2a24b3 | 3f9ff09b65675139196bd073123e28a306180a8ec7d07398d1e331351f5a7124 |
 | 12.4 | `/chapter-12/speculative-decoding` | Inspected 2026-11-25 | a5f93ea8411bab0fe68bf277224f8f19f111ac0f0fd73f6b4eda75739a8990b5 | 61986787b62bf6d99f59ab08a66d2ea6312e472faea94ded13c4a7d627d03cc4 |
 | 12.5 | `/chapter-12/long-context-serving` | Inspected 2026-11-15 | 82f413a5a2e2731fe01603c7036b42dee434b010cc76410eba7e0807d73742e8 | 59933e962b9f0bef0f8b50e9889ec628fd92ade6d7d0fb91636981793bd83052 |
 | 12.6 | `/chapter-12/serving-policies-slos-and-fallbacks` | Inspected 2026-11-25 | 8222c69fc753a073f358acef599ad825d1193693daa931acbd774081c82f2b46 | 35067207b0e514380e54bb373c7b545a075fc1999f3e039eb327edb1e13ba1a5 |
@@ -629,3 +629,7 @@ Both editions of 17.2 follow the same three candidate translations through place
 ### 2026-11-25 next-token training and serving
 
 Both editions of 4.2 follow the three shifted targets in one four-token sequence. The PyTorch example checks causal visibility and a mean token loss of 0.520 nats. The new diagrams implement the four-position mask directly and distinguish allowed keys from learned weights. Review covered GPT-3's task-specific few-shot result, the scope of the scaling-law findings, and how both decoder-only and encoder-decoder models can reuse cached state.
+
+### 2026-11-25 training exposure and serving cross-references
+
+Inspection of both 8.5 manuscripts covered the service-ticket diagnosis, the meaning of a counted loss target, and two different sampling schedules with the same 112,000 targets. The inline examples and downloadable CSV auditor reproduce the same token shares. The 12.1 and 12.3 manuscripts reviewed earlier that day now link directly to the relevant block table, speculative decoding lesson and disaggregated serving section. Verification of these link-only edits covered the URLs, destination anchors and language in both editions.

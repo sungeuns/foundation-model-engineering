@@ -10,6 +10,7 @@ const lessonFragments = {
   '/chapter-4/hybrid-prefix-lm': ['prefix-mask-test'],
   '/chapter-5/sparse-vs-dense-models': ['moe-routing-lab'],
   '/chapter-7/tiny-decoder-lab': ['decoder-copy-trace', 'local-decoder-setup'],
+  '/chapter-8/continued-pretraining-and-domain-adaptation': ['token-mixture-example'],
   '/chapter-10/dpo': ['reference-relative-example'],
   '/chapter-11/vision-language-bridges': ['visual-token-budget'],
   '/chapter-12/kv-cache-management': ['kv-cache-capacity', 'kv-calculator', 'mixed-request-budget'],

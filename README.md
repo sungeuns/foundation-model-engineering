@@ -1,6 +1,6 @@
 # Foundation Model Engineering
 
-**[Read the book in English](https://sungeuns.github.io/foundation-model-engineering/)** · [한국어판](https://sungeuns.github.io/foundation-model-engineering/ko/) · [한국어 README](README.ko.md)
+**[Read the book in English](https://sungeuns.github.io/foundation-model-engineering/)** · [한국어판](https://sungeuns.github.io/foundation-model-engineering/ko/) · [한국어 README](README.ko.md) · [Download the serving guide (EPUB)](https://github.com/sungeuns/foundation-model-engineering/releases/download/serving-guide-2026-11/llm-serving-en.epub)
 
 A free textbook on training, serving, and evaluating foundation models. Work through browser experiments and PyTorch examples you can run on a CPU.
 

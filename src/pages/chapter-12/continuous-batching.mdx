@@ -11,7 +11,7 @@ import SchedulingVisualizer from '../../components/chapter-12/SchedulingVisualiz
 
 Three requests are generating tokens together. One finishes after two decode iterations; another needs six. Must a fourth request wait four more iterations before it can use the freed slot? **Continuous batching** lets the scheduler admit it at the next iteration boundary, provided token and KV-cache budgets allow it.
 
-The previous section explained where growing KV state is stored. This section explains which requests get to compute next. Reusable memory blocks help admission, but a memory allocator alone does not choose an execution schedule.
+[Section 12.2](/chapter-12/paged-attention-vllm/#2-the-os-inspiration-paging-and-block-tables) explained where growing KV state is stored. This section explains which requests get to compute next. Reusable memory blocks help admission, but a memory allocator alone does not choose an execution schedule.
 
 ## 1. Follow Six Requests Through Three Slots
 
@@ -87,7 +87,7 @@ The following existing timeline uses **invented time units**. Compare “Unified
 
 <SchedulingVisualizer client:load />
 
-The timeline serializes labeled blocks to explain ordering; it is not a kernel-level depiction of SARATHI's mixed batch. The “Disaggregated” option introduces another resource pool and a KV handoff, which the later disaggregated-serving section examines. It is not an equal-resource speed comparison.
+The timeline serializes labeled blocks to explain ordering; it is not a kernel-level depiction of SARATHI's mixed batch. The “Disaggregated” option introduces another resource pool and a KV handoff, which [the disaggregated-serving example in §12.5](/chapter-12/long-context-serving/#4-disaggregation-adds-a-transfer-and-ownership-contract) examines. It is not an equal-resource speed comparison.
 
 ## 5. Run the Decode-Only Schedule
 
@@ -158,7 +158,7 @@ The completion assertions distinguish the admission policies, and the loop stops
 
 Replay a representative arrival trace with prompt/output lengths and burst patterns preserved. Hold the model, hardware, precision and quality settings fixed. Compare throughput **within** the declared latency budget, alongside TTFT and ITL distributions, queue time, KV occupancy, preemptions, cancellations and errors. Split long and short prompts and low and high load; a good average can hide starvation or tail-latency failures.
 
-Save the request trace identifier, model/runtime versions, scheduler configuration and admission limits with the results. Reject a change that exceeds a predeclared tail-latency or error threshold, even if tokens per second rises. Keep the previous configuration available for rollback. The next section studies another way to change work per iteration: verifying several candidate tokens through speculative decoding.
+Save the request trace identifier, model/runtime versions, scheduler configuration and admission limits with the results. Reject a change that exceeds a predeclared tail-latency or error threshold, even if tokens per second rises. Keep the previous configuration available for rollback. [Section 12.4 on speculative decoding](/chapter-12/speculative-decoding/) studies another way to change work per iteration: verifying several candidate tokens together.
 
 ## Quizzes
 
