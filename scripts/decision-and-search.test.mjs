@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { decisionCases, evaluateDecisionPolicy } from '../src/utils/decision-policy.js';
+import { decisionCases, decisionFloors, evaluateDecisionPolicy } from '../src/utils/decision-policy.js';
 import { demoNodes, greedyTrace, layerGraph } from '../src/utils/hierarchical-search-demo.js';
 
 test('decision costs count false positives, false negatives and review independently', () => {
@@ -23,14 +23,38 @@ test('no accepted decisions gives undefined conditional risk, not a fabricated z
   assert.equal(actual.expectedCost, .25);
 });
 
-test('label shift preserves predictions and predicted cost while exposing outcome errors', () => {
-  const baseline = decisionCases(false), shifted = decisionCases(true);
-  assert.deepEqual(baseline.map(x => x.p), shifted.map(x => x.p));
-  const a = evaluateDecisionPolicy(baseline, .8, 5, 1, .25);
-  const b = evaluateDecisionPolicy(shifted, .8, 5, 1, .25);
-  assert.equal(a.expectedCost, b.expectedCost);
-  assert.equal(a.coverage, b.coverage);
-  assert.notEqual(a.observedCost, b.observedCost);
+test('calibration can worsen at fixed scores and prevalence while observed cost rises', () => {
+  const baseline = decisionCases(false);
+  const worse = decisionCases(true);
+  assert.deepEqual(baseline.map(row => row.p), worse.map(row => row.p));
+  for (const [cases, highScorePositives, errorsPerClass, risk, observedCost] of [
+    [baseline, 9, 2, .10, .19],
+    [worse, 7, 6, .30, .27],
+  ]) {
+    assert.equal(cases.length, 100);
+    assert.equal(cases.filter(row => row.y === 1).length, 50);
+    assert.equal(cases.filter(row => row.p === .95 && row.y === 1).length, highScorePositives);
+    const result = evaluateDecisionPolicy(cases, .85, 1, 1, .25);
+    assert.deepEqual([result.accepted, result.reviewed, result.coverage], [40, 60, .4]);
+    assert.deepEqual([result.fp, result.fn, result.risk], [errorsPerClass, errorsPerClass, risk]);
+    assert.ok(Math.abs(result.expectedCost - .19) < 1e-12);
+    assert.equal(result.observedCost, observedCost);
+  }
+});
+
+test('curve floors include equality for either answer and match every slider step', () => {
+  assert.deepEqual(decisionFloors, [.50, .55, .60, .65, .70, .75, .80, .85, .90, .95, 1]);
+  const cases = decisionCases();
+  const counts = decisionFloors.map(floor => evaluateDecisionPolicy(cases, floor, 1, 1, .25).accepted);
+  assert.deepEqual(counts, [100, 100, 80, 80, 60, 60, 40, 40, 20, 20, 0]);
+});
+
+test('ties at the published cost boundary choose positive before applying the floor', () => {
+  for (const [p, fpCost, fnCost] of [[.85, 17, 3], [.95, 19, 1]]) {
+    const result = evaluateDecisionPolicy([{ p, y: 1 }], p, fpCost, fnCost, .25);
+    assert.equal(result.accepted, 1);
+    assert.equal(result.observedCost, 0);
+  }
 });
 
 test('hierarchical traversal only follows actual edges or descends at the same node', () => {

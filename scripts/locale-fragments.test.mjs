@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { chapters } from '../src/data/chapters.js';
-import { localeHref, sharedLocaleFragments } from '../src/utils/locale-fragments.js';
+import { localeHref, sharedHeadingAliases, sharedLocaleFragments } from '../src/utils/locale-fragments.js';
 
 const read = file => readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
 const modelIds = JSON.parse(read('src/data/commercial-model-snapshot.json')).models.map(model => model.id);
@@ -45,6 +45,7 @@ test('shared exercise IDs belong to the same authored content in both translatio
     ['/chapter-4/decoder-only', 'shifted-target-example'],
     ['/chapter-4/encoder-decoder', 'cross-attention-example'],
     ['/chapter-4/hybrid-prefix-lm', 'prefix-mask-test'],
+    ['/chapter-5/expert-parallelism', 'expert-dispatch-lab'],
     ['/chapter-7/tiny-decoder-lab', 'decoder-copy-trace'],
     ['/chapter-7/tiny-decoder-lab', 'local-decoder-setup'],
     ['/chapter-8/continued-pretraining-and-domain-adaptation', 'token-mixture-example'],
@@ -55,6 +56,8 @@ test('shared exercise IDs belong to the same authored content in both translatio
     ['/chapter-12/speculative-decoding', 'speculative-sampling-example'],
     ['/chapter-12/serving-policies-slos-and-fallbacks', 'streaming-latency-trace'],
     ['/chapter-14/advanced-retrieval', 'rrf-candidate-cutoff'],
+    ['/chapter-16/decision-models-and-selective-prediction', 'calibration-drift-example'],
+    ['/chapter-17/production-evaluation-and-release-gates', 'release-gate-example'],
     ['/chapter-17/llm-as-a-judge', 'translation-rubric-example'],
     ['/chapter-17/commercial-model-benchmarks', 'long-context-cost'],
     ['/chapter-14/rag-failure-modes-and-operational-design', 'trace-a-rag-answer'],
@@ -103,4 +106,28 @@ test('locale links keep deployment paths and only verified fragments as the loca
       assert.equal(localeHref(`${page}#references`, '', fragments), page);
     }
   }
+});
+
+test('a previously shared heading URL switches to the exercise in the other edition', () => {
+  const route = '/chapter-3/self-attention-mathematics';
+  const shared = sharedLocaleFragments(route);
+  // Minimal element siblings. Only empty, unlinked markers belong to the heading.
+  const marker = (id, previousElementSibling) => ({
+    id, previousElementSibling, matches: selector => selector === 'a[id]:empty:not([href])',
+  });
+  const older = marker('이전-제목');
+  const exercise = marker('attention-weight-example', older);
+  const prose = { matches: () => false, previousElementSibling: exercise };
+  const local = '예제-어텐션-가중치-행렬';
+  const aliases = sharedHeadingAliases([
+    { id: local, previousElementSibling: exercise },
+    { id: 'other-topic', previousElementSibling: prose },
+  ], shared);
+  const otherEdition = '/book/chapter-3/self-attention-mathematics/';
+  for (const id of [local, older.id, exercise.id]) {
+    assert.equal(localeHref(otherEdition, '#' + encodeURIComponent(id), shared, '', aliases),
+      otherEdition + '#attention-weight-example');
+  }
+  assert.equal(localeHref(otherEdition, '#other-topic', shared, '', aliases), otherEdition);
+  assert.equal(localeHref(otherEdition, '#ref-1', shared, '', aliases), otherEdition);
 });

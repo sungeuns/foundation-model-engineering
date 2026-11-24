@@ -6,129 +6,118 @@ lang: en
 
 # 17.5 Production Evaluation and Release Gates
 
-A model is ready when a specific immutable artifact passes predeclared offline and online gates—not when one benchmark score rises. The release process must make the decision reproducible, identify who can approve it, and switch back safely when reality differs from the lab.
+A support assistant has learned to answer a new class of questions. Can it still handle the requests customers rely on today? A release gate turns each requirement into a decision. Before seeing the scores, the team agrees on the smallest useful gain, the losses it can tolerate, and who can stop the rollout.
 
----
-
-## Immutable Artifact Bundle
-
-Evaluate and deploy one **immutable artifact bundle** containing hashes for:
-
-- base model and every adapter or merged checkpoint;
-- tokenizer, special-token map, chat template, and generation config;
-- tool schemas, retrieval/index revision, safety policy, and prompt assets;
-- code commit, resolved config, container, CUDA/framework/kernel versions;
-- training/evaluation data manifests, objective, and decoding seeds.
-
-A champion/candidate registry records bundle identity, owner, intended traffic, approvals, evaluation report, and last-known-good predecessor. Reject base/adapter/tokenizer/template incompatibility before loading. A model-name string is not an artifact identity.
-
----
-
-## Release Packet and Statistical Decision
-
-Freeze the baseline hash, prompts, rubrics, judge/verifier artifacts, tool state, fixed seeds, and decoding settings. The packet reports raw per-example results and:
-
-- target/domain, base-retention, safety/over-refusal, format/tool, privacy/security slices;
-- response length, entropy, calibration, hallucination/citation evidence;
-- latency **p50, p95, p99**, throughput, cost, OOM/error/tool-retry rates;
-- slice sample counts and critical failures that an average must not hide.
-
-For paired outcomes, use a **paired bootstrap** confidence interval or paired permutation/randomization test. Predeclare minimum effect, alpha/error tolerance, **sample size** or power rationale, tie handling, and slice minimums. Inspect disagreements and adjudicate a sample; statistical significance does not establish product significance.
-
-LLM judges require human calibration on the target rubric, position randomization, and agreement/error analysis by slice. Executable or rule-based verifiers take precedence when they directly test the requirement.
-
----
-
-## Gate Decision Table
-
-Every metric maps to an action, not merely a dashboard color.
-
-| Gate | Pass | Review | Block |
-|---|---|---|---|
-| Target quality | lower confidence bound clears the minimum effect | uncertain or slice-limited | material regression |
-| Retention | all protected slices within bounds | noncritical borderline slice | critical capability regression |
-| Safety/privacy | no critical failure; rates within bounds | adjudication needed | any severity-defined blocker |
-| Format/tools | schema and side-effect tests pass | recoverable warning | invalid action or unauthorized effect |
-| Systems | latency/cost/error within SLO | capacity plan required | OOM, retry storm, or SLO breach |
-
-The gate definition includes owner, data window, threshold, confidence rule, missing-data behavior, and exception approver. Missing evidence is not a zero and not a pass.
-
----
-
-## Shadow, Canary, and Ramp-up
-
-These stages answer different questions:
-
-1. **Shadow:** candidate receives mirrored inputs but cannot produce user-visible output or external side effects. Compare outputs, latency, and tool plans.
-2. **Canary:** a small randomized eligible cohort receives the candidate. Log exposure/propensity and compare against champion concurrently.
-3. **Ramp-up:** increase traffic in explicit steps only after each observation window passes.
-
-Use a traffic feature flag or registry pointer, not an ad hoc redeploy. Configure **automatic abort** thresholds for safety, error, latency, cost, and critical task failures. Add an observation window and **hysteresis** so noise neither flips versions repeatedly nor delays a severe stop.
-
----
-
-## Rollback Runbook
-
-Rollback means switching to the **last-known-good** complete bundle, not just replacing weights. The runbook names the incident owner and approval path and covers:
-
-- routing switch and cache invalidation;
-- incompatible adapter/base or tokenizer state;
-- **stateful tool side effects**, partially completed workflows, and external transactions;
-- queued jobs, conversation/session state, and outputs already delivered;
-- audit trail, affected cohort reconstruction, notification, and follow-up evaluation.
-
-Some side effects cannot be undone by a model rollback. Use idempotency keys, dry-run/shadow tool calls, compensating actions, and queue version tags. Conduct a periodic **rollback rehearsal** that measures detection and recovery time and verifies the prior bundle still loads.
-
----
-
-## Evaluation-Set Maintenance
-
-**Eval-set maintenance** is a controlled data lifecycle. Assign stable evaluation IDs and cluster IDs, provenance, creation reason, owner, severity, rubric version, access class, and retirement state. Deduplicate and quarantine semantic neighbors from every training and synthetic pipeline.
-
-When a production badcase appears, either quarantine its entire semantic cluster for evaluation or admit the cluster to training and label all related regression tests exposed. Generalization claims require separate untouched clusters; creating siblings before training does not make them independent. Add fresh slices for distribution drift, but keep a stable anchor set for longitudinal comparison. Version changes and rerun both champion and candidate when prompts, graders, tools, or schemas change.
-
-Audit evaluation access and contamination regularly. Rotate secret cases when exposure is suspected; never silently rewrite answers to preserve a trend line.
-
----
-
-## Evaluate Actions Without Creating Uncontrolled Effects
-
-**Evidence update as of 2026-10-13.** The October report discussed in [Chapter 16.6](/chapter-16/agent-reliability-recovery-and-guardrails) makes an evaluation-design issue concrete: task completion and containment are separate properties [[4]](#ref-4). Treat evaluation network access as an explicit capability. Prefer replayed responses, owned test services, or offline subsets when they test the intended skill; when live access is necessary, define permitted destinations, identities, and effects before the run.
-
-Add a gate for **unauthorized attempted actions** even when an executor blocks them and the final answer looks correct. Record policy decisions and actual side effects outside the agent's own transcript. Version any offline substitute, because it changes the evaluated task and cannot inherit a live benchmark's score. Run containment tests through every enabled tool path, including redirected and indirect requests.
-
+<a id="release-gate-example"></a>
 
 ## Worked Release Decision
 
-Use [17.7](../experimental-design-and-uncertainty/) to compute a paired cluster estimate, distinguish noninferiority from an inconclusive result, and quantify a zero-event safety bound. For canaries, declare persistent user/session assignment, sample size and one terminal efficacy analysis. Continuous safety-abort monitoring remains active; early efficacy promotion requires a sequential design. Hysteresis alone does not correct repeated statistical looks.
+In the [release lab in §17.7](../experimental-design-and-uncertainty/#release-lab), select `regression`. The candidate and the current production model answer the same cases. The lab uses synthetic outcomes for two tasks. Each has 80 independent groups of four related cases, and each group counts equally. All differences below are in **percentage points** of success rate.
+
+| Task | Candidate minus current model | One-sided 95% lower bound | Requirement set before the run |
+|---|---:|---:|---|
+| New task | +15 | +11.25 | Lower bound above +5 |
+| Existing task to protect | −25 | −25 | Lower bound above −2 |
+
+**Block the canary.** The new task clears the minimum useful gain, even at its lower bound. On the existing task the candidate gets one fewer case right in *every group of four*. That is a 25-point loss regardless of which groups the lab resamples. Keep serving the current model and inspect the paired failures before testing a new candidate. The identical group losses are a feature of this exercise. Real tasks can vary enough to leave the decision open.
+
+## Immutable Artifact Bundle
+
+Give the exact release a version. Record the hashes and settings for one **immutable artifact bundle**:
+
+- Base model and every adapter or merged checkpoint.
+- Tokenizer, special-token map, chat template, and generation configuration.
+- Tool schemas, retrieval index revision, safety policy, and prompts.
+- Code commit, resolved configuration, container, and CUDA, framework and kernel versions.
+- Training and evaluation data manifests, objective, and decoding seeds.
+
+Record who owns each bundle, who approved it for which users, where the evaluation results are, and which last-known-good version it replaces. Check that the model, adapter, tokenizer, and template work together before loading them. Two services with the same model name can produce different answers if one renders the conversation differently.
+
+## Release Packet and Statistical Decision
+
+Freeze the baseline hash, prompts, rubrics, grading model or verifier version, tool state, seeds, and decoding settings. Keep each system's result for each case. Summarize both task quality and operating costs, as multi-metric evaluations such as HELM illustrate [[1]](#ref-1).
+
+- For the target domain and protected capabilities, report success by task. Break out safety failures, unnecessary refusals, invalid formats, incorrect tool calls, and privacy or security failures.
+- Report response length, entropy and calibration where relevant. Retain the evidence used to check factual claims and citations.
+- Record latency at **p50, p95, and p99**, throughput, cost, and rates of out-of-memory errors, other errors, and tool retries.
+- Give the sample size in each group and identify individual failures severe enough to block a release.
+
+When both models see the same cases, keep their outcomes paired. Related prompts from one conversation also stay together in a **paired bootstrap** confidence interval. A paired permutation test is another option when its exchangeability assumptions fit the design. The unit of comparison matters: comparing algorithms across independent datasets is a different design from comparing answers to paired prompts [[2]](#ref-2). Set the minimum useful effect, error tolerance, sample size or power rationale, tie handling and minimum evidence per group in advance. Inspect a sample of disagreements with a human reviewer.
+
+If an LLM grades the answers, calibrate it against human judgments on the target rubric, randomize answer order, and check agreement and errors in each group. When a requirement can be checked exactly, such as whether a tool argument satisfies its schema, run that check directly.
+
+## Gate Decision Table
+
+Write down what the release owner should do for each result.
+
+| Requirement | Pass | Review | Block |
+|---|---|---|---|
+| Target quality | Lower bound exceeds the minimum useful gain | Too few cases or an inconclusive estimate | Material regression |
+| Retention | All protected groups meet their margins | Borderline result in a noncritical group | Confirmed loss on a critical capability |
+| Safety and privacy | No critical failures and rates within limits | A case needs human adjudication | A failure reaches the predeclared blocking severity |
+| Output format and tools | Schema checks and allowed-action tests pass | Recoverable warning | Invalid action or unauthorized external effect |
+| Service operation | Latency, cost and errors stay within their limits | Capacity plan needed | Out of memory, retry storm or service-level objective breached |
+
+Record the owner, observation window, threshold, statistical rule, treatment of missing evidence, and who can approve an exception. If a safety test never ran, record the result as missing and withhold approval.
+
+## Shadow, Canary, and Ramp-up
+
+1. **Shadow traffic.** Mirror actual inputs to the candidate. Only the current model responds to users. Disable external side effects on the shadow path so the team can compare outputs, latency and planned tool calls safely.
+2. **Canary.** Randomly assign a small share of eligible users or sessions to the candidate. Keep each assignment stable, log exposure and assignment probability, and compare the two models concurrently [[3]](#ref-3).
+3. **Ramp-up.** Increase the share in planned steps. Wait for the required observation window and sample size before expanding.
+
+Use a traffic flag or a registry pointer to switch versions. Set **automatic abort** thresholds for safety, errors, latency, cost and critical task failures. For noisy metrics, **hysteresis** can require a healthier reading before resuming than the reading that triggered a pause. A critical safety event can still stop traffic immediately. Monitor safety throughout the run. For efficacy, use a fixed sample size and one planned analysis at the end, or choose a sequential design before the first look.
+
+## Rollback Runbook
+
+Name the incident owner and approver. Switch routing to the complete **last-known-good** bundle and invalidate incompatible cached state. Then account for:
+
+- Model, adapter or tokenizer state that the prior version cannot load.
+- **Stateful tool side effects**, unfinished workflows, and external transactions.
+- Queued jobs, ongoing conversations, sessions, and replies already delivered.
+- Logs that identify the affected users, notifications, and follow-up evaluations.
+
+A customer may already have received a refund. Restoring the previous model changes what handles the *next* request. The payments system needs its own record of the completed transaction. Use idempotency keys to make retries safe, dry runs for tool checks, version tags on queued work, and compensating actions where feasible. In a **rollback rehearsal**, time detection and recovery and verify that the prior bundle still loads.
+
+## Evaluation-Set Maintenance
+
+Give each case a stable evaluation ID and a group ID. Record its source, why it was added, owner, severity, rubric version, access rules, and retirement status. Deduplicate semantically related cases and keep evaluation groups out of training, including synthetic data generation.
+
+When a support incident becomes a test case, reserve the whole family of related requests for evaluation, or use it in training and mark all related regression cases as exposed. Use fresh, untouched groups to test generalization. Add cases as traffic changes, keeping a stable set for comparisons over time. Version changes to prompts, graders, tools or schemas and rerun both systems.
+
+Audit access and possible contamination. Replace secret cases when exposure is suspected and record the change so readers can interpret the trend.
+
+## Evaluate Actions Without Creating Uncontrolled Effects
+
+In its October 9, 2026 report, Anthropic described a model submitting a form on a real website [[4]](#ref-4). A task can end with a plausible answer after an unauthorized action. [Chapter 16.6](/chapter-16/agent-reliability-recovery-and-guardrails) discusses containment. In release testing, grant network access explicitly. Use recorded responses, a test service you control or an offline subset when these exercise the intended skill. For live access, specify permitted destinations, identities and effects before the run.
+
+Record attempted unauthorized actions even when the executor blocks them. Collect policy decisions and actual side effects outside the agent's transcript. Test all enabled tool paths, including redirected and indirect requests. Version each offline substitute and report its results separately, since it changes the task being measured.
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: Why must tokenizer, template, tools, and safety configuration be in the artifact bundle?</summary>
-*They change rendered inputs and system behavior. Deploying only a weight hash can reproduce neither the evaluated distribution nor the actual tool and safety decisions.*
+<summary>Quiz 1: The candidate clears the target quality threshold with room to spare. Why keep it out of the canary?</summary>
+*The team also committed to protecting an existing task. In the example, every group loses one success in four, far beyond the two-point retention margin. Passing one requirement cannot offset that loss.*
 </details>
 
 <details>
-<summary>Quiz 2: Why use paired statistics for candidate-versus-champion evaluation?</summary>
-*Both systems answer the same cases, so per-case differences contain the relevant signal and control case difficulty. Paired bootstrap or permutation methods preserve that structure.*
+<summary>Quiz 2: Why record the tokenizer, template, tools and safety configuration alongside the weights?</summary>
+*The template and tokenizer determine which tokens reach the model. The tool and safety configurations determine which actions it can take. Restoring the complete bundle restores the version that was evaluated.*
 </details>
 
 <details>
-<summary>Quiz 3: What distinguishes shadow from canary?</summary>
-*Shadow traffic is not user-visible and must not create external side effects. Canary traffic affects a small randomized real cohort and therefore needs automatic abort and rollback controls.*
+<summary>Quiz 3: Two paraphrases of one support request produce the same outcome. What should a paired bootstrap resample?</summary>
+*Resample the independent request group, keeping its paraphrases and both models’ outcomes together. Counting the paraphrases as independent requests gives duplicated evidence too much weight.*
 </details>
 
 <details>
-<summary>Quiz 4: Why can changing model weights back fail to reverse an incident?</summary>
-*The candidate may already have created stateful tool side effects, external transactions, queued jobs, or session state. Those need idempotency, compensation, and queue/session handling beyond weight rollback.*
+<summary>Quiz 4: During a refund test, what changes when the candidate moves from shadow traffic to a canary?</summary>
+*Shadow tool calls must leave the payment system untouched. A canary can affect real users and create transactions. It needs monitoring, immediate abort criteria and a way to reconcile transactions after traffic switches back.*
 </details>
-
----
 
 ## References
 
 1. <a id="ref-1"></a>Liang, P., et al. (2022). *Holistic Evaluation of Language Models.* [arXiv:2211.09110](https://arxiv.org/abs/2211.09110).
 2. <a id="ref-2"></a>Demšar, J. (2006). *Statistical Comparisons of Classifiers over Multiple Data Sets.* [JMLR](https://www.jmlr.org/papers/v7/demsar06a.html).
-3. <a id="ref-3"></a>Kohavi, R., Tang, D., & Xu, Y. (2020). *Trustworthy Online Controlled Experiments.* Cambridge University Press.
-4. <a id="ref-4"></a>Anthropic. (2026-10-09). Investigating unintended model actions in our evaluations and internal use. [Source](https://www.anthropic.com/research/investigating-unintended-model-actions).
+3. <a id="ref-3"></a>Kohavi, R., Tang, D., & Xu, Y. (2020). *Trustworthy Online Controlled Experiments.* [Authors’ website](https://experimentguide.com/).
+4. <a id="ref-4"></a>Anthropic. (2026-10-09). [Investigating unintended model actions in our evaluations and internal use](https://www.anthropic.com/research/investigating-unintended-model-actions).

@@ -51,8 +51,8 @@ export const searchDescriptions = {
     ko: '루프 제한, 위험한 작업 전 체크포인트, 도구 실행 정책과 사람의 승인 및 복구 절차를 통해 에이전트의 신뢰성을 높입니다.',
   },
   '/chapter-16/decision-models-and-selective-prediction': {
-    en: 'Compare Jev, OpenAI Decisions and open-weight decision models through typed outputs, probability calibration, abstention, error costs and release gates.',
-    ko: 'Jev·OpenAI Decisions·공개 가중치 판단 모델의 타입 출력, 확률 보정, 판단 보류, 오판 비용과 릴리스 게이트를 비교합니다.',
+    en: 'Compare Jev and OpenAI Decisions, then test a policy that accepts the same 40 cases even as their error rate rises from 10% to 30%.',
+    ko: 'Jev와 OpenAI Decisions를 살펴보고, 같은 40건을 자동 처리하는 동안 오답 비율이 10%에서 30%로 높아지는 이유를 실습으로 확인합니다.',
   },
   '/chapter-17/academic-benchmarks': {
     en: 'Evaluate language and multimodal models with benchmark methodology, compatible metrics, statistical comparisons, and contamination checks.',
@@ -311,8 +311,8 @@ export const searchDescriptions = {
     ko: '전문가 혼합(MoE)에서 토큰이 고른 전문가와 출력 가중치를 직접 계산합니다. 활성 파라미터와 전체 가중치로 메모리 예산을 구하고 CPU PyTorch 예제로 확인하세요.',
   },
   '/chapter-5/expert-parallelism': {
-    en: 'Explore MoE expert parallelism, token dispatch, all-to-all communication, grouped matrix multiplication, and communication-compute overlap.',
-    ko: 'MoE 전문가 병렬화의 토큰 분배, All-to-All 통신, 그룹 행렬 곱셈과 통신·연산 중첩을 통해 분산 실행의 병목을 살펴봅니다.',
+    en: 'Trace six tokens through an MoE layer on two CPU processes. Inspect all-to-all traffic, expert assignments and how results return to their original order.',
+    ko: 'CPU 프로세스 두 개에서 MoE 전문가 병렬화를 실습합니다. 토큰 여섯 개가 어느 전문가에게 가고, 처리 결과가 어떻게 원래 순서로 돌아오는지 추적합니다.',
   },
   '/chapter-5/collapsing-load-balancing': {
     en: 'Diagnose MoE expert collapse and compare load-balancing losses, capacity factors, token dropping, router z-loss, and loss-free routing.',
@@ -415,7 +415,7 @@ export const searchDescriptions = {
     ko: '잘못된 RAG 답변의 근거를 청크 ID로 추적하세요. 여섯 가지 Python 사례로 검색 누락, 재순위화, 문맥 구성, 잘못된 인용을 구분합니다.',
   },
   '/chapter-17/production-evaluation-and-release-gates': {
-    en: 'Design LLM release gates with immutable artifacts, statistical evaluation, shadow traffic, canary rollouts, and a rehearsed rollback runbook.',
-    ko: '불변 모델 아티팩트, 통계적 평가, 섀도 트래픽과 카나리 배포를 바탕으로 LLM 출시 기준과 검증 가능한 롤백 절차를 설계합니다.',
+    en: 'A candidate gains 15 percentage points on its target task. See why a regression blocks deployment, then work through shadow traffic, canaries and rollback.',
+    ko: '목표 과제의 성공률이 15%p 올랐는데도 배포를 보류한 사례를 풉니다. 평가를 통과한 모델은 어떤 절차로 트래픽을 받고, 언제 이전 버전으로 되돌리는지 살펴봅니다.',
   },
 };

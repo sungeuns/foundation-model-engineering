@@ -285,7 +285,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 4.5 | `/chapter-4/various-llm-architectures` | Inspected 2026-11-24 | 028ebccee02c3a1b30297a6c43b9ed91806975ff737f33e8a5ccd5ea26f26a30 | 5d9fb05bb56198c702831691a20832099bac533ece95857c22101dfb884863a8 |
 | 5.1 | `/chapter-5/sparse-vs-dense-models` | Inspected 2026-11-25 | 01f8735ffcc52bb919dfea3402cb6fbdb0313849c20a83c447820f04e5bb6c08 | 7908d7d81bd30342d4223623ac332bf1d17f91a47e55e1deb8ba8d3ee2b88c37 |
 | 5.2 | `/chapter-5/routing-algorithms` | Inspected 2026-11-15 | 3b83671dec53a4a69ee8c357d810ac48b3b2b069f1b54fdb76a8e567ae6ed3e7 | 436d75fa19297b28084c3bf55cb2e92e341e86d33370e1843de1c263a8f9d356 |
-| 5.3 | `/chapter-5/expert-parallelism` | Inspected 2026-11-18 | b068ad369a94f058c7e7c63ac3072bb7be023481ba3566cec292cb0da234f210 | 29dfe7ecd4340bf4c209b4985b485765dd7af91bca8ad96be8a9712dc22e2fa4 |
+| 5.3 | `/chapter-5/expert-parallelism` | Inspected 2026-11-25 | 75beb517abd6e9d61832a0e3cdb79eac46c214026c2cbd86c6946965d07209d8 | a34266db4231c9ecb6970fbe47c569dce99129dbe3e82c2027c050b8fe1fb9dc |
 | 5.4 | `/chapter-5/collapsing-load-balancing` | Inspected 2026-11-15 | 9eafbfd1e7b75ad8196d586895ed76c5c16b609fb3b6d7c3c6450331d3fbec83 | e882e33f29592a27d156efc7b998c7f7d1fa8a3f2e8f63179ad4319ef47ab56a |
 | 5.5 | `/chapter-5/case-study` | Inspected 2026-11-15 | f9e6e1c0fde57aac1cbcf9f3303676fb84e6e31a7b7f11e026ef961b61d8b0c8 | dd5217b2e0027bf27ea9b37275452ae728ce3a4f7471bf309303cf6888761297 |
 | 6.1 | `/chapter-6/data-engineering-at-scale` | Inspected 2026-11-15 | c962ed779370d70734cdc1d8dad26fd622732ab5add4b42eb33ca13d4e9e1978 | 196b5d2f730cb1450a5c68054444814151be61cda197d8cad6d5e761caf2e85e |
@@ -348,12 +348,12 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 16.4 | `/chapter-16/multi-agent-collaboration` | Mechanical only | a155d11e7c31a3c47f3b5a6ecbc02c54c5a3d638c70aac59e5fa0a48af1953df | 2dca3cc2d271f458117b44c0110ea8762a1416ab4f1554e10a4a87253e7a983a |
 | 16.5 | `/chapter-16/long-term-memory-for-agents` | Mechanical only | 282f35343780e2c45555ff63e389a1335a91ec8c00f22085e8f8bbd8b97d3f0e | 121d1cb19357df979ff3139d6022f6041bc711842a38f62a81ecf5d87c592fcd |
 | 16.6 | `/chapter-16/agent-reliability-recovery-and-guardrails` | Mechanical only | cd83fc417cb7950d6d24116d1492925a16694aa596d897d0cb4cc7be3f18ca7e | 16b6b0641b20d49d6fd5de7a7568d32d4889fe2fa1f88289396ea078b4874895 |
-| 16.7 | `/chapter-16/decision-models-and-selective-prediction` | Inspected 2026-11-15 | 11804b8958ee5bad618e14856a0e49b1f47fbb6c47168b58d910d0d796833ce4 | 4e60990227ed403274365841e57f7a71228610ce244d226c2d1077dd515d3c50 |
+| 16.7 | `/chapter-16/decision-models-and-selective-prediction` | Inspected 2026-11-25 | 968048e13fae199978a109f4fef886dcc261832fbbfdd62899e96967209cca9f | 07b1f8a70ee24b852c35c5ee40502166c5d9c9cf63e984d30013442d89da1bc2 |
 | 17.1 | `/chapter-17/academic-benchmarks` | Mechanical only | 2949edf4e9fe1e16fda3f118fa009854dbb67b9501b7989aece12379a4df2686 | 1b13ad1b53dafd3bc3d45f8253913244a7c02ed8336963afc3b707ab4607a567 |
 | 17.2 | `/chapter-17/llm-as-a-judge` | Inspected 2026-11-25 | c57401335205ae3dc187e512d28443027ed79d13a6858df675662fe7dbe97ce4 | fed0a9a3459a3eb9683eb1576383f225b0943f807dfd1b3564bdb8603f8986d7 |
 | 17.3 | `/chapter-17/elo-rating-and-leaderboards` | Inspected 2026-11-15 | 14f931df5e4641c576c1763d446b2c663d1f282abf438767e5a330d49b31a9b9 | 1e78f5819e5452372109f72327dad0f7831b3b9ce66750000c9378a906744c30 |
 | 17.4 | `/chapter-17/contamination-issues` | Mechanical only | 38a0cad52c7504804a57a8cc2deed94a3ac2fe68f7648809261abad1cf6b4fa5 | ad7b87426dcdde29f69a6921696a462359e7681d7d3b5ee5c11f3d80ec0a71c7 |
-| 17.5 | `/chapter-17/production-evaluation-and-release-gates` | Mechanical only | 60ddb6057d61fb19bdcbbed9bdb165b892e506e549dbe2b985e976bab1ef60f4 | 25e04ba235e259243c4df62f67886f8ae54283189fc0e32334e31f2e2a1d582e |
+| 17.5 | `/chapter-17/production-evaluation-and-release-gates` | Inspected 2026-11-25 | d2917516ef75c2ede2cd4db285a221090b09f181104e7112bd388f427ecc5298 | cb7d670ce7898fe43516e3cc8a38e295b6e24bba8e3a65c7579c61f3e03b9fb3 |
 | 17.6 | `/chapter-17/commercial-model-benchmarks` | Inspected 2026-11-25 | 4a49828c17446fd693ac686fc8ff5511adde668d5bd79ad3a5c0d385889e7bd4 | 81b1ffabb6d28b33cd31188c769502570b14c35d6f3611eb6b421c48b4611b2f |
 | 17.7 | `/chapter-17/experimental-design-and-uncertainty` | Inspected 2026-11-25 | 15572b32598a7c488cd3930fe29d3dd54f54ebd5521257817788e039253cdf1d | 00b4ea5b58d4ec986eee7b8d4ed7fbb61749c27a0c9c1c77aced73a4d86f14b1 |
 | 18.1 | `/chapter-18/red-teaming` | Mechanical only | fa815b07490b4a1039a2e91d2c98e9f1f212d6479f534afa5f09020cc8f93598 | 5aa628372d20829e842ce6b3fad0133fee7c40e63c345e76f0b823b351df6f59 |
@@ -643,3 +643,7 @@ The 17.6 product note was checked against OpenAI’s November 24 API changelog a
 ### 2026-11-25 normalization and paged KV address checks
 
 In both editions of 3.4, the two-feature browser example and CPU PyTorch agree for an offset, a nearly constant input and a constant input at both epsilon settings. The worked residual example distinguishes the zero-branch behavior of Pre-LN and Post-LN. In 12.2, request A’s block table maps five logical values to physical blocks 0 and 2. The CPU example checks the logical rows and final attention value, excludes unused tail slots and refuses incomplete or out-of-range active mappings.
+
+### 2026-11-25 expert dispatch, decision costs and deployment
+
+In 5.3, the code visible in both editions is also the downloadable two-process CPU exercise. Six tokens test uneven all-to-all dispatch and the return to source order. Additional runs cover a process that starts with no tokens and one that receives none. In 16.7 the two fixtures keep scores and the overall positive rate fixed. Of the same 40 automatically accepted cases, errors rise from four to twelve. The cost estimate and observed cost have separate readouts. In 17.5 the worked release decision uses the 17.7 fixture. A 15-point target gain clears its threshold while a 25-point loss on a protected capability blocks deployment.

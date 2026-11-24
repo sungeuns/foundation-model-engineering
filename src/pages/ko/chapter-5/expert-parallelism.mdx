@@ -4,6 +4,7 @@ title: "5.3 Expert Parallelism"
 lang: "ko"
 ---
 
+import ExpertDispatchCode from '../../../components/chapter-5/ExpertDispatchCode.astro';
 import { ExpertParallelismVisualizer } from '../../../components/chapter-5/ExpertParallelismVisualizer.tsx';
 
 # 5.3 Expert Parallelism (전문가 병렬화)
@@ -38,6 +39,8 @@ MoE 피드포워드 레이어에서는 다른 랭크의 전문가가 필요할 �
 
 여기서는 수신 버퍼를 할당하고 `all_to_all_single`을 호출하기 전에, 각 출발 랭크에서 받을 행 수를 알아야 합니다. 가변 길이 전송을 위해 먼저 개수를 교환하는 것입니다. 다른 디스패처는 고정 용량 패딩이나 다른 통신 프로토콜을 쓸 수 있으므로, 별도 개수 교환이 모든 EP 구현의 필수 단계는 아닙니다. 아래 API 동작은 **2026-11-18 기준** PyTorch 2.15 문서와 대조했습니다. [[3]](#ref-3)
 
+<a id="expert-dispatch-lab"></a>
+
 ### 토큰 여섯 개를 두 랭크로 따라가기
 
 랭크 0이 0–1번 전문가를, 랭크 1이 2–3번 전문가를 맡는다고 합시다. 랭크 0의 토큰이 선택한 전문가 ID는 `[2, 0, 3, 2]`, 랭크 1은 `[1, 3]`입니다. 다음 표의 단위는 바이트가 아니라 **토큰 행 수** 입니다.
@@ -51,82 +54,24 @@ MoE 피드포워드 레이어에서는 다른 랭크의 전문가가 필요할 �
 
 한 상태에 BF16 값이 4,096개 있다면 크기는 8,192바이트입니다. 랭크 사이를 건너는 행은 네 개(0→1 세 개, 1→0 한 개)이므로 dispatch의 랭크 간 상태 페이로드는 32 KiB입니다. 같은 폭의 출력을 돌려보내면 32 KiB가 더 필요합니다. ID, 개수, 프로토콜 오버헤드, 역전파는 별도입니다. Top-k 라우팅은 선택한 전문가마다 할당을 추가합니다. 같은 랭크의 전문가를 선택한 토큰도 연산은 필요하지만 이 랭크 경계를 건너지는 않습니다.
 
-> **교육용 전송 예제.** 초기화된 분산 프로세스 그룹과 토큰당 하나의 전문가 ID를 가정합니다. ID는 상태와 같은 장치의 `torch.long` 텐서이며 값은 `[0, num_total_experts)` 범위여야 합니다. 모든 랭크의 상태 폭과 dtype이 같고, 백엔드가 해당 텐서를 지원해야 합니다. 전문가 수는 양수이며 랭크 수로 나누어떨어져야 합니다. 상태와 전문가 ID의 전달만 보여줍니다. 역방향 combine, 라우팅 가중치, top-k 복제, 패딩·용량 정책, autograd 지원과 장애 복구는 빠져 있으며 GPU 분산 학습 검증을 거치지 않았습니다. 전체 시스템 구조는 GShard를 참고하세요. [[1]](#ref-1)
+> **CPU 실습.** 토큰마다 전문가 하나를 선택합니다. 모든 랭크에서 상태 벡터의 폭과 dtype은 같고, 전문가 ID는 상태와 같은 장치에 있는 `torch.long` 텐서입니다. 두 랭크가 연속된 전문가 ID 두 개씩을 맡습니다. 실습에서는 토큰을 전문가에게 보내고 결과를 돌려받습니다. 학습 시스템에는 top-k 라우팅 가중치, 용량 정책, 통신을 통과하는 그래디언트, 장애 복구도 필요합니다. [[1]](#ref-1)
 
-```python
-import torch
-import torch.distributed as dist
+<ExpertDispatchCode lang="ko" />
 
-class ExpertParallelDispatcher:
-    def __init__(self, ep_group, num_total_experts):
-        """
-        ep_group: 전문가 병렬화를 위한 torch.distributed 프로세스 그룹.
-        num_total_experts: 전체 GPU에 걸친 총 전문가 수.
-        """
-        self.ep_group = ep_group
-        self.world_size = dist.get_world_size(ep_group)
-        self.rank = dist.get_rank(ep_group)
+원하는 디렉터리에 파일을 저장한 뒤, Gloo를 지원하는 Linux용 PyTorch 환경에서 다음 명령을 실행합니다. 로컬 CPU 프로세스 두 개가 시작됩니다. 아래 결과는 2026-11-25에 PyTorch 2.15.0+cpu에서 확인했습니다.
 
-        # 전문가가 EP 그룹에 균등하게 분산되어 있다고 가정
-        assert num_total_experts % self.world_size == 0
-        self.local_experts = num_total_experts // self.world_size
-
-    def dispatch(self, hidden_states, expert_indices):
-        """
-        hidden_states: [num_local_tokens, d_model]; 모든 랭크에서 폭과 dtype이 같음.
-        expert_indices: [num_local_tokens], hidden_states.device의 torch.long;
-                        ID 범위는 [0, num_total_experts).
-        """
-        device = hidden_states.device
-
-        # 1. 어떤 GPU(랭크)가 어떤 전문가를 소유하고 있는지 결정
-        target_ranks = expert_indices // self.local_experts
-
-        # 2. 연속적인 네트워크 전송을 준비하기 위해 대상 랭크별로 토큰 정렬
-        sort_idx = torch.argsort(target_ranks)
-        sorted_states = hidden_states[sort_idx]
-        sorted_target_ranks = target_ranks[sort_idx]
-
-        # 3. 이 GPU가 다른 각 GPU로 보내야 할 토큰 수 계산
-        send_counts = torch.bincount(sorted_target_ranks, minlength=self.world_size)
-        send_counts_list = send_counts.cpu().tolist()
-
-        # 4. 메타데이터 교환: 다른 GPU들에게 우리로부터 받을 토큰 수를 알림
-        # 수신 버퍼를 할당하기 위해 recv_counts를 알아야 함.
-        recv_counts = torch.empty_like(send_counts)
-        dist.all_to_all_single(recv_counts, send_counts, group=self.ep_group)
-        recv_counts_list = recv_counts.cpu().tolist()
-
-        # 5. 들어오는 토큰을 위한 수신 버퍼 할당
-        total_recv = sum(recv_counts_list)
-        recv_buffer = torch.empty(
-            (total_recv, hidden_states.size(1)),
-            dtype=hidden_states.dtype,
-            device=device
-        )
-
-        # 6. 배분 (THE DISPATCH): 설정된 백엔드를 통해 실제 All-to-All 토큰 전송 수행
-        dist.all_to_all_single(
-            recv_buffer,
-            sorted_states,
-            output_split_sizes=recv_counts_list,
-            input_split_sizes=send_counts_list,
-            group=self.ep_group
-        )
-
-        # recv_buffer는 이제 클러스터 곳곳에서 우리 로컬 전문가를 향해 온 토큰들을 포함함.
-        # 상태와 동일한 순열 및 분할 크기로 전문가 ID를 보냄.
-        recv_experts = torch.empty(total_recv, device=device, dtype=torch.long)
-        dist.all_to_all_single(
-            recv_experts, expert_indices[sort_idx].contiguous(),
-            output_split_sizes=recv_counts_list,
-            input_split_sizes=send_counts_list, group=self.ep_group)
-        local_ids = recv_experts % self.local_experts
-        # Combine에서는 분할을 반대로 적용하고 sort_idx를 되돌린 뒤 가중치를 적용해야 함.
-        return recv_buffer, local_ids, recv_counts_list, sort_idx, send_counts_list
+```bash
+torchrun --standalone --nproc-per-node=2 expert_dispatch.py
 ```
 
-PyTorch가 설치된 환경에서 저장소 루트의 `python scripts/expert-dispatch-smoke.py`를 실행하면 이 영문·한국어 예제를 그대로 검사할 수 있습니다. 두 CPU/Gloo 프로세스로 불균등 라우팅, 입력 토큰이 없는 랭크, 수신 토큰이 없는 랭크, 모의 전문가 계산 후 원래 토큰 순서 복원을 확인합니다. 2026-11-18에 PyTorch 2.15에서 통과했으며, GPU 처리량이나 학습 그래디언트를 검증하는 테스트는 아닙니다.
+토큰 여섯 개를 보내는 첫 번째 사례에서 각 입력 행의 첫 번째 값은 토큰 번호입니다. 결과에서 담당 전문가를 알아볼 수 있도록 $e$번 전문가는 두 좌표에 각각 $1000e$를 더합니다. 랭크 1에 도착한 토큰은 `[1, 3, 4, 102]`이고, 각 토큰을 처리할 전역 전문가 ID는 `[2, 3, 2, 3]`입니다. 3번 토큰은 랭크 0에서 출발해 랭크 1의 3번 전문가를 거쳐 3003이 된 뒤, 랭크 0의 세 번째 자리로 돌아옵니다. 모든 결과가 출발지로 돌아왔을 때의 첫 번째 좌표를 확인해 보세요.
+
+| 출발 랭크 | 원래 토큰 순서 | 전문가 연산을 마치고 돌아온 값 |
+|---|---|---|
+| 0 | 1, 2, 3, 4 | 2001, 2, 3003, 2004 |
+| 1 | 101, 102 | 1101, 3102 |
+
+스크립트는 랭크 0에 처음부터 입력이 없는 경우와 랭크 1이 아무 토큰도 받지 않는 경우도 실행합니다. 두 프로세스는 빈 텐서가 있더라도 같은 순서로 집합 통신을 호출합니다. 마지막으로 모든 토큰의 두 좌표가 원래 자리에서 각각 기댓값과 일치하는지 검사합니다.
 
 ---
 

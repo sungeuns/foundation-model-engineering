@@ -4,6 +4,7 @@ title: "5.3 Expert Parallelism"
 lang: "en"
 ---
 
+import ExpertDispatchCode from '../../components/chapter-5/ExpertDispatchCode.astro';
 import { ExpertParallelismVisualizer } from '../../components/chapter-5/ExpertParallelismVisualizer.tsx';
 
 # 5.3 Expert Parallelism
@@ -38,6 +39,8 @@ The core operation powering Expert Parallelism is the `All-to-All` collective co
 
 For this variable-size implementation, every rank must know how many rows it will receive from each source before allocating the output and calling `all_to_all_single`. A count exchange supplies that information. Other dispatchers can use padded fixed-capacity layouts or different communication protocols; a separate count exchange is not a universal requirement of EP. API semantics below were checked against PyTorch 2.15 documentation **as of 2026-11-18**. [[3]](#ref-3)
 
+<a id="expert-dispatch-lab"></a>
+
 ### Follow six tokens through two ranks
 
 Suppose rank 0 owns Experts 0–1 and rank 1 owns Experts 2–3. Rank 0 starts with expert IDs `[2, 0, 3, 2]`; rank 1 starts with `[1, 3]`. The table counts **token rows**, not bytes:
@@ -51,82 +54,24 @@ Rank 0's send counts are `[1, 3]`, while its receive counts are the first column
 
 If each state has 4,096 BF16 values, it occupies 8,192 bytes. Four rows cross between ranks (three from 0→1, one from 1→0), so dispatch carries 32 KiB of cross-rank state payload. Returning equal-width outputs adds another 32 KiB. IDs, counts, protocol overhead and any backward pass are separate. Top-k routing adds one assignment per chosen expert; local assignments still need expert work but do not cross this rank boundary.
 
-> **Educational transport example.** Assumes an initialized distributed process group and one expert ID per token. IDs must be `torch.long`, on the states' device, and in `[0, num_total_experts)`. All ranks must use the same state width and dtype, with a backend that supports their tensors. The positive expert count must divide evenly across ranks. It sends states and expert IDs only. Reverse combine, routing weights, top-k replication, padding/capacity policy, autograd support and recovery are omitted; this has not been validated as distributed GPU training code. See GShard for the full system context. [[1]](#ref-1)
+> **CPU lab.** Each token selects one expert. All ranks use the same state width and dtype. An expert ID is a `torch.long` on the same device as its state. Four experts are split into two contiguous pairs. The lab follows the forward dispatch and the return trip. A training system also needs routing weights for top-k, a capacity policy, gradients through communication, and failure recovery. [[1]](#ref-1)
 
-```python
-import torch
-import torch.distributed as dist
+<ExpertDispatchCode lang="en" />
 
-class ExpertParallelDispatcher:
-    def __init__(self, ep_group, num_total_experts):
-        """
-        ep_group: The torch.distributed process group for Expert Parallelism.
-        num_total_experts: Total number of experts across all GPUs.
-        """
-        self.ep_group = ep_group
-        self.world_size = dist.get_world_size(ep_group)
-        self.rank = dist.get_rank(ep_group)
+Save the file in any directory. With a Linux installation of PyTorch that includes Gloo, run this command in that directory. It starts two local CPU processes. The run below used PyTorch 2.15.0+cpu on 2026-11-25.
 
-        # Assume experts are distributed evenly across the EP group
-        assert num_total_experts % self.world_size == 0
-        self.local_experts = num_total_experts // self.world_size
-
-    def dispatch(self, hidden_states, expert_indices):
-        """
-        hidden_states: [num_local_tokens, d_model]; same width/dtype across ranks.
-        expert_indices: [num_local_tokens], torch.long on hidden_states.device;
-                        IDs in [0, num_total_experts).
-        """
-        device = hidden_states.device
-
-        # 1. Determine which GPU (rank) owns which expert
-        target_ranks = expert_indices // self.local_experts
-
-        # 2. Sort tokens by their target rank to prepare for contiguous network transmission
-        sort_idx = torch.argsort(target_ranks)
-        sorted_states = hidden_states[sort_idx]
-        sorted_target_ranks = target_ranks[sort_idx]
-
-        # 3. Count how many tokens this GPU needs to send to each other GPU
-        send_counts = torch.bincount(sorted_target_ranks, minlength=self.world_size)
-        send_counts_list = send_counts.cpu().tolist()
-
-        # 4. METADATA EXCHANGE: Inform other GPUs how many tokens to expect from us
-        # We must know recv_counts to allocate the incoming memory buffer.
-        recv_counts = torch.empty_like(send_counts)
-        dist.all_to_all_single(recv_counts, send_counts, group=self.ep_group)
-        recv_counts_list = recv_counts.cpu().tolist()
-
-        # 5. Allocate the receive buffer for incoming tokens
-        total_recv = sum(recv_counts_list)
-        recv_buffer = torch.empty(
-            (total_recv, hidden_states.size(1)),
-            dtype=hidden_states.dtype,
-            device=device
-        )
-
-        # 6. THE DISPATCH: Perform the actual All-to-All token transfer using the configured backend
-        dist.all_to_all_single(
-            recv_buffer,
-            sorted_states,
-            output_split_sizes=recv_counts_list,
-            input_split_sizes=send_counts_list,
-            group=self.ep_group
-        )
-
-        # recv_buffer now contains tokens from all over the cluster destined for our local experts.
-        # Send expert identity with exactly the same permutation and splits.
-        recv_experts = torch.empty(total_recv, device=device, dtype=torch.long)
-        dist.all_to_all_single(
-            recv_experts, expert_indices[sort_idx].contiguous(),
-            output_split_sizes=recv_counts_list,
-            input_split_sizes=send_counts_list, group=self.ep_group)
-        local_ids = recv_experts % self.local_experts
-        # Combine must reverse the splits, then undo sort_idx before weighting.
-        return recv_buffer, local_ids, recv_counts_list, sort_idx, send_counts_list
+```bash
+torchrun --standalone --nproc-per-node=2 expert_dispatch.py
 ```
 
-With PyTorch installed, run `python scripts/expert-dispatch-smoke.py` from the repository root to check this exact EN/KO example. The two-process CPU/Gloo test covers uneven routing, a rank with no input tokens, a rank receiving no tokens, and restoring source order after a stand-in expert calculation. It passed with PyTorch 2.15 on 2026-11-18; it does not test GPU throughput or training gradients.
+In the six-token case, the first coordinate of each input row identifies its token. Expert $e$ adds $1000e$ to both coordinates so you can trace its output. Rank 1 receives tokens `[1, 3, 4, 102]` for global experts `[2, 3, 2, 3]`. Follow token 3: it starts at rank 0, visits expert 3 on rank 1, and returns as 3003 to its original slot. Here are the first coordinates after the return trip:
+
+| Source rank | Original token order | Values after dispatch, expert work and return |
+|---|---|---|
+| 0 | 1, 2, 3, 4 | 2001, 2, 3003, 2004 |
+| 1 | 101, 102 | 1101, 3102 |
+
+The script also runs a case where rank 0 starts empty and one where rank 1 receives nothing. Both processes still enter the collectives in the same order. The checks compare both coordinates with the expected output for every source token.
 
 ---
 

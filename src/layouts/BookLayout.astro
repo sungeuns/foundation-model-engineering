@@ -338,7 +338,7 @@ if (currentIndex !== -1) {
     <script>
       import { setupContentsSearch } from '../utils/contents-search';
       import { copyBookMath } from '../utils/copy-book-math';
-      import { localeHref } from '../utils/locale-fragments.js';
+      import { localeHref, sharedHeadingAliases } from '../utils/locale-fragments.js';
 
       if (document.querySelector('main .katex')) document.addEventListener('copy', copyBookMath);
 
@@ -346,11 +346,13 @@ if (currentIndex !== -1) {
       const sidebar = document.getElementById('sidebar');
       const backdrop = document.getElementById('sidebarBackdrop');
       const localeLink = document.querySelector<HTMLAnchorElement>('#localeLink');
+      const headings = document.querySelectorAll<HTMLElement>('main > h2[id], main > h3[id]');
+      const fragments: string[] = JSON.parse(localeLink?.dataset.sharedFragments || '[]');
+      const aliases = sharedHeadingAliases(headings, fragments);
       if (localeLink) {
         const targetPage = localeLink.getAttribute('href')!;
-        const fragments: string[] = JSON.parse(localeLink.dataset.sharedFragments || '[]');
         const updateLocaleLink = () => {
-          localeLink.setAttribute('href', localeHref(targetPage, location.hash, fragments, location.search));
+          localeLink.setAttribute('href', localeHref(targetPage, location.hash, fragments, location.search, aliases));
         };
         updateLocaleLink();
         window.addEventListener('hashchange', updateLocaleLink);
@@ -393,11 +395,11 @@ if (currentIndex !== -1) {
 
       // Share a specific explanation with a normal fragment link. Only use
       // manuscript headings; component-generated IDs need not survive a reload.
-      document.querySelectorAll<HTMLElement>('main > h2[id], main > h3[id]').forEach(heading => {
+      headings.forEach(heading => {
         const title = heading.textContent?.trim() || '';
         const permalink = document.createElement('a');
         permalink.className = 'section-permalink';
-        permalink.href = `#${encodeURIComponent(heading.id)}`;
+        permalink.href = `#${encodeURIComponent(aliases.get(heading.id) ?? heading.id)}`;
         permalink.textContent = '#';
         permalink.setAttribute('aria-label', isKo ? `${title} 절의 링크` : `Link to section: ${title}`);
         permalink.title = isKo ? '이 절의 링크' : 'Link to this section';

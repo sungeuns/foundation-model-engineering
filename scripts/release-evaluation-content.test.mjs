@@ -8,19 +8,24 @@ const pair = (slug) => [
 ];
 
 test('release-gate pages define artifact, statistics, rollout, and rollback contracts', () => {
-  for (const page of pair('production-evaluation-and-release-gates')) {
-    assert.match(page, /immutable artifact bundle|불변 artifact bundle/i);
-    assert.match(page, /tokenizer.*chat template.*generation config/is);
-    assert.match(page, /paired bootstrap|paired permutation|대응.*bootstrap|대응.*permutation/i);
-    assert.match(page, /sample size|표본 크기/i);
-    assert.match(page, /p50.*p95.*p99/is);
-    assert.match(page, /shadow.*canary.*ramp-up/is);
-    assert.match(page, /automatic abort|자동 중단/i);
-    assert.match(page, /hysteresis|히스테리시스/i);
-    assert.match(page, /last-known-good/i);
-    assert.match(page, /stateful.*side effect|상태.*side effect/is);
-    assert.match(page, /rollback rehearsal|rollback.*리허설/i);
-    assert.match(page, /eval.*maintenance|평가셋.*유지/i);
+  const [en, ko] = pair('production-evaluation-and-release-gates');
+  const criteria = [
+    [/immutable artifact bundle/i, /불변 아티팩트 묶음/],
+    [/tokenizer.*chat template.*generation config/is, /토크나이저.*대화 템플릿.*생성 설정/s],
+    [/paired bootstrap|paired permutation/i, /대응 부트스트랩|대응 순열 검정/],
+    [/sample size/i, /표본 크기/],
+    [/p50.*p95.*p99/is, /p50.*p95.*p99/s],
+    [/shadow.*canary.*ramp-up/is, /섀도 테스트.*카나리 배포.*점진적 확대/s],
+    [/automatic abort/i, /자동 중단/],
+    [/hysteresis/i, /히스테리시스/],
+    [/last-known-good/i, /마지막으로 정상 동작을 확인한 버전 전체/],
+    [/stateful.*side effect/is, /도구 호출로 이미 바뀐 외부 상태/],
+    [/rollback rehearsal/i, /복구 훈련/],
+    [/eval.*maintenance/is, /평가셋 유지보수/],
+  ];
+  for (const [englishTerm, koreanTerm] of criteria) {
+    assert.match(en, englishTerm);
+    assert.match(ko, koreanTerm);
   }
 });
 

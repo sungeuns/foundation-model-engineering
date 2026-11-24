@@ -1,0 +1,15 @@
+---
+import { readFileSync } from 'node:fs';
+import { Code } from 'astro:components';
+import { withBasePath } from '../../utils/paths.js';
+
+const ko = Astro.props.lang === 'ko';
+const path = '/labs/expert_dispatch.py';
+const code = readFileSync(`public${path}`, 'utf8').trimEnd();
+---
+
+<p><a href={withBasePath(path)} download="expert_dispatch.py">{ko ? 'CPU 실습 파일 내려받기' : 'Download the CPU lab'} (expert_dispatch.py)</a></p>
+<details>
+  <summary>{ko ? '토큰 전송·복원 코드와 세 가지 검증 사례 보기' : 'Read the dispatch, return path, and three test cases'}</summary>
+  <Code code={code} lang="python" theme="github-dark" />
+</details>

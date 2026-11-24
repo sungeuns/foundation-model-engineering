@@ -56,13 +56,26 @@ $$
 
 A constant $C_R$ assumes review resolves the case correctly. Real review has delay, limited capacity, and residual error: include those costs when they matter. Add an explicit “insufficient evidence/other” option when the answer set is incomplete; merely renormalizing over two wrong options can create artificial certainty. For mutually exclusive alternatives, one Choice distribution is different from several independently asked predicates. Their marginals need not sum to one.
 
+<a id="calibration-drift-example"></a>
+
 ### Explore the Trade-off
 
-The following experiment uses a separate probability floor after a cost-based binary choice. It illustrates selective prediction rather than implementing the full three-action optimum. Move costs and the floor, then introduce label shift. The curve is empirical on a small fixed synthetic set; monotonic risk improvement is not assumed.
+Imagine a support router with 100 tickets. It first picks the cheaper of two automatic decisions according to the scores. A separate policy sends a ticket to review whenever the probability assigned to the chosen answer falls below a floor. This two-step policy lets you explore the price of requiring more confidence. The three-action optimum above would compare review cost directly with both automatic actions.
+
+Start with the floor at **0.85** and both mistake costs at **1**. Each review costs **0.25** and resolves the ticket correctly. Before you turn on **Worse calibration**, predict which will change. Will the router send more tickets to review, incur more cost from mistakes, or both?
 
 <DecisionPolicyExplorer client:load locale="en" />
 
-**Coverage** is the fraction automatically processed. **Selective risk** is the error rate among accepted cases. At zero coverage the conditional error rate is undefined, not zero. A system that defers everything may avoid automatic mistakes while failing its throughput or review-capacity goal.
+In both settings the router accepts 40 of 100 tickets (**40% coverage**). Of those, 20 have a chosen-answer probability of 0.85 and 20 have 0.95. The scores predict $20(0.15)+20(0.05)=4$ mistakes. The 60 reviews cost another 15 units. The forecast is therefore $(4+15)/100=0.19$ units per incoming ticket.
+
+| Outcome labels | Errors among the 40 accepted (selective risk) | Observed cost per incoming ticket |
+|---|---|---|
+| Original | 2 false positives + 2 false negatives (4/40 = 10%) | (4 + 15)/100 = 0.19 |
+| Worse calibration | 6 false positives + 6 false negatives (12/40 = 30%) | (12 + 15)/100 = 0.27 |
+
+The score histogram stays the same, and both sets have 50 positive tickets. What changes is how often a given score is right. Among the ten tickets scored 0.95 for the positive class, nine are positive originally and seven after the switch. Detecting this change requires outcomes as well as scores. **Label shift** describes a different assumption in which the class proportions $P(y)$ change while the distribution of inputs within each class $P(x\mid y)$ stays fixed [[11]](#ref-11).
+
+Now raise the floor to 1.00. All 100 tickets go to review, so the cost is 0.25 per ticket and the error rate among accepted tickets is undefined. The review queue still has to absorb the entire workload.
 
 ## 4. What Recent Research Adds
 
@@ -136,3 +149,4 @@ Evaluate actor success, judge calibration and downstream student improvement ind
 8. <a id="ref-8"></a>Sun, Y., et al. (2026). *Type-Safe Is Not Error-Free: Typed Decision Models Follow the Option Name, Not the Definition Bound to It*. October 8 revision; preprint. [arXiv:2609.26758v3](https://arxiv.org/abs/2609.26758v3).
 9. <a id="ref-9"></a>Li, K., et al. (2026). *Beyond Calibration: Do a Typed-Decision Model's Probabilities Obey the Probability Axioms?* September 27 preprint. [arXiv:2609.33209v1](https://arxiv.org/abs/2609.33209v1).
 10. <a id="ref-10"></a>Research preprint (2026). [Actor, Judge, or Teacher? Understanding Decision Models in Long-Horizon Agents](https://arxiv.org/html/2611.17167v1). Version pinned; accessed 2026-11-15.
+11. <a id="ref-11"></a>Lipton, Z., Wang, Y.-X., and Smola, A. (2018). *Detecting and Correcting for Label Shift with Black Box Predictors*. [ICML proceedings](https://proceedings.mlr.press/v80/lipton18a.html).

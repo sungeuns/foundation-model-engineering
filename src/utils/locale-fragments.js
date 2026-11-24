@@ -12,6 +12,7 @@ const lessonFragments = {
   '/chapter-4/encoder-decoder': ['cross-attention-example'],
   '/chapter-4/hybrid-prefix-lm': ['prefix-mask-test'],
   '/chapter-5/sparse-vs-dense-models': ['moe-routing-lab'],
+  '/chapter-5/expert-parallelism': ['expert-dispatch-lab'],
   '/chapter-7/tiny-decoder-lab': ['decoder-copy-trace', 'local-decoder-setup'],
   '/chapter-8/continued-pretraining-and-domain-adaptation': ['token-mixture-example'],
   '/chapter-10/dpo': ['reference-relative-example'],
@@ -22,7 +23,9 @@ const lessonFragments = {
   '/chapter-12/serving-policies-slos-and-fallbacks': ['streaming-latency-trace'],
   '/chapter-14/advanced-retrieval': ['rrf-candidate-cutoff'],
   '/chapter-14/rag-failure-modes-and-operational-design': ['trace-a-rag-answer'],
+  '/chapter-16/decision-models-and-selective-prediction': ['calibration-drift-example'],
   '/chapter-17/commercial-model-benchmarks': ['long-context-cost'],
+  '/chapter-17/production-evaluation-and-release-gates': ['release-gate-example'],
   '/chapter-17/llm-as-a-judge': ['translation-rubric-example'],
   '/chapter-17/experimental-design-and-uncertainty': ['release-lab'],
 };
@@ -36,7 +39,27 @@ export function sharedLocaleFragments(chapterPath, modelIds = []) {
   return ['quizzes', 'references', ...(lessonFragments[chapterPath] || []), ...models];
 }
 
-export function localeHref(baseHref, hash, sharedFragments, search = '') {
+// An empty anchor immediately before a heading names the same passage.
+// Stop at prose, linked content, or a component instead of guessing its section.
+export function sharedHeadingAliases(headings, sharedFragments) {
+  const aliases = new Map();
+  for (const heading of headings) {
+    const markers = [];
+    let previous = heading.previousElementSibling;
+    while (previous?.matches('a[id]:empty:not([href])')) {
+      markers.push(previous.id);
+      previous = previous.previousElementSibling;
+    }
+    const shared = markers.find(id => sharedFragments.includes(id));
+    if (shared) {
+      aliases.set(heading.id, shared);
+      for (const marker of markers) aliases.set(marker, shared);
+    }
+  }
+  return aliases;
+}
+
+export function localeHref(baseHref, hash, sharedFragments, search = '', aliases) {
   const scenario = search && sharedFragments.includes('kv-calculator') ? canonicalKvSearch(search) : '';
   const pageHref = baseHref.split('#')[0] + scenario;
   if (!hash.startsWith('#')) return pageHref;
@@ -46,5 +69,6 @@ export function localeHref(baseHref, hash, sharedFragments, search = '') {
   } catch {
     return pageHref;
   }
-  return sharedFragments.includes(id) ? `${pageHref}#${encodeURIComponent(id)}` : pageHref;
+  const target = sharedFragments.includes(id) ? id : aliases?.get(id);
+  return sharedFragments.includes(target) ? `${pageHref}#${encodeURIComponent(target)}` : pageHref;
 }

@@ -8,129 +8,130 @@ lang: ko
 
 # 17.5 프로덕션 평가와 모델 배포 기준
 
-모델은 특정한 불변 artifact가 사전에 선언한 offline·online gate를 통과했을 때 준비됩니다. 하나의 benchmark score가 올랐다고 준비된 것이 아닙니다. Release process는 의사결정을 재현 가능하게 만들고 승인자를 식별하며, 실제 환경이 실험실과 다를 때 안전하게 되돌릴 수 있어야 합니다.
+고객 지원 모델이 새로운 유형의 문의를 처리할 수 있게 됐습니다. 고객이 어제까지 맡기던 일도 여전히 잘할까요? 배포 기준을 정할 때는 평가 결과가 나오기 전에 세 가지를 합의합니다. 새 기능에서 어느 정도 개선이 있어야 쓸 만한지, 기존 기능에서 어디까지 손실을 감수할지, 누가 배포를 멈출 수 있는지입니다.
 
----
-
-## 불변 Artifact Bundle
-
-다음 hash를 포함하는 하나의 **불변 artifact bundle(immutable artifact bundle)** 을 평가하고 배포합니다.
-
-- base model과 모든 adapter 또는 merged checkpoint
-- tokenizer, special-token map, chat template, generation config
-- tool schema, retrieval/index revision, safety policy, prompt asset
-- code commit, resolved config, container, CUDA/framework/kernel version
-- training/evaluation data manifest, objective, decoding seed
-
-Champion/candidate registry에 bundle identity, owner, target traffic, approval, evaluation report, last-known-good predecessor를 기록합니다. Base/adapter/tokenizer/template incompatibility는 load 전에 차단합니다. Model-name 문자열은 artifact identity가 아닙니다.
-
----
-
-## Release Packet과 통계적 결정
-
-Baseline hash, prompt, rubric, judge/verifier artifact, tool state, fixed seed, decoding setting을 고정합니다. Packet에는 raw per-example 결과와 다음을 포함합니다.
-
-- target/domain, base-retention, safety/over-refusal, format/tool, privacy/security slice
-- response length, entropy, calibration, hallucination/citation evidence
-- latency **p50, p95, p99**, throughput, cost, OOM/error/tool-retry 비율
-- slice별 표본 크기(sample size)와 평균으로 숨기면 안 되는 critical failure
-
-Paired outcome에는 **대응 bootstrap(paired bootstrap)** confidence interval 또는 paired permutation/randomization test를 사용합니다. Minimum effect, alpha/error tolerance, sample size 또는 power 근거, tie 처리, slice minimum을 사전에 정합니다. 불일치 사례를 확인하고 일부를 adjudication합니다. Statistical significance가 product significance를 보장하지 않습니다.
-
-LLM judge는 target rubric의 human calibration, position randomization, slice별 agreement/error 분석이 필요합니다. Requirement를 직접 검사하는 executable·rule-based verifier가 있으면 우선합니다.
-
----
-
-## Gate Decision Table
-
-모든 metric은 단순한 dashboard 색이 아니라 action으로 연결됩니다.
-
-| Gate | Pass | Review | Block |
-|---|---|---|---|
-| Target quality | lower confidence bound가 minimum effect 통과 | uncertain 또는 제한된 slice | material regression |
-| Retention | 모든 protected slice가 범위 안 | noncritical borderline | critical capability regression |
-| Safety/privacy | critical failure 없음 | adjudication 필요 | severity-defined blocker |
-| Format/tools | schema·side-effect test 통과 | 복구 가능한 warning | invalid action 또는 unauthorized effect |
-| Systems | latency/cost/error SLO 통과 | capacity plan 필요 | OOM, retry storm, SLO breach |
-
-Gate에는 owner, data window, threshold, confidence rule, missing-data behavior, exception approver가 포함됩니다. Evidence가 없으면 0도 pass도 아닙니다.
-
----
-
-## Shadow, Canary, Ramp-up
-
-세 단계는 서로 다른 질문에 답합니다.
-
-1. **Shadow:** candidate가 mirrored input을 받지만 user-visible output이나 external side effect를 만들 수 없습니다. Output, latency, tool plan을 비교합니다.
-2. **Canary:** 작고 무작위화한 eligible cohort가 candidate를 사용합니다. Exposure/propensity를 기록하고 champion과 동시에 비교합니다.
-3. **Ramp-up:** 각 observation window가 통과한 뒤 명시적인 단계로 traffic을 늘립니다.
-
-Ad hoc redeploy가 아니라 traffic feature flag 또는 registry pointer를 사용합니다. Safety, error, latency, cost, critical task failure에 **자동 중단(automatic abort)** threshold를 둡니다. Observation window와 **히스테리시스(hysteresis)** 를 두어 noise 때문에 버전이 반복 전환되거나 심각한 중단이 늦어지지 않게 합니다.
-
----
-
-## Rollback Runbook
-
-Rollback은 weight만 교체하는 것이 아니라 **last-known-good** complete bundle로 전환하는 것입니다. Runbook은 incident owner와 approval path를 지정하고 다음을 다룹니다.
-
-- routing switch와 cache invalidation
-- incompatible adapter/base 또는 tokenizer state
-- **상태를 가진 tool side effect(stateful tool side effect)**, 부분 완료 workflow, external transaction
-- queued job, conversation/session state, 이미 전달한 output
-- audit trail, affected cohort 재구성, notification, follow-up evaluation
-
-일부 side effect는 model rollback으로 취소할 수 없습니다. Idempotency key, dry-run/shadow tool call, compensating action, queue version tag를 사용합니다. Detection·recovery time을 측정하고 이전 bundle이 여전히 load되는지 확인하는 정기 **rollback 리허설(rollback rehearsal)** 을 수행합니다.
-
----
-
-## 평가셋 유지보수
-
-**평가셋 유지보수(eval-set maintenance)** 는 통제된 data lifecycle입니다. Stable evaluation ID와 cluster ID, provenance, creation reason, owner, severity, rubric version, access class, retirement state를 부여합니다. Semantic neighbor를 deduplicate하고 모든 human·synthetic training pipeline에서 격리합니다.
-
-운영 실패 사례가 생기면 의미 집단 전체를 평가용으로 격리하거나, 학습에 사용하고 관련 회귀 테스트 모두를 노출된 것으로 표시합니다. 일반화 주장은 별도의 미노출 집단에서 평가해야 합니다. 학습 전에 형제 예시를 만들었다고 독립성이 생기지는 않습니다. 분포 변화에는 새로운 평가 집단을 추가하되 장기 비교용 고정 기준셋을 유지합니다. Prompt, 채점기, 도구, schema가 바뀌면 버전을 올리고 기준 모델과 후보를 모두 다시 평가합니다.
-
-평가 접근 이력과 오염 여부를 정기적으로 점검합니다. 노출이 의심되면 비공개 사례를 교체하되, 추세를 유지하려고 정답을 몰래 바꾸면 안 됩니다.
-
----
-
-## 통제되지 않은 효과 없이 행동을 평가하기
-
-**2026-10-13 기준 근거 보강.** [16.6절](/ko/chapter-16/agent-reliability-recovery-and-guardrails)의 10월 보고서는 평가 설계에서 과업 완료와 격리 준수가 별도 속성임을 보여 줍니다 [[4]](#ref-4). 평가의 네트워크 접근을 명시적 capability로 다룹니다. 목표 기술을 검사할 수 있다면 재생 응답·소유한 테스트 서비스·오프라인 부분집합을 사용합니다. live 접근이 필요하면 실행 전에 허용 목적지·신원·효과를 정의합니다.
-
-실행기가 차단했고 최종 답이 맞아도 **권한 밖 행동을 시도한 경우** 를 출시 조건에 포함합니다. 정책 결정과 실제 부수 효과는 에이전트 transcript와 별도 기록합니다. 오프라인 대체 환경은 평가 과업을 바꾸므로 버전 관리해야 하며 live benchmark 점수를 그대로 물려받지 못합니다. redirect·간접 요청을 포함한 모든 도구 경로에서 격리 검사를 수행합니다.
-
+<a id="release-gate-example"></a>
 
 ## 실제 수치로 출시 판단하기
 
-[17.7](../experimental-design-and-uncertainty/)에서 대응 집단 추정, 비열등성과 증거 부족의 구분, 실패 0회의 위험 상한을 계산합니다. Canary에서는 사용자·세션 배정을 지속적으로 고정하고 표본 크기와 종료 시 효능 분석 한 번을 사전에 정합니다. 안전 중단 감시는 계속 유지합니다. 효능에 따른 조기 승격에는 순차 설계가 필요하며 hysteresis만으로 반복 검정 문제를 해결할 수 없습니다.
+[17.7절의 배포 실험](../experimental-design-and-uncertainty/#release-lab)에서 `regression`을 골라 보세요. 후보 모델과 현재 서비스 중인 모델이 같은 사례에 답합니다. 실습에는 두 과제의 성공과 실패를 기록한 가상 데이터가 들어 있습니다. 과제마다 독립적인 사례군이 80개이고, 한 사례군에는 서로 관련된 사례가 4개씩 있습니다. 모든 사례군에는 같은 가중치를 줍니다. 표의 단위는 성공률의 차이인 **퍼센트포인트(%p)** 입니다.
+
+| 과제 | 후보 성공률 − 현재 모델 성공률 | 단측 95% 신뢰하한 | 평가 전에 정한 통과 기준 |
+|---|---:|---:|---|
+| 새로 맡길 과제 | +15 | +11.25 | 신뢰하한이 +5 초과 |
+| 성능을 지켜야 할 기존 과제 | −25 | −25 | 신뢰하한이 −2 초과 |
+
+**이번 후보의 카나리 배포를 차단합니다.** 일부 사용자에게라도 후보를 제공하려면 두 기준을 모두 넘어야 합니다. 새 과제에서는 불확실성을 감안해도 필요한 만큼 개선됐습니다. 하지만 기존 과제에서는 *모든 사례군에서 4건 중 1건씩* 덜 맞혔습니다. 어느 사례군을 다시 뽑아도 25%p 하락이라는 결과는 같습니다. 서비스는 현재 모델로 유지하고, 두 모델의 답이 갈린 사례를 조사한 뒤 다음 후보를 평가합니다. 실제 데이터에서는 사례군별 손실이 이처럼 똑같지 않아 판단을 유보해야 할 수도 있습니다.
+
+<a id="불변-artifact-bundle"></a>
+
+## 평가한 버전을 그대로 배포하려면
+
+배포할 버전에 식별자를 부여하고, 구성 요소의 해시와 설정을 하나의 **불변 아티팩트 묶음** 으로 관리합니다.
+
+- 기본 모델과 여기에 적용한 모든 어댑터 또는 병합된 체크포인트
+- 토크나이저, 특수 토큰 대응표, 대화 템플릿, 생성 설정
+- 도구 스키마, 검색 인덱스 버전, 안전 정책, 프롬프트
+- 코드 커밋, 실제 적용된 설정, 컨테이너, CUDA·프레임워크·커널 버전
+- 학습·평가 데이터 명세, 학습 목적 함수, 디코딩 난수 시드
+
+버전별로 담당자, 승인자, 배포 대상, 평가 보고서, 직전에 정상 동작을 확인한 버전을 기록합니다. 불러오기 전에 모델과 어댑터, 토크나이저, 대화 템플릿이 서로 맞는지 확인합니다. 같은 이름의 모델을 쓰는 두 서비스도 대화를 서로 다른 토큰열로 바꾸면 답이 달라질 수 있습니다.
+
+<a id="release-packet과-통계적-결정"></a>
+
+## 평가 보고서에는 무엇을 남길까?
+
+비교 기준 모델의 해시, 프롬프트, 채점 기준, 채점 모델이나 검증기 버전, 도구 상태, 난수 시드, 디코딩 설정을 고정합니다. 두 모델이 각각 어떤 사례를 맞히고 틀렸는지 남깁니다. HELM이 여러 지표를 함께 평가한 것처럼, 보고서에도 과제 성능과 운영 비용을 함께 담습니다 [[1]](#ref-1).
+
+- 목표 분야와 보호할 기존 기능은 과제별 성공률을 냅니다. 안전 위반, 불필요한 거절, 출력 형식 오류, 잘못된 도구 호출, 개인정보 및 보안 문제를 구분해 셉니다.
+- 필요에 따라 답변 길이, 엔트로피, 예측 확률과 실제 정답률의 일치 정도를 기록합니다. 사실관계와 인용을 검증한 근거도 남깁니다.
+- 응답 지연의 **p50, p95, p99** 와 처리량, 비용을 기록합니다. 메모리 부족, 그 밖의 오류, 도구 호출 재시도는 각각 발생률을 냅니다.
+- 항목별 표본 크기를 밝힙니다. 한 번만 발생해도 배포를 막을 만큼 심각한 실패는 따로 표시합니다.
+
+같은 사례에 대한 두 모델의 답은 한 쌍으로 다룹니다. **대응 부트스트랩** 으로 신뢰구간을 구할 때는 한 대화에서 파생한 질문도 한 묶음으로 다시 뽑습니다. 차이가 없다는 가설 아래 두 모델의 결과를 서로 바꿔도 되는 실험이라면 대응 순열 검정도 쓸 수 있습니다. 독립적인 데이터셋 여러 개에서 알고리즘을 비교하는 문제와, 같은 질문에 대한 두 답을 비교하는 문제는 분석 단위가 다릅니다 [[2]](#ref-2). 실무에서 의미 있는 최소 개선 폭, 허용할 통계적 오류, 표본 크기나 검정력의 근거, 동점 처리 방식, 항목별 최소 표본 수를 미리 정합니다. 판정이 엇갈린 사례 중 일부는 사람이 다시 봅니다.
+
+LLM을 채점에 쓴다면 해당 과제의 채점 기준으로 사람과 LLM의 판정을 대조해 보정합니다. 답변을 보여 주는 순서를 무작위로 바꾸고 항목별 일치도와 오판을 확인합니다. 도구 인자가 스키마를 따르는지처럼 정확히 검사할 수 있는 조건은 직접 검사합니다.
+
+<a id="gate-decision-table"></a>
+
+## 어떤 결과가 배포를 막는가?
+
+각 지표의 결과를 보고 배포 담당자가 취할 조치를 적어 둡니다.
+
+| 평가 항목 | 통과 | 추가 검토 | 배포 차단 |
+|---|---|---|---|
+| 목표 과제 성능 | 신뢰하한이 최소 개선 폭을 넘음 | 사례가 부족하거나 개선 여부가 불확실함 | 실무에 영향을 줄 만큼 성능이 하락함 |
+| 기존 기능 유지 | 보호 대상 모두 허용 범위 안에 듦 | 덜 중요한 항목의 결과가 경계에 걸림 | 핵심 기능의 퇴보가 확인됨 |
+| 안전과 개인정보 | 중대한 위반이 없고 발생률도 기준 이내임 | 사람이 판정해야 할 사례가 남음 | 사전에 정한 차단 등급의 위반이 발생함 |
+| 출력 형식과 도구 | 스키마 검사와 허용된 동작 검사를 통과함 | 복구 가능한 경고가 발생함 | 잘못된 동작을 하거나 권한 밖에서 외부 상태를 바꿈 |
+| 서비스 운영 | 지연·비용·오류가 허용치 이내임 | 처리 용량을 확보할 계획이 필요함 | 메모리 부족, 재시도 폭증, 서비스 수준 목표 위반이 발생함 |
+
+담당자, 관찰 기간, 임곗값, 통계적 판정 방식, 누락된 결과의 처리 방침, 예외 승인자를 기록합니다. 안전 검사를 실행하지 않았다면 결과를 ‘미측정’으로 남기고 승인을 보류합니다.
+
+<a id="shadow-canary-ramp-up"></a>
+
+## 실제 트래픽에 적용하는 세 단계
+
+1. **섀도 테스트.** 실제 요청을 복사해 후보 모델에도 보내되 사용자는 현재 모델의 답만 받습니다. 후보가 외부 상태를 바꾸는 도구를 실행하지 못하게 하고, 두 모델의 답, 지연 시간, 호출하려 한 도구를 비교합니다.
+2. **카나리 배포.** 배포 대상 사용자나 세션 중 일부를 무작위로 뽑아 후보 모델에 배정합니다. 한 번 정한 배정은 유지합니다. 배정 확률과 실제로 어떤 버전을 사용했는지 기록하고, 같은 기간의 두 집단을 비교합니다 [[3]](#ref-3).
+3. **점진적 확대.** 미리 정한 단계에 따라 트래픽 비중을 늘립니다. 각 단계의 관찰 기간과 표본 수를 채운 뒤에 다음 단계로 넘어갑니다.
+
+트래픽 분배 설정이나 배포 시스템에서 가리키는 버전을 바꿔 전환할 수 있게 합니다. 안전 위반, 오류, 지연, 비용, 핵심 과제 실패에는 **자동 중단** 기준을 둡니다. 변동이 큰 지표라면 중단 기준보다 더 양호한 값으로 회복됐을 때만 재개하도록 정할 수 있습니다. 이렇게 중단과 재개의 경계를 다르게 두는 것이 **히스테리시스** 입니다. 중대한 안전 사고는 즉시 중단합니다. 실험 내내 안전을 감시하되, 효과는 정해 둔 표본 수를 채운 뒤 한 번 분석합니다. 중간에 효과를 보고 조기 승격하려면 처음부터 순차 실험으로 설계합니다.
+
+<a id="rollback-runbook"></a>
+
+## 이전 버전으로 복구하는 절차
+
+장애 대응 책임자와 승인자를 지정합니다. 트래픽을 마지막으로 정상 동작을 확인한 버전 전체로 되돌리고, 호환되지 않는 캐시를 무효화합니다. 다음 항목도 확인합니다.
+
+- 이전 버전에서 불러올 수 없는 모델·어댑터·토크나이저 상태
+- **도구 호출로 이미 바뀐 외부 상태**, 중간에 멈춘 작업, 외부 거래
+- 대기열에 남은 작업, 진행 중인 대화와 세션, 이미 전달한 답변
+- 영향을 받은 사용자를 식별할 로그, 통지 절차, 후속 평가
+
+고객에게 이미 환불한 경우를 생각해 보세요. 모델을 복구하면 *다음* 요청을 처리할 버전이 바뀝니다. 완료된 거래는 결제 시스템에서 따로 추적해야 합니다. 재시도에는 같은 멱등성 키를 쓰고, 도구를 시험할 때는 실제 거래를 막고, 대기 중인 작업에는 버전을 표시합니다. 되돌릴 수 있는 거래에는 이를 상쇄할 후속 조치를 마련합니다. 정기적으로 **복구 훈련** 을 하며 탐지부터 복구까지 걸린 시간을 재고 이전 버전이 여전히 실행되는지 확인합니다.
+
+## 평가셋 유지보수
+
+각 사례와 사례군에 고정 ID를 부여합니다. 출처, 추가한 이유, 담당자, 심각도, 채점 기준 버전, 접근 권한, 폐기 여부를 기록합니다. 의미가 겹치는 사례를 정리하고, 평가용 사례군은 합성 데이터 생성 과정을 포함한 모든 학습 과정에서 격리합니다.
+
+운영 중 발생한 장애를 테스트로 만들 때는 관련 문의 전체를 평가용으로 남길지, 학습에 쓰고 관련 회귀 테스트를 모두 ‘학습에 노출됨’으로 표시할지 정합니다. 일반화 성능은 학습에 쓰지 않은 별도의 사례군에서 평가합니다. 실제 문의 유형이 달라지면 새 사례를 추가하되, 시간에 따른 변화를 볼 고정 기준셋도 남깁니다. 프롬프트, 채점기, 도구, 스키마가 바뀌면 새 버전을 기록하고 두 모델을 모두 다시 평가합니다.
+
+평가 데이터 접근 이력과 오염 여부를 점검합니다. 노출이 의심되는 비공개 사례는 교체하고 그 사실을 기록해야 이후 점수 추이를 해석할 수 있습니다.
+
+<a id="통제되지-않은-효과-없이-행동을-평가하기"></a>
+
+## 행동 평가가 실제 서비스에 영향을 주지 않게 하려면
+
+Anthropic은 2026년 10월 9일 보고서에서 모델이 실제 웹사이트에 양식을 제출한 사례를 공개했습니다 [[4]](#ref-4). 최종 답변이 그럴듯해도 그 과정에서 허용되지 않은 행동이 일어날 수 있습니다. [16.6절](/ko/chapter-16/agent-reliability-recovery-and-guardrails)에서는 이런 행동을 제한하는 방법을 다룹니다. 배포 평가에서는 네트워크 접근 권한을 명시적으로 부여합니다. 평가하려는 능력을 확인할 수 있다면 저장된 응답이나 직접 관리하는 테스트 서비스, 오프라인 데이터 일부를 사용합니다. 실제 접속이 필요할 때는 허용할 목적지, 계정, 동작을 실행 전에 정합니다.
+
+실행기가 막았더라도 권한 밖의 동작을 시도한 사실은 기록합니다. 정책에 따른 허용·차단 결정과 외부 상태의 변화는 에이전트의 대화 기록과 별도로 수집합니다. 리디렉션과 간접 요청을 포함해 활성화한 모든 도구 경로를 검사합니다. 오프라인 대체 환경에서는 측정하는 과제도 달라지므로 버전을 기록하고 결과를 따로 보고합니다.
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: Tokenizer, template, tool, safety configuration이 artifact bundle에 있어야 하는 이유는 무엇인가요?</summary>
-*이 요소들이 rendered input과 system behavior를 바꿉니다. Weight hash만 배포하면 평가한 분포나 실제 tool·safety 결정을 재현할 수 없습니다.*
+<summary>Quiz 1: 새 과제의 성능이 기준을 넉넉히 넘었는데도 카나리 배포를 차단한 이유는 무엇인가요?</summary>
+*기존 과제의 성능도 지키기로 했기 때문입니다. 예제에서는 어느 사례군에서나 4건 중 1건씩 덜 맞혀 허용한 하락 폭 2%p를 크게 넘겼습니다. 새 과제에서 얻은 개선으로 기존 과제의 손실을 상쇄할 수 없습니다.*
 </details>
 
 <details>
-<summary>Quiz 2: Candidate와 champion 비교에 paired statistics를 쓰는 이유는 무엇인가요?</summary>
-*두 system이 같은 case에 답하므로 case별 차이가 관련 signal이며 case difficulty를 통제합니다. Paired bootstrap이나 permutation이 이 구조를 보존합니다.*
+<summary>Quiz 2: 가중치와 함께 토크나이저, 대화 템플릿, 도구, 안전 설정까지 기록하는 이유는 무엇인가요?</summary>
+*템플릿과 토크나이저에 따라 모델이 받는 입력 토큰이 달라집니다. 도구와 안전 설정은 모델이 실행할 수 있는 행동을 결정합니다. 이 구성 전체를 복구해야 평가했던 버전으로 돌아갑니다.*
 </details>
 
 <details>
-<summary>Quiz 3: Shadow와 canary의 차이는 무엇인가요?</summary>
-*Shadow traffic은 사용자에게 보이지 않고 external side effect를 만들면 안 됩니다. Canary는 작은 randomized real cohort에 영향을 주므로 automatic abort와 rollback이 필요합니다.*
+<summary>Quiz 3: 같은 문의를 다르게 표현한 두 질문에서 결과가 같았습니다. 대응 부트스트랩에서 무엇을 다시 뽑아야 하나요?</summary>
+*독립적인 문의 사례군을 뽑습니다. 그 안의 두 질문과 각 질문에 대한 두 모델의 결과는 함께 움직여야 합니다. 표현만 다른 질문을 독립적인 요청으로 세면 같은 근거에 지나치게 큰 가중치를 줍니다.*
 </details>
 
 <details>
-<summary>Quiz 4: Model weight를 되돌려도 incident가 취소되지 않을 수 있는 이유는 무엇인가요?</summary>
-*Candidate가 이미 stateful tool side effect, external transaction, queued job, session state를 만들 수 있습니다. Weight rollback 외에 idempotency, compensation, queue/session 처리가 필요합니다.*
+<summary>Quiz 4: 환불 기능을 섀도 테스트에서 카나리 배포로 옮기면 무엇이 달라지나요?</summary>
+*섀도 테스트에서는 결제 상태를 바꾸면 안 됩니다. 카나리 배포에서는 실제 고객에게 환불 거래가 발생할 수 있습니다. 감시와 즉시 중단 기준을 두고, 모델을 복구한 뒤 이미 처리한 거래를 대조할 방법도 마련해야 합니다.*
 </details>
-
----
 
 ## References
 
 1. <a id="ref-1"></a>Liang, P., et al. (2022). *Holistic Evaluation of Language Models.* [arXiv:2211.09110](https://arxiv.org/abs/2211.09110).
 2. <a id="ref-2"></a>Demšar, J. (2006). *Statistical Comparisons of Classifiers over Multiple Data Sets.* [JMLR](https://www.jmlr.org/papers/v7/demsar06a.html).
-3. <a id="ref-3"></a>Kohavi, R., Tang, D., & Xu, Y. (2020). *Trustworthy Online Controlled Experiments.* Cambridge University Press.
-4. <a id="ref-4"></a>Anthropic. (2026-10-09). Investigating unintended model actions in our evaluations and internal use. [Source](https://www.anthropic.com/research/investigating-unintended-model-actions).
+3. <a id="ref-3"></a>Kohavi, R., Tang, D., & Xu, Y. (2020). *Trustworthy Online Controlled Experiments.* [저자 웹사이트](https://experimentguide.com/).
+4. <a id="ref-4"></a>Anthropic. (2026-10-09). [Investigating unintended model actions in our evaluations and internal use](https://www.anthropic.com/research/investigating-unintended-model-actions).

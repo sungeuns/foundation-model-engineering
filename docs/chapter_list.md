@@ -39,7 +39,7 @@
 
 * **5.1 Sparse vs Dense Models:** Top-k 경로와 가중합을 계산하고, 토큰당 활성 가중치와 전체 가중치의 저장 공간을 구분하는 실습.
 * **5.2 Routing Algorithms:** Top-k routing, Noisy Top-k, Expert choice routing.
-* **5.3 Expert Parallelism:** 대규모 MoE 모델을 여러 GPU에 분산하는 기술.
+* **5.3 Expert Parallelism:** 전문가 배치와 토큰 전송을 구분하고, CPU 프로세스 두 개에서 여섯 토큰이 원래 순서로 돌아오는지 검산.
 * **5.4 Collapsing & Load Balancing:** 특정 전문가에게 연산이 쏠리는 문제와 해결책(Auxiliary Loss).
 * **5.5 Case Study:** Mixtral, DBRX, DeepSeek-V3, GLM-5.2와 DeepSeek-V4.1-Flash의 단계별 연산까지 MoE 라우팅, sparse attention, MTP, post-training/serving pipeline을 뜯어보기.
 * **Summary:** 거대 모델을 효율적으로 운영하기 위한 핵심 기술인 MoE의 라우팅 매커니즘과 분산 처리 기법을 정리합니다.
@@ -155,7 +155,7 @@
 * **17.2 LLM-as-a-Judge:** 강력한 모델을 이용해 다른 모델의 정성적 답변 평가하기.
 * **17.3 Elo Rating & Leaderboards:** LMSYS Chatbot Arena와 같은 인간 선호도 기반 평가.
 * **17.4 Contamination Issues:** 학습 데이터에 평가셋이 포함되는 문제와 검증법.
-* **17.5 Production Evaluation and Release Gates:** offline eval, judge calibration, canary, rollout gate를 실제 릴리스 프로세스와 연결하는 방법.
+* **17.5 Production Evaluation and Release Gates:** 오프라인 평가와 평가자 보정, 점진 배포, 롤백을 연결하고 목표 점수가 올랐어도 배포를 막아야 하는 사례를 검산.
 * **17.6 Commercial and Open-weight Model Benchmarks:** 2026-11-24에 확인한 GLM-5.4·GPT-6.2 Astra/Sol·Gemini 4 Neon/Carbon 등을 포함한 45개 프로필. 공개 상태·평가 설정·가격 가정을 구분하고 Python 예제로 긴 문맥 비용을 계산.
 * **17.7 Experimental Design and Uncertainty:** 실험 설계와 불확실성.
 * **Summary:** 모델의 '진짜 실력'을 객관적이고 공정하게 측정하기 위한 평가 방법론과 지표를 다룹니다.
