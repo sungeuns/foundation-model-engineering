@@ -1,5 +1,7 @@
 # Foundation Model Engineering
 
+**English** · [한국어 소개](README.ko.md)
+
 **Understand the model. Measure the trade-offs. Build a system you can test.**
 
 A free textbook for AI engineers, with interactive explanations, PyTorch examples, and CPU labs. Read in **[English](https://sungeuns.github.io/foundation-model-engineering/)** or **[한국어](https://sungeuns.github.io/foundation-model-engineering/ko/)**. No account required.
