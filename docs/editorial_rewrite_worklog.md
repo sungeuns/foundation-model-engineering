@@ -354,7 +354,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 17.3 | `/chapter-17/elo-rating-and-leaderboards` | Inspected 2026-11-15 | 14f931df5e4641c576c1763d446b2c663d1f282abf438767e5a330d49b31a9b9 | 1e78f5819e5452372109f72327dad0f7831b3b9ce66750000c9378a906744c30 |
 | 17.4 | `/chapter-17/contamination-issues` | Mechanical only | 38a0cad52c7504804a57a8cc2deed94a3ac2fe68f7648809261abad1cf6b4fa5 | ad7b87426dcdde29f69a6921696a462359e7681d7d3b5ee5c11f3d80ec0a71c7 |
 | 17.5 | `/chapter-17/production-evaluation-and-release-gates` | Inspected 2026-11-25 | d2917516ef75c2ede2cd4db285a221090b09f181104e7112bd388f427ecc5298 | cb7d670ce7898fe43516e3cc8a38e295b6e24bba8e3a65c7579c61f3e03b9fb3 |
-| 17.6 | `/chapter-17/commercial-model-benchmarks` | Inspected 2026-11-25 | db251f40fd588f3562ec4a2ae401092791d50b6f753d320114e79825853942c7 | b77ee797c1a5a5f5f30aade013de1bb2f9ebb516e2e1301ebcdf9e6dfe4ac009 |
+| 17.6 | `/chapter-17/commercial-model-benchmarks` | Inspected 2026-11-25 | ffc810ab2f615f008244a4fa5323c28b14c18fdbf9e4604b7f3940a5fedfde0c | 064999e209abf87eef01fe4e25aea0b82aabe8ec2fcf56a9f340260f9d8f43a3 |
 | 17.7 | `/chapter-17/experimental-design-and-uncertainty` | Inspected 2026-11-25 | a49f4705d53ea21959540b6d9cbaade29cdd63310712a6f8e2d67eb9288746cc | 8040249564bacddeebe7eda07ece30695e580990c258f0393284df9e3d07735f |
 | 18.1 | `/chapter-18/red-teaming` | Mechanical only | fa815b07490b4a1039a2e91d2c98e9f1f212d6479f534afa5f09020cc8f93598 | 5aa628372d20829e842ce6b3fad0133fee7c40e63c345e76f0b823b351df6f59 |
 | 18.2 | `/chapter-18/jailbreaking-and-defense` | Mechanical only | caff93966e1d1a925120d696bf37a09fa46cc63cd9378c818ac9f1d489348afd | 165303014a71dfa4ec8e28c0ac7f38712f5d97fbcd551510aa5539cb33c33ac1 |
@@ -680,7 +680,7 @@ In §17.1, with 10 successful answers out of 20, drawing nine leaves 10 failing 
 
 Section 7.5 now links to the CPU environment at commit `b6a54ff80e80cbf10d68b15d4419bbae2269ef7e`. The English starter completed all ten code cells in a single anonymous public Binder session with Python 3.12.16 and PyTorch 2.15.0+cpu. Restoring the valid checkpoint reproduced the uninterrupted run. The modified copy was rejected, and the exported result packet passed checksum verification. The Korean starter executed separately in a local kernel. Both translated worked notebooks also rendered their measured outputs with JavaScript disabled.
 
-In sections 4.5 and 17.6, checked GPT-6.2 Astra and Sol access against the launch announcement. The release table now names documented product and API routes and distinguishes the healthcare search configurations from the scored general models. Checked Gemini and Qwen product access against their dated launch posts. Historical rows describe the API access in the source without claiming it was the only way to use a model. The 45 numerical profiles retain the November 24 evaluation snapshot.
+In sections 4.5 and 17.6, checked GPT-6.2 Astra and Sol access against the launch announcement. The release table names documented product and API routes. In §17.6, matched all four healthcare configuration IDs to the November 24 API changelog and checked when medical web search uses its dedicated index. The 45 numerical profiles retain the November 24 evaluation snapshot. Checked Gemini and Qwen product access against their dated launch posts. Historical rows describe the API access in the source without claiming it was the only way to use a model.
 
 ### 2026-11-25 reproducible retrieval links and LoRA dimensions
 
