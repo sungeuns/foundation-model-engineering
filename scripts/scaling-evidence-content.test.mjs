@@ -42,3 +42,14 @@ test('power-law framing remains empirical and conditional', () => {
     assert.doesNotMatch(document, /governed by strict, predictable|엄격하고 예측 가능한.*지배/i);
   }
 });
+
+test('the static compute example keeps both sliders disabled until their calculations load', () => {
+  for (const locale of ['', 'ko/']) {
+    const html = read(`dist/${locale}chapter-1/bitter-lesson/index.html`);
+    const sliders = [...html.matchAll(/<input\b[^>]*>/g)]
+      .map(match => match[0])
+      .filter(input => input.includes('type="range"'));
+    assert.equal(sliders.length, 2);
+    for (const input of sliders) assert.match(input, /\sdisabled(?:\s|=|\/?>)/);
+  }
+});
