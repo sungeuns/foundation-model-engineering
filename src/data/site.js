@@ -6,7 +6,7 @@ export const site = {
     ko: '파운데이션 모델 엔지니어링',
   },
   descriptions: {
-    en: 'A technical textbook for understanding foundation model architectures, training pipelines, inference systems, RAG, evaluation, alignment, and agentic AI from theory to production.',
-    ko: '파운데이션 모델 아키텍처, 학습 파이프라인, 추론 시스템, RAG, 평가, 정렬, 에이전트 AI를 이론부터 프로덕션까지 깊게 다루는 기술 교재입니다.',
+    en: 'A free English and Korean textbook on foundation models. Train a tiny decoder on a CPU, trace evidence in a RAG answer, and test whether a model is ready to ship.',
+    ko: 'CPU로 작은 디코더를 학습하고, RAG 답변의 근거를 추적하고, 모델을 배포해도 될지 평가해 보세요. 학습·서빙·평가를 실습으로 익히는 무료 한영 교재입니다.',
   },
 };

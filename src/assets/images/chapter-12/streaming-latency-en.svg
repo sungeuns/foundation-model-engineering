@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" xml:lang="en" role="img" aria-labelledby="card-title card-description">
+<title id="card-title">A 370 ms pause hides in the average</title><desc id="card-description">Two illustrative streams each deliver five tokens between 100 and 500 ms after submission. Both have a 100 ms TTFT and a mean gap of 100 ms. Stream A delivers a token every 100 ms. Stream B delivers four tokens 10 ms apart, then waits 370 ms for its last token.</desc>
+<rect width="1200" height="630" fill="#f5f2eb"/><rect width="12" height="630" fill="#256257"/>
+<g font-family="DejaVu Sans, sans-serif" fill="#192a30">
+<text x="60" y="94" font-size="53" font-weight="700">A 370 ms pause hides in the average</text>
+<text x="62" y="150" font-size="29" fill="#4e5d61">Both streams have a 100 ms TTFT and a 100 ms mean gap (TPOT).</text>
+
+    <path d="M240 207V445" stroke="#d2d8d3" stroke-width="2"/>
+    <text x="240" y="487" font-size="27" text-anchor="middle" fill="#4e5d61">0</text>
+    <path d="M420 207V445" stroke="#d2d8d3" stroke-width="2"/>
+    <text x="420" y="487" font-size="27" text-anchor="middle" fill="#4e5d61">100</text>
+    <path d="M600 207V445" stroke="#d2d8d3" stroke-width="2"/>
+    <text x="600" y="487" font-size="27" text-anchor="middle" fill="#4e5d61">200</text>
+    <path d="M780 207V445" stroke="#d2d8d3" stroke-width="2"/>
+    <text x="780" y="487" font-size="27" text-anchor="middle" fill="#4e5d61">300</text>
+    <path d="M960 207V445" stroke="#d2d8d3" stroke-width="2"/>
+    <text x="960" y="487" font-size="27" text-anchor="middle" fill="#4e5d61">400</text>
+    <path d="M1140 207V445" stroke="#d2d8d3" stroke-width="2"/>
+    <text x="1140" y="487" font-size="27" text-anchor="middle" fill="#4e5d61">500</text>
+<g>
+      <text x="60" y="285" font-size="30" font-weight="700">Stream A</text>
+      <path d="M240 276H1140" stroke="#a6b1aa" stroke-width="3"/>
+      <g id="arrivals-a" stroke="#192a30" stroke-width="7" stroke-linecap="round"><line x1="420" x2="420" y1="260" y2="292"/><line x1="600" x2="600" y1="260" y2="292"/><line x1="780" x2="780" y1="260" y2="292"/><line x1="960" x2="960" y1="260" y2="292"/><line x1="1140" x2="1140" y1="260" y2="292"/></g>
+      <path d="M960 248v-10H1140v10" fill="none" stroke="#256257" stroke-width="4"/>
+      <text x="1050" y="225" font-size="33" text-anchor="middle" fill="#256257" font-weight="700">100 ms</text>
+    </g><g>
+      <text x="60" y="418" font-size="30" font-weight="700">Stream B</text>
+      <path d="M240 409H1140" stroke="#a6b1aa" stroke-width="3"/>
+      <g id="arrivals-b" stroke="#192a30" stroke-width="7" stroke-linecap="round"><line x1="420" x2="420" y1="393" y2="425"/><line x1="438" x2="438" y1="393" y2="425"/><line x1="456" x2="456" y1="393" y2="425"/><line x1="474" x2="474" y1="393" y2="425"/><line x1="1140" x2="1140" y1="393" y2="425"/></g>
+      <path d="M474 381v-10H1140v10" fill="none" stroke="#974221" stroke-width="4"/>
+      <text x="807" y="358" font-size="33" text-anchor="middle" fill="#974221" font-weight="700">370 ms</text>
+    </g>
+<text x="690" y="529" font-size="26" text-anchor="middle" fill="#4e5d61">Time since request submission (ms)</text>
+<path d="M60 554H1140" stroke="#bbc8c1" stroke-width="2"/>
+<text x="60" y="599" font-size="22" fill="#4e5d61">Illustrative client-side traces · Each mark is one received token</text>
+<text x="1140" y="599" font-size="20" text-anchor="end" fill="#256257">Foundation Model Engineering · 12.6</text>
+</g></svg>

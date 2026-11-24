@@ -4,6 +4,8 @@ title: 12.6 Serving Policies, SLOs, and Fallbacks
 lang: ko
 ---
 
+import traceFigure from '../../../assets/images/chapter-12/streaming-latency-ko.svg';
+
 # 12.6 서빙 정책, SLO, 그리고 폴백
 
 주방이 하나뿐인 식당을 떠올려 봅시다. 커피 두 잔을 주문한 손님과 12코스 디너를 주문한 손님이 동시에 들어왔는데, 주방이 단순한 선착순만 따른다면 커피 손님은 디너 주문이 끝날 때까지 기다려야 합니다. 프로덕션 LLM 서빙도 정확히 이런 방식으로 망가집니다.
@@ -46,6 +48,11 @@ $$
 
 아래는 설명을 위해 **직접 만든 두 기록** 입니다. 둘 다 $t_0=0$ 에 요청을 보냈으며, 표의 각 도착 시각에는 토큰이 정확히 하나씩 들어옵니다.
 
+<figure style="margin: 1rem 0;">
+  <a href={traceFigure.src}><img src={traceFigure.src} alt="같은 시간 축에 토큰 수신 시각을 표시했다. A의 눈금은 고르게 놓이고, B는 처음 네 눈금이 몰려 있으며 다섯 번째까지 370ms가 비어 있다." width="1200" height="630" loading="lazy" /></a>
+  <figcaption>눈금 하나는 클라이언트가 토큰 하나를 받은 시각입니다. 괄호는 이 예제를 위해 구성한 두 기록에서 각각 가장 긴 멈춤을 가리킵니다.</figcaption>
+</figure>
+
 | 기록 | 토큰 도착 시각(ms) | 개별 간격(ms) | TTFT(ms) | TPOT(첫 토큰 이후 ms/토큰) | 가장 긴 간격(ms) |
 | --- | --- | --- | --- | --- | --- |
 | A: 일정한 간격 | 100, 200, 300, 400, 500 | 100, 100, 100, 100 | 100 | 100 | 100 |
@@ -59,13 +66,31 @@ $$
 
 ### Goodput이라는 관점
 
-프로덕션에서는 다음과 같은 관점이 훨씬 유용합니다.
+일정 시간 동안 약속한 조건을 지킨 요청이 몇 개인지 세어 봅시다. 세 요청이 모두 시각 0에 시작합니다. 위의 A와 B는 끝까지 응답했고, C는 100ms에 토큰 하나를 보낸 뒤 900ms에 타임아웃됐습니다. 1초 동안 들어온 요청은 세 개, 성공적으로 끝난 요청은 두 개입니다. 그중 스트리밍 지연 목표까지 지킨 요청은 몇 개일까요?
 
-$$
-\text{Goodput} = \text{TTFT, TPOT, 성공률 제약을 만족하는 요청 처리율}
-$$
+이번 예제의 조건은 응답을 끝까지 보내고, 첫 텍스트 토큰을 150ms 이내에 전달하며, 이후 모든 토큰 간격을 200ms 이하로 유지하는 것입니다. 아래 Python 코드의 입력은 각 요청을 보낸 시점부터 잰 토큰 수신 시각입니다. 단위는 밀리초이며, 음수가 아닌 값을 시간순으로 넣습니다. 한 번에 텍스트 토큰 하나가 도착한다고 가정합니다. 토큰 하나로 끝난 정상 응답에는 검사할 토큰 간격이 없습니다. 반면 타임아웃이 발생한 요청은 첫 토큰이 빨리 왔어도 실패입니다.
 
-이 값이 raw throughput보다 더 중요합니다. 총 토큰 처리량은 높아졌어도 p95 TTFT가 무너지면 interactive 제품 입장에서는 더 나쁜 시스템일 수 있기 때문입니다.
+```python
+def meets_slo(arrivals_ms, completed):
+    if not completed or not arrivals_ms:
+        return False
+    gaps = [b - a for a, b in zip(arrivals_ms, arrivals_ms[1:])]
+    return arrivals_ms[0] <= 150 and all(gap <= 200 for gap in gaps)
+
+
+traces = [
+    ([100, 200, 300, 400, 500], True),
+    ([100, 110, 120, 130, 500], True),
+    ([100], False),
+]
+window_s = 1.0
+passed = [meets_slo(times, completed) for times, completed in traces]
+assert passed == [True, False, False]
+assert meets_slo([100], True)
+print(sum(passed) / window_s)  # 1.0 request/s
+```
+
+**조건을 지킨 처리량은 초당 요청 한 건입니다.** A는 통과했고, B는 370ms 동안 멈췄으며, C는 응답을 마치지 못했습니다. 들어온 요청을 분모로 삼으면 목표 달성률은 1/3입니다. 개별 간격 대신 평균 간격을 쓰면 B도 통과하므로 어떤 지표를 골랐는지 밝혀야 합니다. 서빙 시스템을 비교할 때도 정의를 확인하세요. DistServe는 첫 토큰 지연과 토큰당 평균 지연을 지키는 요청의 비율이 목표치 이상일 때 GPU 한 대가 감당하는 최대 부하를 찾습니다. 그 값을 추정하려면 여러 부하에서 실험해야 합니다. [[5]](#ref-5)
 
 ### SLO는 lane별로 달라야 한다
 

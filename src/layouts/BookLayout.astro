@@ -5,6 +5,7 @@ import { searchDescriptions } from '../data/search-descriptions.js';
 import { socialCards } from '../data/social-cards.js';
 import modelSnapshot from '../data/commercial-model-snapshot.json';
 import { sharedLocaleFragments } from '../utils/locale-fragments.js';
+import { getManuscriptTimestamp } from '../utils/content-dates.js';
 import { getBasePath, normalizePathname, stripBasePath, withBasePath, withPagePath } from '../utils/paths.js';
 import '../styles/book.css';
 
@@ -56,6 +57,10 @@ const toAbsoluteUrl = (pagePath) => {
 const githubUrl = 'https://github.com/sungeuns/foundation-model-engineering';
 const feedPath = withBasePath(isKo ? '/ko/feed.xml' : '/feed.xml', basePath);
 const canonicalUrl = toAbsoluteUrl(currentPath);
+const manuscriptTimestamp = currentSub && getManuscriptTimestamp(currentPath);
+const manuscriptDate = manuscriptTimestamp && new Date(manuscriptTimestamp).toLocaleDateString(
+  isKo ? 'ko-KR' : 'en-US', { dateStyle: 'long', timeZone: 'UTC' },
+);
 const correctionUrl = new URL(`${githubUrl}/issues/new`);
 correctionUrl.searchParams.set('template', 'correction.yml');
 correctionUrl.searchParams.set('page', canonicalUrl);
@@ -91,6 +96,7 @@ const structuredData = {
   },
   ...(!isHomePage && {
     mainEntityOfPage: canonicalUrl,
+    dateModified: manuscriptTimestamp,
     isPartOf: {
       '@type': 'Book',
       name: site.titles[lang] || site.titles.en,
@@ -245,6 +251,11 @@ if (currentIndex !== -1) {
               <li aria-current="page">{contentTitle}</li>
             </ol>
           </nav>
+        )}
+        {manuscriptTimestamp && (
+          <p class="manuscript-revision">
+            {isKo ? '원고 수정일' : 'Manuscript updated'} <time datetime={manuscriptTimestamp}>{manuscriptDate}</time> (UTC)
+          </p>
         )}
         {!isHomePage && (
           <details class="page-outline" id="pageOutline" hidden>

@@ -68,7 +68,7 @@ const copy = {
     },
   },
   'vision-bridge': {
-    path: '/chapter-11/vision-language-bridges', number: '11.1',
+    path: '/chapter-11/vision-language-bridges', number: '11.1', render: visionBridgeSvg,
     en: {
       title: 'Same image. Different decoder length.',
       setup: '1 image · 224 × 224 px · 14 × 14 px patches · 32 prompt positions',
@@ -88,6 +88,22 @@ const copy = {
       formula: patches => `패치 ${patches}개 + 프롬프트 32자리`,
       memory: '슬롯 · 별도 시각 메모리',
       note: '계산 예제 · 프롬프트에 이미지 표시 토큰 포함',
+    },
+  },
+  'streaming-latency': {
+    path: '/chapter-12/serving-policies-slos-and-fallbacks', number: '12.6', render: streamingLatencySvg,
+    figureDir: 'src/assets/images/chapter-12',
+    en: {
+      title: 'A 370 ms pause hides in the average',
+      setup: 'Both streams have a 100 ms TTFT and a 100 ms mean gap (TPOT).',
+      rows: ['Stream A', 'Stream B'], unit: ' ms', elapsed: 'Time since request submission (ms)',
+      note: 'Illustrative client-side traces · Each mark is one received token',
+    },
+    ko: {
+      title: '평균에 가려진 370ms의 멈춤',
+      setup: '두 응답 모두 첫 토큰 지연(TTFT)과 이후 평균 간격(TPOT)이 100ms입니다.',
+      rows: ['응답 A', '응답 B'], unit: 'ms', elapsed: '요청을 보낸 뒤 지난 시간(ms)',
+      note: '설명용 클라이언트 수신 기록 · 표시 하나가 토큰 한 개',
     },
   },
 };
@@ -131,14 +147,54 @@ ${text('sungeuns.github.io', 1136, 597, 20, `fill="${muted}" text-anchor="end"`)
 </g></svg>\n`;
 }
 
+function streamingLatencySvg(lesson, lang, card) {
+  const labels = lesson[lang], korean = lang === 'ko';
+  // Authored, individually observed arrivals from section 12.6, in milliseconds.
+  const traces = [[100, 200, 300, 400, 500], [100, 110, 120, 130, 500]];
+  const x = ms => 240 + 1.8 * ms;
+  const axis = [0, 100, 200, 300, 400, 500].map(ms => `
+    <path d="M${x(ms)} 207V445" stroke="#d2d8d3" stroke-width="2"/>
+    ${text(ms, x(ms), 487, 27, `text-anchor="middle" fill="${muted}"`)}`).join('');
+  const rows = traces.map((times, i) => {
+    const y = 276 + 133 * i;
+    const previous = times.at(-2), last = times.at(-1);
+    const left = x(previous), right = x(last);
+    const accent = i === 0 ? teal : '#974221';
+    const ticks = times.map(ms =>
+      `<line x1="${x(ms)}" x2="${x(ms)}" y1="${y - 16}" y2="${y + 16}"/>`
+    ).join('');
+    return `<g>
+      ${text(labels.rows[i], 60, y + 9, 30, 'font-weight="700"')}
+      <path d="M${x(0)} ${y}H${x(500)}" stroke="#a6b1aa" stroke-width="3"/>
+      <g id="arrivals-${i === 0 ? 'a' : 'b'}" stroke="${ink}" stroke-width="7" stroke-linecap="round">${ticks}</g>
+      <path d="M${left} ${y - 28}v-10H${right}v10" fill="none" stroke="${accent}" stroke-width="4"/>
+      ${text(`${last - previous}${labels.unit}`, (left + right) / 2, y - 51, 33, `text-anchor="middle" fill="${accent}" font-weight="700"`)}
+    </g>`;
+  }).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" xml:lang="${lang}" role="img" aria-labelledby="card-title card-description">
+<title id="card-title">${escape(labels.title)}</title><desc id="card-description">${escape(card.alt)}</desc>
+<rect width="1200" height="630" fill="#f5f2eb"/><rect width="12" height="630" fill="${teal}"/>
+<g font-family="${korean ? 'Noto Sans CJK KR, DejaVu Sans' : 'DejaVu Sans'}, sans-serif" fill="${ink}">
+${text(labels.title, 60, 94, 53, 'font-weight="700"')}
+${text(labels.setup, 62, 150, korean ? 28 : 29, `fill="${muted}"`)}
+${axis}
+${rows}
+${text(labels.elapsed, (x(0) + x(500)) / 2, 529, 26, `text-anchor="middle" fill="${muted}"`)}
+<path d="M60 554H1140" stroke="#bbc8c1" stroke-width="2"/>
+${text(labels.note, 60, 599, korean ? 23 : 22, `fill="${muted}"`)}
+${text(korean ? `파운데이션 모델 엔지니어링 · ${lesson.number}` : `Foundation Model Engineering · ${lesson.number}`, 1140, 599, 20, `text-anchor="end" fill="${teal}"`)}
+</g></svg>\n`;
+}
+
 for (const [kind, lesson] of Object.entries(copy)) {
   if (selectedKind && selectedKind !== kind) continue;
   for (const lang of ['en', 'ko']) {
     const c = lesson[lang], card = socialCards[lesson.path][lang];
-    if (kind === 'vision-bridge') {
-      const svg = visionBridgeSvg(lesson, lang, card);
+    if (lesson.render) {
+      const svg = lesson.render(lesson, lang, card);
       const imagePath = path.join(root, 'public', card.image);
-      await fs.writeFile(imagePath.replace(/\.png$/, '.svg'), svg);
+      const svgDir = lesson.figureDir ? path.join(root, lesson.figureDir) : path.dirname(imagePath);
+      await fs.writeFile(path.join(svgDir, path.basename(imagePath, '.png') + '.svg'), svg);
       await sharp(Buffer.from(svg)).png({ compressionLevel: 9 }).toFile(imagePath);
       console.log(`${path.relative(root, imagePath)}: 1200 × 630`);
       continue;

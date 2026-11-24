@@ -4,7 +4,7 @@ import test from 'node:test';
 import { chapters } from '../src/data/chapters.js';
 import { searchDescriptions } from '../src/data/search-descriptions.js';
 import { socialCards } from '../src/data/social-cards.js';
-import { getContentDates } from '../src/utils/content-dates.js';
+import { getContentDates, getContentRevisions } from '../src/utils/content-dates.js';
 
 const base = 'https://sungeuns.github.io/foundation-model-engineering';
 const outputDir = process.env.SEARCH_DIST_DIR || 'dist';
@@ -24,6 +24,7 @@ test('search descriptions have real routes and equivalent language coverage', ()
 // Run after the GitHub Pages build, not against the production site's old HTML.
 test('every built page has canonical, reciprocal language links, and a local social image', () => {
   const seenDescriptions = new Set();
+  const revisions = getContentRevisions();
   for (const route of routes) {
     const html = readFileSync(`${outputDir}${route === '/' ? '' : route}/index.html`, 'utf8');
     const head = html.slice(0, html.indexOf('</head>'));
@@ -52,6 +53,21 @@ test('every built page has canonical, reciprocal language links, and a local soc
     assert.ok(head.includes('max-image-preview:large'), route);
     assert.doesNotMatch(head, /content="[^"]*\bnoindex\b/);
     const schemas = [...head.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/g)].map(m => JSON.parse(m[1]));
+    const timestamp = revisions.get(`src/pages${route}.mdx`)?.timestamp;
+    assert.equal(schemas[0].dateModified, timestamp, `${route}: manuscript revision`);
+    const byline = html.match(/<p class="manuscript-revision"[^>]*>([\s\S]*?)<\/p>/)?.[1];
+    if (timestamp) {
+      assert.ok(byline?.includes(lang === 'ko' ? '원고 수정일' : 'Manuscript updated'), route);
+      assert.ok(byline.includes('(UTC)'), route);
+      const time = byline.match(/<time\b[^>]*\bdatetime="([^"]+)"[^>]*>([^<]+)<\/time>/);
+      assert.equal(time?.[1], timestamp, `${route}: visible time and structured time must match`);
+      const visibleDate = new Date(timestamp).toLocaleDateString(lang === 'ko' ? 'ko-KR' : 'en-US', {
+        dateStyle: 'long', timeZone: 'UTC',
+      });
+      assert.equal(time?.[2], visibleDate, `${route}: localized manuscript date`);
+    } else {
+      assert.equal(byline, undefined, `${route}: no unsupported revision date`);
+    }
     assert.equal(schemas[0].image, `${base}${socialImage}`, `${route}: structured image parity`);
     const breadcrumb = schemas.find(schema => schema['@type'] === 'BreadcrumbList');
     if (route !== '/' && route !== '/ko') {

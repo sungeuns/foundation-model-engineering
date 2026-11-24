@@ -34,10 +34,24 @@ export function getContentRevisions(cwd = process.cwd()) {
     for (const file of git('diff', 'HEAD', '--name-only', '--', 'src/pages').split('\n')) {
       revisions.delete(file);
     }
+    // A deleted manuscript may be recreated locally at its old path. Git diff
+    // omits untracked files, but the old deletion still occurs in Git history.
+    for (const file of git('ls-files', '--others', '--exclude-standard', '--', 'src/pages').split('\n')) {
+      revisions.delete(file);
+    }
   } catch {
     revisions.clear();
   }
   return revisions;
+}
+
+// The static build renders every chapter in one snapshot. A development
+// server can outlive many edits, so it must not serve a cached revision date.
+let buildRevisions;
+export function getManuscriptTimestamp(chapterPath) {
+  if (!import.meta.env?.PROD) return;
+  buildRevisions ??= getContentRevisions();
+  return buildRevisions.get(`src/pages${chapterPath}.mdx`)?.timestamp;
 }
 
 // Preserve the sitemap API while RSS retains the full timestamp and identity.

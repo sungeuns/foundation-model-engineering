@@ -195,8 +195,8 @@ export const searchDescriptions = {
     ko: '프리필·디코드 비용, StreamingLLM, YaRN, 청크 프리필과 분리형 추론 스케줄링을 통해 긴 문맥 서빙의 병목을 분석합니다.',
   },
   '/chapter-12/serving-policies-slos-and-fallbacks': {
-    en: 'Design LLM serving policies with latency SLOs, cost-aware admission control, tenant isolation, fallbacks, and actionable incident metrics.',
-    ko: '지연 시간 SLO, 비용 기반 요청 수락, 테넌트 격리, 대체 처리와 장애 대응 지표를 바탕으로 LLM 서빙 정책을 설계합니다.',
+    en: 'Two LLM streams average 100 ms per token, yet one pauses for 370 ms. Compare TTFT, TPOT and token gaps, then count requests that meet a serving SLO in Python.',
+    ko: '두 응답 모두 평균 토큰 간격은 100ms인데 하나만 370ms 동안 멈춥니다. TTFT·TPOT와 개별 토큰 간격을 비교하고 지연 목표를 지킨 요청 수를 Python으로 계산합니다.',
   },
   '/chapter-13/ptq-vs-qat': {
     en: 'Compare post-training quantization (PTQ) and quantization-aware training (QAT), including linear quantization, calibration, and quantization error.',
@@ -303,8 +303,8 @@ export const searchDescriptions = {
     ko: 'Prefix LM이 프롬프트의 양방향 어텐션과 인과적 생성을 결합하는 방식을 배우고, 프리픽스 마스크 구현을 살펴봅니다.',
   },
   '/chapter-4/various-llm-architectures': {
-    en: 'Compare LLM architecture choices by attention, sparsity, and disclosed design details, with a simplified multi-head latent attention example.',
-    ko: '어텐션, 희소성, 공개된 설계 정보를 기준으로 LLM 아키텍처를 비교하고, 단순화한 MLA 예제로 구조적 차이를 이해합니다.',
+    en: 'Why can a model run more layers than it stores? Explore the reused 28-layer block in GLM-5.4, sparsity, and a worked example of multi-head latent attention (MLA).',
+    ko: '가중치를 한 번 저장한 층을 두 번 실행하면 무엇이 달라질까요? GLM-5.4의 28층 블록 재사용 사례와 MLA 예제로 어텐션·희소성·연산량을 비교합니다.',
   },
   '/chapter-5/sparse-vs-dense-models': {
     en: 'Calculate top-k mixture-of-experts (MoE) routing, then use active and total parameter counts to budget memory for dense and sparse models. Includes a CPU PyTorch example.',
@@ -395,8 +395,8 @@ export const searchDescriptions = {
     ko: '메모리 예산과 저랭크 업데이트를 통해 LoRA와 QLoRA를 이해하고, 어댑터 병합·베이스 모델 호환성·배포 평가를 살펴봅니다.',
   },
   '/chapter-10/dpo': {
-    en: 'Understand Direct Preference Optimization: preference pairs, the reference policy, completion log probabilities, masking, and training metrics.',
-    ko: 'DPO의 선호 쌍과 기준 정책, 응답 로그 확률, 손실 마스킹을 이해하고 데이터 분할과 학습 모니터링에서 확인할 항목을 살펴봅니다.',
+    en: 'Calculate Direct Preference Optimization (DPO) loss for two response pairs in Python. Change only the reference model to see why the preference margin can flip sign.',
+    ko: '두 응답 쌍의 DPO 손실을 Python으로 계산합니다. 선호 라벨과 정책 모델을 그대로 두고 기준 모델만 바꿨을 때 왜 마진의 부호가 뒤집히는지 확인하세요.',
   },
   '/chapter-10/kto-and-ipo': {
     en: 'Compare IPO, KTO, and conservative DPO: finite preference margins, unpaired feedback, label uncertainty, and shared training contracts.',

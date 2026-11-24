@@ -33,6 +33,14 @@ test('content dates compare commit instants across timezone boundaries and omit 
     writeFileSync(join(cwd, 'src/pages/example.mdx'), 'Uncommitted version\n');
     assert.equal(getContentDates(cwd).has('src/pages/example.mdx'), false);
     assert.equal(getContentRevisions(cwd).has('src/pages/example.mdx'), false);
+    git('add', '.');
+    assert.equal(getContentRevisions(cwd).has('src/pages/example.mdx'), false, 'staged manuscript edits');
+    git('commit', '-m', 'Revise manuscript');
+    git('rm', 'src/pages/example.mdx');
+    git('commit', '-m', 'Remove manuscript');
+    mkdirSync(join(cwd, 'src/pages'), { recursive: true });
+    writeFileSync(join(cwd, 'src/pages/example.mdx'), 'New untracked manuscript at the old path\n');
+    assert.equal(getContentRevisions(cwd).has('src/pages/example.mdx'), false, 'untracked replacement');
   } finally {
     rmSync(cwd, { recursive: true, force: true });
   }

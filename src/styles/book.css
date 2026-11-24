@@ -230,6 +230,12 @@ header .book-title {
   color: var(--accent-color);
 }
 
+.manuscript-revision {
+  margin: 0 0 1rem;
+  color: var(--secondary-color);
+  font-size: .9rem;
+}
+
 main {
   font-size: 1.125rem;
   font-weight: 400;

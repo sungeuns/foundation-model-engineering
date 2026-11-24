@@ -21,6 +21,16 @@ export const socialCards = {
       alt: '224 × 224픽셀 이미지 한 장, 14 × 14픽셀 패치, 프롬프트 32자리로 계산한 예제입니다. 패치별 투영은 디코더 288자리를, 리샘플링과 교차 어텐션은 디코더 32자리와 별도 시각 메모리 64슬롯을 사용합니다.',
     },
   },
+  '/chapter-12/serving-policies-slos-and-fallbacks': {
+    en: {
+      image: '/social/streaming-latency-en.png',
+      alt: 'Two illustrative streams each deliver five tokens between 100 and 500 ms after submission. Both have a 100 ms TTFT and a mean gap of 100 ms. Stream A delivers a token every 100 ms. Stream B delivers four tokens 10 ms apart, then waits 370 ms for its last token.',
+    },
+    ko: {
+      image: '/social/streaming-latency-ko.png',
+      alt: '두 예시 응답에서 토큰 다섯 개가 요청 후 100~500ms 사이에 도착합니다. 둘 다 첫 토큰 지연과 이후 평균 토큰 간격이 100ms입니다. A에서는 토큰이 100ms마다 도착합니다. B에서는 토큰 네 개가 10ms 간격으로 도착한 뒤 마지막 토큰까지 370ms를 기다립니다.',
+    },
+  },
   '/chapter-14/rag-failure-modes-and-operational-design': {
     en: {
       image: '/social/rag-trace-en.png',

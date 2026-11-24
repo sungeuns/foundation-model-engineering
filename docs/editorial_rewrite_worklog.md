@@ -325,7 +325,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 12.3 | `/chapter-12/continuous-batching` | Inspected 2026-11-25 | 6ef1bf606cdf836c97703e2c9518a7f395f6c7242f614fb7e24f7a44ed301b28 | 4c9be3e2b663d439d85799a0f93db2a485fbca65eb945328789a188afd3b65db |
 | 12.4 | `/chapter-12/speculative-decoding` | Inspected 2026-11-15 | c211bce7483db5699601fe8743d1686ab5b645e7c574072d3cd8f2d8daaf0c70 | a3c7a599410b1ee428f27865bd9dbd1979703192f108984ae5fb522cd9ab3bb2 |
 | 12.5 | `/chapter-12/long-context-serving` | Inspected 2026-11-15 | 82f413a5a2e2731fe01603c7036b42dee434b010cc76410eba7e0807d73742e8 | 59933e962b9f0bef0f8b50e9889ec628fd92ade6d7d0fb91636981793bd83052 |
-| 12.6 | `/chapter-12/serving-policies-slos-and-fallbacks` | Inspected 2026-11-25 | d678d90eaa17a91bb8aba70d6738d376a1a9847112e22a6ae0283c7c8c17275a | d7ad4825a43ff026ebf65d48f510b1b8b6cc2a6dc4237376c802b9b50e17a946 |
+| 12.6 | `/chapter-12/serving-policies-slos-and-fallbacks` | Inspected 2026-11-25 | 8222c69fc753a073f358acef599ad825d1193693daa931acbd774081c82f2b46 | 35067207b0e514380e54bb373c7b545a075fc1999f3e039eb327edb1e13ba1a5 |
 | 13.1 | `/chapter-13/ptq-vs-qat` | Inspected 2026-11-18 | 6961419a7297e663a0894db1a8fd075b0153ae00ca4a904bbf5137dde68f3eda | 955b46bf42c872bd7857f3540012dfdc10b418008246ad5de0f6d42bc333c1c0 |
 | 13.2 | `/chapter-13/quantization-methods` | Inspected 2026-11-18 | 9939109a4f7a49939655429be92e41c75f5db0a9ee7fc29ce17765313d2f8778 | 5e79bd98352c5f72d6d4c28cbb11ce46ef369cc6d5a60c108df129bc0803d6cc |
 | 13.3 | `/chapter-13/weight-sparsification` | Inspected 2026-11-18 | cef7eea23f21faf8a4719bc13b2f3e28a8743ba0230c67b01438dbac642a6530 | bf555f470f962f689ad1442496cf669946e7933df2f1527b8832a0199f5f5f0c |

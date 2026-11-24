@@ -4,6 +4,8 @@ title: 12.6 Serving Policies, SLOs, and Fallbacks
 lang: en
 ---
 
+import traceFigure from '../../assets/images/chapter-12/streaming-latency-en.svg';
+
 # 12.6 Serving Policies, SLOs, and Fallbacks
 
 Imagine a restaurant with one kitchen. A table ordering two coffees and a table ordering a 12-course tasting menu both arrive at the same time. If the kitchen follows a naive first-come, first-served policy, the coffee table waits behind the tasting menu even though its order is cheap and urgent. Production LLM serving has the same failure mode.
@@ -46,6 +48,11 @@ $$
 
 Consider two **authored traces**, both submitted at $t_0=0$. Every arrival in this table contains exactly one token.
 
+<figure style="margin: 1rem 0;">
+  <a href={traceFigure.src}><img src={traceFigure.src} alt="Token arrivals on one time axis. A has evenly spaced ticks. Four ticks cluster at the start of B, with a 370 ms gap before the fifth." width="1200" height="630" loading="lazy" /></a>
+  <figcaption>Each tick is one token received by the client. The brackets mark the longest pause in each authored trace.</figcaption>
+</figure>
+
 | Trace | Token arrival times (ms) | Individual gaps (ms) | TTFT (ms) | TPOT (ms/token after the first) | Longest gap (ms) |
 | --- | --- | --- | --- | --- | --- |
 | A: steady delivery | 100, 200, 300, 400, 500 | 100, 100, 100, 100 | 100 | 100 | 100 |
@@ -59,13 +66,31 @@ Real streaming APIs can deliver several tokens in one chunk. Chunk arrival times
 
 ### Goodput Is the Right Mental Model
 
-For a production system, a useful objective is:
+Count the requests that delivered the promised experience in a fixed observation window. Suppose three requests start together at time zero. A and B above complete successfully. C delivers a single token at 100 ms and times out at 900 ms. In that one-second window, the service offered three requests and successfully completed two. How many met the streaming contract?
 
-$$
-\text{Goodput} = \text{Request rate that meets TTFT, TPOT, and success constraints}
-$$
+Here the contract requires a successful completion, a first text token within 150 ms, and every subsequent gap within 200 ms. The Python example uses ordered, nonnegative arrival offsets in milliseconds from each request’s submission. Each event contains one text token. A successful one-token response has no gap to check. A timed-out response fails even when its first token arrived on time.
 
-This is more useful than plain throughput because it reflects what the product actually promises. A cluster that serves more total tokens but violates p95 TTFT is not healthier for an interactive application.
+```python
+def meets_slo(arrivals_ms, completed):
+    if not completed or not arrivals_ms:
+        return False
+    gaps = [b - a for a, b in zip(arrivals_ms, arrivals_ms[1:])]
+    return arrivals_ms[0] <= 150 and all(gap <= 200 for gap in gaps)
+
+
+traces = [
+    ([100, 200, 300, 400, 500], True),
+    ([100, 110, 120, 130, 500], True),
+    ([100], False),
+]
+window_s = 1.0
+passed = [meets_slo(times, completed) for times, completed in traces]
+assert passed == [True, False, False]
+assert meets_slo([100], True)
+print(sum(passed) / window_s)  # 1.0 request/s
+```
+
+**One request per second met this contract.** A passed, B paused for 370 ms, and C timed out. The SLO attainment fraction was 1/3 of offered requests. Substituting the mean gap for the longest gap admits B and changes the question. When comparing a system benchmark, check its definition too. DistServe seeks the highest per-GPU load that still meets a target fraction of requests’ TTFT and TPOT requirements. Estimating that capacity takes a load sweep, beyond this single trace window. [[5]](#ref-5)
 
 ### SLOs Should Be Lane-Specific
 
