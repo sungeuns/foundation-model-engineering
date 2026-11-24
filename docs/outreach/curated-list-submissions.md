@@ -16,3 +16,7 @@ On November 25, 2026 (Korea time), Codex recommended the English CPU copying tra
 ## One2N inference engineering reading list
 
 On November 25, 2026 (Korea time), Codex submitted the KV cache capacity calculator for section 1.3. The proposal links to the nine-request example and its tests, states the assumptions, and identifies the book maintainer and AI assistance. Both of the reading list's local checks passed. The PR was open when verified. [Submission #30](https://github.com/one2nc/awesome-inference-engineering/pull/30)
+
+## Kempner Institute Computing Handbook
+
+On November 25, 2026 (Korea time), Codex opened a content discussion on behalf of Seongeun So about adding a CPU replay exercise to the handbook’s checkpoint section. The issue includes a runnable sampler example. In the accompanying training experiment, restoring the sampler reproduced the next batch after 80 updates, while reseeding it repeated the first batch. The issue was open when verified. [Content proposal #471](https://github.com/KempnerInstitute/kempner-computing-handbook/issues/471)

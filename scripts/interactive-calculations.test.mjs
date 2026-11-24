@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { calculateAttention, values } from '../src/components/chapter-3/attention-example.mjs';
+import { readFileSync } from 'node:fs';
+import { attentionTokens, calculateAttention, values } from '../src/components/chapter-3/attention-example.mjs';
 import { passAtK } from '../src/components/chapter-17/pass-at-k.mjs';
+import { socialCards } from '../src/data/social-cards.js';
 
 const close = (a, b) => assert.ok(Math.abs(a - b) < 1e-12, `${a} != ${b}`);
 test('attention: every selectable query/temperature/mask state normalizes; masked values cannot contribute', () => {
@@ -19,6 +21,27 @@ test('attention: every selectable query/temperature/mask state normalizes; maske
   assert.deepEqual(calculateAttention(0, 2, true).output, values[0]);
   assert.ok(calculateAttention(1, .25).weights[1] > calculateAttention(1, 2).weights[1]);
 });
+
+test('bilingual attention previews show the lesson’s weights and outputs in token order', () => {
+  const query = attentionTokens.indexOf('cat');
+  const states = [false, true].map(causal => calculateAttention(query, 1, causal));
+  for (const [lang, card] of Object.entries(socialCards['/chapter-3/self-attention-mathematics'])) {
+    const source = new URL('../public' + card.image.replace(/\.png$/, '.svg'), import.meta.url);
+    const svg = readFileSync(source, 'utf8');
+    assert.ok(svg.includes(`xml:lang="${lang}"`));
+    const labels = [...svg.matchAll(/<text\b[^>]*>([^<]+)<\/text>/g)].map(match => match[1]);
+    assert.deepEqual(labels.filter(label => attentionTokens.includes(label)), attentionTokens);
+    const expectedWeights = states.map(state => state.weights.map(weight => weight ? (100 * weight).toFixed(1) + '%' : '0%'));
+    const rows = [...svg.matchAll(/<g id="(all-keys|causal)">(.*?)<\/g>/gs)];
+    assert.deepEqual(rows.map(row => row[1]), ['all-keys', 'causal']);
+    assert.deepEqual(rows.map(row => row[2].match(/[\d.]+%/g)), expectedWeights);
+    assert.deepEqual(card.alt.match(/[\d.]+%/g), expectedWeights.flat());
+    const vectors = states.map(state => `[${state.output.map(value => value.toFixed(3)).join(', ')}]`);
+    assert.ok(labels.includes(vectors.join(' → ')));
+    assert.deepEqual(card.alt.match(/\[[^\]]+\]/g), vectors);
+  }
+});
+
 test('pass@k agrees with exhaustive enumeration of small finite sample pools', () => {
   for (let n = 1; n <= 9; n++) for (let c = 0; c <= n; c++) for (let k = 1; k <= n; k++) {
     let subsets = 0, successes = 0;

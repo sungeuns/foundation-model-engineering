@@ -276,7 +276,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 3.1 | `/chapter-3/self-attention-mathematics` | Inspected 2026-11-25 | 3d5171b29cb8add9577bf4fc5141f1062f110fcced7f7498a817634649280c14 | 20de831f65342bff5532fdb8d8c22fe1bbd0daef0f31510a0abd1042e9b6fcbe |
 | 3.2 | `/chapter-3/multi-head-attention` | Inspected 2026-11-25 | bc5026a7ec1b9aa4d5bc4589f7f6011630bc877efcb8d179954ee0560d8a705f | 4316a26ed2c414ccdb0c4f4ad6642d98286b9350748fd362920a1d183cac8b68 |
 | 3.3 | `/chapter-3/position-encoding-strategy` | Inspected 2026-11-15 | 63c3645268727e12760f56b1748a44bbac8afd1c7f66f9d49329e76e39130fb8 | 17d34127b63e936f20ca9f2440fa2aed52e5291548cf18a9dcf8b4f3fdf7463e |
-| 3.4 | `/chapter-3/layer-normalization-residuals` | Inspected 2026-11-15 | d9c2b8dbee0ba9d5c365d0395014e3e9d6fe06e7f58387401fd6ae625584825f | 7571b6552563c1bc6c771e9a1cb3acc1163645b179e7bb7e6a3dc2769e2cfe5e |
+| 3.4 | `/chapter-3/layer-normalization-residuals` | Inspected 2026-11-25 | a3587f46c53f4796ac71f768e9561130af2c053e394f20d83a1d8f12a6841487 | a69ef3c4fc27e17f5313847ce8003f1b3acb57db1b99557a5354f904818065ba |
 | 3.5 | `/chapter-3/complexity-analysis` | Inspected 2026-11-15 | 528f765af0e658c5d7116b5d3651be5a3ec6496b5651970285143831e0344b2c | d5da6dea75982e92dc97033508aacd582e677911caa2afbfb61f1356fbf12537 |
 | 4.1 | `/chapter-4/encoder-only` | Inspected 2026-11-25 | d1ead46157733149700b6dbe04d9b4b762b926993bb8fbd5656077c6183979a9 | 20c6167fe0147b402577fea44ad27b8267f000770e267848e558f60acc6969cf |
 | 4.2 | `/chapter-4/decoder-only` | Inspected 2026-11-25 | 566f11bdb11a6760f26ac9639bd0922af4ad46077497b6332ca7d4647a090e8b | 7a42e67720a62c01c9801e20b6ef5523aa9f6fb0fe3b60cdb074afb20dc23897 |
@@ -321,7 +321,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 11.5 | `/chapter-11/video-generation-foundations` | Inspected 2026-11-15 | b34544d0352be5feafdfc0d30ac23092d50edf3a3af5f3e4d37cc62531230c20 | 55c0488a07c962041cdbb0cdb945d18c8e136b23dba2aed6f6970f1c33cb4b4b |
 | 11.6 | `/chapter-11/commercial-video-models` | Mechanical only | 12216aad67ffc900bcfe437f20a7fcf9be618ccc5d617f698f4466ef15ff33cb | 6ee6e17876daa24bd17b8d709b7f541276019da545887510035b916819ae13a3 |
 | 12.1 | `/chapter-12/kv-cache-management` | Inspected 2026-11-25 | 366a6909bf401478c9abf17c66dfcc45c68685517d1fe347309299c8d1cff0fa | f5f19b3d52ee8665be584d640185d8abb206334e99f549dd7ae50462df529865 |
-| 12.2 | `/chapter-12/paged-attention-vllm` | Mechanical only | 75d76b30c45ca44edbb56072df6f91209343c7d8ad5c69270cd6b6c4e9700dba | 2446c00fd36edfd6fda8dc1aaf18805e0de0af19615ad504eb4e9acac8356917 |
+| 12.2 | `/chapter-12/paged-attention-vllm` | Inspected 2026-11-25 | 52cf569f107eda54688b02ae4a5149d5191e4e56e3241ffe32a2b53ae8bc66d8 | 14402809f988d4e8b12edd29476af19ece120d3abe6c86ac16ca1a664496bb46 |
 | 12.3 | `/chapter-12/continuous-batching` | Inspected 2026-11-25 | 588de002d211758e1fbb83af67004497e5280cad3512efc790f73f9b3d2a24b3 | 3f9ff09b65675139196bd073123e28a306180a8ec7d07398d1e331351f5a7124 |
 | 12.4 | `/chapter-12/speculative-decoding` | Inspected 2026-11-25 | a5f93ea8411bab0fe68bf277224f8f19f111ac0f0fd73f6b4eda75739a8990b5 | 61986787b62bf6d99f59ab08a66d2ea6312e472faea94ded13c4a7d627d03cc4 |
 | 12.5 | `/chapter-12/long-context-serving` | Inspected 2026-11-15 | 82f413a5a2e2731fe01603c7036b42dee434b010cc76410eba7e0807d73742e8 | 59933e962b9f0bef0f8b50e9889ec628fd92ade6d7d0fb91636981793bd83052 |
@@ -639,3 +639,7 @@ Inspection of both 8.5 manuscripts covered the service-ticket diagnosis, the mea
 In 4.1, both editions distinguish the keys attended to by one query from the positions scored by the MLM loss. The two PyTorch reductions reproduce 1.040 and 0.693 nats. Review of 4.3 covered the three attention masks, the different reconstruction targets in T5 and BART, and the scope of the DeepSeek causal encoder description. With the two-query CPU fixture, changing a padding value leaves both outputs unchanged. Increasing the last real source value by 21 raises them by 7 and 12. Existing heading links are retained in both editions.
 
 The 17.6 product note was checked against OpenAI’s November 24 API changelog and the Chat Latest model card. The rolling API alias can change between evaluations. The profile table retains the Astra and Sol evaluation settings.
+
+### 2026-11-25 normalization and paged KV address checks
+
+In both editions of 3.4, the two-feature browser example and CPU PyTorch agree for an offset, a nearly constant input and a constant input at both epsilon settings. The worked residual example distinguishes the zero-branch behavior of Pre-LN and Post-LN. In 12.2, request A’s block table maps five logical values to physical blocks 0 and 2. The CPU example checks the logical rows and final attention value, excludes unused tail slots and refuses incomplete or out-of-range active mappings.

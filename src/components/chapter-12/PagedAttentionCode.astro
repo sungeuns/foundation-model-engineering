@@ -1,0 +1,15 @@
+---
+import { Code } from 'astro:components';
+import { readFileSync } from 'node:fs';
+import { withBasePath } from '../../utils/paths.js';
+
+const ko = Astro.props.lang === 'ko';
+const path = '/labs/paged_attention.py';
+const code = readFileSync(`public${path}`, 'utf8').trimEnd();
+---
+
+<p><a href={withBasePath(path)} download="paged_attention.py">{ko ? 'CPU용 PyTorch 예제 내려받기' : 'Download the CPU PyTorch example'} (paged_attention.py)</a></p>
+<details>
+  <summary>{ko ? '블록 주소 계산과 세 가지 오류 검사 코드 보기' : 'Read the address calculation and the three invalid-table checks'}</summary>
+  <Code code={code} lang="python" theme="github-dark" />
+</details>

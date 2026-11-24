@@ -5,6 +5,7 @@ lang: en
 ---
 
 import PagedAttentionVisualizer from '../../components/chapter-12/PagedAttentionVisualizer.tsx';
+import PagedAttentionCode from '../../components/chapter-12/PagedAttentionCode.astro';
 
 # 12.2 PagedAttention (vLLM)
 
@@ -48,85 +49,27 @@ The following component starts with two requests. Generate tokens to see when cr
 
 ---
 
-## 3. Engineering PagedAttention (PyTorch Simulation)
+<a id="3-engineering-pagedattention-pytorch-simulation"></a>
+<a id="paged-kv-addresses"></a>
 
-In a production environment, PagedAttention is implemented as a highly optimized, fused custom CUDA kernel. The kernel reads the Block Table directly and fetches the non-contiguous Key and Value tensors on the fly during the matrix multiplication.
+## 3. Which five values does the query actually read?
 
-The following educational simulation reconstructs contiguous keys and values from a block table so the address mapping is visible.
+Use the diagram's initial request A. Each block holds four tokens. A has five tokens and the block table `[0, 2]`. Physical block 1 belongs to request B.
 
-> **Deliberately simplified implementation.** This CUDA-only example is not a production allocator and has not been GPU-smoke-tested for this revision. It omits KV writers, ownership and double-free checks, reference counting, concurrent requests, copy-on-write, and cache recovery. It copies blocks into contiguous tensors; a real paged kernel avoids that reconstruction. The float16 pool and query must share device and dtype.
+| Logical token position | Physical block | Slot within block | Value |
+| --- | --- | --- | --- |
+| 0, 1, 2, 3 | 0 | 0, 1, 2, 3 | 1, 2, 3, 4 |
+| 4 | 2 | 0 | 101 |
 
-```python
-import torch
-import torch.nn.functional as F
+For token position $t$ and block size $B$, first read the block ID at $\lfloor t/B\rfloor$ in A's table, then take slot $t \bmod B$ in that physical block. Stop after position 4. There are three more slots in A's second block, but the request has no tokens there yet.
 
-class KVCacheMemoryPool:
-    def __init__(self, num_blocks, block_size, num_heads, head_dim, dtype=torch.float16):
-        self.num_blocks = num_blocks
-        self.block_size = block_size
+Set the query and keys to zero. All five scores are equal, so the answer is the mean of the values, $(1+2+3+4+101)/5=22.2$. If the second block entry is missing, averaging the first four values gives a plausible **2.5** for the wrong sequence. Check that the table covers the stated context length before computing attention. In a fixed-width table, only the entries needed for that length are active.
 
-        # Physical VRAM Pool: [num_blocks, 2 (K&V), num_heads, block_size, head_dim]
-        self.physical_memory = torch.zeros(
-            (num_blocks, 2, num_heads, block_size, head_dim),
-            dtype=dtype,
-            device='cuda'
-        )
-        self.free_blocks = list(range(num_blocks)[::-1]) # Stack of free block indices
+**Scope of the CPU example.** The script reads one nonempty request with one decode query, a Python list of block IDs and precomputed keys and values. It gathers rows into ordinary PyTorch tensors to check against an independent dense reference. The original paged kernel reads the blocks directly. The example omits allocation, concurrent writes, shared-block ownership, GPU scheduling and kernel performance [[1]](#ref-1).
 
-    def allocate_block(self):
-        if not self.free_blocks:
-            raise RuntimeError("Out of Memory: No free KV blocks available.")
-        return self.free_blocks.pop()
+<PagedAttentionCode lang="en" />
 
-    def free_block(self, block_idx):
-        self.free_blocks.append(block_idx)
-
-def paged_attention_simulated(query, physical_pool, block_table, context_len):
-    """
-    Simulates the PagedAttention kernel logic in pure PyTorch.
-    query: [1, num_heads, 1, head_dim] (The current token's query)
-    physical_pool: The KVCacheMemoryPool object
-    block_table: List of physical block indices for this specific sequence
-    context_len: Total number of valid tokens in the sequence
-    """
-    num_heads = query.size(1)
-    head_dim = query.size(3)
-    block_size = physical_pool.block_size
-
-    # 1. Reconstruct the contiguous K and V tensors from the non-contiguous physical blocks
-    # Note: In the actual CUDA kernel, this explicit reconstruction is bypassed,
-    # and the dot product is computed directly block-by-block to save memory bandwidth.
-    keys = []
-    values = []
-
-    for block_idx in block_table:
-        # Fetch physical block: [num_heads, block_size, head_dim]
-        k_block = physical_pool.physical_memory[block_idx, 0]
-        v_block = physical_pool.physical_memory[block_idx, 1]
-        keys.append(k_block)
-        values.append(v_block)
-
-    # Concatenate blocks along the sequence dimension
-    # Shape: [num_heads, total_allocated_len, head_dim]
-    contiguous_k = torch.cat(keys, dim=1)
-    contiguous_v = torch.cat(values, dim=1)
-
-    # 2. Truncate the padded tokens in the final block using context_len
-    contiguous_k = contiguous_k[:, :context_len, :]
-    contiguous_v = contiguous_v[:, :context_len, :]
-
-    # 3. Add batch dimension for PyTorch compatibility
-    contiguous_k = contiguous_k.unsqueeze(0)
-    contiguous_v = contiguous_v.unsqueeze(0)
-
-    # 4. Compute standard scaled dot-product attention
-    # FlashAttention can be applied here in a real scenario
-    attn_output = F.scaled_dot_product_attention(query, contiguous_k, contiguous_v)
-
-    return attn_output
-```
-
-*The original implementation reads physical blocks through the block table and combines partial attention results without constructing the full contiguous KV tensors shown here [[1]](#ref-1). This removes the simulation's reconstruction buffers; it does not make cache storage or kernel workspace free.*
+Run `python paged_attention.py` with CPU PyTorch. It checks the five values in logical order and the attention result. Raising every unused tail value leaves the result at 22.2. A missing entry, a negative active ID and an ID outside the pool each raise an error. An unused suffix in a wider table is ignored.
 
 ---
 
@@ -183,8 +126,13 @@ However, as we efficiently pack more requests into a batch, we encounter a new p
 </details>
 
 <details>
-<summary>Quiz 5: Formulate the mathematical internal fragmentation overhead of PagedAttention. Let the block size be $B$ tokens, sequence length of request $i$ be $S_i$, and the memory footprint per token be $M$ bytes. Derive the exact fragmented memory formula for a batch of $N$ requests.</summary>
-*In PagedAttention, memory is allocated in fixed-size blocks of $B$ tokens. Internal fragmentation occurs only in the last allocated block of a sequence if it is not completely filled. The number of wasted token slots for request $i$ is $(B - (S_i \pmod B)) \pmod B$. Therefore, the exact fragmented memory footprint in bytes for request $i$ is: $W_i = M \times ((B - (S_i \pmod B)) \pmod B)$. For a batch of $N$ requests, the total internal fragmentation overhead is $W_{total} = \sum_{i=1}^N W_i$. For independent allocations with no shared or pre-reserved blocks, and assuming the residues $S_i \pmod B$ are uniform over $0,\ldots,B-1$, the average wasted tokens per request is $(B-1)/2$. Thus, the average total overhead for $N$ requests is approximately $N \times M \times \frac{B-1}{2}$ bytes.*
+<summary>Quiz 5: With blocks of four slots, how many bytes go unused for independent requests of lengths 4, 5 and 8?</summary>
+*Only the five-token request leaves a partial final block, so three slots are unused. If one token takes $M$ bytes, the batch wastes $3M$ bytes. In general request $i$ of length $S_i$ wastes $M(B\lceil S_i/B\rceil-S_i)$ bytes for block size $B$. Sum over requests with no sharing or extra reservation. If lengths modulo $B$ are uniformly distributed, expected waste is $M(B-1)/2$ per request.*
+</details>
+
+<details>
+<summary>Quiz 6: A five-token query returns 2.5 instead of 22.2 in the example. Which two things should you check?</summary>
+*Check that the table supplies two active entries and that the fifth position maps to block 2, slot 0. A one-block read silently drops the value 101 and averages the first four values.*
 </details>
 
 ---

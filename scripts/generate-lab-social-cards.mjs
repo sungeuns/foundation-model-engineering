@@ -10,6 +10,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 import { socialCards } from '../src/data/social-cards.js';
+import { attentionTokens, calculateAttention } from '../src/components/chapter-3/attention-example.mjs';
 import { denseResults, bm25Results, fuseRanks } from '../src/components/chapter-14/rank-fusion.mjs';
 import { GiB, kvCapacity } from '../src/components/chapter-12/kv-capacity.mjs';
 
@@ -19,6 +20,17 @@ const text = (value, x, y, size, opts = '') => `<text x="${x}" y="${y}" font-siz
 const ink = '#192a30', teal = '#256257', muted = '#4e5d61';
 
 const copy = {
+  'attention-weights': {
+    path: '/chapter-3/self-attention-mathematics', number: '3.1', render: attentionWeightsSvg,
+    en: {
+      title: 'Can “cat” attend to “here”?', setup: 'Example attention weights · Query: cat · τ = 1',
+      all: 'All keys', causal: 'Causal', output: 'Weighted sum of V · all keys → causal',
+    },
+    ko: {
+      title: 'cat은 뒤에 오는 here를 볼 수 있을까?', setup: '어텐션 가중치 예제 · 쿼리: cat · τ = 1',
+      all: '전체 키', causal: '인과 마스크', output: '값 벡터의 가중합 · 전체 키 → 인과 마스크',
+    },
+  },
   'prefix-mask': {
     path: '/chapter-4/hybrid-prefix-lm', number: '4.4', render: prefixMaskSvg,
     en: {
@@ -167,6 +179,41 @@ if (args.length && (args.length !== 2 || args[0] !== '--only' || !Object.hasOwn(
   throw new Error(`Usage: node scripts/generate-lab-social-cards.mjs [--only ${Object.keys(copy).join('|')}]`);
 }
 const selectedKind = args[1];
+
+function attentionWeightsSvg(lesson, lang, card) {
+  const labels = lesson[lang];
+  const selected = attentionTokens.indexOf('cat');
+  const unmasked = calculateAttention(selected, 1, false);
+  const causal = calculateAttention(selected, 1, true);
+  const center = index => 352 + 220 * index;
+  const tokens = attentionTokens.map((token, i) =>
+    text(token, center(i), 213, 44, 'text-anchor="middle" font-weight="600"')
+  ).join('');
+  const rows = [unmasked, causal].map(({ weights }, row) => {
+    const y = 289 + row * 111;
+    const cells = weights.map((weight, i) => {
+      const x = center(i);
+      const percent = weight === 0 ? '0%' : `${(100 * weight).toFixed(1)}%`;
+      return text(percent, x, y, 47, 'text-anchor="middle" font-weight="700"') +
+        `<rect x="${x - 75}" y="${y + 15}" width="150" height="9" fill="#d9dfd8"/>` +
+        `<rect x="${x - 75}" y="${y + 15}" width="${150 * weight}" height="9" fill="${teal}"/>`;
+    }).join('');
+    return `<g id="${row ? 'causal' : 'all-keys'}">${text(row ? labels.causal : labels.all, 56, y, 40, 'font-weight="600"')}${cells}</g>`;
+  }).join('');
+  const vector = output => `[${output.map(value => value.toFixed(3)).join(', ')}]`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" xml:lang="${lang}" role="img" aria-labelledby="card-title card-description">
+<title id="card-title">${escape(labels.title)}</title><desc id="card-description">${escape(card.alt)}</desc>
+<rect width="1200" height="630" fill="#f5f2eb"/>
+<g font-family="${lang === 'ko' ? 'Noto Sans CJK KR, DejaVu Sans' : 'DejaVu Sans'}, sans-serif" fill="${ink}">
+${text(labels.title, 54, 85, 62, 'font-weight="700"')}
+${text(labels.setup, 57, 145, 39, `fill="${muted}"`)}
+${tokens}
+<path d="M56 229H1144M56 340H1144M56 451H1144" fill="none" stroke="#bdc8c0" stroke-width="2"/>
+${rows}
+${text(labels.output, 56, 510, 39, `fill="${muted}"`)}
+${text(`${vector(unmasked.output)} → ${vector(causal.output)}`, 55, 583, 54, `fill="${teal}" font-weight="700"`)}
+</g></svg>\n`;
+}
 
 function visionBridgeSvg(lesson, lang, card) {
   const c = lesson[lang], korean = lang === 'ko';

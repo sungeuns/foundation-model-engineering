@@ -183,8 +183,8 @@ export const searchDescriptions = {
     ko: '공개된 기능과 자체 테스트 사례로 상용 비디오 모델을 평가하고, 시각적 그럴듯함과 물리적 추론 능력을 구분하는 기준을 살펴봅니다.',
   },
   '/chapter-12/paged-attention-vllm': {
-    en: 'Understand vLLM PagedAttention through KV cache fragmentation, block tables, non-contiguous allocation, and copy-on-write cache sharing.',
-    ko: 'KV 캐시 단편화, 블록 테이블, 비연속 메모리 할당과 쓰기 시 복사 기반 캐시 공유를 통해 vLLM의 PagedAttention을 이해합니다.',
+    en: 'Map five tokens to two physical KV blocks. Check the PagedAttention addresses against dense attention on a CPU, then explore block reuse and copy-on-write sharing.',
+    ko: '다섯 토큰이 물리 KV 블록 두 개에 어떻게 나뉠까요? CPU에서 블록 주소를 따라가며 어텐션 출력을 검산하고, 블록 반환과 공유 과정을 살펴봅니다.',
   },
   '/chapter-12/speculative-decoding': {
     en: 'Change two token probabilities and see why speculative decoding needs residual sampling. Redrawing from the target gives 62.5% where it should give 75%.',
@@ -279,8 +279,8 @@ export const searchDescriptions = {
     ko: '사인·코사인 위치 인코딩과 회전 위치 임베딩(RoPE)을 비교하고, 위치 정보를 전달하는 수학적 원리와 PyTorch 구현을 살펴봅니다.',
   },
   '/chapter-3/layer-normalization-residuals': {
-    en: 'Learn how residual connections and layer normalization support Transformer training, and compare Pre-LN and Post-LN architectures.',
-    ko: '잔차 연결과 레이어 정규화가 Transformer 학습을 돕는 원리를 이해하고, Pre-LN과 Post-LN 구조의 차이를 비교합니다.',
+    en: 'Add 10 to both features of a token and compare LayerNorm with RMSNorm. Change epsilon, reproduce the outputs in PyTorch, and trace a zero branch through Pre-LN and Post-LN.',
+    ko: '두 특성에 10을 더하면 LayerNorm과 RMSNorm 중 어느 쪽의 출력이 달라질까요? 브라우저에서 엡실론을 바꾸고, PyTorch와 Pre-LN·Post-LN 예제로 확인합니다.',
   },
   '/chapter-3/complexity-analysis': {
     en: 'Analyze Transformer computation and memory complexity, compare sequence-model costs, and visualize the quadratic growth of attention.',

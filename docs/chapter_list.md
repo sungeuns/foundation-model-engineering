@@ -22,7 +22,7 @@
 * **3.1 Self-Attention Mathematics:** $Q, K, V$ 행렬 연산과 Scaled Dot-Product의 수식적 이해.
 * **3.2 Multi-head Attention (MHA):** 다양한 관점에서 특징을 추출하는 병렬 어텐션 구조.
 * **3.3 Position Encoding Strategy:** Sinusoidal부터 최신 RoPE(Rotary), ALiBi까지의 비교 분석.
-* **3.4 Layer Normalization & Residuals:** Pre-LN vs Post-LN의 학습 안정성 차이.
+* **3.4 Layer Normalization & Residuals:** 두 특성값으로 LayerNorm·RMSNorm과 엡실론의 효과를 검산하고, 잔차 분기를 0으로 둘 때 Pre-LN과 Post-LN의 출력 비교.
 * **3.5 Complexity Analysis:** 시퀀스 길이에 따른 $O(n^2)$ 복잡도와 메모리 병목 현상.
 * **Summary:** Transformer 계열 Foundation Model의 내부 로직을 수학적, 구조적으로 파헤칩니다.
 
@@ -103,7 +103,7 @@
 ### **Chapter 12: LLM Inference Optimization (Deep Tech)**
 
 * **12.1 KV Cache: How It Works and Memory Use:** KV 캐시의 원리, GQA 메모리 계산 공식과 용량 계산기, PyTorch 재계산 비교.
-* **12.2 PagedAttention (vLLM):** OS의 가상 메모리 개념을 도입한 메모리 단편화 해결.
+* **12.2 PagedAttention (vLLM):** 다섯 토큰의 블록 주소를 따라가며 어텐션을 검산하고, 블록 재사용·꼬리 슬롯 낭비·쓰기 시 복사를 비교.
 * **12.3 Continuous Batching: Request Scheduling and Chunked Prefill:** 여섯 요청의 실행 순서로 연속 배칭을 따라가고 청크 프리필이 첫 토큰 지연과 토큰 간 지연에 미치는 영향을 비교.
 * **12.4 Speculative Decoding:** 작은 모델로 초안을 잡고 큰 모델로 검수하여 속도를 올리는 기법.
 * **12.5 Long Context Serving:** StreamingLLM, YaRN 등 컨텍스트 윈도우 확장을 위한 시스템 최적화.

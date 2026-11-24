@@ -8,175 +8,135 @@ import LayerNormVisualizer from '../../../components/chapter-3/LayerNormVisualiz
 
 # 3.4 레이어 정규화 및 잔차
 
-깊은 트랜스포머를 구축하려면 셀프 어텐션 이상의 것이 필요합니다. 안정적인 학습을 보장하고 네트워크가 수백 개의 레이어로 성장할 수 있도록 두 가지 중요한 구성 요소가 사용됩니다. 바로 **레이어 정규화(Layer Normalization)** 와 **잔차 연결(Residual Connections)** 입니다.
+한 토큰의 두 특성값이 `[1, 3]`입니다. 두 값에 10을 더하면 `[11, 13]`이 됩니다. 정규화를 거치고도 두 입력을 구분할 수 있을까요? **LayerNorm** 은 특성값의 평균을 먼저 빼므로 둘 다 `[-1, 1]`이 된 뒤 같은 크기로 조정됩니다. **RMSNorm** 은 평균을 빼지 않고 제곱 평균의 제곱근(RMS)으로 나누므로 결과가 달라집니다. 매 층에서 잔차 상태를 정규화하는 모델의 체크포인트를 옮길 때도 같은 연산을 선택해야 원래 결과를 재현할 수 있습니다. [[2]](#ref-2) [[7]](#ref-7)
 
----
+<a id="동기-깊은-네트워크의-딜레마"></a>
+<a id="비유-합창단과-지름길"></a>
+<a id="예제-정규화-효과"></a>
+<a id="normalization-example"></a>
 
-### **동기: 깊은 네트워크의 딜레마**
-신경망에 더 많은 레이어를 쌓을수록:
-*   **공변량 변화 (Covariate Shift):** 학습 중에 깊은 레이어에 대한 입력 분포가 계속 바뀌어 학습이 어려워집니다.
-*   **열화 문제 (Degradation Problem):** 레이어를 더 많이 추가하면 과적합 때문이 아니라 그래디언트가 너무 많은 레이어를 통과하는 데 어려움을 겪기 때문에 오히려 학습 오차가 *높아질* 수 있습니다.
+## 같은 값을 더한 토큰과 거의 일정한 토큰 비교하기
 
-레이어 정규화와 잔차는 딥러닝이 실제로 대규모로 작동하도록 만드는 안정화 기둥입니다.
-
----
-
-### **비유: 합창단과 지름길**
-
-당신이 대규모 합창단을 이끌고 있다고 상상해 보세요.
-
-*   **레이어 정규화는 볼륨 컨트롤러와 같습니다.** 어떤 가수는 소리를 지르고 다른 가수는 속삭이면 화음이 깨집니다. 레이어 정규화는 각 단계에서 모든 사람의 볼륨이 표준적이고 제어된 수준이 되도록 조정합니다. 신호가 폭주하거나 사라지는 것을 방지합니다.
-*   **잔차 연결은 구불구불한 골목길 옆에 고속도로를 건설하는 것과 같습니다.** 도시의 시작부터 끝까지 메시지를 보내고 싶은데, 모든 골목길(레이어)을 거쳐 가려면 시간이 오래 걸리고 메시지가 손실될 수 있습니다. 잔차 연결은 메시지가 왜곡 없이 직접 이동할 수 있는 고속도로(스킵 연결)를 제공합니다.
-
----
-
-## 잔차 연결: 고속도로
-
-ResNet (He et al., 2015) [[1]](#ref-1)에서 도입된 잔차 연결(Residual Connections)은 단순히 서브 레이어의 입력을 그 출력에 더하는 것입니다.
-
-**비하인드 스토리:** 2015년 Kaiming He 등이 ResNet을 제안했을 때, 그들은 신경망에 층을 더 많이 쌓을수록 오히려 학습 오차가 *높아지는* 현상(Degradation Problem)에 주목했습니다. 이는 상식에 반하는 결과였습니다. 그들은 단순히 입력을 출력에 더해주는 '잔차 연결'이라는 기발한 아이디어로 이 문제를 해결했고, 이로 인해 100층이 넘는 깊은 네트워크를 학습할 수 있게 되었습니다.
-
-$$\text{Output} = \text{Sublayer}(x) + x$$
-
-<div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', margin: '20px 0' }}>
-
-<div style={{ maxWidth: '600px', width: '100%' }}>
-![Transformer Residual and Layer Norm](../../../assets/images/chapter-3/transformer_resideual_layer_norm.png)
-</div>
-
-<em style={{ marginTop: '10px', color: '#7f8c8d' }}>Source: [The Illustrated Transformer by Jay Alammar](https://jalammar.github.io/illustrated-transformer/)</em>
-
-</div>
-
-이 단순한 덧셈 연산은 역전파 중에 서브 레이어의 복잡한 비선형성을 우회하여 그래디언트가 항등 매핑($+ x$)을 통해 직접 흐를 수 있도록 합니다. 항등 경로로 기울기를 전달하기 쉬워지지만 소실을 완전히 막지는 않습니다. 분기 Jacobian이 이 경로를 상쇄하거나 증폭할 수 있어 정규화와 최적화 조건도 중요합니다.
-
----
-
-## 레이어 정규화: 안정성 유지
-
-배치 차원에 대해 통계량을 계산하는 배치 정규화(Batch Normalization)와 달리, **레이어 정규화** (Ba et al., 2016) [[2]](#ref-2)는 각 학습 사례에 대해 독립적으로 피처에 걸쳐 입력을 정규화합니다.
-
-$d$ 차원의 벡터 $\mathbf{x}$에 대해:
-$$\mu = \frac{1}{d} \sum_{i=1}^d x_i$$
-$$\sigma^2 = \frac{1}{d} \sum_{i=1}^d (x_i - \mu)^2$$
-$$\text{LN}(\mathbf{x}) = \frac{\mathbf{x} - \mu}{\sqrt{\sigma^2 + \epsilon}} \odot \gamma + \beta$$
-
-여기서 $\gamma$와 $\beta$는 학습 가능한 파라미터이고, $\epsilon$은 수치적 안정성을 위한 작은 상수입니다.
-레이어 정규화는 가변적인 시퀀스 길이와 작은 배치 크기에서도 잘 작동하기 때문에 NLP에서 선호됩니다.
-
----
-
-## PyTorch 구현
-
-다음은 표준 트랜스포머 블록에서 이들이 어떻게 결합되는지 보여줍니다.
-
-```python
-import torch
-import torch.nn as nn
-
-class TransformerSublayer(nn.Module):
-    def __init__(self, d_model):
-        super(TransformerSublayer, self).__init__()
-        self.norm = nn.LayerNorm(d_model)
-        # 시뮬레이션된 서브 레이어 (예: 셀프 어텐션 또는 피드 포워드)
-        self.sublayer = nn.Linear(d_model, d_model)
-        self.dropout = nn.Dropout(0.1)
-
-    def forward(self, x):
-        # Post-LN 아키텍처 (원래 논문에서와 같이)
-        # 1. 서브 레이어 연산
-        out = self.sublayer(x)
-        # 2. 드롭아웃 및 잔차 추가
-        out = x + self.dropout(out)
-        # 3. 레이어 정규화
-        out = self.norm(out)
-        return out
-
-# 사용 예시
-d_model = 64
-layer = TransformerSublayer(d_model)
-x = torch.randn(2, 10, d_model)
-output = layer(x)
-print("출력 형태:", output.shape)
-```
-
-> [!NOTE]
-> 현대 트랜스포머는 종종 서브 레이어 *이전*에 정규화가 수행되는 **Pre-LN** 을 사용합니다: `x + sublayer(norm(x))`. 초기화와 최적화 안정성을 개선할 수 있지만 warm-up과 학습 안정성은 설정에 따라 달라집니다.
-
----
-
-## Pre-LN vs. Post-LN: 아키텍처의 변화
-
-원래 트랜스포머 논문은 레이어 정규화를 잔차 추가 *이후*에 배치했습니다 (Post-LN). 그러나 대부분의 현대 트랜스포머(예: GPT-2, GPT-3, Llama)는 Pre-LN을 사용합니다. 이 둘을 비교해 봅시다:
-
-### Post-LN (원본)
-$$\mathbf{x}_{l+1} = \text{LayerNorm}(\mathbf{x}_l + \text{Sublayer}(\mathbf{x}_l))$$
-*   **장점:** 각 레이어의 출력이 잘 정규화되어 있어, 성공적으로 학습된다면 더 좋은 성능을 낼 수 있습니다.
-*   **단점:** 초기화 시 그래디언트가 불안정해질 수 있어, 신중한 학습률 웜업(warm-up) 스케줄이 필요합니다. 정규화는 각 블록 출력을 제어하지만 정규화 전 스케일과 기울기는 따로 확인해야 합니다.
-
-### Pre-LN (현대 표준)
-$$\mathbf{x}_{l+1} = \mathbf{x}_l + \text{Sublayer}(\text{LayerNorm}(\mathbf{x}_l))$$
-*   **장점:** 학습이 훨씬 더 안정적입니다. 그래디언트가 정규화 레이어에 의해 변형되지 않고 잔차 연결을 통해 직접 흐를 수 있습니다. 연구한 조건에서는 warm-up 요구를 줄일 수 있지만 검증된 optimizer schedule은 여전히 필요합니다.
-*   **단점:** 항등(identity) 분기에 직접 더해지기 때문에 주의하지 않으면 표현 붕괴(representation collapse)가 발생할 수 있지만, 실제로는 매우 잘 작동합니다.
-
-Xiong 등의 연구는 초기화 시 Post-LN 출력 부근의 큰 기대 그래디언트와 Pre-LN의 더 안정적인 초기화 특성을 분석합니다 [[3]](#ref-3). 모든 Pre-LN의 그래디언트가 깊이와 무관하거나 warm-up이 전혀 필요 없다는 증명은 아닙니다.
-
----
-
-## 연구 보강: 깊이 방향의 routing
-
-**2026-10-13 기준.** Attention Residuals는 고정 누적 대신 이전 레이어 출력에 학습된 어텐션을 적용하며 block 변형으로 저장·통신 비용을 줄입니다 [[4]](#ref-4). Low-Rank Attention Residuals의 9월 개정판은 좁은 routing key와 전체 폭의 residual value를 분리하고 1B·4B 규모에서 실험합니다 [[5]](#ref-5).
-
-이는 Pre-LN/Post-LN 외의 설계 축을 추가합니다. 실무에서는 깊이·파라미터/연산 예산·activation 저장·pipeline 통신·커널 지원·검증 손실·gradient/activation norm·처리량을 함께 비교해야 합니다. 보고한 규모에서 성공했다고 보편적으로 더 좋은 잔차 구조가 되거나 다른 상용 모델의 내부가 공개되는 것은 아닙니다.
-
-
-## 예제: 정규화 효과
-
-레이어 정규화가 거친 값들을 가진 벡터를 어떻게 평균 0, 분산 1의 정규화된 분포로 변환하는지 확인해 보세요.
+엡실론을 `0.00001`로 두고 `[1, 3]`과 `[11, 13]`을 비교해 보세요. LayerNorm의 출력은 두 경우 모두 약 `[-0.999995, 0.999995]`입니다. RMSNorm의 출력은 `[0.447213, 1.341639]`에서 `[0.913500, 1.079591]`로 바뀝니다. 특성별 배율은 1, 편향을 쓰는 경우 그 값은 0으로 두었습니다. [파이토치로 같은 숫자를 직접 확인](#pytorch-normalization-check)할 수 있습니다.
 
 <LayerNormVisualizer client:load lang="ko" />
 
----
+<a id="레이어-정규화-안정성-유지"></a>
 
-## SimpleHC: 잔차 상태 접근도 시스템 설계다
+## 엡실론을 키우면 무엇이 달라질까요?
 
-**2026-11-15 기준 — 초기 연구.** SimpleHC는 잔차 혼합을 제거하고 학습 가능한 읽기·쓰기 게이트를 남깁니다. 여러 하위 레이어가 그룹 시작 상태를 공유하며, 일괄 읽기·지연 쓰기·스칼라 보정으로 반복 메모리 접근을 줄입니다. 논문은 실험한 15B/30B MoE에서 mHC와 비슷한 품질을 보고하지만, 모든 초대형 모델의 안정성을 입증하지는 않습니다. [[6]](#ref-6)
+트랜스포머 텐서의 모양이 `[배치, 토큰, 특성]`이라고 합시다. 토큰 하나의 특성값 $x_i$가 $d$개일 때, 이들의 평균을 $\mu$, 모집단 분산을 $v=\frac1d\sum_i(x_i-\mu)^2$로 씁니다. 두 연산 모두 다른 토큰이나 배치 원소의 값을 섞지 않습니다. 특성별 배율 $\gamma_i$, LayerNorm의 편향 $\beta_i$, 양수인 상수 $\epsilon$을 쓰면 다음과 같습니다. [[2]](#ref-2) [[7]](#ref-7) [[8]](#ref-8)
 
-실제 검토에서는 데이터와 연산량을 맞추고 그래디언트 norm, 처리량과 상태 전송량을 비교하세요. 잔차 경로가 저렴해도 목표 학습 환경에서 수치 안정성과 품질을 유지해야 합니다.
+$$
+\begin{aligned}
+\operatorname{LN}(x)_i &= \gamma_i\frac{x_i-\mu}{\sqrt{v+\epsilon}}+\beta_i,\\
+\operatorname{RMSNorm}(x)_i &= \gamma_i\frac{x_i}{\sqrt{\frac1d\sum_j x_j^2+\epsilon}}.
+\end{aligned}
+$$
+
+값 차이가 작은 `[1, 1.002]`에서 평균을 빼면 $-0.001$과 $+0.001$이 남으므로 $v=10^{-6}$입니다. $\epsilon=10^{-5}$라면 LayerNorm은 두 값을 $\sqrt{0.000011}$로 나누어 약 `[-0.30151, 0.30151]`을 냅니다. 엡실론을 `0.001`로 키우면 두 출력의 절댓값은 `0.03161`로 줄어듭니다. 제곱근을 먼저 구한 뒤 엡실론을 더하면 이 계산을 재현할 수 없습니다.
+
+배율이 1이고 편향이 0일 때 LayerNorm 출력의 평균은 0이고 분산은 $v/(v+\epsilon)$입니다. 위에서 작은 엡실론을 쓴 경우, 이 분산은 실수 연산에서 정확히 $1/11$입니다. 입력이 `[2, 2]`라면 분산은 0입니다. 학습한 배율과 편향을 적용하면 출력의 통계량은 다시 달라질 수 있습니다. 부동소수점 계산 결과를 대조할 때는 오차를 허용합니다.
+
+<a id="잔차-연결-고속도로"></a>
+<a id="pre-ln-vs-post-ln-아키텍처의-변화"></a>
+
+## 잔차 분기의 출력이 0일 때 무엇이 남을까요?
+
+He 등은 기존 표현에 더할 변화량을 분기에서 학습하는 잔차 블록으로 깊은 영상 인식 모델을 훈련했습니다. 입력을 그대로 통과시키는 경로에 모양이 같은 분기 $F$를 더하면 $x+F(x)$입니다. 이를 $x$에 대해 미분하면 항등 항이 남습니다. 분기 쪽 도함수에 따라 이 항이 증폭되거나 상쇄될 수 있습니다. [[1]](#ref-1)
+
+<a id="post-ln-원본"></a>
+<a id="pre-ln-현대-표준"></a>
+
+분기 출력을 0으로 놓고 정규화 위치만 옮겨 보겠습니다. 원래 트랜스포머는 잔차를 더한 뒤에 LayerNorm을 적용했습니다. [[9]](#ref-9)
+
+| 하위 층의 배치 | 출력 | 분기 출력이 0이고 입력이 `[1, 3]`일 때 |
+| --- | --- | --- |
+| Pre-LN | $x+F(\operatorname{LN}(x))$ | `[1, 3]` |
+| Post-LN | $\operatorname{LN}(x+F(x))$ | 약 `[-0.999995, 0.999995]` |
+
+<figure>
+
+![자기 어텐션과 피드포워드 신경망을 각각 우회하는 잔차 경로가 연산 결과와 만난 뒤 정규화되는 Post-LN 인코더.](../../../assets/images/chapter-3/transformer_resideual_layer_norm.png)
+
+<figcaption>점선은 입력이 자기 어텐션을 우회해 첫 덧셈에 이르는 경로입니다. 정규화는 더한 결과에 적용합니다. 그림은 Jay Alammar의 <a href="https://jalammar.github.io/illustrated-transformer/">The Illustrated Transformer</a>에서 가져왔습니다.</figcaption>
+</figure>
+
+Pre-LN 블록 $L$개의 분기가 더하는 변화량이 서로 무상관이고 초기 상태와도 무상관이라고 가정해 봅시다. 각 변화량의 분산이 $s^2$이면 분산을 더할 수 있으므로, 여러 샘플에서 한 특성을 관측한 분산은 $\operatorname{Var}(x_L)=\operatorname{Var}(x_0)+Ls^2$입니다. 학습된 모델에서는 변화량 사이에 상관이 생길 수 있습니다.
+
+Pre-LN에서는 분기가 아무것도 더하지 않으면 입력이 잔차 경로를 그대로 통과합니다. Post-LN에서는 잔차 합을 거쳐 전달되는 기울기에 정규화의 야코비안이 작용합니다. Xiong 등은 초기화 시 자신들이 분석한 Post-LN 모델의 출력 부근에서 큰 기울기 기댓값을 관측했고, Pre-LN에서 워밍업을 생략할 수 있는 조건을 연구했습니다. 실제 옵티마이저 일정은 목표 깊이와 데이터, 수치 정밀도에서 검증해야 합니다. [[3]](#ref-3)
+
+<a id="pytorch-구현"></a>
+<a id="pytorch-normalization-check"></a>
+
+## CPU에서 두 식 검산하기
+
+아래 텐서에서 한 행은 토큰 하나입니다. 파이토치 2.15 예제는 수치 차이를 확인하기 위해 float64를 쓰고, 학습되는 배율과 편향을 생략하며 두 함수에 엡실론을 명시합니다. `correction=0`은 파이토치 LayerNorm처럼 특성 수를 분산의 분모로 쓴다는 뜻입니다. [[8]](#ref-8)
+
+```python
+import torch
+from torch.nn import functional as F
+
+x = torch.tensor([[1, 3], [11, 13], [1, 1.002], [2, 2]], dtype=torch.float64)
+mean = x.mean(dim=-1, keepdim=True)
+variance = x.var(dim=-1, keepdim=True, correction=0)
+for eps in (1e-5, 1e-3):
+    ln = F.layer_norm(x, (2,), eps=eps)
+    rms = F.rms_norm(x, (2,), eps=eps)
+    torch.testing.assert_close(ln, (x - mean) / (variance + eps).sqrt())
+    torch.testing.assert_close(rms, x / (x.square().mean(-1, keepdim=True) + eps).sqrt())
+    torch.testing.assert_close(ln[0], ln[1])
+    torch.testing.assert_close(ln[3], torch.zeros_like(ln[3]))
+    assert not torch.allclose(rms[0], rms[1])
+    print(eps, ln[2].tolist(), ln[2].var(correction=0).item())
+```
+
+출력의 각 줄 마지막 수는 `[1, 1.002]`를 정규화한 결과의 분산으로, 각각 약 `0.090909`와 `0.000999`입니다. 블록을 다른 구현으로 옮길 때는 동일한 은닉 상태를 넣고 정규화 전후의 값을 대조합니다. 수치 정밀도를 의심하기 전에 특성 축, 분산의 분모, 엡실론의 위치, 배율·편향, 잔차 덧셈의 순서부터 확인하세요.
+
+<a id="연구-보강-깊이-방향의-routing"></a>
+<a id="simplehc-잔차-상태-접근도-시스템-설계다"></a>
+
+## 최근 잔차 연결 연구가 바꾸는 것
+
+**2026-11-25 기준.** Attention Residuals는 이전 층의 출력에 줄 가중치를 학습합니다. 블록 단위 변형은 여러 층을 묶어 읽거나 전송해야 할 이전 상태의 수를 줄입니다. Low-Rank Attention Residuals는 원래 폭의 잔차 값을 유지하면서 가중치를 구하는 데만 폭이 좁은 키를 씁니다. Su는 1B와 4B 모델에서 얻은 결과를 보고했습니다. 두 방법 모두 토큰 위치와 별개로 어느 깊이의 표현을 가져올지 선택합니다. [[4]](#ref-4) [[5]](#ref-5)
+
+SimpleHC는 학습 가능한 읽기·쓰기 게이트를 유지하고 잔차 혼합을 없애며, 여러 하위 층에서 그룹 시작 상태를 공유합니다. 저자들은 실험한 15B·30B MoE 모델에서 mHC와 비슷한 다운스트림 성능을 보고했습니다. 다른 학습 시스템에서 이 방식을 검토하려면 데이터, 깊이, 연산량을 맞춘 뒤 검증 성능, 기울기·활성화의 노름, 메모리 전송량, 실측 스텝 시간을 함께 비교합니다. [[6]](#ref-6)
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: 토큰별 LayerNorm이 배치 통계에 의존하지 않는 이유는 무엇인가요?</summary>
-*여러 예시가 아니라 각 토큰의 피처 차원에서 평균·분산을 계산하기 때문입니다. 학습 가능한 affine 파라미터에 따라 최종 평균·분산은 달라질 수 있습니다.*
+<summary>Quiz 1: 두 특성에 같은 상수를 더해도 LayerNorm의 출력은 같습니다. RMSNorm의 출력은 왜 달라질까요?</summary>
+*LayerNorm은 함께 이동한 평균을 빼므로 평균과 각 특성의 차이가 유지됩니다. RMSNorm은 평균을 빼지 않으므로 상수를 더하면 분자와 분모가 함께 달라집니다.*
 </details>
 
 <details>
-<summary>Quiz 2: 잔차 연결이 기울기 흐름을 돕지만 안정성을 보장하지는 않는 이유는 무엇인가요?</summary>
-*블록 Jacobian에 항등 항이 들어가지만 분기 미분이 이를 상쇄하거나 증폭할 수 있습니다. 여러 레이어의 Jacobian은 여전히 곱해집니다.*
+<summary>Quiz 2: LayerNorm 출력의 분산이 0에 가깝다면 구현 오류일까요?</summary>
+*꼭 그렇지는 않습니다. 배율이 1이고 편향이 0이면 분산은 v/(v+epsilon)입니다. 입력이 일정하면 0이고, 입력 분산이 엡실론보다 훨씬 작으면 0에 가까워집니다.*
 </details>
 
 <details>
-<summary>Quiz 3: Pre-LN과 Post-LN에서는 무엇이 달라지나요?</summary>
-*Pre-LN은 분기 입력을 정규화하고 잔차 stream은 정규화하지 않습니다. Post-LN은 잔차 합을 정규화합니다. 각각 초기화·학습률·warm-up을 검증해야 합니다.*
+<summary>Quiz 3: 분기 출력을 0으로 놓으면 Pre-LN과 Post-LN을 어떻게 구분할 수 있나요?</summary>
+*Pre-LN은 잔차 경로의 입력을 그대로 내보냅니다. Post-LN은 더할 값이 없어도 입력을 정규화합니다. [1, 3]처럼 정규화 전후의 값이 다른 입력으로 검사하면 됩니다.*
 </details>
 
 <details>
-<summary>Quiz 4: 어느 잔차 stream의 분산이 깊이에 따라 대략 선형 증가할 수 있나요?</summary>
-*Pre-LN에서 분산 σ²인 L개 분기 증가량이 서로 비상관이며 affine 정규화 조건이 고정됐다고 가정하면 Var(x_L) ≈ Var(x_0) + Lσ²입니다. 비상관 가정은 설명용이며 학습된 모델의 보장된 성질이 아닙니다. Post-LN은 같은 비정규화 stream을 누적하지 않습니다.*
+<summary>Quiz 4: 입력을 그대로 전달하는 경로가 있어도 깊은 모델의 기울기가 불안정해질 수 있는 이유는 무엇인가요?</summary>
+*분기의 도함수가 항등 항에 더해져 이를 상쇄하거나 증폭할 수 있습니다. Post-LN에서는 정규화의 도함수도 잔차 합에 작용합니다. 블록을 쌓으면 이렇게 얻은 야코비안이 차례로 곱해집니다.*
 </details>
 
 <details>
-<summary>Quiz 5: 깊이 방향 어텐션은 토큰 어텐션과 어떻게 다른가요?</summary>
-*이전 레이어·블록의 표현에 가중치를 줍니다. 토큰 어텐션은 시퀀스 위치를 선택하고 깊이 routing은 이전 변환을 선택하며 별도 저장·통신 비용이 듭니다.*
+<summary>Quiz 5: 깊이 방향으로 어텐션을 적용할 때는 어떤 상태를 더 읽어야 할까요?</summary>
+*각 상태의 가중치를 계산하고 값을 합치려면 앞선 하위 층이나 블록의 표현을 읽어야 합니다. 상태 수와 라우팅 키의 폭에 따라 저장 공간, 전송량, 스텝 시간이 달라집니다.*
 </details>
-
 
 ## References
 
-1. <a id="ref-1"></a>He, K., Zhang, X., Ren, S., & Sun, J. (2016). *Deep residual learning for image recognition*. In Proceedings of the IEEE conference on computer vision and pattern recognition (pp. 770-778).
-2. <a id="ref-2"></a>Ba, J. L., Kiros, J. R., & Hinton, G. E. (2016). *Layer normalization*. [arXiv:1607.06450](https://arxiv.org/abs/1607.06450).
-3. <a id="ref-3"></a>Xiong, R., et al. (2020). *On Layer Normalization in the Transformer Architecture*. [arXiv:2002.04745](https://arxiv.org/abs/2002.04745).
-4. <a id="ref-4"></a>Moonshot AI. (2026). Attention Residuals. [Source](https://arxiv.org/abs/2603.15031).
-5. <a id="ref-5"></a>Su, J. (2026). Low-Rank Attention Residuals, September 22 revision. [Source](https://arxiv.org/abs/2607.09694).
-6. <a id="ref-6"></a>Research preprint (2026). [On the Design of Hyper-Connections: Simplification, Stability, and Scalability](https://arxiv.org/html/2611.05984v1). Version pinned; accessed 2026-11-15.
+1. <a id="ref-1"></a>He, K., et al. (2016). [Deep Residual Learning for Image Recognition](https://openaccess.thecvf.com/content_cvpr_2016/html/He_Deep_Residual_Learning_CVPR_2016_paper.html).
+2. <a id="ref-2"></a>Ba, J. L., Kiros, J. R., & Hinton, G. E. (2016). [Layer Normalization](https://arxiv.org/abs/1607.06450).
+3. <a id="ref-3"></a>Xiong, R., et al. (2020). [On Layer Normalization in the Transformer Architecture](https://arxiv.org/abs/2002.04745).
+4. <a id="ref-4"></a>Kimi Team. (2026). [Attention Residuals](https://arxiv.org/abs/2603.15031).
+5. <a id="ref-5"></a>Su, J. (2026). [Low-Rank Attention Residuals](https://arxiv.org/abs/2607.09694).
+6. <a id="ref-6"></a>Zhang, X., et al. (2026). [On the Design of Hyper-Connections: Simplification, Stability, and Scalability](https://arxiv.org/html/2611.05984v1).
+7. <a id="ref-7"></a>Zhang, B., & Sennrich, R. (2019). [Root Mean Square Layer Normalization](https://arxiv.org/abs/1910.07467).
+8. <a id="ref-8"></a>PyTorch 2.15 문서. [LayerNorm](https://docs.pytorch.org/docs/2.15/generated/torch.nn.LayerNorm.html) 및 [RMSNorm](https://docs.pytorch.org/docs/2.15/generated/torch.nn.RMSNorm.html).
+9. <a id="ref-9"></a>Vaswani, A., et al. (2017). [Attention Is All You Need, 3.1절](https://arxiv.org/html/1706.03762).

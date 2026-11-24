@@ -1,6 +1,16 @@
 // Focused previews for independently useful lessons. Other pages keep the book cover.
 // Paths are site-root-relative; the layout applies the deployment base.
 export const socialCards = {
+  '/chapter-3/self-attention-mathematics': {
+    en: {
+      image: '/social/attention-weights-en.png',
+      alt: 'For the query “cat” in “The cat sat here”, the four attention weights in this example are 23.4%, 47.5%, 23.4% and 5.7%. With a causal mask they become 33.0%, 67.0%, 0% and 0%. The weighted output changes from [0.645, 1.241] to [0.330, 1.340].',
+    },
+    ko: {
+      image: '/social/attention-weights-ko.png',
+      alt: '예제 문장 “The cat sat here”에서 cat의 어텐션 가중치는 차례로 23.4%, 47.5%, 23.4%, 5.7%입니다. 인과 마스크를 켜면 33.0%, 67.0%, 0%, 0%가 되고, 출력 벡터는 [0.645, 1.241]에서 [0.330, 1.340]으로 바뀝니다.',
+    },
+  },
   '/chapter-4/hybrid-prefix-lm': {
     en: {
       image: '/social/prefix-mask-en.png',
