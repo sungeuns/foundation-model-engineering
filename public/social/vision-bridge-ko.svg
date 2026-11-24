@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" xml:lang="ko" role="img" aria-labelledby="card-title card-description">
+<title id="card-title">같은 이미지, 달라지는 디코더 길이</title><desc id="card-description">224 × 224픽셀 이미지 한 장, 14 × 14픽셀 패치, 프롬프트 32자리로 계산한 예제입니다. 패치별 투영은 디코더 288자리를, 리샘플링과 교차 어텐션은 디코더 32자리와 별도 시각 메모리 64슬롯을 사용합니다.</desc>
+<rect width="1200" height="630" fill="#f5f2eb"/><rect width="12" height="630" fill="#256257"/>
+<g font-family="Noto Sans CJK KR, DejaVu Sans, sans-serif" fill="#192a30">
+<text x="64" y="61" font-size="19" fill="#256257" font-weight="600" >파운데이션 모델 엔지니어링</text>
+<text x="1136" y="61" font-size="18" fill="#256257" text-anchor="end">11.1 · 비전–언어 모델</text>
+<text x="61" y="140" font-size="48" font-weight="700">같은 이미지, 달라지는 디코더 길이</text>
+<text x="64" y="193" font-size="24" fill="#4e5d61">이미지 1장 · 224 × 224픽셀 · 14 × 14픽셀 패치 · 프롬프트 32자리</text>
+<rect x="64" y="229" width="520" height="260" rx="20" fill="#ffffff" stroke="#c5cec6"/>
+<rect x="616" y="229" width="520" height="260" rx="20" fill="#ffffff" stroke="#c5cec6"/>
+<text x="90" y="276" font-size="26" fill="#256257" font-weight="600">패치별 투영</text>
+<text x="642" y="276" font-size="26" fill="#256257" font-weight="600">리샘플링 후 교차 어텐션</text>
+<text x="87" y="372" font-size="90" font-weight="700">288</text>
+<text x="288" y="351" font-size="26" fill="#4e5d61">자리 · 디코더</text>
+<text x="639" y="372" font-size="90" font-weight="700">32</text>
+<text x="786" y="351" font-size="26" fill="#4e5d61">자리 · 디코더</text>
+<path d="M90 402H558" stroke="#dbe1db"/>
+<text x="90" y="447" font-size="24" fill="#4e5d61">패치 256개 + 프롬프트 32자리</text>
+<rect x="642" y="408" width="468" height="54" rx="9" fill="#f8ecd9"/>
+<text x="659" y="444" font-size="29" fill="#82491f" font-weight="700">64</text>
+<text x="711" y="444" font-size="23" fill="#82491f">슬롯 · 별도 시각 메모리</text>
+<text x="64" y="529" font-size="21" fill="#4e5d61">계산 예제 · 프롬프트에 이미지 표시 토큰 포함</text>
+<path d="M64 554H1136" stroke="#bbc8c1" stroke-width="2"/>
+<text x="64" y="597" font-size="20" fill="#256257">무료 온라인 교재 · 한국어 / 영어</text>
+<text x="1136" y="597" font-size="20" fill="#4e5d61" text-anchor="end">sungeuns.github.io</text>
+</g></svg>

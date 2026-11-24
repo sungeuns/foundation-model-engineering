@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" xml:lang="en" role="img" aria-labelledby="card-title card-description">
+<title id="card-title">Same image. Different decoder length.</title><desc id="card-description">Toy calculation for one 224 × 224 pixel image with 14 × 14 pixel patches and 32 prompt positions: patch projection uses 288 decoder positions; resampling with cross-attention uses 32 decoder positions and 64 separate visual memory slots.</desc>
+<rect width="1200" height="630" fill="#f5f2eb"/><rect width="12" height="630" fill="#256257"/>
+<g font-family="DejaVu Sans, sans-serif" fill="#192a30">
+<text x="64" y="61" font-size="19" fill="#256257" font-weight="600" letter-spacing="1.6">FOUNDATION MODEL ENGINEERING</text>
+<text x="1136" y="61" font-size="18" fill="#256257" text-anchor="end">11.1 / VISION–LANGUAGE MODELS</text>
+<text x="61" y="140" font-size="45" font-weight="700">Same image. Different decoder length.</text>
+<text x="64" y="193" font-size="25" fill="#4e5d61">1 image · 224 × 224 px · 14 × 14 px patches · 32 prompt positions</text>
+<rect x="64" y="229" width="520" height="260" rx="20" fill="#ffffff" stroke="#c5cec6"/>
+<rect x="616" y="229" width="520" height="260" rx="20" fill="#ffffff" stroke="#c5cec6"/>
+<text x="90" y="276" font-size="26" fill="#256257" font-weight="600">Project each patch</text>
+<text x="642" y="276" font-size="25" fill="#256257" font-weight="600">Resample, then cross-attend</text>
+<text x="87" y="372" font-size="90" font-weight="700">288</text>
+<text x="288" y="351" font-size="26" fill="#4e5d61">decoder positions</text>
+<text x="639" y="372" font-size="90" font-weight="700">32</text>
+<text x="786" y="351" font-size="26" fill="#4e5d61">decoder positions</text>
+<path d="M90 402H558" stroke="#dbe1db"/>
+<text x="90" y="447" font-size="22" fill="#4e5d61">256 patches + 32 prompt positions</text>
+<rect x="642" y="408" width="468" height="54" rx="9" fill="#f8ecd9"/>
+<text x="659" y="444" font-size="29" fill="#82491f" font-weight="700">64</text>
+<text x="711" y="444" font-size="21" fill="#82491f">slots · separate visual memory</text>
+<text x="64" y="529" font-size="22" fill="#4e5d61">Toy calculation · Prompt count includes image markers</text>
+<path d="M64 554H1136" stroke="#bbc8c1" stroke-width="2"/>
+<text x="64" y="597" font-size="20" fill="#256257">Free online textbook · English / Korean</text>
+<text x="1136" y="597" font-size="20" fill="#4e5d61" text-anchor="end">sungeuns.github.io</text>
+</g></svg>

@@ -92,7 +92,7 @@
 
 ### **Chapter 11: Multimodal Learning**
 
-* **11.1 Vision-Language Bridges:** CLIP, Flamingo 아키텍처와 Projection Layer.
+* **11.1 Vision-Language Models: CLIP, Projectors, and Cross-Attention:** CLIP 검색, 패치 투영, Flamingo의 교차 어텐션을 비교하고 디코더 시퀀스와 별도 시각 메모리의 크기를 계산.
 * **11.2 Audio & Speech Integration:** 코덱·RVQ·연속 잠재 표현과 스트리밍 음성의 예산·중단·행동 권한 계약.
 * **11.3 Unified Multimodal (Any-to-Any):** 입출력 지원 범위, 시간 정렬, 공개된 표현·생성 경로와 native의 의미.
 * **11.4 Image Diffusion Models:** 확산(Diffusion) 모델의 원리와 Stable Diffusion, Flux 등 대표적인 이미지 생성 모델 소개.

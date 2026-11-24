@@ -159,8 +159,8 @@ export const searchDescriptions = {
     ko: '정렬 과정에서 발생하는 능력 저하를 측정하고 원인 가설과 완화 방법을 비교하며, 데이터 하위 집합별 배포 기준을 설계합니다.',
   },
   '/chapter-11/vision-language-bridges': {
-    en: 'Compare CLIP contrastive alignment, Flamingo cross-attention, and projection-layer bridges, including the engineering costs of connecting vision and language.',
-    ko: 'CLIP의 대조 정렬, Flamingo의 교차 어텐션과 투영 레이어를 비교하며 시각과 언어를 연결하는 방식 및 시스템 비용을 살펴봅니다.',
+    en: 'How does an image reach a language model? Compare CLIP retrieval, projected image patches, and Flamingo cross-attention. Calculate decoder positions and visual memory.',
+    ko: '이미지 한 장을 넣으면 언어 모델의 문맥은 얼마나 길어질까요? CLIP의 이미지 검색, 패치 투영, Flamingo의 교차 어텐션을 비교하고 디코더 자리 수와 시각 메모리를 계산합니다.',
   },
   '/chapter-11/audio-and-speech-integration': {
     en: 'Explore neural audio codecs, discrete speech tokens, AudioLM, VALL-E, and the trade-offs of integrating speech into language-model systems.',

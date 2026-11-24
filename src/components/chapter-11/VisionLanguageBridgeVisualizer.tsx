@@ -1,109 +1,118 @@
-import React, { useState } from 'react';
-import './visualizers.css';
+import React, { useEffect, useState } from 'react';
+import './vision-language-bridge.css';
 
-const VisionLanguageBridgeVisualizer = () => {
-  const [bridgeType, setBridgeType] = useState('linear');
-  const [resolution, setResolution] = useState(224);
-  const [isProcessing, setIsProcessing] = useState(false);
-
-  // Constants
-  const patchSize = 14;
-  const numLatents = 64;
-
-  // Calculations
-  const patches1D = Math.floor(resolution / patchSize);
-  const totalPatches = patches1D * patches1D;
-
-  let outputTokens = 0;
-  let description = '';
-
-  if (bridgeType === 'linear') {
-    outputTokens = totalPatches;
-    description = "Linear Projection maps every single patch to an LLM token (1:1). High resolutions cause Token Explosion.";
-  } else if (bridgeType === 'perceiver') {
-    outputTokens = numLatents;
-    description = `Perceiver Resampler compresses all ${totalPatches} patches into exactly ${numLatents} latent tokens via Cross-Attention.`;
-  } else if (bridgeType === 'qwen2') {
-    // Simulating dynamic resolution windowing (simplified)
-    const activePatches = Math.floor(totalPatches * 0.6); // Assuming 40% of patches are empty/background and dropped
-    outputTokens = activePatches;
-    description = `Dynamic Resolution (Qwen2.5-VL style) drops uninformative patches and processes native aspect ratios. Estimated ${totalPatches - activePatches} patches dropped.`;
-  }
-
-  const handleSimulate = () => {
-    setIsProcessing(true);
-    setTimeout(() => setIsProcessing(false), 800);
-  };
-
-  return (
-    <div className="vlm-bridge-container">
-      <div className="vlm-controls">
-        <div className="vlm-control-group">
-          <label>Bridge Architecture:</label>
-          <select value={bridgeType} onChange={(e) => { setBridgeType(e.target.value); handleSimulate(); }}>
-            <option value="linear">Linear / MLP (LLaVA)</option>
-            <option value="perceiver">Perceiver Resampler (Flamingo)</option>
-            <option value="qwen2">Dynamic Resolution (Qwen2.5-VL)</option>
-          </select>
-        </div>
-        <div className="vlm-control-group">
-          <label>Image Resolution: {resolution}x{resolution}</label>
-          <input 
-            type="range" 
-            min="112" 
-            max="1024" 
-            step="112" 
-            value={resolution} 
-            onChange={(e) => { setResolution(Number(e.target.value)); handleSimulate(); }} 
-          />
-        </div>
-      </div>
-
-      <div className="vlm-stats-panel">
-        <div className="vlm-stat">
-          <span className="vlm-stat-label">Input Patches</span>
-          <span className="vlm-stat-value">{totalPatches}</span>
-        </div>
-        <div className="vlm-stat">
-          <span className="vlm-stat-label">Output LLM Tokens</span>
-          <span className={`vlm-stat-value ${outputTokens > 2000 ? 'vlm-warning' : 'vlm-safe'}`}>
-            {outputTokens}
-          </span>
-        </div>
-      </div>
-      
-      <p className="vlm-description">{description}</p>
-
-      <div className="vlm-visualization-area">
-        <div className="vlm-stage">
-          <h4>Vision Encoder</h4>
-          <div className={`vlm-grid ${isProcessing ? 'vlm-pulse' : ''}`}>
-            {/* Visualizing a subset of patches to avoid DOM overload */}
-            {Array.from({ length: Math.min(totalPatches, 100) }).map((_, i) => (
-              <div key={i} className="vlm-patch"></div>
-            ))}
-            {totalPatches > 100 && <div className="vlm-patch-overflow">+{totalPatches - 100} more</div>}
-          </div>
-        </div>
-
-        <div className="vlm-arrow">
-          <div className="vlm-arrow-line"></div>
-          <div className="vlm-arrow-head"></div>
-          <span className="vlm-bridge-label">{bridgeType.toUpperCase()} BRIDGE</span>
-        </div>
-
-        <div className="vlm-stage">
-          <h4>LLM Context Window</h4>
-          <div className={`vlm-tokens ${isProcessing ? 'vlm-pulse' : ''}`}>
-             {Array.from({ length: Math.min(outputTokens, 100) }).map((_, i) => (
-              <div key={i} className={`vlm-token ${bridgeType === 'perceiver' ? 'vlm-latent' : ''}`}></div>
-            ))}
-            {outputTokens > 100 && <div className="vlm-token-overflow">+{outputTokens - 100} more</div>}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+const copy = {
+  en: {
+    title: 'Where do the image features go?',
+    side: 'Side of each square image',
+    count: 'Number of images',
+    setup: 'For this exercise, each 14 × 14 pixel patch produces one feature. The prompt has 32 text positions, including any image markers.',
+    perImage: 'patches per image',
+    total: 'input features across all images',
+    sequence: 'Decoder sequence',
+    memory: 'Separate visual memory',
+    projection: 'Project each patch',
+    external: 'Resample, then cross-attend',
+    text: 'Text and markers',
+    visual: 'Projected patches',
+    positions: 'positions',
+    slots: 'slots',
+    projectedNote: 'One patch adds one decoder position.',
+    resampledNote: 'Each image contributes 64 memory slots. A text query can read them at a cross-attention layer.',
+    caption: 'Both paths use the same illustrative patch grid. The counts describe sequence length and memory slots. Measuring latency or detail retention requires a model and workload.',
+    sources: 'Architectures',
+    resolutionUnit: 'px',
+    staticView: 'The example below uses one 224 px image. Enable JavaScript to change the inputs.',
+  },
+  ko: {
+    title: '이미지 특징은 어디에 들어갈까?',
+    side: '정사각형 이미지 한 변의 길이',
+    count: '이미지 수',
+    setup: '이 예제는 14 × 14픽셀 패치 하나에서 특징 벡터 하나를 얻는다고 가정합니다. 프롬프트는 이미지 표시용 토큰을 포함해 32자리입니다.',
+    perImage: '이미지 한 장의 패치 수',
+    total: '전체 이미지의 특징 벡터 수',
+    sequence: '디코더 시퀀스',
+    memory: '별도 시각 메모리',
+    projection: '패치별 투영',
+    external: '리샘플링 후 교차 어텐션',
+    text: '텍스트와 이미지 표시 토큰',
+    visual: '투영된 패치',
+    positions: '자리',
+    slots: '슬롯',
+    projectedNote: '패치 하나가 디코더 시퀀스에서 한 자리를 차지합니다.',
+    resampledNote: '이미지 한 장이 시각 메모리 64슬롯을 채웁니다. 텍스트 쿼리는 교차 어텐션 층에서 이 메모리를 읽습니다.',
+    caption: '두 방식에 같은 패치 격자를 적용한 계산 예제입니다. 지연 시간이나 작은 글자를 읽는 능력은 실제 모델과 입력으로 측정해야 합니다.',
+    sources: '원 논문',
+    resolutionUnit: '픽셀',
+    staticView: '아래는 224픽셀 이미지 한 장의 계산 결과입니다. 입력을 바꾸려면 JavaScript를 켜세요.',
+  },
 };
 
-export default VisionLanguageBridgeVisualizer;
+const textPositions = 32;
+const patchSize = 14;
+const slotsPerImage = 64;
+
+export default function VisionLanguageBridgeVisualizer({ lang = 'en' }: { lang?: 'en' | 'ko' }) {
+  const t = copy[lang];
+  const [side, setSide] = useState(224);
+  const [images, setImages] = useState(1);
+  const [interactive, setInteractive] = useState(false);
+  useEffect(() => setInteractive(true), []);
+  const patchesPerSide = side / patchSize;
+  const patchesPerImage = patchesPerSide ** 2;
+  const features = patchesPerImage * images;
+  const maxPositions = textPositions + features;
+  const paths = [
+    { name: t.projection, projected: features, slots: 0, note: t.projectedNote },
+    { name: t.external, projected: 0, slots: slotsPerImage * images, note: t.resampledNote },
+  ];
+
+  return (
+    <section className="bridge-budget" id="visual-token-budget" aria-labelledby="bridge-budget-title">
+      <h3 id="bridge-budget-title">{t.title}</h3>
+      <p>{t.setup}</p>
+      <div className="bridge-budget-controls">
+        <label>{t.side}
+          <select disabled={!interactive} value={side} onChange={event => setSide(Number(event.target.value))}>
+            {[224, 336, 448].map(size => <option key={size} value={size}>{size} {t.resolutionUnit}</option>)}
+          </select>
+        </label>
+        <label>{t.count}
+          <select disabled={!interactive} value={images} onChange={event => setImages(Number(event.target.value))}>
+            {[1, 2, 4].map(count => <option key={count} value={count}>{count}</option>)}
+          </select>
+        </label>
+      </div>
+      <noscript><p>{t.staticView}</p></noscript>
+      <div className="bridge-budget-input">
+        <span>{t.perImage}<b>{patchesPerSide} × {patchesPerSide} = {patchesPerImage}</b></span>
+        <span>{t.total}<b>{patchesPerImage} × {images} = {features}</b></span>
+      </div>
+      <div className="bridge-budget-legend" aria-hidden="true">
+        <span className="bridge-budget-key-text">{t.text}</span>
+        <span className="bridge-budget-key-image">{t.visual}</span>
+        <span>{lang === 'ko' ? `막대 전체 길이 = 디코더 ${maxPositions}자리` : `Full track = ${maxPositions} decoder positions`}</span>
+      </div>
+      {paths.map(path => (
+        <div key={path.name} className="bridge-budget-path">
+          <h4>{path.name}</h4>
+          <div className="bridge-budget-track" aria-hidden="true">
+            <span className="bridge-budget-text" style={{ width: `${100 * textPositions / maxPositions}%` }} />
+            <span className="bridge-budget-image" style={{ width: `${100 * path.projected / maxPositions}%` }} />
+          </div>
+          <dl>
+            <div><dt>{t.sequence}</dt><dd>{textPositions + path.projected} {t.positions}</dd></div>
+            <div><dt>{t.memory}</dt><dd>{path.slots} {t.slots}</dd></div>
+          </dl>
+          <p>{path.note}</p>
+        </div>
+      ))}
+      <output className="bridge-budget-announcement" aria-live="polite" aria-atomic="true">
+        {lang === 'ko'
+          ? `패치별 투영은 디코더 ${maxPositions}자리, 교차 어텐션은 디코더 ${textPositions}자리와 시각 메모리 ${slotsPerImage * images}슬롯입니다.`
+          : `Projection uses ${maxPositions} decoder positions. Cross-attention uses ${textPositions} decoder positions and ${slotsPerImage * images} visual memory slots.`}
+      </output>
+      <p className="bridge-budget-caption">{t.caption} {t.sources} · <a href="#ref-3">LLaVA</a> · <a href="#ref-2">Flamingo</a></p>
+    </section>
+  );
+}

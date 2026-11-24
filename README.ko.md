@@ -14,6 +14,7 @@
 | --- | --- | --- |
 | 가중치는 GPU에 들어가는데, 왜 다음 요청에서 메모리가 부족할까? | [KV 캐시 관리](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-12/kv-cache-management/) | 문맥 길이·배치 크기·KV 헤드 수를 바꾸며 캐시 메모리를 계산합니다. |
 | 어텐션 가중치는 실제 출력에 어떻게 쓰일까? | [셀프 어텐션의 수학](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-3/self-attention-mathematics/) | 쿼리 하나를 따라 내적·마스킹·softmax·가중합을 연결합니다. |
+| 이미지 한 장은 문맥을 몇 자리 차지할까? | [시각 토큰 계산](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-11/vision-language-bridges/#visual-token-budget) | 이미지 크기와 장수를 바꾸며 패치 투영과 교차 어텐션의 디코더 자리 수를 비교합니다. |
 | RAG 답변이 틀렸다. 검색부터 고쳐야 할까? | [RAG 실패 원인과 운영 설계](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-14/rag-failure-modes-and-operational-design/) | 검색·재순위화·문맥 구성·생성 중 근거가 사라진 단계를 찾습니다. |
 | 새 모델은 무엇이 공개됐고, 어떤 조건에서 비교해야 할까? | [모델 비교와 공개 근거](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-17/commercial-model-benchmarks/) | 공개 상태, 평가 조건, 비용과 미공개 항목을 구분합니다. |
 | 평가 점수가 올랐다면 바로 배포해도 될까? | [실험 설계와 불확실성](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-17/experimental-design-and-uncertainty/) | 같은 사례의 결과를 대응 비교하고, 불확실성이 판단을 바꾸는 경우를 확인합니다. |

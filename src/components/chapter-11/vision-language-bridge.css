@@ -1,0 +1,55 @@
+.bridge-budget {
+  margin: 1.5rem 0;
+  padding: clamp(.9rem, 3vw, 1.6rem);
+  border: 1px solid var(--border-color, #b4c1c1);
+  border-radius: .5rem;
+  scroll-margin-top: 6rem;
+}
+.bridge-budget h3, .bridge-budget h4 { margin: 0 0 .4rem; }
+.bridge-budget p { margin: .4rem 0 .9rem; }
+.bridge-budget-controls, .bridge-budget-input, .bridge-budget-legend, .bridge-budget dl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .65rem 1.5rem;
+}
+.bridge-budget-controls label { display: grid; gap: .24rem; font: inherit; }
+.bridge-budget-controls select {
+  padding: .45rem .65rem;
+  color: inherit;
+  background: var(--bg-color, #fff);
+  border: 1px solid currentColor;
+  border-radius: .25rem;
+  font: inherit;
+}
+.bridge-budget select:focus-visible, .bridge-budget a:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+.bridge-budget-input { margin: .95rem 0; }
+.bridge-budget-input > span { display: grid; }
+.bridge-budget-input b, .bridge-budget dd { font-variant-numeric: tabular-nums; }
+.bridge-budget-legend { font-size: .85rem; }
+.bridge-budget-key-text::before, .bridge-budget-key-image::before {
+  content: '';
+  display: inline-block;
+  width: .8rem;
+  height: .8rem;
+  margin-inline-end: .35rem;
+  vertical-align: -.06rem;
+}
+.bridge-budget-key-text::before, .bridge-budget-text { background: #20645f; }
+.bridge-budget-key-image::before, .bridge-budget-image {
+  background: repeating-linear-gradient(135deg, #c37032, #c37032 4px, #f4cd9d 4px, #f4cd9d 7px);
+}
+.bridge-budget-path { margin-top: 1rem; }
+.bridge-budget-track { display: flex; height: .8rem; background: #e3e8e5; }
+.bridge-budget dl { margin: .5rem 0 0; }
+.bridge-budget dl div { display: flex; flex-wrap: wrap; gap: .35em; align-items: baseline; }
+.bridge-budget dt { font-size: .87rem; }
+.bridge-budget dd { margin: 0; font-weight: 650; }
+.bridge-budget-announcement {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.bridge-budget .bridge-budget-caption { border-top: 1px solid var(--border-color, #b4c1c1); padding-top: .7rem; margin-bottom: 0; font-size: .87rem; }

@@ -1,57 +1,53 @@
 ---
 layout: ../../layouts/BookLayout.astro
-title: 11.1 Vision-Language Bridges
+title: '11.1 Vision-Language Models: CLIP, Projectors, and Cross-Attention'
 lang: en
 ---
 
-# 11.1 Vision-Language Bridges
+import VisionLanguageBridgeVisualizer from '../../components/chapter-11/VisionLanguageBridgeVisualizer.tsx';
 
-The transition from purely text-based Large Language Models (LLMs) to Multimodal Foundation Models requires bridging the gap between different modalities. Specifically, we need to connect visual understanding (images/videos) with text generation. This page explores the core architectures that serve as "bridges" between vision and language: **CLIP**, **Flamingo**, and the ubiquitous **Projection Layer**. We will dive deep into their mathematical formulations, architectural choices, and the engineering trade-offs involved.
+# 11.1 Vision-Language Models: CLIP, Projectors, and Cross-Attention
 
-## The Challenge: Aligning Modalities
+A **vision-language model** connects image representations with language. The connection can support different outputs: CLIP scores whether an image matches a supplied description; a generative model conditions a language decoder on image features to produce an answer. A **vision-language bridge** is the interface that makes those representations compatible.
 
-Visual data (pixels) and text data (tokens) live in completely different vector spaces. A model cannot directly understand an image by treating pixels as text tokens. We need a mechanism to translate visual features into a representation that a language model can process. This is the role of the Vision-Language Bridge. The goal is to align these spaces so that the model can understand that the visual concept of a "cat" mapped from pixels corresponds to the linguistic concept of "cat" mapped from tokens.
+Consider a photograph of a receipt. “Find receipts among these photographs” can use image–text similarity. “What is the total, and which line shows it?” requires a model to read the image and generate a grounded response. Reusing a CLIP image encoder does not, by itself, turn its similarity scores into that response.
 
-Bridge design is not a cosmetic implementation detail. It determines what kind of multimodal behavior the system can support. A weak bridge may be enough for retrieval or coarse captioning, but not for grounded dialogue about multiple images. A very expressive bridge may improve reasoning, but at the cost of more visual tokens, more cross-attention layers, and a much harder optimization problem. In practice, many product decisions in multimodal systems reduce to this question: how much visual information should the language model actually see, and in what form?
+| Interface | Concrete input → output | What reaches the language model? |
+| :--- | :--- | :--- |
+| CLIP dual encoders | Images and candidate descriptions → similarity scores | No generative decoder is required |
+| Projector + decoder | Image feature sequence and prompt → answer tokens | Projected image features occupy decoder positions |
+| Resampler + cross-attention | Image features and prompt → answer tokens | Text states query a separate visual memory |
 
-## 1. CLIP: The Contrastive Bridge (Representation Alignment)
+Compare what happens to the same 224-pixel image in the [visual token calculator](#visual-token-budget), then follow the mechanisms below.
 
-Contrastive Language-Image Pre-training (CLIP), introduced by OpenAI in 2021 [[1]](#ref-1), is the foundational bridge for many multimodal models. It doesn't generate text; instead, it learns to *align* image and text representations in a shared latent space.
+## 1. CLIP: Learning Which Image and Text Belong Together
 
-### The Architecture: Dual Encoders
+CLIP trains an image encoder and a text encoder with paired examples. Each produces a single embedding for comparison, projected into a common dimension and normalized to unit length. The original work uses a symmetric contrastive objective and learns its logit scale [[1]](#ref-1).
 
-CLIP uses a dual-encoder architecture:
-1.  **Image Encoder ($E_i$)**: Typically a Vision Transformer (ViT) or a ResNet that maps an image $I$ to a $d$-dimensional visual embedding $v = E_i(I)$.
-2.  **Text Encoder ($E_t$)**: A Transformer that maps a text description $T$ to a $d$-dimensional text embedding $t = E_t(T)$.
+Let a batch contain $B$ paired examples with shared embedding width $d$. For image $i$ and description $j$, write their normalized embeddings as $v_i,t_j\in\mathbb R^d$. Distinguish cosine similarity $C$ from the temperature-scaled logits $Z$:
 
-Both embeddings are normalized to have unit length ($\|v\|_2 = 1, \|t\|_2 = 1$).
-
-### The Symmetric Contrastive Objective
-
-The core innovation of CLIP is its training objective. Given a batch of $N$ image-text pairs, the model computes an $N \times N$ similarity matrix $S$, where $S_{i,j} = v_i^\top t_j$ is the cosine similarity between image $i$ and text $j$.
-
-CLIP applies a learnable temperature parameter $\tau$ to scale the logits: $S_{i,j} = S_{i,j} / \tau$. The loss is the average of two cross-entropy losses: one for image-to-text retrieval and one for text-to-image retrieval.
-
-**Image-to-Text Loss ($\mathcal{L}_{i \to t}$)**: For each image, find the correct text.
 $$
-\mathcal{L}_{i \to t} = -\frac{1}{N} \sum_{i=1}^N \log \frac{\exp(S_{i,i})}{\sum_{j=1}^N \exp(S_{i,j})}
+C_{ij}=v_i^\top t_j,\qquad Z_{ij}=C_{ij}/\tau,\qquad \tau>0.
 $$
 
-**Text-to-Image Loss ($\mathcal{L}_{t \to i}$)**: For each text, find the correct image.
+Both embedding arrays have shape $[B,d]$; the comparison matrix has shape $[B,B]$. Pair $i$ occupies the diagonal because the arrays use the same pairing order. The losses classify the matching caption within each row and the matching image within each column:
+
 $$
-\mathcal{L}_{t \to i} = -\frac{1}{N} \sum_{j=1}^N \log \frac{\exp(S_{j,j})}{\sum_{i=1}^N \exp(S_{i,j})}
+\begin{aligned}
+\mathcal L_{i\to t}&=-\frac1B\sum_{i=1}^{B}\log\frac{\exp Z_{ii}}{\sum_{j=1}^{B}\exp Z_{ij}},\\[0.5em]
+\mathcal L_{t\to i}&=-\frac1B\sum_{j=1}^{B}\log\frac{\exp Z_{jj}}{\sum_{i=1}^{B}\exp Z_{ij}}.
+\end{aligned}
 $$
 
-**Total Loss**:
 $$
-\mathcal{L}_{CLIP} = \frac{1}{2} (\mathcal{L}_{i \to t} + \mathcal{L}_{t \to i})
+\mathcal L_{\mathrm{CLIP}}=\tfrac12(\mathcal L_{i\to t}+\mathcal L_{t\to i}).
 $$
 
-This objective forces the model to maximize the similarity of the $N$ correct pairs (diagonal) while minimizing the similarity of the $N^2 - N$ incorrect pairs (off-diagonal).
+The off-diagonal entries are **assumed negatives**, not necessarily incorrect descriptions. Two photographs may show the same scene, or two captions may both fit one image. Duplicates and multiple valid captions require a deliberate sampling or multi-positive loss policy. Lower temperature sharpens the softmax; it does not change the nearest-neighbor ranking for fixed embeddings.
 
-### PyTorch Implementation of CLIP Loss
+### The PyTorch loss in isolation
 
-Here is a clean PyTorch implementation of the symmetric contrastive loss used in CLIP.
+> **Educational loss implementation:** Inputs are nonzero image/text embeddings with matching shape $[B,d]$, dtype, device, and pair order. This shows normalization, a positive learned scale, and the two loss directions. It omits encoders, distributed negative gathering, multi-positive targets, mixed-precision safeguards, and a training/checkpoint loop. It is not a complete CLIP trainer.
 
 ```python
 import torch
@@ -66,145 +62,180 @@ class CLIPLoss(nn.Module):
         self.logit_scale = nn.Parameter(torch.tensor(1.0 / init_temperature).log())
 
     def forward(self, image_embeddings, text_embeddings):
-        """
-        Compute symmetric contrastive loss.
-
-        Args:
-            image_embeddings: Tensor of shape (batch_size, embed_dim)
-            text_embeddings: Tensor of shape (batch_size, embed_dim)
-        """
-        # Normalize embeddings to unit length
+        # Inputs: [batch_size, embed_dim]; paired rows have equal indices.
         image_embeddings = F.normalize(image_embeddings, p=2, dim=-1)
         text_embeddings = F.normalize(text_embeddings, p=2, dim=-1)
-
         batch_size = image_embeddings.size(0)
-
-        # Compute cosine similarity matrix
         logits = torch.matmul(image_embeddings, text_embeddings.t()) * self.logit_scale.exp()
-
-        # Target is the identity matrix (correct pairs are on the diagonal)
         labels = torch.arange(batch_size, device=image_embeddings.device)
-
-        # Symmetric cross-entropy loss
         loss_i = F.cross_entropy(logits, labels)
         loss_t = F.cross_entropy(logits.t(), labels)
-
         return (loss_i + loss_t) / 2
-
-# Example Usage
-batch_size = 32
-embed_dim = 512
-img_emb = torch.randn(batch_size, embed_dim)
-text_emb = torch.randn(batch_size, embed_dim)
-
-criterion = CLIPLoss()
-loss = criterion(img_emb, text_emb)
-print(f"CLIP Loss: {loss.item():.4f}")
 ```
 
-## 2. Flamingo: The Cross-Attention Bridge (Generative Alignment)
+### A runnable pairing experiment, without downloading a model
 
-While CLIP aligns representations, it does not allow for deep interaction between vision and language during *generation*. DeepMind's Flamingo (2022) [[2]](#ref-2) introduced a breakthrough architecture for few-shot multimodal learning by injecting visual information directly into a frozen LLM.
+> **Scope:** This standalone Python 3 program uses only the standard library and three authored unit vectors. It computes ranking and loss on CPU with Python floats; it neither reads pixels nor trains an encoder. Temperature is fixed at $0.2$. The diagonal-target assumption is intentionally broken in the second case to expose a pairing bug.
 
-### Key Components
+```python
+from math import exp, isclose, log
 
-Flamingo connects a frozen visual encoder and a frozen LLM using two novel components:
+def contrastive_logits(images, texts, temperature=0.2):
+    # This exercise supplies unit vectors; no encoder or normalization here.
+    return [[sum(a * b for a, b in zip(image, text)) / temperature
+             for text in texts] for image in images]
 
-#### A. Perceiver Resampler
-Visual encoders (like ViT) output a variable number of features depending on the image resolution or video frames. Passing hundreds of visual tokens directly to the LLM would explode the sequence length and compute cost ($O(N^2)$ in self-attention).
+def diagonal_cross_entropy(rows):
+    losses = []
+    for target, row in enumerate(rows):
+        peak = max(row)
+        log_partition = peak + log(sum(exp(x - peak) for x in row))
+        losses.append(log_partition - row[target])
+    return sum(losses) / len(losses)
 
-The Perceiver Resampler solves this by mapping a variable number of spatio-temporal visual features to a **fixed number of visual tokens** (e.g., 64 tokens).
--   It uses a set of $K$ learned latent queries.
--   These queries attend to the visual features using cross-attention.
--   The output is always $K$ tokens, regardless of input size, which are then fed to the LLM.
+def symmetric_loss(logits):
+    columns = list(zip(*logits))
+    return (diagonal_cross_entropy(logits)
+            + diagonal_cross_entropy(columns)) / 2
 
-#### B. Gated Cross-Attention (Gated xAttn)
-To allow the LLM to understand these visual tokens, Flamingo inserts new Gated Cross-Attention layers between the existing layers of the frozen LLM.
+def top_matches(rows):
+    return [max(range(len(row)), key=row.__getitem__) for row in rows]
 
-To prevent the new layers from destroying the LLM's pre-trained knowledge at the start of training, Flamingo uses a **tanh gating** mechanism:
+images = [(1., 0., 0.), (0., 1., 0.), (0., 0., 1.)]
+paired = images.copy()
+shuffled = [paired[2], paired[0], paired[1]]
+good = contrastive_logits(images, paired)
+bad = contrastive_logits(images, shuffled)
+
+print("paired image-to-text:", top_matches(good))
+print("shuffled image-to-text:", top_matches(bad))
+print("shuffled text-to-image:", top_matches(list(zip(*bad))))
+print(f"paired loss: {symmetric_loss(good):.6f}")
+print(f"shuffled diagonal-target loss: {symmetric_loss(bad):.6f}")
+
+assert top_matches(good) == [0, 1, 2]
+assert top_matches(bad) == [1, 2, 0]
+assert top_matches(list(zip(*bad))) == [2, 0, 1]
+assert isclose(symmetric_loss(good), log(1 + 2 * exp(-5)))
+assert isclose(symmetric_loss(bad) - symmetric_loss(good), 5.0)
+```
+
+Expected losses are `0.013386` and `5.013386`. The embeddings did not become worse when the captions moved: the targets became wrong. Restore the pair order or remap both target directions before blaming the encoder. Printing a loss from random embeddings would not reveal this data-pipeline mistake.
+
+## 2. Projectors: Turning Image Features into Decoder Positions
+
+For generation, retain a **sequence of spatial features**, rather than the single global embedding used for CLIP retrieval. In the original LLaVA architecture, a linear projection maps CLIP ViT grid features to the language model's embedding width [[3]](#ref-3).
+
+Let $P$ be the number of retained image features, $d_v$ the vision width, and $d_\ell$ the language width. With batch size $B$ and $T$ text positions, a linear projector has the shape contract
+
 $$
-y = x + \tanh(\alpha) \cdot \text{CrossAttend}(x, V)
+\begin{aligned}
+H_v&\in\mathbb R^{B\times P\times d_v},\\
+W&\in\mathbb R^{d_v\times d_\ell},\\
+X_v&=H_vW\in\mathbb R^{B\times P\times d_\ell}.
+\end{aligned}
 $$
-Where:
--   $x$ is the text feature from the previous LLM layer.
--   $V$ are the visual tokens from the Perceiver Resampler.
--   $\alpha$ is a learnable scalar initialized to **0**.
-
-Because $\tanh(0) = 0$, the model starts by behaving exactly like the original frozen LLM. As training progresses, $\alpha$ deviates from zero, and the model gradually learns to incorporate visual information.
-
-## 3. The Projection Layer: The Simple Bridge (LMMs)
-
-Modern Vision-Language models like LLaVA [[3]](#ref-3) use a much simpler but highly effective approach: a direct projection layer.
-
-### How it Works
-
-Instead of complex cross-attention mechanisms inserted throughout the LLM, these models use:
-1.  A pre-trained visual encoder (often CLIP's ViT) to extract features from an image.
-2.  A **Projection Layer** (typically a simple Linear Layer or a Multi-Layer Perceptron, MLP) to map these features directly into the text embedding space of the LLM.
-
-The LLM treats these projected visual features as if they were special "visual tokens" and simply concatenates them with the normal text tokens in the input sequence.
 
 $$
-X_v = \text{MLP}(E_i(I))
+X_{\mathrm{input}}=[X_v;X_{\mathrm{text}}]
+\in\mathbb R^{B\times(P+T)\times d_\ell}.
 $$
-Input sequence to LLM = $[X_v, X_{text}]$
 
-This approach is extremely simple to implement and allows for reusing existing LLM training infrastructure with minimal changes. It has become the dominant paradigm for open-source Large Multimodal Models (LMMs).
+The bracket means concatenation along the sequence axis. It depicts an image followed by text; an implementation can insert image features at marked positions instead. An MLP can replace the linear map without changing this interface. These visual vectors are continuous inputs, not vocabulary IDs that the text tokenizer emits.
 
-## 4. Engineering Trade-offs in Real Systems
+For a hypothetical shape example, $[1,256,768]$ image features projected to width 4,096 become $[1,256,4096]$. Adding 32 text positions yields $[1,288,4096]$. The projector changed the width, **not the feature count**. A small connector can therefore create a long, expensive decoder input.
 
-Once we move from papers to deployed models, bridge choice becomes a systems trade-off rather than just an architectural preference.
+Freezing is a separate decision. Original LLaVA trains only the projector during feature alignment, then trains the projector and language model during instruction tuning while keeping the vision encoder frozen [[3]](#ref-3). “Uses a projector” does not mean “trains only a projector.”
 
-### Token Budget vs. Visual Fidelity
+## 3. Cross-Attention: Keeping Visual Memory Beside the Text
 
-Every visual token competes with text tokens for context window budget and attention compute. If the bridge emits too many tokens, the model becomes expensive and may bury important text instructions. If it emits too few, it compresses away details such as small text in an image, spatial relations, or subtle frame-to-frame changes in video.
+Flamingo connects frozen vision and language backbones with a trainable Perceiver Resampler and gated cross-attention blocks. Its original vision encoder is NFNet, not a ViT patch encoder. The resampler uses learned queries to convert spatial or spatiotemporal features into 64 visual latents per image/video; added language-model blocks query those latents [[2]](#ref-2).
 
-### Frozen Backbones vs. End-to-End Adaptation
+For a single image, describe the interface as $[B,P,d_v]\to[B,K,d_m]$, where $K$ is the resampled memory length and $d_m$ its feature width. Text queries still have $T$ positions. Cross-attention projects the text and memory to compatible query/key/value widths, producing an update with the same shape as the text states. The $K$ memory slots are **not appended to the decoder's self-attention sequence**.
 
-Many practical models freeze the vision encoder, freeze most of the LLM, and train only the bridge or projector. This dramatically lowers training cost and preserves the language model's general capabilities. The downside is that the bridge must do a lot of representational work by itself. If the target domain is far from the pretraining data, the bridge may become the bottleneck.
+A simplified view of one gated attention branch is
 
-### Interleaving and Multi-Image Reasoning
+$$
+y=x+\tanh(\alpha)\,\mathrm{CrossAttend}(x,M).
+$$
 
-Simple projection-layer models work best when the input pattern is straightforward: one image, then a prompt. Tasks such as visual dialogue, multi-image comparison, or long video understanding put more pressure on the bridge because the model must preserve temporal order, cross-reference visual evidence, and decide when to attend back to earlier frames. This is why deeper fusion mechanisms remain attractive even when projection layers dominate open-source practice.
+Here $x$ and $y$ are text states, $M$ is visual memory, and $\alpha$ is a learned scalar initialized to zero. This omits the block's feed-forward branch. At initialization the added contribution is zero; this does not guarantee language retention after the gates and other trainable components change. Flamingo also masks each text position's direct cross-attention to the most recent preceding image/video; earlier evidence can persist through text self-attention [[2]](#ref-2).
 
-## Summary of Trade-offs
+Multi-image behavior depends on image ordering, markers, masks, positional encoding, and training data in either design. Concatenation alone does not restrict a model to one image, and cross-attention alone does not guarantee correct comparisons between images.
 
-| Feature | CLIP | Flamingo | Projection Layer (LLaVA) |
-| :--- | :--- | :--- | :--- |
-| **Primary Goal** | Representation Alignment | Generative Few-Shot | Generative Instruction Tuning |
-| **Fusion Type** | Late Fusion (Dot Product) | Deep Fusion (Cross-Attention) | Early Fusion (Concatenation) |
-| **Compute Cost** | Low | High (requires new layers) | Low (simple MLP) |
-| **Flexibility** | Retrieval & Zero-shot | Interleaved Text/Image | Fixed Image Input |
+## 4. Work Out the Visual Token Budget
+
+Use a deliberately matched toy setup: each $14\times14$ pixel patch produces one feature; there are no extra class tokens, crops, or merged patches. Let $s$ be the square image's side length in pixels, $m$ the image count, and $T=32$ the text positions, including any image markers. Then
+
+$$
+P=(s/14)^2,\qquad S_{\mathrm{projector}}=T+mP.
+$$
+
+For one $224\times224$ image, $P=16^2=256$ and the projected decoder sequence has 288 positions. Doubling both image dimensions gives $P=32^2=1024$ and 1,056 positions. A dense attention score matrix per head changes from $288^2=82{,}944$ to $1056^2=1{,}115{,}136$ entries—about $13.4\times$. This counts full matrix entries before causal masking; it is not a measured latency or GPU-memory ratio, and efficient kernels need not materialize the matrix.
+
+In the alternative toy path, resample to $K=64$ memory slots per image. The decoder sequence remains 32 positions while separate memory holds $64m$ slots. A text-to-memory attention matrix over all slots would have $T(mK)$ entries per head; a per-image mask can restrict which entries are used. The encoder and resampler still process the input features, and cross-attention has its own projections, layers, and caches. A fixed memory length does not make high-resolution input free.
+
+Change resolution and image count below. The two routes share the same illustrative patch grid to isolate where features go; this is not a reconstruction of Flamingo's NFNet or a benchmark between released models.
+
+<VisionLanguageBridgeVisualizer client:visible lang="en" />
+
+For a receipt reader, test small-font totals and line items before choosing a smaller visual budget. A model may preserve the coarse fact “this is a receipt” while losing the digits needed for the answer. Keep image preprocessing, crop count, prompt, decoding, and answer rubric fixed when measuring that trade-off. For concatenated visual tokens, include the extra positions in the [KV-cache budget](../../chapter-12/kv-cache-management/); separate cross-attention memory needs its own accounting.
+
+## 5. Test What the Bridge Preserves
+
+Build a small receipt test before changing the connector or visual budget. Use two authored receipts: A has a printed line `Total 31.50`, B has `Total 42.00`. Keep the source images, their IDs, the prompt, preprocessing settings, and expected answer lines together. This is a proposed diagnostic, not a reported model result.
+
+Run two separate tasks: rank “a receipt” against fixed non-receipt descriptions using image–text similarity, and ask a generative model to return the printed total plus the line supporting it. A correct coarse retrieval match does not establish that the digits survived the visual interface.
+
+| Controlled input change | What to check |
+| :--- | :--- |
+| Original receipt A | Retrieve the receipt description; return `31.50` with `Total 31.50` as evidence |
+| Blur or crop away the total line | Record whether coarse retrieval still works; the answer must acknowledge an unreadable/missing line instead of inventing visible evidence |
+| Replace A with B, keeping the question fixed | The answer must change to `42.00`, supported by B's total line |
+| Provide labeled A and B, then reverse their order | A question about receipt A must still cite A; keep labels bound to the correct image attachments |
+
+Sweep the visual budget while keeping those fixtures and decoding settings fixed. Report retrieval accuracy separately from exact-amount accuracy, correct source-line attribution, and appropriate abstention. Also measure time to first token and peak memory. For this small diagnostic, any fabricated source line is a failure to investigate before trying a larger evaluation; passing a handful of fixtures is not a release claim.
+
+If adaptation is needed, use the [SFT procedure](../../chapter-9/sft-fundamentals/) for the training contract. The multimodal details to verify are the image processor and selected feature layer, native chat-template image markers, image–answer alignment after truncation, and exclusion of visual positions from answer loss. Frozen LM weights reduce gradient/optimizer state, but an upstream projector may still need gradients through the LM and its activation memory. Keep these evaluation receipts out of training and use the [evaluation and release gates](../../chapter-17/production-evaluation-and-release-gates/) for a larger deployment decision.
 
 ## Research Check: Which Part of a Vision Encoder Helps?
 
-**As of 2026-11-17.** *Unbundling Multimodal Vision Encoding* separates three choices: upstream visual pretraining, dedicated vision capacity, and where that capacity enters the backbone. Under its matched-lifetime-compute experiments, jointly trained vision capacity can match a pretrained encoder; deleting dedicated vision capacity is a different intervention and hurts visual understanding [[4]](#ref-4). This does not establish that pretrained encoders are unnecessary at every scale or data budget.
+**As of 2026-11-25.** *Unbundling Multimodal Vision Encoding* separates upstream visual pretraining, dedicated vision capacity, and where that capacity enters the backbone. In its controlled, matched-lifetime-compute experiments, jointly trained vision capacity can match a pretrained encoder, while removing dedicated vision capacity hurts visual understanding [[4]](#ref-4). That is evidence about the tested setup, not proof that pretrained encoders are unnecessary at every scale or data budget.
 
-Reproduction exercise: compare a pretrained encoder, a same-size jointly trained encoder, and a capacity-matched encoder-free model on common data. Charge upstream pretraining to the budget, then separately report a reuse scenario where that cost is already sunk. Keep visual tokenization and evaluation controls explicit; measure language retention and time to first token alongside VQA. A comparison of unrelated released models cannot isolate this mechanism.
+To investigate the result, compare a pretrained encoder, a same-size jointly trained encoder, and a capacity-matched encoder-free model on common data. Count upstream pretraining in one budget and report an encoder-reuse scenario separately. Keep visual tokenization and evaluation conditions explicit; measure language retention and time to first token alongside visual question answering. Comparing unrelated released models cannot isolate this mechanism.
+
+Choose the interface by the required output, then count the features it introduces and test the details it preserves. A retrieval score, a decoder position, and a cross-attention memory slot serve different purposes even when all three are called “image embeddings.”
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: Why use two CLIP loss directions when cosine similarity is symmetric?</summary>
-*A pair’s cosine is symmetric, but row-wise image-to-text and column-wise text-to-image softmax denominators differ. The two losses supervise retrieval classification from both directions; they do not by themselves guarantee generation ability or generalization.*
+<summary>Quiz 1: Why use two CLIP loss directions when the dot product is symmetric?</summary>
+*Swapping the two vectors leaves one dot product unchanged, but the image-to-text row and text-to-image column normalize over different candidates. Both directions need the correct pairing labels. Neither loss creates a text generator.*
 </details>
 
 <details>
-<summary>Quiz 2: Does a fixed resampler output make all visual computation constant?</summary>
-*No. It bounds tokens passed to the LLM, but the vision encoder and resampler cross-attention over input features can still grow with image resolution and frame count.*
+<summary>Quiz 2: Why does shuffling captions raise the example's loss by exactly 5?</summary>
+*With temperature 0.2, each row or column has one logit of 5 and two of 0. The log-partition is unchanged by permutation, but every diagonal target changes from 5 to 0. Each cross-entropy therefore rises by 5 even though the embedding matches are intact.*
 </details>
 
 <details>
-<summary>Quiz 3: Does zero-initializing the visual gate guarantee no forgetting?</summary>
-*No. Since $\tanh(0)=0$, the new branch initially contributes zero, preserving the existing path at initialization. Gates and other trainable modules subsequently change, so language retention and training stability still need evaluation.*
+<summary>Quiz 3: Does projecting 256 features from width 768 to 4,096 reduce the visual token budget?</summary>
+*No. A position-wise projection changes feature width, not the 256 positions. In the example, 32 text positions make a 288-position decoder sequence. Pooling, merging, or resampling would be a separate operation.*
 </details>
 
----
+<details>
+<summary>Quiz 4: With two 448-pixel images, how do the toy routes differ?</summary>
+*Each image has 1,024 patches. Concatenation gives $32+2\times1024=2080$ decoder positions. Resampling to 64 slots per image gives 128 separate memory slots while the text sequence stays at 32 positions. These counts alone do not establish a latency ratio or equal accuracy.*
+</details>
+
+<details>
+<summary>Quiz 5: Do a frozen LM and a zero-initialized visual gate guarantee capability retention?</summary>
+*No. A zero gate initially removes the added branch's contribution, but trained gates and visual conditioning can change outputs even with frozen base weights. Evaluate language retention and visual grounding after adaptation; freezing also does not eliminate all activation memory needed for backpropagation.*
+</details>
 
 ## References
 
 1. <a id="ref-1"></a>Radford, A., et al. (2021). *Learning Transferable Visual Models From Natural Language Supervision*. [arXiv:2103.00020](https://arxiv.org/abs/2103.00020).
-2. <a id="ref-2"></a>Alayrac, J. B., et al. (2022). *Flamingo: a Visual Language Model for Few-Shot Learning*. [arXiv:2204.14198](https://arxiv.org/abs/2204.14198).
-3. <a id="ref-3"></a>Liu, H., et al. (2023). *Visual Instruction Tuning*. [arXiv:2304.08485](https://arxiv.org/abs/2304.08485).
-
-4. <a id="ref-4"></a>Brown et al. (2026). Unbundling Multimodal Vision Encoding, v1. Verified 2026-11-17. [Source](https://arxiv.org/abs/2611.17334v1).
+2. <a id="ref-2"></a>Alayrac, J. B., et al. (2022). *Flamingo: a Visual Language Model for Few-Shot Learning*. Architecture, masking, and gated blocks: Sections 2.1–2.3 and Appendix A.1. [arXiv:2204.14198](https://arxiv.org/abs/2204.14198).
+3. <a id="ref-3"></a>Liu, H., et al. (2023). *Visual Instruction Tuning*. Original linear connector and two-stage training: Section 4. [arXiv:2304.08485](https://arxiv.org/abs/2304.08485).
+4. <a id="ref-4"></a>Brown, E., et al. (2026). *Unbundling Multimodal Vision Encoding*, v1. Verified 2026-11-25. [arXiv:2611.17334v1](https://arxiv.org/abs/2611.17334v1).

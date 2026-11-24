@@ -11,6 +11,16 @@ export const socialCards = {
       alt: 'CPU PyTorch 실습: 작은 디코더로 합성 토큰 복사 과제를 학습하고 인과 마스크, 과거 문맥 제거, 체크포인트 재개를 검증합니다.',
     },
   },
+  '/chapter-11/vision-language-bridges': {
+    en: {
+      image: '/social/vision-bridge-en.png',
+      alt: 'Toy calculation for one 224 × 224 pixel image with 14 × 14 pixel patches and 32 prompt positions: patch projection uses 288 decoder positions; resampling with cross-attention uses 32 decoder positions and 64 separate visual memory slots.',
+    },
+    ko: {
+      image: '/social/vision-bridge-ko.png',
+      alt: '224 × 224픽셀 이미지 한 장, 14 × 14픽셀 패치, 프롬프트 32자리로 계산한 예제입니다. 패치별 투영은 디코더 288자리를, 리샘플링과 교차 어텐션은 디코더 32자리와 별도 시각 메모리 64슬롯을 사용합니다.',
+    },
+  },
   '/chapter-17/experimental-design-and-uncertainty': {
     en: {
       image: '/social/paired-evaluation-en.png',

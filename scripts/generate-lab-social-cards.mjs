@@ -1,5 +1,7 @@
-// Regenerate the four committed, code-native lab previews:
+// Regenerate the committed, code-native lesson previews:
 //   node scripts/generate-lab-social-cards.mjs
+// Or regenerate one lesson without touching existing previews:
+//   node scripts/generate-lab-social-cards.mjs --only vision-bridge
 // Requires installed project dependencies (sharp) and Noto Sans CJK KR / DejaVu Sans
 // fonts. No network, model call, or external image is used. These are explanatory
 // cards, not plots or screenshots of measured experimental outcomes.
@@ -65,11 +67,82 @@ const copy = {
       decisions: ['통과', '재검토', '차단'], gate: '합성 오프라인 평가 기준',
     },
   },
+  'vision-bridge': {
+    path: '/chapter-11/vision-language-bridges', number: '11.1',
+    en: {
+      title: 'Same image. Different decoder length.',
+      setup: '1 image · 224 × 224 px · 14 × 14 px patches · 32 prompt positions',
+      projection: 'Project each patch',
+      resampling: 'Resample, then cross-attend',
+      positions: 'decoder positions',
+      formula: patches => `${patches} patches + 32 prompt positions`,
+      memory: 'slots · separate visual memory',
+      note: 'Toy calculation · Prompt count includes image markers',
+    },
+    ko: {
+      title: '같은 이미지, 달라지는 디코더 길이',
+      setup: '이미지 1장 · 224 × 224픽셀 · 14 × 14픽셀 패치 · 프롬프트 32자리',
+      projection: '패치별 투영',
+      resampling: '리샘플링 후 교차 어텐션',
+      positions: '자리 · 디코더',
+      formula: patches => `패치 ${patches}개 + 프롬프트 32자리`,
+      memory: '슬롯 · 별도 시각 메모리',
+      note: '계산 예제 · 프롬프트에 이미지 표시 토큰 포함',
+    },
+  },
 };
 
+const args = process.argv.slice(2);
+if (args.length && (args.length !== 2 || args[0] !== '--only' || !Object.hasOwn(copy, args[1]))) {
+  throw new Error(`Usage: node scripts/generate-lab-social-cards.mjs [--only ${Object.keys(copy).join('|')}]`);
+}
+const selectedKind = args[1];
+
+function visionBridgeSvg(lesson, lang, card) {
+  const c = lesson[lang], korean = lang === 'ko';
+  // Same authored setup as VisionLanguageBridgeVisualizer's initial state.
+  // These are sequence and memory counts, not performance measurements.
+  const patches = (224 / 14) ** 2, prompt = 32, memory = 64;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" xml:lang="${lang}" role="img" aria-labelledby="card-title card-description">
+<title id="card-title">${escape(c.title)}</title><desc id="card-description">${escape(card.alt)}</desc>
+<rect width="1200" height="630" fill="#f5f2eb"/><rect width="12" height="630" fill="${teal}"/>
+<g font-family="${korean ? 'Noto Sans CJK KR, DejaVu Sans' : 'DejaVu Sans'}, sans-serif" fill="${ink}">
+${text(korean ? '파운데이션 모델 엔지니어링' : 'FOUNDATION MODEL ENGINEERING', 64, 61, 19, `fill="${teal}" font-weight="600" ${korean ? '' : 'letter-spacing="1.6"'}`)}
+${text(korean ? `${lesson.number} · 비전–언어 모델` : `${lesson.number} / VISION–LANGUAGE MODELS`, 1136, 61, 18, `fill="${teal}" text-anchor="end"`)}
+${text(c.title, 61, 140, korean ? 48 : 45, 'font-weight="700"')}
+${text(c.setup, 64, 193, korean ? 24 : 25, `fill="${muted}"`)}
+<rect x="64" y="229" width="520" height="260" rx="20" fill="#ffffff" stroke="#c5cec6"/>
+<rect x="616" y="229" width="520" height="260" rx="20" fill="#ffffff" stroke="#c5cec6"/>
+${text(c.projection, 90, 276, 26, `fill="${teal}" font-weight="600"`)}
+${text(c.resampling, 642, 276, korean ? 26 : 25, `fill="${teal}" font-weight="600"`)}
+${text(prompt + patches, 87, 372, 90, 'font-weight="700"')}
+${text(c.positions, 288, 351, 26, `fill="${muted}"`)}
+${text(prompt, 639, 372, 90, 'font-weight="700"')}
+${text(c.positions, 786, 351, 26, `fill="${muted}"`)}
+<path d="M90 402H558" stroke="#dbe1db"/>
+${text(c.formula(patches), 90, 447, korean ? 24 : 22, `fill="${muted}"`)}
+<rect x="642" y="408" width="468" height="54" rx="9" fill="#f8ecd9"/>
+${text(memory, 659, 444, 29, 'fill="#82491f" font-weight="700"')}
+${text(c.memory, 711, 444, korean ? 23 : 21, 'fill="#82491f"')}
+${text(c.note, 64, 529, korean ? 21 : 22, `fill="${muted}"`)}
+<path d="M64 554H1136" stroke="#bbc8c1" stroke-width="2"/>
+${text(korean ? '무료 온라인 교재 · 한국어 / 영어' : 'Free online textbook · English / Korean', 64, 597, 20, `fill="${teal}"`)}
+${text('sungeuns.github.io', 1136, 597, 20, `fill="${muted}" text-anchor="end"`)}
+</g></svg>\n`;
+}
+
 for (const [kind, lesson] of Object.entries(copy)) {
+  if (selectedKind && selectedKind !== kind) continue;
   for (const lang of ['en', 'ko']) {
     const c = lesson[lang], card = socialCards[lesson.path][lang];
+    if (kind === 'vision-bridge') {
+      const svg = visionBridgeSvg(lesson, lang, card);
+      const imagePath = path.join(root, 'public', card.image);
+      await fs.writeFile(imagePath.replace(/\.png$/, '.svg'), svg);
+      await sharp(Buffer.from(svg)).png({ compressionLevel: 9 }).toFile(imagePath);
+      console.log(`${path.relative(root, imagePath)}: 1200 × 630`);
+      continue;
+    }
     const korean = lang === 'ko', evaluation = kind === 'evaluation';
     const chipWidth = evaluation ? 300 : 215;
     const secondX = 64 + chipWidth + 16;

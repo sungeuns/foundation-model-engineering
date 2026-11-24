@@ -314,7 +314,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 10.3 | `/chapter-10/dpo` | Inspected 2026-11-15 | 7e4f3631827b07506801aafb6e8a06de50b0c341231b4dbd8d46e2be72f2f57e | 6996af5f5f56fc57afd5f48177621cba58cae1d5898f2007a27be44806889762 |
 | 10.4 | `/chapter-10/kto-and-ipo` | Inspected 2026-11-15 | 61ac741df320db7fb3031414fdacaf5770fa28200d3f91f8d69cec83c273c046 | a4efc7610bf213a07fe5fcabf60033b2ab28a12d8fb257270bd9900a69e5a4e3 |
 | 10.5 | `/chapter-10/alignment-tax` | Inspected 2026-11-15 | e630460ac1b1a8620d753362e400c3bea18d69cff7a6265b3820b6ce7230c6f6 | 5041f746d84764553aecee5b114599a703cc2206889aa57838d5b2719b0bec7e |
-| 11.1 | `/chapter-11/vision-language-bridges` | Inspected 2026-11-17 | 821e9cc5083e4bedc7315993ab1d841eb4b0864e52633036bbe175fd885cf6b5 | 85884e1add65d8a5e7b357a601d60929e0bc4e7c2a27835517a497c0712b6d29 |
+| 11.1 | `/chapter-11/vision-language-bridges` | Inspected 2026-11-25 | 24fb4f6155431bf716e88e29bceaa78cbb3a5631641da212c9e073d7d71a10b8 | d0eba2f44cf9745be286fba5bd051849ee0471874e6c208df815f5bc3da8ff9f |
 | 11.2 | `/chapter-11/audio-and-speech-integration` | Inspected 2026-11-24 | 3c8de54d3316183f25505eea48298dc784a4b0a61b55390f944bbc0a60ffef91 | 150f266fee7ca8b40ccdc495d9f7898048b2d7d54991e2d51bbd40978ff03629 |
 | 11.3 | `/chapter-11/unified-multimodal-any-to-any` | Inspected 2026-11-15 | 63b49653980ac69e7662b92d1423aad27976789545651d8f21bb97c04a0993a2 | 05b4775ea2e63d295a8def6928b0a7280187755f1e95669da1a9db2ad9134158 |
 | 11.4 | `/chapter-11/image-diffusion-models` | Inspected 2026-11-24 | 5bb8bc33ff8adf86105e24018b03423e9f19e0d29739f64b843c0cbeadea05e8 | 308de426fdbc7b1c845a4d63be36b83988abe2eb36026affba1dd101194816b7 |

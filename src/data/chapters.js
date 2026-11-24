@@ -113,7 +113,7 @@ export const chapters = [
     id: 11,
     title: { en: "11. Multimodal Learning", ko: "11. 멀티모달 학습" },
     subs: [
-      { id: "11-1", title: { en: "11.1 Vision-Language Bridges", ko: "11.1 비전-언어 브리지" }, path: "/chapter-11/vision-language-bridges" },
+      { id: "11-1", title: { en: "11.1 Vision-Language Models: CLIP, Projectors, and Cross-Attention", ko: "11.1 비전–언어 모델: CLIP·프로젝터·교차 어텐션" }, path: "/chapter-11/vision-language-bridges" },
       { id: "11-2", title: { en: "11.2 Audio & Speech Integration", ko: "11.2 오디오 및 음성 통합" }, path: "/chapter-11/audio-and-speech-integration" },
       { id: "11-3", title: { en: "11.3 Unified Multimodal (Any-to-Any)", ko: "11.3 통합 멀티모달 (Any-to-Any)" }, path: "/chapter-11/unified-multimodal-any-to-any" },
       { id: "11-4", title: { en: "11.4 Image Diffusion Models", ko: "11.4 이미지 확산 모델" }, path: "/chapter-11/image-diffusion-models" },
