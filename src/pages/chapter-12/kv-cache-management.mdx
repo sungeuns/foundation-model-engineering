@@ -64,9 +64,10 @@ $$
 
 This is the aggregate for 32 equal-length sequences, not one request. Nor does the cache always exceed the weights. It can do so at large concurrency or context length, so both weights and peak live-cache occupancy belong in the capacity plan.
 
+<a id="worked-example-the-tenth-request-does-not-fit"></a>
 <a id="kv-cache-capacity"></a>
 
-### Worked Example: The Tenth Request Does Not Fit
+### Can the tenth request fit? A 24 GiB KV cache calculator example
 
 With the same geometry, one cached token costs 327,680 bytes, or 320 KiB, across all 80 layers. One 8,192-token request therefore needs **2.5 GiB**. Suppose the serving pool has **24 GiB left for KV payload** after reserving weights, activations, workspaces, allocator overhead, and a failure margin. Nine such requests consume 22.5 GiB; ten require 25 GiB. This is a payload bound for that pool, not a measured GPU concurrency limit. If the cache is sharded, apply the actual per-device layout and account for any replicated heads.
 

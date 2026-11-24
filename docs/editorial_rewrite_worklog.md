@@ -320,22 +320,22 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 11.4 | `/chapter-11/image-diffusion-models` | Inspected 2026-11-24 | 5bb8bc33ff8adf86105e24018b03423e9f19e0d29739f64b843c0cbeadea05e8 | 308de426fdbc7b1c845a4d63be36b83988abe2eb36026affba1dd101194816b7 |
 | 11.5 | `/chapter-11/video-generation-foundations` | Inspected 2026-11-15 | b34544d0352be5feafdfc0d30ac23092d50edf3a3af5f3e4d37cc62531230c20 | 55c0488a07c962041cdbb0cdb945d18c8e136b23dba2aed6f6970f1c33cb4b4b |
 | 11.6 | `/chapter-11/commercial-video-models` | Mechanical only | 12216aad67ffc900bcfe437f20a7fcf9be618ccc5d617f698f4466ef15ff33cb | 6ee6e17876daa24bd17b8d709b7f541276019da545887510035b916819ae13a3 |
-| 12.1 | `/chapter-12/kv-cache-management` | Inspected 2026-11-25 | 366a6909bf401478c9abf17c66dfcc45c68685517d1fe347309299c8d1cff0fa | f5f19b3d52ee8665be584d640185d8abb206334e99f549dd7ae50462df529865 |
+| 12.1 | `/chapter-12/kv-cache-management` | Inspected 2026-11-25 | d4bf724a660050e8706c4ba5a44007134571faa457ffeb9e24529f55d2376e71 | e269b5140e261ebf87512782279820fdedb45d5ee5bb9d174daa7c7a4d9875ec |
 | 12.2 | `/chapter-12/paged-attention-vllm` | Inspected 2026-11-25 | 52cf569f107eda54688b02ae4a5149d5191e4e56e3241ffe32a2b53ae8bc66d8 | 14402809f988d4e8b12edd29476af19ece120d3abe6c86ac16ca1a664496bb46 |
 | 12.3 | `/chapter-12/continuous-batching` | Inspected 2026-11-25 | 588de002d211758e1fbb83af67004497e5280cad3512efc790f73f9b3d2a24b3 | 3f9ff09b65675139196bd073123e28a306180a8ec7d07398d1e331351f5a7124 |
 | 12.4 | `/chapter-12/speculative-decoding` | Inspected 2026-11-25 | a5f93ea8411bab0fe68bf277224f8f19f111ac0f0fd73f6b4eda75739a8990b5 | 61986787b62bf6d99f59ab08a66d2ea6312e472faea94ded13c4a7d627d03cc4 |
 | 12.5 | `/chapter-12/long-context-serving` | Inspected 2026-11-15 | 82f413a5a2e2731fe01603c7036b42dee434b010cc76410eba7e0807d73742e8 | 59933e962b9f0bef0f8b50e9889ec628fd92ade6d7d0fb91636981793bd83052 |
 | 12.6 | `/chapter-12/serving-policies-slos-and-fallbacks` | Inspected 2026-11-25 | 8222c69fc753a073f358acef599ad825d1193693daa931acbd774081c82f2b46 | 35067207b0e514380e54bb373c7b545a075fc1999f3e039eb327edb1e13ba1a5 |
-| 13.1 | `/chapter-13/ptq-vs-qat` | Mechanical only | 6961419a7297e663a0894db1a8fd075b0153ae00ca4a904bbf5137dde68f3eda | 20342b8f4e7499012cbd810bd0e9cb2781a3c0537b308a95abf74bd334ca88e5 |
-| 13.2 | `/chapter-13/quantization-methods` | Mechanical only | 9939109a4f7a49939655429be92e41c75f5db0a9ee7fc29ce17765313d2f8778 | 78f4edd801cb0c8d9fdf32434fb962d8e2dde7b063a1706a219b29b2ba21d8d0 |
+| 13.1 | `/chapter-13/ptq-vs-qat` | Inspected 2026-11-25 | 156ca2ee736440fc77b09629f937bdc027bbd4e7e8ea80d3584499b0f0721e54 | ce7f6e01c0bc440ee12795fa1fdc6b6c5089c14c8fb83616449ee99b6a62d59b |
+| 13.2 | `/chapter-13/quantization-methods` | Inspected 2026-11-25 | f128eb1a2a438226a64a9e9f82f4eea316a0ddf62f38c32553657fbd9dad6944 | d2ef6a2e7b3349d2fa4a93ef0d79356511c79d4939a24bd5913965064c16bdaf |
 | 13.3 | `/chapter-13/weight-sparsification` | Mechanical only | cef7eea23f21faf8a4719bc13b2f3e28a8743ba0230c67b01438dbac642a6530 | 4d1291c234050b189b7f5c66be305966e3fadd57ef521d171ca9283131987aed |
 | 13.4 | `/chapter-13/knowledge-distillation` | Mechanical only | f184dcb71820a852dee1c7b2d640412cec7cad8a6f765ee912da00daf6b337f0 | 7c19030da7fe737ad78f41f6d09a1aa1107040bbb7cedcf7176b24e5db8dfccb |
 | 13.5 | `/chapter-13/advanced-quantization` | Inspected 2026-11-15 | 27a364583a8df29cdea48119e65184594a4c27ab9f8f22437778a330596d4a3b | b55fe9860d8cf44911a1bf6508787d6c865bfbdf548adff861878ccdf10fd691 |
 | 14.1 | `/chapter-14/lexical-to-semantic-search` | Inspected 2026-11-15 | 14b58e7aaf9ebe7914bbdc7dcb6de1b48eee71d893d20e58039dce184d55b9cd | 80983723429f788bbd719d8ac7ce5235fa89888ad9bd39aaf7ade613b32f7bb5 |
 | 14.2 | `/chapter-14/vector-indexing-and-db-solutions` | Inspected 2026-11-15 | 9cd80b8fa316923b8db209981294ea15b991ef55851416fb72455a0f12d92783 | 7f9a5d85dde7cb1d91679e64a99760562b8640003062593ded9483faf4af35c4 |
-| 14.3 | `/chapter-14/advanced-retrieval` | Inspected 2026-11-25 | fd676e72ba325694456b7af3214c7177f84c17ccd0950d236a3a9a77792c3db3 | 98f84e5697250182a78d98cc7675ddd954df32eb3b3f36e315b581de4126155b |
+| 14.3 | `/chapter-14/advanced-retrieval` | Inspected 2026-11-25 | f5261364645a4ac9935949094a48fd98f3884e66cbf40b675070b068874ebdce | 05784d2936ca643a04d71799ea2d33822708e1d77457ebf4c577293e47f95fb2 |
 | 14.4 | `/chapter-14/rag-orchestration` | Inspected 2026-11-15 | c0415652280790508493840235e671903d660547416bc0bf3a73aba796039dd8 | 71eb996863fcf49fa62bc979e9167173c39fec0312811f89ac3095eca414b283 |
-| 14.5 | `/chapter-14/graphrag-and-ontology` | Inspected 2026-11-18 | 6a6bfb305a399dd26588c20193a52bd7fa3f5a127b5ef766c5f235a265bc2b6f | 0d8e5a5ead4ce3e1ec71dac8a9daf62373947617248ec254d23bffb65c670e50 |
+| 14.5 | `/chapter-14/graphrag-and-ontology` | Inspected 2026-11-25 | 1d56da922b530c30f04507318a0384f06ab78fde769574a20d96de1d2777026e | 0a9106cf60adb75afe3e3dd465c6c642b79fe2153b696ad812a7cc9e745cb780 |
 | 14.6 | `/chapter-14/rag-failure-modes-and-operational-design` | Inspected 2026-11-25 | c72856114d2cb84479aafdc3b30c627c29b5aef1166e94797f37f2694fdf81ac | 8087cbcf0189649a93b9ae5cd534eebce28cb31bbfdeed8359f7cd5d1d4583f5 |
 | 15.1 | `/chapter-15/chain-of-thought` | Inspected 2026-11-18 | dfa755568cbd54f3636f06ca66bc5a279f0d5f54f81d0589f4293abdabc5979b | 217a9074408e2c33d9405b96de888fd38d7b46a996ca24cffb9ce5056c16bf55 |
 | 15.2 | `/chapter-15/tree-graph-of-thoughts` | Inspected 2026-11-15 | 7e8547ebde4982cf4cbab76343d088ceef6b39d22ad8b6d1403ddb292b381251 | 59780614eb21ba3c945f22c3defcd3ff49c762ef1b1c2b9c686d68660ef9147f |
@@ -647,3 +647,9 @@ In both editions of 3.4, the two-feature browser example and CPU PyTorch agree f
 ### 2026-11-25 expert dispatch, decision costs and deployment
 
 In 5.3, the code visible in both editions is also the downloadable two-process CPU exercise. Six tokens test uneven all-to-all dispatch and the return to source order. Additional runs cover a process that starts with no tokens and one that receives none. In 16.7 the two fixtures keep scores and the overall positive rate fixed. Of the same 40 automatically accepted cases, errors rise from four to twelve. The cost estimate and observed cost have separate readouts. In 17.5 the worked release decision uses the 17.7 fixture. A 15-point target gain clears its threshold while a 25-point loss on a protected capability blocks deployment.
+
+### 2026-11-25 quantization and graph evidence
+
+The 13.1 CPU examples and browser grid cover a value on a half-step, a rounded code still within range, and a clamped code. The PTQ example accumulates activation maxima over calibration batches and includes both scales in the checkpoint. In 13.2, a five-weight dot product exposes the effect of the input activation on each rounding error. The browser's 693 bit-width and range combinations were checked against a CPU PyTorch calculation with the stated midpoint convention.
+
+In 14.5, ranking the graph nodes places Mina and Vendor Z at exactly the same score. The example includes both at the cutoff and checks the two source passages used to answer the CEO question. Section 14.3 links to that exercise. The 12.1 worked example can be found by its 24 GiB budget and retains its previous heading links. In-book search also indexes the two named exercises rendered by React in 12.1 and 17.7.

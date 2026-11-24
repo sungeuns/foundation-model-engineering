@@ -8,20 +8,18 @@ import QuantizationErrorVisualizer from '../../components/chapter-13/Quantizatio
 
 # 13.1 PTQ vs QAT
 
-In the previous section, we explored systems engineering solutions—like Chunked Prefill and Disaggregated Serving—to manage the massive memory footprint of the KV Cache during long-context inference. However, optimizing the context window only addresses the dynamic memory overhead. The static model weights themselves remain a colossal bottleneck. A 70-billion parameter model in 16-bit precision (BF16) requires 140GB of VRAM just to reside in memory, completely barring it from consumer hardware and inflating enterprise deployment costs.
+Seventy billion BF16 weights occupy 140 GB before serving a single token. At four bits per weight the raw payload would be 35 GB. Scales, unquantized layers, the KV cache and runtime buffers all add to that number. The first question for an engineer is whether the rounded weights still make the decisions that matter.
 
-To solve this, we must compress the weights. Quantization is the mathematical process of mapping high-precision floating-point values (FP32/BF16) to lower-precision discrete integer bins (INT8, INT4, or even smaller).
-
-The field of quantization is divided into two distinct paradigms based on *when* and *how* the model encounters the noise introduced by this compression: **Post-Training Quantization (PTQ)** and **Quantization-Aware Training (QAT)**.
+**Post-training quantization (PTQ)** converts an existing checkpoint. **Quantization-aware training (QAT)** lets an optimizer update weights while the forward pass simulates the target representation. Try the [eight-weight example](#quantization-grid-example) to see exactly where their forward and backward computations differ.
 
 ---
 
 ## 1. The Mathematics of Linear Quantization
 
-Before dividing the paradigms, we must understand the shared underlying math. The most common form of compression is **Affine (Linear) Quantization**. It maps a high-precision tensor $x$ to a quantized integer tensor $q$ using a scale factor $S$ and a zero-point $Z$:
+Affine quantization uses a positive scale $S$, an integer zero-point $Z$, and an integer interval from $q_{\min}$ to $q_{\max}$. For a real scalar $x$, compute the integer code $q$ and clamp it to that interval [[2]](#ref-2).
 
 $$
-q = \text{clip}\left(\text{round}\left(\frac{x}{S} + Z\right), q_{\text{min}}, q_{\text{max}}\right)
+q = \operatorname{clip}\left(\operatorname{round}(x/S) + Z, q_{\min}, q_{\max}\right).
 $$
 
 An integer kernel can accumulate quantized products before rescaling; other weight-only kernels dequantize before multiplication. The scalar reconstruction is:
@@ -30,7 +28,7 @@ $$
 x_{\text{approx}} = S \times (q - Z)
 $$
 
-The difference between $x$ and $x_{\text{approx}}$ is the **Quantization Error**. The fundamental difference between PTQ and QAT is how they handle this error.
+The examples use a signed symmetric grid with $Z=0$. For $b$ bits set $K=2^{b-1}-1$, choose codes $-K$ through $K$, and leave the most negative storage code unused. A positive bound $a$ sets the spacing $S=a/K$. Zero is represented exactly. Halfway values round to the nearest even code, the convention used by PyTorch [[3]](#ref-3).
 
 ---
 
@@ -44,143 +42,114 @@ Static activation quantization estimates ranges from representative inputs. Reco
 
 ### Engineering the Calibration Loop
 
-Below is a PyTorch implementation demonstrating symmetric min-max calibration for a linear layer.
+For a static per-tensor INT8 scale, the largest magnitude from **all** calibration batches matters. Suppose the first batch reaches 2.0 and the last reaches only 0.25. Replacing the scale at each batch would make even an ordinary 1.0 input saturate at 0.25. Running min/max observers retain extrema across batches [[4]](#ref-4).
 
-> **Deliberately simplified example.** This isolates one quantization operation; it omits real packed kernels, calibration/export parity, tokenizer/loss-mask handling, distributed state and the complete training loop. It is not a smoke-tested production implementation.
+> **CPU FP32 example.** This simulates quantized inputs and weights in one frozen linear layer. The scale buffers travel with the checkpoint. Packing, integer kernels, per-channel scales, and a model-level evaluation are outside the example.
 
 ```python
 import torch
-import torch.nn as nn
+from torch import nn
 
 class PTQLinear(nn.Module):
     def __init__(self, in_features, out_features):
         super().__init__()
         self.weight = nn.Parameter(torch.randn(out_features, in_features))
         self.bias = nn.Parameter(torch.zeros(out_features))
-        self.weight_scale = None
-        self.act_scale = None
+        self.register_buffer("act_scale", torch.tensor(0.0))
+        self.register_buffer("weight_scale", torch.tensor(0.0))
 
+    @torch.no_grad()
     def calibrate(self, x):
-        """
-        Calibrates the scales based on the absolute maximum values.
-        In practice, moving averages or KL-divergence are used for robustness.
-        """
-        # Calibrate activations (INT8 range: -128 to 127)
-        max_act = torch.max(torch.abs(x))
-        self.act_scale = (max_act / 127.0).detach().clamp_min(torch.finfo(x.dtype).tiny)
-
-        # Calibrate weights
-        max_w = torch.max(torch.abs(self.weight))
-        self.weight_scale = (max_w / 127.0).detach().clamp_min(torch.finfo(self.weight.dtype).tiny)
+        # Keep extrema across batches of the same frozen checkpoint.
+        if x.ndim < 1 or x.shape[-1] != self.weight.shape[1] or x.numel() == 0:
+            raise ValueError("expected a nonempty batch with the layer's input width")
+        peaks = torch.stack((x.abs().amax(), self.weight.abs().amax()))
+        if not torch.isfinite(peaks).all():
+            raise ValueError("nonfinite calibration data or weights")
+        scales = (peaks / 127).clamp_min(torch.finfo(self.weight.dtype).tiny)
+        self.act_scale.copy_(torch.maximum(self.act_scale, scales[0]))
+        self.weight_scale.copy_(scales[1])
 
     def forward(self, x):
-        if self.weight_scale is None:
-            # Pre-calibration forward pass
-            return nn.functional.linear(x, self.weight, self.bias)
+        if self.act_scale.item() == 0:
+            raise RuntimeError("calibrate the layer or load its calibrated state")
+        weight_codes = (self.weight / self.weight_scale).round().clamp(-127, 127)
+        input_codes = (x / self.act_scale).round().clamp(-127, 127)
+        accumulated = nn.functional.linear(input_codes, weight_codes)
+        return accumulated * self.act_scale * self.weight_scale + self.bias
 
-        # Simulate Quantized Inference (Hardware executes this in INT8/INT32)
-        q_w = torch.clamp(torch.round(self.weight / self.weight_scale), -128, 127)
-        q_x = torch.clamp(torch.round(x / self.act_scale), -128, 127)
-
-        # Floating-point simulation of integer accumulation
-        out = nn.functional.linear(q_x, q_w)
-
-        # Dequantize back to floating point for the next layer
-        return out * (self.weight_scale * self.act_scale) + self.bias
-
-# Example Execution
-layer = PTQLinear(128, 64)
-calibration_data = torch.randn(32, 128) # Must represent real-world data!
-
-layer.calibrate(calibration_data)
-output = layer(calibration_data)
-print(f"Quantized Output Shape: {output.shape}")
+layer = PTQLinear(1, 1).eval()
+with torch.no_grad():
+    layer.weight.fill_(1)
+    layer.calibrate(torch.tensor([[2.0]]))
+    layer.calibrate(torch.tensor([[0.25]]))
+    probes = torch.tensor([[1.0], [3.0]])
+    restored = PTQLinear(1, 1).eval()
+    restored.load_state_dict(layer.state_dict())
+    torch.testing.assert_close(restored(probes), torch.tensor([[128 / 127], [2.0]]))
 ```
+
+The retained activation scale is $2/127$. The restored layer maps 1.0 to $128/127$ and 3.0 to 2.0. A checkpoint containing only the weights and bias cannot reproduce this behavior. Use separate held-out inputs to measure saturation and task quality.
+
 
 ---
 
 ## 3. Quantization-Aware Training (QAT): The Active Approach
 
-PTQ has no universal eight- or four-bit accuracy floor. Lower precision can increase error, but outcomes depend on model, calibration distribution, group size and method. QAT can adapt through training while adding cost and risks of overfitting or capability regression.
-
-**Quantization-Aware Training (QAT)** changes the optimization process. Instead of quantizing after the fact, QAT inserts "Fake Quantization" nodes into the computational graph *during* training or fine-tuning. The model’s optimizer "sees" the quantization error during the forward pass and adjusts the master weights during the backward pass to compensate. The model actively learns to survive the low-precision constraints.
-
-> **Compare exported models, not imagined loss landscapes.** QAT gives weights a chance to adapt to quantization; it does not guarantee a better minimum. Compare PTQ and QAT with the same held-out tasks, precision target, and deployment kernels, including adaptation cost.
+QAT keeps trainable weights in floating point and computes the training loss with simulated quantized values in the forward pass. An optimizer can change a weight enough to cross a rounding boundary. This costs training compute and data. Test whether the exported model recovers the failing capability under the same evaluation and deployment kernel.
 
 ### The Straight-Through Estimator (STE)
 
-Implementing QAT introduces a critical mathematical roadblock: the `round()` function.
-The derivative of a step function like `round()` is zero almost everywhere (and undefined at the steps). If we run standard backpropagation, the gradients will multiply by zero at the quantization node, preventing any weight updates.
-
-To solve this, QAT relies on the **Straight-Through Estimator (STE)** [[1]](#ref-1). During the backward pass, the STE simply ignores the `round()` operation, treating its local gradient as $1$.
-
-$$
-\frac{\partial L}{\partial x} = \frac{\partial L}{\partial q} \cdot \frac{\partial q}{\partial x} \approx \frac{\partial L}{\partial q} \cdot 1
-$$
+Within each rounding interval a small change in the input leaves the reconstructed value unchanged. Its true derivative is zero there and undefined where the output jumps. A straight-through estimator (STE) supplies a surrogate gradient for training [[1]](#ref-1). Here we choose a specific backward rule for a fixed scale. Write $r=\operatorname{round}(x/S)$. Multiply the upstream gradient by 1 if $-K\leq r\leq K$ and by 0 otherwise. This tests the **rounded code**, so an input slightly above the largest reconstructed value can still pass a gradient.
 
 ### Engineering Fake Quantization with STE
 
-> **Deliberately simplified example.** This isolates one quantization operation; it omits real packed kernels, calibration/export parity, tokenizer/loss-mask handling, distributed state and the complete training loop. It is not a smoke-tested production implementation.
+> **CPU FP32 example.** The forward and backward passes below exercise one weight quantizer. The layer estimates its scale from its detached weights. The eight-value test fixes the scale to expose the boundary. It omits a training loop, packed weights, learned scales, and deployment kernels.
 
 ```python
 import torch
-import torch.nn as nn
+from torch import nn
 
-class RoundSTE(torch.autograd.Function):
+class RoundClampSTE(torch.autograd.Function):
     @staticmethod
-    def forward(ctx, x):
-        return torch.round(x)
+    def forward(ctx, x, limit):
+        rounded = torch.round(x)
+        ctx.save_for_backward(rounded.abs() <= limit)
+        return rounded.clamp(-limit, limit)
 
     @staticmethod
     def backward(ctx, grad_output):
-        # Straight-Through Estimator: pass the gradient through unchanged
-        return grad_output
+        (in_range,) = ctx.saved_tensors
+        return grad_output * in_range, None
 
 def fake_quantize(tensor, scale, bits=4):
-    q_max = (1 << (bits - 1)) - 1
-    q_min = -(1 << (bits - 1))
-
-    # Scale and round using STE
-    scaled = tensor / scale
-    rounded = RoundSTE.apply(scaled)
-
-    # Clip and Dequantize
-    clipped = torch.clamp(rounded, q_min, q_max)
-    return clipped * scale
+    limit = 2 ** (bits - 1) - 1
+    return RoundClampSTE.apply(tensor / scale, limit) * scale
 
 class QATLinear(nn.Module):
     def __init__(self, in_features, out_features, bits=4):
         super().__init__()
-        # Master weights remain in full precision
+        if not 2 <= bits <= 8:
+            raise ValueError("this example supports 2 to 8 bits")
         self.weight = nn.Parameter(torch.randn(out_features, in_features) * 0.02)
         self.bias = nn.Parameter(torch.zeros(out_features))
-        if bits < 2:
-            raise ValueError("this signed integer example requires bits >= 2")
         self.bits = bits
 
     def forward(self, x):
-        # Dynamically calculate scale for weights
-        w_max = self.weight.detach().abs().max()
-        q_max = (1 << (self.bits - 1)) - 1
-        w_scale = (w_max / q_max).clamp_min(torch.finfo(self.weight.dtype).tiny)
+        limit = 2 ** (self.bits - 1) - 1
+        scale = (self.weight.detach().abs().amax() / limit).clamp_min(torch.finfo(self.weight.dtype).tiny)
+        return nn.functional.linear(x, fake_quantize(self.weight, scale, self.bits), self.bias)
 
-        # Apply fake quantization
-        q_weight = fake_quantize(self.weight, w_scale, self.bits)
-
-        # Forward pass uses quantized weights, but the computational graph
-        # routes gradients to the full-precision self.weight via STE.
-        return nn.functional.linear(x, q_weight, self.bias)
-
-# Example Execution
-layer = QATLinear(128, 64, bits=4)
-x = torch.randn(32, 128)
-out = layer(x)
-loss = out.sum()
-loss.backward()
-
-# Gradients successfully flow to the full-precision weights!
-print(f"Master Weight Gradient Shape: {layer.weight.grad.shape}")
+# A fixed calibration scale makes rounding and clamping visible separately.
+w = torch.tensor([-2, -1.25, -0.75, 0, 0.25, 1.25, 1.6, 2.0], requires_grad=True)
+reconstructed = fake_quantize(w, scale=0.5, bits=3)
+reconstructed.sum().backward()
+torch.testing.assert_close(reconstructed, torch.tensor([-1.5, -1, -1, 0, 0, 1, 1.5, 1.5]))
+torch.testing.assert_close(w.grad, torch.tensor([0., 1., 1., 1., 1., 1., 1., 0.]))
 ```
+
+Summing the reconstructions sends an upstream gradient of 1 to every row. Equal reconstructed values can then expose different gradient masks. The same fixture runs in the interactive table below.
+
 
 ---
 
@@ -196,15 +165,15 @@ Monitor token-normalized loss and domain/retention slices, nonfinite/overflow, g
 
 ---
 
+<a id="quantization-grid-example"></a>
+
 ## 5. Interactive Component: Quantization Error Visualizer
 
-The interaction computes rounding and clipping error on eight authored scalar values. PTQ and QAT share the forward quantizer; QAT mode illustrates a clipped straight-through gradient, not a trained distribution or a model-quality benchmark.
+At **3 bits** and a reconstruction bound of **1.5**, the seven codes run from −3 to 3 and the spacing is 0.5. Start with 1.25. Its scaled value is 2.5, so the even code 2 reconstructs as 1.0. Now compare 1.6 with 2.0. Both reconstruct as 1.5. Which one can pass a gradient in QAT?
 
+Switch to QAT. The input 1.6 rounds to code 3 and passes a gradient of 1. The input 2.0 rounds to code 4, which clamps to 3 and blocks the gradient. The eight reconstructions stay the same in both modes. Two rounded codes are clamped and the weight mean squared error is 0.095. Changing the bit width or range recomputes every row. The table treats the displayed decimals as exact. A kernel using binary floating-point arithmetic may land just to one side of a nominal tie.
 
 <QuantizationErrorVisualizer client:load locale="en" />
-
-
-
 
 ---
 
@@ -215,10 +184,10 @@ The interaction computes rounding and clipping error on eight authored scalar va
 | **Complexity** | Calibration and conversion; workload-dependent | Additional training or adaptation |
 | **Data Required** | Representative calibration or data-free method, depending on algorithm | Representative adaptation data for the objective |
 | **Accuracy** | Depends on format, calibration, model and task | Can recover some low-bit degradation; not guaranteed |
-| **Memory Overhead** | Minimal | Depends on trainable state and kernel implementation |
+| **Memory Overhead** | Depends on calibration statistics, temporary tensors and method | Depends on trainable state and kernel implementation |
 | **Best Use Case** | Compression with limited adaptation budget | Adaptation when PTQ misses the quality gate |
 
-As we move to the next section, we will explore specific algorithms that have evolved from these paradigms—such as GPTQ, AWQ, and GGUF—and analyze how they handle the physical layout of quantized tensors on modern hardware.
+Section 13.2 examines where GPTQ and AWQ place rounding error, then shows how a container such as GGUF describes the stored tensors.
 
 ---
 
@@ -230,8 +199,8 @@ As we move to the next section, we will explore specific algorithms that have ev
 </details>
 
 <details>
-<summary>Quiz 2: In Quantization-Aware Training, the `round()` function is applied during the forward pass to simulate lower precision. Why is the Straight-Through Estimator (STE) mathematically necessary during the backward pass?</summary>
-*The mathematical derivative of the `round()` function is zero almost everywhere (and undefined at the midpoints). If standard backpropagation were used, gradients would multiply by zero at the quantization node, preventing any weight updates. The STE bypasses this by approximating the local gradient as 1, allowing the loss to flow back to the full-precision weights.*
+<summary>Quiz 2: What would ordinary backpropagation through the rounding operation do to a weight update?</summary>
+*On a plateau the exact derivative is zero. An STE supplies a different local derivative so optimization can move a weight across a grid boundary. Other gradient estimators are possible.*
 </details>
 
 <details>
@@ -245,8 +214,8 @@ As we move to the next section, we will explore specific algorithms that have ev
 </details>
 
 <details>
-<summary>Quiz 5: Does this example pass gradients unchanged outside clipping bounds?</summary>
-*No. RoundSTE has an identity backward, but the following clamp blocks gradients when the rounded value is outside the bounds. The scale is detached, so there is no gradient through scale estimation. Boundary behavior can differ from an STE that tests the original input against the range.*
+<summary>Quiz 5: Why can 1.6 and 2.0 reconstruct identically and receive different gradients?</summary>
+*At scale 0.5 the rounded codes are 3 and 4. Only the latter exceeds the maximum code 3, so only its gradient is blocked by the chosen surrogate. The scale stays fixed during the backward pass.*
 </details>
 
 ---
@@ -254,3 +223,6 @@ As we move to the next section, we will explore specific algorithms that have ev
 ## References
 
 1. <a id="ref-1"></a>Bengio, Y., Léonard, N., & Courville, A. (2013). *Estimating or Propagating Gradients Through Stochastic Neurons for Conditional Computation.* [arXiv:1308.3432](https://arxiv.org/abs/1308.3432).
+2. <a id="ref-2"></a>Jacob, B., et al. (2017). *Quantization and Training of Neural Networks for Efficient Integer-Arithmetic-Only Inference*. [Paper](https://arxiv.org/abs/1712.05877).
+3. <a id="ref-3"></a>PyTorch. *torch.round*. [Rounding convention](https://docs.pytorch.org/docs/2.15/generated/torch.round.html).
+4. <a id="ref-4"></a>PyTorch. *MinMaxObserver*. [Running calibration statistics](https://docs.pytorch.org/docs/2.15/generated/torch.ao.quantization.observer.MinMaxObserver.html).

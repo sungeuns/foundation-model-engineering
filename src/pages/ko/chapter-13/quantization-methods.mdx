@@ -168,9 +168,13 @@ print((weight_bytes + metadata_bytes) / 1e9)  # 4.125 decimal GB
 
 배포 파일을 바꾸기 전에 기본 체크포인트·토크나이저와 템플릿·보정 데이터 명세·변환기와 런타임 버전·해시를 보존합니다. 별도 평가 구간에서 도메인과 기본 능력 유지, 안전성, 형식·도구 정확성, 최대 메모리와 지연 시간을 비교하세요. 미리 정한 품질 또는 서비스 기준을 넘으면 배포를 거부하거나 롤백합니다. 파일이 작아졌다는 사실만으로 배포를 결정해서는 안 됩니다.
 
+<a id="weighted-rounding-example"></a>
+
 ## 7. 양자화 범위와 출력 오차 살펴보기
 
-범위와 비트 수를 바꾸며 반올림·클리핑·활성화에 따른 출력 오차를 비교하세요. 균일 양자화 계산이며 GPTQ·AWQ 벤치마크는 아닙니다.
+가중치 $-0.25$와 $4.85$ 중 어느 쪽이 출력을 더 많이 바꿀까요? 3비트, 대칭 범위 $\pm 0.50$에서 시작합니다. 정수 코드는 $-3$부터 $3$까지 일곱 개이고 격자 간격은 $0.50/3=1/6$입니다. $-0.25$를 이 간격으로 나누면 $-1.5$입니다. 두 정수의 정확한 중간에서는 PyTorch와 같이 짝수 코드 $-2$를 선택하므로 복원한 가중치는 $-2/6=-1/3$입니다. [[6]](#ref-6)
+
+이 가중치에 곱하는 입력은 $x=8$이므로 반올림에 따른 출력 변화는 $(-1/3+0.25)\times8\approx-0.667$입니다. 가중치 $4.85$는 $0.50$으로 잘리지만 입력이 $0.1$에 불과해 출력 변화는 $(0.50-4.85)\times0.1=-0.435$입니다. 다섯 행을 모두 합하면 원래 출력은 $-1.615$, 양자화 후 출력은 약 $-2.783$입니다. 이제 범위를 $4.85$까지 넓혔을 때 어떤 가중치가 0으로 반올림되는지 확인해 보세요.
 
 <QuantizationMethodVisualizer client:load lang="ko" />
 
@@ -208,3 +212,4 @@ print((weight_bytes + metadata_bytes) / 1e9)  # 4.125 decimal GB
 3. <a id="ref-3"></a>Zandieh, A., et al. (2025). *TurboQuant: Online Vector Quantization with Near-optimal Distortion Rate*. [arXiv:2504.19874](https://arxiv.org/abs/2504.19874).
 4. <a id="ref-4"></a>Micikevicius, P., Stosic, D., Burgess, N., Cornea, M., Dubey, P., ... & Wu, H. (2022). *FP8 Formats for Deep Learning.* [arXiv:2209.05433](https://arxiv.org/abs/2209.05433).
 5. <a id="ref-5"></a>ggml contributors. *GGUF specification*. [Official specification](https://github.com/ggml-org/ggml/blob/master/docs/gguf.md).
+6. <a id="ref-6"></a>PyTorch. [`torch.round`, PyTorch 2.15의 중간값 반올림 규칙](https://docs.pytorch.org/docs/2.15/generated/torch.round.html).

@@ -1,5 +1,6 @@
 import { chapterHeadingLabel } from '../../utils/chapter-heading-label.js';
 import { chapters } from '../../data/chapters.js';
+import { kvCalculatorTitle, releaseLabTitle } from '../../data/lab-titles.js';
 import modelSnapshot from '../../data/commercial-model-snapshot.json';
 import { getBasePath, withPagePath } from '../../utils/paths.js';
 
@@ -24,6 +25,12 @@ export async function GET({ params: { lang } }) {
 
     if (sub.path === '/chapter-17/commercial-model-benchmarks') {
       candidates.push(...modelSnapshot.models.map(({ model, id }) => [model, `model-${id}`]));
+    }
+    if (sub.path === '/chapter-12/kv-cache-management') {
+      candidates.push([kvCalculatorTitle[lang], 'kv-calculator']);
+    }
+    if (sub.path === '/chapter-17/experimental-design-and-uncertainty') {
+      candidates.push([releaseLabTitle[lang], 'release-lab']);
     }
 
     const sections = [];

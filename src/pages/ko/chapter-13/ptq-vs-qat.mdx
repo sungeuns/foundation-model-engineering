@@ -10,29 +10,27 @@ import QuantizationErrorVisualizer from '../../../components/chapter-13/Quantiza
 
 # 13.1 학습 후 양자화(PTQ)와 양자화 인식 학습(QAT)
 
-이전 장에서 우리는 긴 컨텍스트(Long Context) 추론 시 발생하는 동적 메모리(KV Cache) 오버헤드를 Chunked Prefill과 분리형 서빙(Disaggregated Serving) 같은 시스템 엔지니어링으로 해결하는 방법을 살펴보았습니다. 하지만 컨텍스트 윈도우를 최적화하더라도, 모델의 정적 가중치(Static Weights) 자체가 차지하는 거대한 메모리 장벽은 그대로 남아있습니다. 16비트 정밀도(BF16)를 사용하는 70B(700억 개) 파라미터 모델은 가중치를 메모리에 올리는 데만 140GB 이상의 VRAM을 요구하며, 이는 소비자용 하드웨어에서의 구동을 원천적으로 차단하고 기업의 서빙 인프라 비용을 기하급수적으로 증가시킵니다.
+700억 개의 BF16 가중치는 토큰을 하나도 처리하지 않아도 140 GB를 차지합니다. 가중치당 4비트를 쓴다면 가중치 자체는 35 GB입니다. 여기에 스케일과 양자화하지 않은 레이어, KV 캐시, 실행용 버퍼가 더해집니다. 그만큼 줄인 뒤에도 모델이 중요한 입력에 올바른 답을 내는지 확인해야 합니다.
 
-이 물리적 한계를 돌파하기 위한 핵심 기술이 바로 **양자화** (Quantization)입니다. 양자화는 고정밀 부동소수점(FP32/BF16) 값을 더 낮은 정밀도의 이산적인 정수 구간(INT8, INT4 등)으로 매핑하는 수학적 압축 과정입니다.
-
-양자화 연구 분야는 모델이 이러한 압축 과정에서 발생하는 '노이즈(오차)'를 언제, 그리고 어떻게 대면하는지에 따라 두 가지 패러다임으로 나뉩니다. 바로 **학습 후 양자화** (Post-Training Quantization, PTQ)와 **양자화 인지 학습** (Quantization-Aware Training, QAT)입니다.
+**학습 후 양자화(PTQ)** 는 이미 학습한 체크포인트를 변환합니다. **양자화 인식 학습(QAT)** 은 목표 정밀도로 계산한 결과를 순전파에서 모사하면서 가중치를 조정합니다. [가중치 여덟 개로 만든 실습](#quantization-grid-example)에서 두 방식의 순전파와 역전파를 비교할 수 있습니다.
 
 ---
 
 ## 1. 선형 양자화의 수학적 이해 (Linear Quantization)
 
-두 패러다임을 나누기에 앞서, 기저에 깔린 공통적인 수학적 원리를 이해해야 합니다. 가장 널리 사용되는 압축 방식은 **선형 양자화** (Affine Quantization)입니다. 이 방식은 스케일 팩터(Scale Factor) $S$ 와 제로 포인트(Zero-point) $Z$ 를 사용하여 고정밀 텐서 $x$ 를 양자화된 정수 텐서 $q$ 로 매핑합니다.
+아핀 양자화(affine quantization)는 양수인 스케일 $S$, 정수 제로 포인트 $Z$, 그리고 $q_{\min}$ 에서 $q_{\max}$ 까지의 정수 구간을 사용합니다. 실수 $x$ 에 해당하는 코드 $q$ 를 구한 뒤 이 구간으로 제한합니다 [[2]](#ref-2).
 
 $$
-q = \text{clip}\left(\lfloor \frac{x}{S} + Z \rceil, q_{\text{min}}, q_{\text{max}}\right)
+q = \operatorname{clip}\left(\operatorname{round}(x/S) + Z, q_{\min}, q_{\max}\right).
 $$
 
-추론 시 하드웨어는 행렬 곱셈에 이 정수 연산을 사용하며, 그 결과는 다시 부동소수점 표현으로 역양자화(Dequantization)됩니다.
+정수 커널은 곱의 합을 정수로 누적한 뒤 스케일을 적용할 수 있습니다. 가중치만 양자화하는 커널 중에는 값을 복원한 다음 곱하는 방식도 있습니다. 스칼라 하나의 복원식은 다음과 같습니다.
 
 $$
 x_{\text{approx}} = S \times (q - Z)
 $$
 
-이때 원본 $x$ 와 복원된 $x_{\text{approx}}$ 사이의 차이가 바로 **양자화 오차** (Quantization Error)입니다. PTQ와 QAT의 근본적인 차이는 이 오차를 시스템이 어떻게 다루느냐에 있습니다.
+이 절에서는 $Z=0$ 인 대칭 격자를 사용합니다. $b$ 비트에서 $K=2^{b-1}-1$ 로 두고 $-K$ 부터 $K$ 까지의 코드를 씁니다. 저장 형식에서 가장 작은 음수 코드 하나는 쓰지 않습니다. 양수 $a$ 를 복원 범위의 상한으로 정하면 간격은 $S=a/K$ 입니다. 0은 정확히 0으로 복원하고, 두 코드의 한가운데에 있는 값은 PyTorch와 같이 짝수 쪽으로 반올림합니다 [[3]](#ref-3).
 
 ---
 
@@ -46,163 +44,139 @@ PTQ는 사전 학습된 체크포인트를 낮은 정밀도 표현으로 변환�
 
 ### PyTorch를 이용한 캘리브레이션 루프 엔지니어링
 
-아래는 선형 레이어(Linear Layer)에 대해 대칭적(Symmetric) Min-Max 캘리브레이션을 수행하는 PyTorch 구현 예시입니다.
+정적 INT8에서 텐서당 스케일을 하나 쓰려면 **지금까지 본 모든 보정 배치** 의 최댓값을 기억해야 합니다. 첫 배치에서 절댓값 2.0을 봤고 마지막 배치는 0.25까지만 나왔다고 해 봅시다. 마지막 배치로 스케일을 덮어쓰면 1.0만 입력해도 0.25에서 포화됩니다. 누적 min/max 관측기는 배치가 바뀌어도 앞서 본 극값을 보존합니다 [[4]](#ref-4).
 
-> **의도적으로 단순화한 예제.** 하나의 양자화 연산을 분리하며 실제 packed kernel·보정/export 일치·토크나이저/loss mask·분산 상태·전체 학습 루프는 생략합니다. smoke test한 운영 구현이 아닙니다.
+> **CPU FP32 예제.** 가중치가 고정된 선형 레이어 하나에서 입력과 가중치의 양자화를 모사합니다. 스케일 버퍼를 체크포인트에 함께 저장합니다. 비트 패킹, 정수 커널, 채널별 스케일, 전체 모델 평가는 생략했습니다.
 
 ```python
 import torch
-import torch.nn as nn
+from torch import nn
 
 class PTQLinear(nn.Module):
     def __init__(self, in_features, out_features):
         super().__init__()
         self.weight = nn.Parameter(torch.randn(out_features, in_features))
         self.bias = nn.Parameter(torch.zeros(out_features))
-        self.weight_scale = None
-        self.act_scale = None
+        self.register_buffer("act_scale", torch.tensor(0.0))
+        self.register_buffer("weight_scale", torch.tensor(0.0))
 
+    @torch.no_grad()
     def calibrate(self, x):
-        """
-        절대 최댓값을 기반으로 스케일을 캘리브레이션합니다.
-        실제 프로덕션에서는 이동 평균(Moving Average)이나 KL 발산(KL-divergence)을
-        사용하여 이상치(Outlier)에 대한 견고성을 높입니다.
-        """
-        # 활성화 값 캘리브레이션 (INT8 범위: -128 ~ 127)
-        max_act = torch.max(torch.abs(x))
-        self.act_scale = (max_act / 127.0).detach().clamp_min(torch.finfo(x.dtype).tiny)
-
-        # 가중치 캘리브레이션
-        max_w = torch.max(torch.abs(self.weight))
-        self.weight_scale = (max_w / 127.0).detach().clamp_min(torch.finfo(self.weight.dtype).tiny)
+        # Keep extrema across batches of the same frozen checkpoint.
+        if x.ndim < 1 or x.shape[-1] != self.weight.shape[1] or x.numel() == 0:
+            raise ValueError("expected a nonempty batch with the layer's input width")
+        peaks = torch.stack((x.abs().amax(), self.weight.abs().amax()))
+        if not torch.isfinite(peaks).all():
+            raise ValueError("nonfinite calibration data or weights")
+        scales = (peaks / 127).clamp_min(torch.finfo(self.weight.dtype).tiny)
+        self.act_scale.copy_(torch.maximum(self.act_scale, scales[0]))
+        self.weight_scale.copy_(scales[1])
 
     def forward(self, x):
-        if self.weight_scale is None:
-            # 캘리브레이션 이전의 일반적인 순전파
-            return nn.functional.linear(x, self.weight, self.bias)
+        if self.act_scale.item() == 0:
+            raise RuntimeError("calibrate the layer or load its calibrated state")
+        weight_codes = (self.weight / self.weight_scale).round().clamp(-127, 127)
+        input_codes = (x / self.act_scale).round().clamp(-127, 127)
+        accumulated = nn.functional.linear(input_codes, weight_codes)
+        return accumulated * self.act_scale * self.weight_scale + self.bias
 
-        # 양자화된 추론 시뮬레이션 (실제 하드웨어에서는 INT8/INT32로 실행됨)
-        q_w = torch.clamp(torch.round(self.weight / self.weight_scale), -128, 127)
-        q_x = torch.clamp(torch.round(x / self.act_scale), -128, 127)
-
-        # INT32 누산 (Accumulation)
-        out = nn.functional.linear(q_x, q_w)
-
-        # 다음 레이어를 위해 부동소수점으로 역양자화 (Dequantize)
-        return out * (self.weight_scale * self.act_scale) + self.bias
-
-# 실행 예시
-layer = PTQLinear(128, 64)
-calibration_data = torch.randn(32, 128) # 실제 환경의 데이터를 완벽히 대변해야 함!
-
-layer.calibrate(calibration_data)
-output = layer(calibration_data)
-print(f"Quantized Output Shape: {output.shape}")
+layer = PTQLinear(1, 1).eval()
+with torch.no_grad():
+    layer.weight.fill_(1)
+    layer.calibrate(torch.tensor([[2.0]]))
+    layer.calibrate(torch.tensor([[0.25]]))
+    probes = torch.tensor([[1.0], [3.0]])
+    restored = PTQLinear(1, 1).eval()
+    restored.load_state_dict(layer.state_dict())
+    torch.testing.assert_close(restored(probes), torch.tensor([[128 / 127], [2.0]]))
 ```
+
+보존한 활성값 스케일은 $2/127$ 입니다. 복원한 레이어에 1.0을 넣으면 $128/127$, 3.0을 넣으면 2.0이 나옵니다. 가중치와 편향만 저장하면 이 동작을 재현할 수 없습니다. 포화율과 과업 품질은 보정에 쓰지 않은 입력으로 평가하세요.
+
 
 ---
 
 ## 3. Quantization-Aware Training (QAT): 능동적 접근
 
-PTQ에 보편적인 8비트 또는 4비트 품질 하한은 없습니다. 낮은 정밀도는 오차를 키울 수 있지만 실제 결과는 모델·보정 분포·그룹 크기·방법에 달려 있습니다. QAT는 추가 학습으로 적응할 수 있으나 비용과 과적합·기본 능력 회귀 가능성도 평가해야 합니다.
-
-**QAT** 는 최적화 과정을 바꿉니다. 사후에 양자화하는 대신, QAT는 학습 또는 파인튜닝 과정 중에 연산 그래프(Computational Graph) 내부에 '가짜 양자화(Fake Quantization)' 노드를 삽입합니다. 모델의 옵티마이저(Optimizer)는 순전파 시에 양자화 오차를 직접 '목격'하고, 역전파(Backward-pass) 시에 이를 보상하기 위해 마스터 가중치를 조정합니다. 즉, 모델이 저정밀도 환경에서 살아남는 법을 스스로 학습하는 능동적인 방식입니다.
-
-> **가상의 손실 지형 대신 내보낸 모델을 비교하세요.** QAT는 가중치가 양자화에 적응할 기회를 제공하지만 더 좋은 최솟값을 보장하지는 않습니다. 같은 미노출 평가 과제, 목표 정밀도, 배포 커널에서 PTQ와 QAT를 비교하고 추가 적응 비용도 포함하세요.
+QAT에서는 학습할 가중치를 부동소수점으로 보관하고 순전파에서는 양자화한 값을 모사해 손실을 구합니다. 옵티마이저가 가중치를 움직여 반올림 경계를 넘게 할 수 있습니다. 그만큼 추가 학습 데이터와 연산이 드니, 같은 평가와 서빙 커널에서 변환한 모델이 잃었던 성능을 회복했는지 확인해야 합니다.
 
 ### Straight-Through Estimator (STE)의 수학적 속임수
 
-QAT를 구현할 때 직면하는 가장 큰 수학적 장애물은 `round()` (반올림) 함수입니다.
-`round()` 와 같은 계단 함수의 미분값은 거의 모든 곳에서 0이며, 계단 부분에서는 정의되지 않습니다. 표준 역전파를 그대로 실행하면, 양자화 노드에서 기울기(Gradient)가 0이 되어 가중치 업데이트가 완전히 멈추게 됩니다.
-
-이를 해결하기 위해 QAT는 **Straight-Through Estimator (STE)** [[1]](#ref-1) 를 사용합니다. 역전파 과정에서 STE는 `round()` 연산을 단순히 무시하고, 해당 노드의 로컬 기울기를 $1$ 로 간주하여 기울기를 통과시킵니다.
-
-$$
-\frac{\partial L}{\partial x} = \frac{\partial L}{\partial q} \cdot \frac{\partial q}{\partial x} \approx \frac{\partial L}{\partial q} \cdot 1
-$$
+같은 반올림 구간 안에서는 입력을 조금 움직여도 복원 값이 그대로입니다. 실제 도함수는 그 구간에서 0이고 출력이 뛰는 경계에서는 정의되지 않습니다. STE(straight-through estimator)는 학습에 쓸 대리 기울기를 정하는 방법입니다 [[1]](#ref-1). 이 예제에서는 스케일을 고정하고 $r=\operatorname{round}(x/S)$ 를 먼저 계산합니다. $-K\leq r\leq K$ 이면 상위 기울기를 그대로 전달하고 그 밖에서는 0을 전달합니다. **반올림한 코드** 에 적용하는 규칙이므로, 최대 복원 값보다 조금 큰 입력에도 기울기가 흐를 수 있습니다.
 
 ### STE를 활용한 Fake Quantization 엔지니어링
 
-> **의도적으로 단순화한 예제.** 하나의 양자화 연산을 분리하며 실제 packed kernel·보정/export 일치·토크나이저/loss mask·분산 상태·전체 학습 루프는 생략합니다. smoke test한 운영 구현이 아닙니다.
+> **CPU FP32 예제.** 가중치 양자화 연산 하나의 순전파와 역전파를 확인합니다. 레이어의 스케일은 기울기 계산에서 분리한 가중치로 구합니다. 여덟 값을 쓰는 테스트에서는 경계 동작이 드러나게 스케일을 고정합니다. 전체 학습 루프, 비트 패킹, 스케일 학습, 서빙 커널은 생략했습니다.
 
 ```python
 import torch
-import torch.nn as nn
+from torch import nn
 
-class RoundSTE(torch.autograd.Function):
+class RoundClampSTE(torch.autograd.Function):
     @staticmethod
-    def forward(ctx, x):
-        return torch.round(x)
+    def forward(ctx, x, limit):
+        rounded = torch.round(x)
+        ctx.save_for_backward(rounded.abs() <= limit)
+        return rounded.clamp(-limit, limit)
 
     @staticmethod
     def backward(ctx, grad_output):
-        # Straight-Through Estimator: 기울기를 변경 없이 그대로 통과시킴
-        return grad_output
+        (in_range,) = ctx.saved_tensors
+        return grad_output * in_range, None
 
 def fake_quantize(tensor, scale, bits=4):
-    q_max = (1 << (bits - 1)) - 1
-    q_min = -(1 << (bits - 1))
-
-    # STE를 사용한 스케일링 및 반올림
-    scaled = tensor / scale
-    rounded = RoundSTE.apply(scaled)
-
-    # 클리핑 및 역양자화
-    clipped = torch.clamp(rounded, q_min, q_max)
-    return clipped * scale
+    limit = 2 ** (bits - 1) - 1
+    return RoundClampSTE.apply(tensor / scale, limit) * scale
 
 class QATLinear(nn.Module):
     def __init__(self, in_features, out_features, bits=4):
         super().__init__()
-        # 마스터 가중치는 전체 정밀도(FP32/BF16)로 유지됨
+        if not 2 <= bits <= 8:
+            raise ValueError("this example supports 2 to 8 bits")
         self.weight = nn.Parameter(torch.randn(out_features, in_features) * 0.02)
         self.bias = nn.Parameter(torch.zeros(out_features))
-        if bits < 2:
-            raise ValueError("this signed integer example requires bits >= 2")
         self.bits = bits
 
     def forward(self, x):
-        # 가중치에 대한 스케일을 동적으로 계산
-        w_max = self.weight.detach().abs().max()
-        q_max = (1 << (self.bits - 1)) - 1
-        w_scale = (w_max / q_max).clamp_min(torch.finfo(self.weight.dtype).tiny)
+        limit = 2 ** (self.bits - 1) - 1
+        scale = (self.weight.detach().abs().amax() / limit).clamp_min(torch.finfo(self.weight.dtype).tiny)
+        return nn.functional.linear(x, fake_quantize(self.weight, scale, self.bits), self.bias)
 
-        # 가짜 양자화(Fake Quantization) 적용
-        q_weight = fake_quantize(self.weight, w_scale, self.bits)
-
-        # 순전파는 양자화된 가중치를 사용하지만, 연산 그래프는
-        # STE를 통해 전체 정밀도인 self.weight로 기울기를 라우팅함.
-        return nn.functional.linear(x, q_weight, self.bias)
-
-# 실행 예시
-layer = QATLinear(128, 64, bits=4)
-x = torch.randn(32, 128)
-out = layer(x)
-loss = out.sum()
-loss.backward()
-
-# 기울기가 전체 정밀도 가중치로 성공적으로 흘러 들어옴!
-print(f"Master Weight Gradient Shape: {layer.weight.grad.shape}")
+# A fixed calibration scale makes rounding and clamping visible separately.
+w = torch.tensor([-2, -1.25, -0.75, 0, 0.25, 1.25, 1.6, 2.0], requires_grad=True)
+reconstructed = fake_quantize(w, scale=0.5, bits=3)
+reconstructed.sum().backward()
+torch.testing.assert_close(reconstructed, torch.tensor([-1.5, -1, -1, 0, 0, 1, 1.5, 1.5]))
+torch.testing.assert_close(w.grad, torch.tensor([0., 1., 1., 1., 1., 1., 1., 0.]))
 ```
+
+복원 값을 모두 더하면 각 입력에 도달하는 상위 기울기는 1입니다. 복원 값이 같아도 어떤 기울기를 통과시켰는지 구별할 수 있습니다. 아래 실습에서도 같은 여덟 값을 사용합니다.
+
 
 ---
 
 ## 4. 메모리와 혼합 정밀도 설계
 
-QAT 메모리는 학습 대상·master weight 정밀도·optimizer 상태·activation·fake quantization 중간값의 materialization/fusion에 달려 있습니다. 일반 학습의 두 배이거나 LoRA와 같다고 일반화할 수 없습니다. 파라미터·gradient·optimizer·activation·임시 버퍼·collective·checkpoint·평가를 분리하고 정밀도·sharding·재계산·시퀀스 길이를 명시합니다.
+학습 담당자는 먼저 어떤 가중치를 업데이트할지와 원본 가중치를 어떤 정밀도로 유지할지 정합니다. 그런 다음 파라미터, 기울기, 옵티마이저 상태, 활성값, 임시 버퍼, 분산 통신, 체크포인트와 평가에 드는 자원을 따로 계산합니다. 양자화를 모사한 중간 텐서를 메모리에 저장하는지, 연산을 한 커널로 합치는지에 따라서도 비용이 달라집니다. 비교할 때는 정밀도와 시퀀스 길이, 상태를 장치에 나누는 방식, 활성값 재계산 여부를 함께 기록하세요. QAT가 일반 학습이나 LoRA에 비해 얼마나 더 많은 메모리를 쓸지는 이 조건에 달려 있습니다.
 
-혼합 정밀도는 측정한 민감도와 커널 지원에 따라 tensor·레이어에 format을 배분합니다. 학습된 quantization scale은 격자를 조절하지만 bit-width 자체를 선택하지는 않습니다. 초기·최종 레이어는 민감도 sweep 후보이지 반드시 예외가 되는 것은 아닙니다. 정확한 packed format·hardware에서 품질과 실제 속도를 비교하며 cache 정밀도와 가중치 정밀도도 구분합니다.
+혼합 정밀도를 설계할 때는 텐서나 레이어의 정밀도를 하나씩 바꾸고 품질이 얼마나 달라지는지 측정합니다. 첫 레이어와 마지막 레이어도 이렇게 확인할 후보입니다. 스케일을 학습하면 격자 간격이 바뀌지만 비트 수는 별도로 정해야 합니다. 서빙 담당자는 실제 장비와 커널이 지원하는 저장 형식에서 품질과 실행 시간을 비교합니다. 가중치 정밀도와 KV 캐시 정밀도도 구분해서 기록합니다.
 
-base/토크나이저/템플릿·보정/학습 데이터 manifest·목적·양자화 granularity·optimizer/학습률·학습 모듈·응답 cap·reference ID 또는 미사용·export kernel을 고정합니다. native-template SFT에는 assistant mask·BOS/EOS·잘림/padding·가변 길이 집계·packing 격리가 필요합니다. 평가를 격리하고 출처·라이선스·필터 버전·sample ID·shard hash를 남깁니다.
+실험을 재현하려면 기반 체크포인트, 토크나이저와 대화 템플릿, 보정·학습 데이터 목록, 학습 목적, 양자화 단위, 옵티마이저와 학습률, 학습할 모듈, 최대 응답 길이, 배포에 쓸 커널을 고정하세요. 참조 모델을 쓰면 버전을, 쓰지 않으면 그 사실을 남깁니다. 지도 미세조정(SFT)에는 토크나이저의 대화 템플릿을 사용합니다. 어시스턴트 응답에만 손실이 적용되는지, 시작·종료 토큰(BOS/EOS), 잘림과 패딩 처리가 의도와 맞는지 확인하세요. 길이가 다른 응답의 손실을 어떤 분모로 평균 내는지, 여러 샘플을 한 시퀀스로 묶어도 서로의 토큰을 볼 수 없는지도 검사합니다. 평가 자료는 보정·학습에서 격리하고 데이터의 출처, 라이선스, 필터 버전, 샘플 식별자와 샤드별 해시를 보관합니다.
 
-토큰 정규화 손실·도메인/역량 유지 구간·nonfinite/overflow·gradient/activation norm·saturation/양자화 오차·처리량·MFU·데이터 대기·collective/straggler를 batch ID와 관측합니다. 사전 수치·품질 경계에서 중단합니다. 전체 sharded 학습 상태·scheduler/scaler·RNG·sampler/데이터 커서·아티팩트 hash를 저장하고 가중치·scale·packing 메타데이터·커널 조건을 checksum으로 원자적 export합니다. 복원·rollback을 훈련하고 export한 아티팩트의 짝지은 품질·안전·형식/도구·지연·비용·오류를 검사합니다. fake quantization 학습 품질만으로 배포 packed kernel을 검증할 수는 없습니다.
+학습 중에는 배치 식별자와 함께 토큰당 손실을 기록하고 도메인별 성능과 기반 모델의 역량 유지 여부를 추적합니다. 수치 이상은 NaN·무한대와 오버플로 발생 횟수, 기울기와 활성값의 노름, 포화율과 양자화 오차로 확인합니다. 학습이 느려지면 처리량과 연산 장치 활용률(MFU), 데이터를 기다린 시간, 집합 통신에 걸린 시간, 뒤처지는 작업자를 함께 살펴봅니다. 미리 정한 수치 안정성 또는 품질 기준을 벗어나면 학습을 중단합니다.
+
+복구 담당자는 분산 저장한 모델·옵티마이저 상태, 학습률 스케줄러와 손실 스케일러, 난수 생성기, 데이터 샘플러와 다음에 읽을 위치, 아티팩트 해시를 체크포인트에 보관합니다. 배포용 가중치, 스케일, 비트 패킹 정보, 커널 요구 사항에는 체크섬을 붙이고 전체가 준비된 뒤 한꺼번에 공개합니다. 복원과 직전 버전으로의 롤백을 실제로 연습하세요. 출시 전에는 내보낸 모델을 배포 커널로 실행해 같은 입력에 대한 품질, 안전성, 출력 형식과 도구 호출, 지연 시간, 비용, 오류율을 기존 버전과 짝지어 비교합니다. 학습 단계에서 양자화를 모사한 결과만으로는 이 검사를 대신할 수 없습니다.
+
 
 ---
 
+<a id="quantization-grid-example"></a>
+
 ## 5. 인터랙티브 시각화: 양자화 오차 시뮬레이터
 
-인터랙티브는 직접 정한 스칼라 8개의 반올림·클리핑 오차를 계산합니다. PTQ·QAT의 순전파 양자화는 같고 QAT 모드는 clipped straight-through 기울기를 설명합니다. 학습한 분포나 모델 품질 벤치마크가 아닙니다.
+**3비트** 에서 복원 범위의 상한을 **1.5** 로 두면 코드는 −3부터 3까지 일곱 개이고 간격은 0.5입니다. 1.25를 스케일로 나누면 2.5이므로 짝수 코드 2를 택하고 1.0으로 복원합니다. 이제 1.6과 2.0을 비교해 보세요. 둘 다 1.5로 복원되는데, QAT에서 기울기가 흐르는 쪽은 어느 쪽일까요?
 
+QAT를 누르면 1.6은 코드 3으로 반올림돼 기울기 1을 전달합니다. 2.0은 코드 4로 반올림된 뒤 3으로 잘리므로 기울기가 0입니다. 모드를 바꿔도 여덟 값의 순전파 결과는 그대로입니다. 이 설정에서는 반올림한 코드 두 개가 잘리고, 가중치 평균제곱오차는 0.095입니다. 비트 수나 복원 범위를 바꾸면 표의 모든 값이 다시 계산됩니다. 표에서는 입력한 소수를 정확한 값으로 취급합니다. 실제 커널에서 이진 부동소수점 근사로 중간값의 어느 한쪽에 놓이면 반올림 결과가 달라질 수 있습니다.
 
 <QuantizationErrorVisualizer client:load locale="ko" />
 
@@ -215,10 +189,10 @@ base/토크나이저/템플릿·보정/학습 데이터 manifest·목적·양자
 | **복잡도** | 보정·변환, 작업 부하에 따라 다름 | 추가 학습·적응 |
 | **필요 데이터** | 알고리즘에 따라 대표성 있는 보정셋 또는 data-free 방식 | 목적에 맞는 대표성 있는 적응 데이터 |
 | **정확도 유지력** | format·보정·모델·과업에 따라 다름 | 일부 저비트 품질을 회복할 수 있으나 보장은 아님 |
-| **메모리 오버헤드** | 거의 없음 | 학습 상태·커널 구현에 따라 다름 |
+| **메모리 오버헤드** | 보정 통계·임시 텐서·방법에 따라 다름 | 학습 상태·커널 구현에 따라 다름 |
 | **최적 사용 사례** | 제한된 적응 예산의 압축 | PTQ가 품질 기준을 통과하지 못할 때 적응 |
 
-다음 섹션에서는 이러한 이론적 패러다임에서 파생된 구체적인 알고리즘들(GPTQ, AWQ, GGUF)을 살펴보고, 최신 하드웨어 아키텍처 위에서 양자화된 텐서들이 물리적으로 어떻게 배치되고 연산되는지 깊이 파헤쳐 보겠습니다.
+13.2절에서는 GPTQ와 AWQ가 반올림 오차를 어떻게 다루는지, 그리고 저장된 텐서의 형식을 GGUF 같은 컨테이너가 어떻게 기술하는지 살펴봅니다.
 
 ---
 
@@ -230,8 +204,8 @@ base/토크나이저/템플릿·보정/학습 데이터 manifest·목적·양자
 </details>
 
 <details>
-<summary>Quiz 2: QAT(Quantization-Aware Training)의 순전파 과정에서는 저정밀도를 시뮬레이션하기 위해 `round()` (반올림) 함수가 사용됩니다. 역전파 과정에서 Straight-Through Estimator (STE)라는 수학적 기법이 반드시 필요한 이유는 무엇입니까?</summary>
-*`round()` 와 같은 계단 함수의 수학적 미분값은 거의 모든 구간에서 0이며, 반정수 지점(n + 0.5)에서는 정의조차 되지 않습니다. 만약 표준 역전파 알고리즘을 그대로 적용한다면, 연산 그래프를 타고 내려오던 기울기(Gradient)가 양자화 노드에서 0과 곱해져 소멸되어 버립니다. STE는 이 노드에서의 로컬 기울기를 강제로 1로 근사하여 통과시킴으로써, 손실(Loss)에 대한 기울기가 전체 정밀도(FP32) 마스터 가중치까지 무사히 도달해 업데이트될 수 있도록 만듭니다.*
+<summary>Quiz 2: 반올림 연산의 실제 도함수만 쓰면 가중치 업데이트는 어떻게 될까요?</summary>
+*평평한 구간에서는 도함수가 0이므로 이 경로로 가중치를 움직일 수 없습니다. STE는 대리 기울기를 써서 가중치가 격자 경계를 넘어갈 수 있게 합니다. 다른 기울기 추정 방법도 있습니다.*
 </details>
 
 <details>
@@ -245,8 +219,8 @@ base/토크나이저/템플릿·보정/학습 데이터 manifest·목적·양자
 </details>
 
 <details>
-<summary>Quiz 5: 이 예제의 STE는 클리핑 범위 밖에서도 기울기를 그대로 통과시키나요?</summary>
-*아닙니다. RoundSTE의 역전파는 항등 함수지만, 뒤따르는 clamp는 반올림된 값이 범위를 벗어나면 기울기를 0으로 만듭니다. scale을 detach했으므로 별도의 scale 경로로 기울기가 흐르지 않습니다. 원래 입력에 범위 마스크를 적용하는 구현과도 경계에서 다를 수 있습니다.*
+<summary>Quiz 5: 1.6과 2.0의 복원 값이 같은데 기울기는 왜 다를까요?</summary>
+*스케일이 0.5이면 반올림한 코드는 각각 3과 4입니다. 두 번째만 최대 코드 3을 넘어서므로 이 대리 기울기 규칙에서는 두 번째 기울기만 막힙니다. 역전파에서 스케일은 고정합니다.*
 </details>
 
 ---
@@ -254,3 +228,6 @@ base/토크나이저/템플릿·보정/학습 데이터 manifest·목적·양자
 ## References
 
 1. <a id="ref-1"></a>Bengio, Y., Léonard, N., & Courville, A. (2013). *Estimating or Propagating Gradients Through Stochastic Neurons for Conditional Computation.* [arXiv:1308.3432](https://arxiv.org/abs/1308.3432).
+2. <a id="ref-2"></a>Jacob, B., et al. (2017). *Quantization and Training of Neural Networks for Efficient Integer-Arithmetic-Only Inference*. [논문](https://arxiv.org/abs/1712.05877).
+3. <a id="ref-3"></a>PyTorch. *torch.round*. [반올림 규칙](https://docs.pytorch.org/docs/2.15/generated/torch.round.html).
+4. <a id="ref-4"></a>PyTorch. *MinMaxObserver*. [보정 통계 누적 방식](https://docs.pytorch.org/docs/2.15/generated/torch.ao.quantization.observer.MinMaxObserver.html).

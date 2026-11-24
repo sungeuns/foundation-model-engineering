@@ -11,6 +11,10 @@ const inventory = chapters.flatMap(chapter => chapter.subs);
 const modelPage = '/chapter-17/commercial-model-benchmarks';
 const snapshot = JSON.parse(readFileSync(new URL('../src/data/commercial-model-snapshot.json', import.meta.url)));
 const modelIds = new Set(snapshot.models.map(({ id }) => `model-${id}`));
+const labs = {
+  '/chapter-12/kv-cache-management': { id: 'kv-calculator', en: 'KV cache calculator', ko: 'KV 캐시 계산기' },
+  '/chapter-17/experimental-design-and-uncertainty': { id: 'release-lab', en: 'Release decision lab', ko: '배포 판단 실습' },
+};
 const traceHeading = {
   en: ['Run a Trace Audit with Stable Chunk IDs', 'run-a-trace-audit-with-stable-chunk-ids'],
   ko: ['고정된 청크 ID로 추적 기록 검사하기', '고정된-청크-id로-추적-기록-검사하기'],
@@ -45,7 +49,7 @@ function renderedTargets(html) {
       outlineLinks.push([decodeURIComponent(href.slice(1)), headingText(node).replace(/\s+/gu, ' ').trim()]);
     }
     if (id) {
-      elementsById.set(id, node.tagName);
+      elementsById.set(id, node);
       // The layout places authored MDX headings directly beneath main. Widgets
       // can also render named headings, which are outside the compiler's list.
       if (node.parentNode?.tagName === 'main' && ['h2', 'h3'].includes(node.tagName)) {
@@ -88,10 +92,12 @@ for (const lang of ['en', 'ko']) {
         assert.equal(typeof label, 'string');
         assert.ok(label.trim(), entry.path);
         assert.doesNotMatch(label, /^(quizzes|references|퀴즈|참고\s*문헌)$/iu);
-        const tag = elementsById.get(id);
-        assert.ok(tag, `missing rendered target: ${entry.path}#${id}`);
+        const target = elementsById.get(id);
+        assert.ok(target, `missing rendered target: ${entry.path}#${id}`);
+        const tag = target.tagName;
         assert.ok(id !== 'quizzes' && id !== 'references');
-        assert.ok(tag === 'h2' || tag === 'h3' || (sub.path === modelPage && modelIds.has(id)),
+        assert.ok(tag === 'h2' || tag === 'h3' || (sub.path === modelPage && modelIds.has(id))
+          || (labs[sub.path]?.id === id && tag === 'section'),
           `unexpected section target: ${entry.path}#${id}`);
         assert.ok(!labelsById.has(id), `duplicate: ${entry.path}#${id}`);
         labelsById.set(id, label);
@@ -99,6 +105,12 @@ for (const lang of ['en', 'ko']) {
       for (const [id, label] of chapterHeadings) {
         if (id === 'quizzes' || id === 'references') continue;
         assert.equal(labelsById.get(id), label, `heading label: ${entry.path}#${id}`);
+      }
+      const lab = labs[sub.path];
+      if (lab) {
+        assert.equal(labelsById.get(lab.id), lab[lang]);
+        const labelledBy = elementsById.get(lab.id).attrs.find(attr => attr.name === 'aria-labelledby').value;
+        assert.equal(headingText(elementsById.get(labelledBy)), lab[lang]);
       }
       if (sub.path === modelPage) {
         assert.equal(labelsById.get('model-glm-54'), 'GLM-5.4');

@@ -112,8 +112,8 @@
 
 ### **Chapter 13: Model Compression & Quantization**
 
-* **13.1 PTQ vs QAT:** 훈련 후 양자화(PTQ)와 양자화 인지 학습(QAT)의 차이.
-* **13.2 Quantization Methods:** GPTQ, AWQ, GGUF, 그리고 비트별(FP8/INT4) 성능 변화.
+* **13.1 PTQ vs QAT:** 훈련 후 양자화와 양자화 인지 학습을 비교하고, 3비트 격자에서 반올림 오차와 기울기를 검산.
+* **13.2 Quantization Methods:** GPTQ·AWQ와 GGUF의 역할을 구분하고, 가중치 반올림과 활성값이 출력 오차에 미치는 영향을 계산.
 * **13.3 Weight Sparsification:** 불필요한 가중치를 제거하는 Pruning 기술.
 * **13.4 Knowledge Distillation:** 거대 모델(Teacher)의 지식을 작은 모델(Student)로 전수하기.
 * **13.5 Advanced Quantization:** Sub-4-bit quantization, ternary weights, and the hardware assumptions required for real speedups.
@@ -125,7 +125,7 @@
 * **14.2 Vector Indexing & DB Solutions:** HNSW, ScaNN 등 벡터 인덱싱 알고리즘 비교 및 상용 벡터 DB 솔루션.
 * **14.3 Advanced Retrieval & Reranking:** 하이브리드 검색, Bi-encoder와 Cross-encoder를 이용한 리랭킹(BERT와의 연결), 쿼리 변환(HyDE 등).
 * **14.4 RAG Orchestration:** Self-RAG, Corrective RAG (CRAG) 등 복합 워크플로우.
-* **14.5 GraphRAG & Ontology:** 지식 그래프를 결합하여 복잡한 관계 정보 추출하기 및 실용적 활용법.
+* **14.5 GraphRAG & Ontology:** 그래프 탐색에서 동점을 받은 CEO와 거래처를 구분하고, 답을 뒷받침하는 관계와 원문을 추적.
 * **14.6 RAG Failure Modes and Operational Design:** 검색 실패, 오래된 문서, 라우팅 불확실성, 리랭커 타임아웃 같은 운영 이슈와 방어 설계.
 * **Summary:** 외부 지식을 실시간으로 참조하여 모델의 할루시네이션(환각)을 줄이는 검색 증강 생성 기술을 다룹니다.
 

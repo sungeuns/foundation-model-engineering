@@ -1,4 +1,5 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
+import { releaseLabTitle } from '../../data/lab-titles.js';
 import './paired-release-lab.css';
 
 type Scenario = 'gain' | 'uncertain' | 'regression' | 'missing';
@@ -115,7 +116,7 @@ export default function PairedReleaseLab({ lang = 'en', workerUrl }: { lang?: 'e
               : (ko ? '시나리오를 고르고 실행하세요.' : 'Choose a scenario, then run the experiment.');
 
   return <section id="release-lab" className="paired-release-lab" data-release-state={hydrated ? status : 'hydrating'} aria-labelledby={`${id}-title`}>
-    <h3 id={`${id}-title`}>{ko ? '브라우저에서 배포 판단 실습하기' : 'Run a release decision in your browser'}</h3>
+    <h3 id={`${id}-title`}>{releaseLabTitle[lang]}</h3>
     <p>{ko ? '시나리오를 고르고 실행을 누르면 jsDelivr에서 Python 실행 환경을 내려받습니다. 실습은 이 탭에서 계산되며 로그인이나 설치가 필요 없습니다.' : 'Choose a scenario and press Run to download Python from jsDelivr. The experiment runs in this tab without an account or installation.'}</p>
     <div className="paired-release-controls">
       <label htmlFor={`${id}-scenario`}>{ko ? '합성 시나리오' : 'Synthetic scenario'}

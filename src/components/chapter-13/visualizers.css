@@ -267,16 +267,26 @@
   background: #e2e8f0;
 }
 
-.quantization-visualizer .button-group button.active.ptq {
-  background: #ef4444;
+.quantization-visualizer button[aria-pressed="true"] {
+  background: #254e63;
+  border-color: #254e63;
   color: white;
-  border-color: #dc2626;
+  font-weight: 700;
 }
 
-.quantization-visualizer .button-group button.active.qat {
-  background: #10b981;
-  color: white;
-  border-color: #059669;
+.quant-error-table table {
+  width: 100%;
+  font-variant-numeric: tabular-nums;
+}
+
+.quant-error-table :is(th, td) {
+  text-align: center;
+  padding: .4rem;
+}
+
+@media (max-width: 480px) {
+  .quantization-visualizer { padding: .65rem; }
+  .quant-error-table :is(th, td) { font-size: .78rem; padding: .3rem .16rem; }
 }
 
 .quantization-visualizer .canvas-container {

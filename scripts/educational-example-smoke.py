@@ -5,6 +5,7 @@ import ast
 from pathlib import Path
 import re
 import runpy
+from tempfile import TemporaryDirectory
 from xml.etree import ElementTree
 from math import nextafter
 from unittest.mock import Mock
@@ -68,7 +69,20 @@ for locale in ['', 'ko/']:
     torch.manual_seed(10);expected=betas[t].sqrt()*torch.randn_like(x)
     assert torch.allclose(got,expected,atol=1e-6)
 
-    Graph=definitions(locale+'chapter-14/graphrag-and-ontology.mdx',1)['GraphRetriever']
+    graph_page = ROOT / locale / 'chapter-14/graphrag-and-ontology.mdx'
+    graph_block = re.findall(r'```python\n(.*?)```', graph_page.read_text(), re.S)[1]
+    graph_demo = {'__name__': '__main__'}
+    exec(compile(graph_block, str(graph_page), 'exec'), graph_demo)
+    ids, scores = graph_demo['ids'], graph_demo['scores']
+    assert scores[ids['Mina']] == scores[ids['Vendor Z']] == graph_demo['cutoff']
+    assert graph_demo['candidates'] == {'Orion', 'Northstar', 'Mina', 'Vendor Z'}
+    follow, facts, pool = graph_demo['follow'], graph_demo['facts'], graph_demo['candidates']
+    assert follow(facts, pool, 'Orion', 'ACQUIRED_BY') == [('Northstar', 'A')]
+    assert follow(facts, pool, 'Northstar', 'HAS_CEO') == [('Mina', 'B')]
+    assert graph_demo['memos']['A'] == 'Northstar acquired Orion.'
+    assert graph_demo['memos']['B'] == "Mina is Northstar's CEO."
+    assert follow(facts, pool - {'Mina'}, 'Northstar', 'HAS_CEO') == []
+    Graph=graph_demo['GraphRetriever']
     graph=Graph(3,torch.tensor([[0,1],[1,2]]))
     p=torch.tensor([[1.],[0.],[0.]])
     for steps in [1,2,20,100]:
@@ -116,10 +130,33 @@ for locale in ['', 'ko/']:
     with torch.no_grad(): ptq.weight.zero_()
     ptq.calibrate(torch.zeros(2,4))
     assert torch.isfinite(ptq(torch.zeros(2,4))).all()
+    PTQLinear = type(ptq)
+    calibrated = PTQLinear(1, 1)
+    with torch.no_grad():
+        calibrated.weight.fill_(1)
+    for peak in (2., .25):
+        calibrated.calibrate(torch.tensor([[peak]]))
+    # A fresh layer must retain the larger first batch after a save/load round trip.
+    with TemporaryDirectory() as folder:
+        path = Path(folder) / 'calibrated.pt'
+        torch.save(calibrated.state_dict(), path)
+        restored = PTQLinear(1, 1)
+        restored.load_state_dict(torch.load(path, map_location='cpu', weights_only=True))
+        torch.testing.assert_close(restored.act_scale, torch.tensor(2 / 127))
+        actual = restored(torch.tensor([[1.], [3.]]))
+        torch.testing.assert_close(actual, torch.tensor([[128 / 127], [2.]]))
     q = definitions(locale+'chapter-13/ptq-vs-qat.mdx',1)
     v=torch.tensor([-10.,0.,10.],requires_grad=True)
     q['fake_quantize'](v,torch.tensor(1.),bits=3).sum().backward()
     assert torch.equal(v.grad,torch.tensor([0.,1.,0.]))
+    fixture = torch.tensor([-2., -1.25, -.75, 0., .25, 1.25, 1.6, 2.], requires_grad=True)
+    native_input = fixture.detach().clone().requires_grad_()
+    simulated = q['fake_quantize'](fixture, .5, bits=3)
+    native = torch.fake_quantize_per_tensor_affine(native_input, .5, 0, -3, 3)
+    torch.testing.assert_close(simulated, native)
+    simulated.sum().backward()
+    native.sum().backward()
+    torch.testing.assert_close(fixture.grad, native_input.grad)
     layer=q['QATLinear'](4,3);layer(torch.ones(2,4)).sum().backward()
     assert torch.isfinite(layer.weight.grad).all()
     Patch=definitions(locale+'chapter-11/video-generation-foundations.mdx')['SpacetimePatchEmbed']

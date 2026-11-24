@@ -93,7 +93,9 @@ Validate identifier membership, duplicates, omissions, truncation, and output or
 
 Compare lexical-only, dense-only, fused, and reranked systems on the same frozen queries and corpus version. Report recall@K, nDCG@K or MRR where appropriate, paired uncertainty, language/domain slices, and downstream citation-supported answer quality. Measure index build/storage, p95 latency, token cost, and empty-result/error rates.
 
-Apply tenant/ACL filters before evidence reaches the model, preserving authorization through caches and reranking. Pin corpus lineage, deletion tombstones, embedding/tokenizer versions, index parameters, fusion policy, reranker, and prompt as an artifact bundle. Keep a known-good index route and test rollback without resurrecting deleted content. Next, GraphRAG considers when explicit relationships improve evidence traversal beyond a ranked list.
+Apply tenant/ACL filters before evidence reaches the model, preserving authorization through caches and reranking. Pin corpus lineage, deletion tombstones, embedding/tokenizer versions, index parameters, fusion policy, reranker, and prompt as an artifact bundle. Keep a known-good index route and test rollback without resurrecting deleted content.
+
+For a case where rank leaves the answer ambiguous, follow [the tied CEO and vendor in the §14.5 graph example](../graphrag-and-ontology/#graph-evidence-example). Which edge and source passage identify the CEO?
 
 ## Quizzes
 

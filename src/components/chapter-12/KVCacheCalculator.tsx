@@ -1,4 +1,5 @@
 import { useEffect, useId, useState } from 'react';
+import { kvCalculatorTitle } from '../../data/lab-titles.js';
 import { availableBytes, GiB, kvCapacity } from './kv-capacity.mjs';
 import {
   budgetRange, defaultBudget, defaultPool, defaultWorkload, nineRequestWorkload, dimensions, headCounts,
@@ -78,7 +79,7 @@ export default function KVCacheCalculator({ lang = 'en' }: { lang?: 'en' | 'ko' 
   const units = t('bytes/value','바이트/값');
   const precisionLabels: Record<number, string> = { 4: 'FP32', 2: 'FP16/BF16', 1: 'FP8', 0.5: 'INT4' };
   return <section id="kv-calculator" className="kv-calculator-container" aria-labelledby={id + '-title'}>
-    <h3 className="kv-title" id={id + '-title'}>{t('Will the requests still fit after generation?', '출력까지 생성해도 요청이 모두 들어갈까요?')}</h3>
+    <h3 className="kv-title" id={id + '-title'}>{kvCalculatorTitle[lang]}</h3>
     <p className="kv-desc">{t('Compare the payload for the prompts with the payload when every request reaches its output limit. All requests use the same lengths and the same hypothetical cache layout.', '프롬프트만 저장한 경우와 모든 요청이 출력 한도까지 자란 경우를 비교합니다. 요청마다 길이가 같고 동일한 가상의 캐시 구조를 쓴다고 가정합니다.')}</p>
     {invalidLink && <p role="status">{t('The shared settings could not be read. The calculator opened with its defaults.', '공유 링크의 설정을 읽을 수 없어 기본값으로 계산기를 열었습니다.')}</p>}
     <fieldset className="kv-controls" disabled={!ready}>

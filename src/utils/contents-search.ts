@@ -1,4 +1,4 @@
-import { findSections, readSectionIndex } from './section-search.js';
+import { findSections, normalizeSearchText, readSectionIndex, searchPhrases } from './section-search.js';
 
 export function setupContentsSearch(sidebar: HTMLElement, closeDrawer: () => void) {
   const input = sidebar.querySelector<HTMLInputElement>('#chapterSearch')!;
@@ -7,9 +7,11 @@ export function setupContentsSearch(sidebar: HTMLElement, closeDrawer: () => voi
   const list = panel.querySelector('ul')!;
   const groups = [...sidebar.querySelectorAll<HTMLElement>('.chapter-group')].map(group => ({
     group,
-    links: [...group.querySelectorAll<HTMLAnchorElement>('li a')],
+    links: [...group.querySelectorAll<HTMLAnchorElement>('li a')].map(link => ({
+      link, text: normalizeSearchText(link.dataset.search || ''),
+    })),
   }));
-  const paths = new Set(groups.flatMap(({ links }) => links.map(link => link.pathname)));
+  const paths = new Set(groups.flatMap(({ links }) => links.map(({ link }) => link.pathname)));
   const lang = document.documentElement.lang;
   const ko = lang === 'ko';
   let index: ReturnType<typeof readSectionIndex> | undefined;
@@ -72,13 +74,12 @@ export function setupContentsSearch(sidebar: HTMLElement, closeDrawer: () => voi
 
   function search() {
     const query = input.value.trim();
-    const terms = query.normalize('NFKC').toLowerCase().split(/\s+/);
+    const termSets = searchPhrases(query).map(phrase => phrase.split(' '));
     chapterCount = 0;
     for (const { group, links } of groups) {
       let visible = 0;
-      for (const link of links) {
-        const text = (link.dataset.search || '').normalize('NFKC').toLowerCase();
-        const matches = terms.every(term => text.includes(term));
+      for (const { link, text } of links) {
+        const matches = !query || termSets.some(terms => terms.every(term => text.includes(term)));
         link.parentElement!.hidden = !matches;
         if (matches) visible++;
       }

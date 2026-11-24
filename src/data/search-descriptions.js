@@ -199,12 +199,12 @@ export const searchDescriptions = {
     ko: '두 응답 모두 평균 토큰 간격은 100ms인데 하나만 370ms 동안 멈춥니다. TTFT·TPOT와 개별 토큰 간격을 비교하고 지연 목표를 지킨 요청 수를 Python으로 계산합니다.',
   },
   '/chapter-13/ptq-vs-qat': {
-    en: 'Compare post-training quantization (PTQ) and quantization-aware training (QAT), including linear quantization, calibration, and quantization error.',
-    ko: '학습 후 양자화(PTQ)와 양자화 인지 학습(QAT)을 비교하고, 선형 양자화의 원리와 보정 과정 및 양자화 오차를 이해합니다.',
+    en: 'Compare PTQ and QAT on a 3-bit grid. Round eight values by hand, check when gradients pass through, and save and reload a calibrated PyTorch layer.',
+    ko: '3비트 양자화에서 값 여덟 개를 반올림하고 어느 입력에 기울기가 전달되는지 확인합니다. PyTorch로 보정한 층을 저장하고 다시 불러와 PTQ와 QAT의 차이를 살펴봅니다.',
   },
   '/chapter-13/quantization-methods': {
-    en: 'Compare GPTQ, AWQ, rotation-based quantization, and GGUF deployment, with attention to calibration, data types, and hardware compatibility.',
-    ko: 'GPTQ, AWQ, 회전 기반 양자화와 GGUF 배포를 비교하며 보정 데이터, 자료형, 하드웨어 호환성이 선택에 미치는 영향을 살펴봅니다.',
+    en: 'Why can rounding a small weight change an output more than clipping a large one? Test a 3-bit dot product, then compare GPTQ, AWQ, and GGUF deployment.',
+    ko: '작은 가중치의 반올림이 큰 가중치를 자르는 것보다 출력을 더 크게 바꿀 수 있을까요? 3비트 내적으로 검산하고 GPTQ·AWQ·GGUF가 각각 어디에 쓰이는지 살펴봅니다.',
   },
   '/chapter-13/weight-sparsification': {
     en: 'Compare structured and unstructured pruning through SparseGPT, Wanda, 2:4 sparsity, and SliceGPT, and examine hardware execution constraints.',
@@ -235,8 +235,8 @@ export const searchDescriptions = {
     ko: '질의 라우팅, 문맥 관리, 긴 문맥 중간의 정보 누락 문제와 에이전트 검색 루프를 통해 RAG 오케스트레이션을 설계합니다.',
   },
   '/chapter-14/graphrag-and-ontology': {
-    en: 'Decide when GraphRAG is useful, then explore ontology design, entity and relationship extraction, multi-hop traversal, and global graph summaries.',
-    ko: 'GraphRAG가 필요한 조건을 판단하고 온톨로지 설계, 개체·관계 추출, 다중 홉 탐색과 그래프 전체 요약 방식을 살펴봅니다.',
+    en: 'A graph walk ranks a CEO and a vendor equally. Follow two typed edges back to source passages to check which candidate the evidence supports.',
+    ko: 'GraphRAG 예제에서 CEO와 거래처가 같은 검색 점수를 받습니다. 그래프의 관계 두 개를 따라 원문 메모를 찾아가며 누구를 CEO라고 답할 수 있는지 확인합니다.',
   },
   '/chapter-1/symbolism-vs-connectionism': {
     en: 'Spot a disagreement between two library catalogs. Test AND and XOR on all four inputs and build a two-unit PyTorch network that detects the mismatch.',

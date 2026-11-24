@@ -80,6 +80,8 @@ print(len(graph["relationships"]))  # 2
 
 <GraphVisualizer client:load lang="ko" />
 
+<a id="graph-evidence-example"></a>
+
 ### 그래프 검색 엔지니어링: 재시작이 있는 무작위 보행 (Random Walk with Restart, RWR)
 
 관계가 정해져 있다면 스키마에 맞는 탐색으로 `ACQUIRED_BY` 같은 간선을 따라갈 수 있습니다. 어떤 이웃이 유용한지 덜 분명할 때는 **재시작이 있는 무작위 보행(Random Walk with Restart, RWR)** 으로 시작 분포 주변 노드의 근접도를 매길 수 있습니다. 이는 선택 가능한 그래프 검색 방법이며, Microsoft GraphRAG의 로컬 검색 자체를 정의하는 알고리즘은 아닙니다.
@@ -90,7 +92,9 @@ $$ \mathbf{p}_{t+1}=(1-c)(\mathbf W\mathbf p_t+\mathbf p_0\mathbf d^T\mathbf p_t
 
 여기서 $\mathbf p_t$ 는 $t$ 단계 후 각 노드의 확률을 나타내는 벡터이고, $0 < c \leq 1$ 은 재시작 확률입니다. $\mathbf W$ 는 나가는 간선이 있는 열을 정규화하고 dangling 열은 0으로 둔 인접 행렬입니다. $d_j$ 는 노드 $j$ 가 dangling이면 1, 아니면 0입니다. $\mathbf d^T\mathbf p_t$ 는 그 노드들에 놓인 확률 질량이며 초기 분포 $\mathbf p_0$ 로 재분배됩니다. 아래는 이 규칙의 교육용 구현입니다.
 
-> **교육용 밀집 CPU 예제.** 나가는 간선이 없는 노드의 질량은 초기 분포로 재분배합니다. 노드 수 $V$ 에 대해 저장과 단계당 연산은 $O(V^2)$ 입니다. 실제 그래프에는 희소 연산, 장치 처리, 접근 권한, 수렴 검사와 출처가 필요합니다. 점수는 근접도이지 진실성이 아닙니다.
+Orion을 인수한 회사의 CEO는 누구일까요? 앞의 가상 메모 두 건에 세 번째 메모를 추가합니다. 여기에는 Vendor Z가 Northstar에 장비를 공급한다고 적혀 있습니다. 무작위 보행은 세 간선이 어느 노드를 잇는지만 사용합니다. 관계의 종류와 출처는 답의 근거를 찾을 때 확인합니다.
+
+> **CPU 예제.** PyTorch를 설치한 뒤 아래 블록을 실행하세요. 노드가 $V$개인 밀집 행렬의 저장 공간과 반복당 연산량은 $O(V^2)$입니다. 나가는 간선이 없는 노드의 확률 질량은 시작 분포로 돌려보내며, 20회 반복한 뒤 멈춥니다. 메모 세 건과 추출된 관계는 미리 정해 둔 입력입니다.
 
 ```python
 import torch
@@ -149,29 +153,41 @@ class GraphRetriever:
 
         return p_t
 
-# --- 실행 예시 ---
+
+def follow(facts, candidates, subject, relation):
+    return [(target, memo) for source, kind, target, memo in facts
+            if source == subject and kind == relation and target in candidates]
+
+
 if __name__ == "__main__":
-    # 5개의 노드를 가진 작은 온톨로지 그래프 시뮬레이션
-    # 예: 0: 사용자 쿼리, 1: Orion, 2: Northstar, 3: Mina, 4: Vendor Z
-    edges = torch.tensor([
-        [1, 2, 2], # 소스 노드
-        [2, 3, 4]  # 타겟 노드
-    ])
+    nodes = ["Orion", "Northstar", "Mina", "Vendor Z"]
+    ids = {name: i for i, name in enumerate(nodes)}
+    memos = {"A": "Northstar acquired Orion.",
+             "B": "Mina is Northstar's CEO.",
+             "C": "Vendor Z supplies equipment to Northstar."}
+    facts = [("Orion", "ACQUIRED_BY", "Northstar", "A"),
+             ("Northstar", "HAS_CEO", "Mina", "B"),
+             ("Northstar", "HAS_SUPPLIER", "Vendor Z", "C")]
+    edges = torch.tensor([(ids[s], ids[t]) for s, _, t, _ in facts]).T
+    retriever = GraphRetriever(len(nodes), edges, restart_prob=0.2)
+    initial = torch.zeros(len(nodes), 1)
+    initial[ids["Orion"]] = 1.0
+    scores = retriever.retrieve_subgraph(initial, num_steps=20).flatten()
 
-    retriever = GraphRetriever(num_nodes=5, edges=edges, restart_prob=0.2)
+    cutoff = torch.topk(scores, k=3).values[-1]
+    candidates = {name for name in nodes if scores[ids[name]] >= cutoff}
+    for name in sorted(candidates, key=lambda n: (-scores[ids[n]].item(), n)):
+        print(f"{name}: {scores[ids[name]]:.6f}")
 
-    # 노드 1(Orion)의 순위가 높게 나온 벡터 검색 시뮬레이션
-    initial_dist = torch.zeros(5, 1)
-    initial_dist[1, 0] = 1.0
-
-    # 다중 홉 하위 그래프 컨텍스트 검색
-    relevance_scores = retriever.retrieve_subgraph(initial_dist, num_steps=20)
-
-    # LLM 컨텍스트 윈도우에 주입할 상위 k개의 노드 선택
-    top_k = torch.topk(relevance_scores.squeeze(), k=3)
-    print(f"상위 검색된 노드 인덱스: {top_k.indices.tolist()}")
-    print(f"노드 관련성 점수: {top_k.values.tolist()}")
+    for buyer, first_memo in follow(facts, candidates, "Orion", "ACQUIRED_BY"):
+        for person, second_memo in follow(facts, candidates, buyer, "HAS_CEO"):
+            print(f"{person} | {first_memo}: {memos[first_memo]} "
+                  f"| {second_memo}: {memos[second_memo]}")
 ```
+
+실행하면 Orion은 0.406056, Northstar는 0.324845입니다. Mina와 Vendor Z는 **0.134550** 으로 공동 3위입니다. 두 노드 모두 Northstar에서 나가는 확률의 절반씩을 받고, 나가는 간선도 없습니다. `torch.topk` 에 인덱스 세 개만 요청하면 둘 중 하나만 남습니다. PyTorch는 동점일 때 어느 인덱스를 반환할지 보장하지 않습니다 [[7]](#ref-7). 이 예제는 3위 점수 이상인 후보를 모두 남기므로 네 개가 통과합니다.
+
+마지막 출력은 `Mina | A: Northstar acquired Orion. | B: Mina is Northstar's CEO.`입니다. 메모 A는 인수 기업을, 메모 B는 그 회사의 CEO를 확인해 줍니다. 메모 C가 뒷받침하는 관계는 장비 공급입니다. Vendor Z가 Mina와 같은 점수를 받았어도 CEO라는 근거는 없습니다. 후보를 반드시 세 개만 보낼 수 있다면 동점 처리 기준을 정하고 그 과정에서 답의 근거가 빠지는지 확인하세요.
 
 HippoRAG는 추출한 지식 그래프와 Personalized PageRank를 결합하고, 논문에서 평가한 다중 홉 기준선보다 개선된 결과를 보고합니다 [[3]](#ref-3). 이는 해당 데이터셋과 검색 설정에서 얻은 결과입니다. 위의 작은 RWR 예제는 그 시스템을 재현하지 않으며 비용 우위를 입증하지도 않습니다.
 
@@ -252,3 +268,4 @@ HippoRAG는 추출한 지식 그래프와 Personalized PageRank를 결합하고,
 4. <a id="ref-4"></a>Microsoft. *GraphRAG Indexing Overview.* [Official documentation](https://microsoft.github.io/graphrag/index/overview/).
 5. <a id="ref-5"></a>Microsoft. *GraphRAG Global Search.* [Official documentation](https://microsoft.github.io/graphrag/query/global_search/).
 6. <a id="ref-6"></a>Microsoft. *GraphRAG Local Search.* [Official documentation](https://microsoft.github.io/graphrag/query/local_search/).
+7. <a id="ref-7"></a>PyTorch. *torch.topk*, 버전 2.15, 동점 인덱스에 관한 설명. [API 문서](https://docs.pytorch.org/docs/2.15/generated/torch.topk.html).

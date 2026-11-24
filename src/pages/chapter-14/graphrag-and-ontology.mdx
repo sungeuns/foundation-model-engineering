@@ -80,6 +80,8 @@ The interaction contrasts retrieval paths. Vector retrieval can also find the ri
 
 <GraphVisualizer client:load lang="en" />
 
+<a id="graph-evidence-example"></a>
+
 ### Engineering Graph Retrieval: Random Walk with Restart (RWR)
 
 A schema-constrained traversal can follow a known relation such as `ACQUIRED_BY`. When the useful neighborhood is less obvious, **Random Walk with Restart (RWR)** can rank nodes by proximity to a seed distribution. This is an optional graph-retrieval mechanism, not the definition of Microsoft GraphRAG local search.
@@ -90,7 +92,9 @@ $$ \mathbf{p}_{t+1}=(1-c)(\mathbf W\mathbf p_t+\mathbf p_0\mathbf d^T\mathbf p_t
 
 Here $\mathbf p_t$ is the node-probability vector after $t$ steps, and $0 < c \leq 1$ is the restart probability. $\mathbf W$ normalizes non-dangling adjacency columns and leaves dangling columns zero. Entry $d_j$ is 1 for a dangling node and 0 otherwise. The mass $\mathbf d^T\mathbf p_t$ is redistributed to the initial distribution $\mathbf p_0$. The code below implements this completed transition.
 
-> **Educational dense CPU example.** Dangling mass returns to the initial distribution. Storage and each step cost $O(V^2)$ for $V$ nodes. Real graphs need sparse operators, device handling, permissions, convergence checks and provenance. Scores measure proximity, not truth.
+Who runs the company that acquired Orion? Add a third fictional memo to the two above. It names Vendor Z as a supplier to Northstar. The walk uses the endpoints of all three edges and leaves their relation types and source memos for the evidence check.
+
+> **CPU example.** Run the block with PyTorch installed. The dense $V$-node matrix needs $O(V^2)$ storage and work per iteration. It returns dangling mass to the starting distribution and stops after 20 steps. The three memos and their extracted relations are supplied as fixtures.
 
 ```python
 import torch
@@ -149,29 +153,41 @@ class GraphRetriever:
 
         return p_t
 
-# --- Example Execution ---
+
+def follow(facts, candidates, subject, relation):
+    return [(target, memo) for source, kind, target, memo in facts
+            if source == subject and kind == relation and target in candidates]
+
+
 if __name__ == "__main__":
-    # Simulate a small ontology graph with 5 nodes
-    # e.g., 0: User Query, 1: Orion, 2: Northstar, 3: Mina, 4: Vendor Z
-    edges = torch.tensor([
-        [1, 2, 2], # Source nodes
-        [2, 3, 4]  # Target nodes
-    ])
+    nodes = ["Orion", "Northstar", "Mina", "Vendor Z"]
+    ids = {name: i for i, name in enumerate(nodes)}
+    memos = {"A": "Northstar acquired Orion.",
+             "B": "Mina is Northstar's CEO.",
+             "C": "Vendor Z supplies equipment to Northstar."}
+    facts = [("Orion", "ACQUIRED_BY", "Northstar", "A"),
+             ("Northstar", "HAS_CEO", "Mina", "B"),
+             ("Northstar", "HAS_SUPPLIER", "Vendor Z", "C")]
+    edges = torch.tensor([(ids[s], ids[t]) for s, _, t, _ in facts]).T
+    retriever = GraphRetriever(len(nodes), edges, restart_prob=0.2)
+    initial = torch.zeros(len(nodes), 1)
+    initial[ids["Orion"]] = 1.0
+    scores = retriever.retrieve_subgraph(initial, num_steps=20).flatten()
 
-    retriever = GraphRetriever(num_nodes=5, edges=edges, restart_prob=0.2)
+    cutoff = torch.topk(scores, k=3).values[-1]
+    candidates = {name for name in nodes if scores[ids[name]] >= cutoff}
+    for name in sorted(candidates, key=lambda n: (-scores[ids[n]].item(), n)):
+        print(f"{name}: {scores[ids[name]]:.6f}")
 
-    # Simulate a vector search that highly ranks Node 1 (Orion)
-    initial_dist = torch.zeros(5, 1)
-    initial_dist[1, 0] = 1.0
-
-    # Retrieve the multi-hop subgraph context
-    relevance_scores = retriever.retrieve_subgraph(initial_dist, num_steps=20)
-
-    # Select the top-k nodes to inject into the LLM context window
-    top_k = torch.topk(relevance_scores.squeeze(), k=3)
-    print(f"Top retrieved node indices: {top_k.indices.tolist()}")
-    print(f"Node relevance scores: {top_k.values.tolist()}")
+    for buyer, first_memo in follow(facts, candidates, "Orion", "ACQUIRED_BY"):
+        for person, second_memo in follow(facts, candidates, buyer, "HAS_CEO"):
+            print(f"{person} | {first_memo}: {memos[first_memo]} "
+                  f"| {second_memo}: {memos[second_memo]}")
 ```
+
+The output gives Orion 0.406056 and Northstar 0.324845. Mina and Vendor Z tie for third at **0.134550**. Both receive half of Northstar's outgoing probability and both have no outgoing edges. Asking `torch.topk` for three indices would return just one of them, and PyTorch does not promise which tied index it will return [[7]](#ref-7). This example keeps everyone at or above the third score, so four candidates survive.
+
+Now look at the last output line: `Mina | A: Northstar acquired Orion. | B: Mina is Northstar's CEO.` Memo A identifies the buyer. Memo B supports the CEO relation. Memo C supports a supplier relation and cannot answer the question, even though Vendor Z received the same score as Mina. If three candidates are a hard limit, use a declared tie policy and check whether it drops the supporting evidence.
 
 HippoRAG combines extracted knowledge graphs with Personalized PageRank and reports improvements over its evaluated multi-hop baselines [[3]](#ref-3). Those results concern the paper's datasets and retrieval configurations. The small RWR example above does not reproduce that system or establish a cost advantage.
 
@@ -252,3 +268,4 @@ The next section, **14.6 RAG Failure Modes and Operational Design**, follows evi
 4. <a id="ref-4"></a>Microsoft. *GraphRAG Indexing Overview.* [Official documentation](https://microsoft.github.io/graphrag/index/overview/).
 5. <a id="ref-5"></a>Microsoft. *GraphRAG Global Search.* [Official documentation](https://microsoft.github.io/graphrag/query/global_search/).
 6. <a id="ref-6"></a>Microsoft. *GraphRAG Local Search.* [Official documentation](https://microsoft.github.io/graphrag/query/local_search/).
+7. <a id="ref-7"></a>PyTorch. *torch.topk*, version 2.15, note on tied indices. [API documentation](https://docs.pytorch.org/docs/2.15/generated/torch.topk.html).
