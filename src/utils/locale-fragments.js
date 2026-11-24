@@ -4,6 +4,7 @@ const lessonFragments = {
   '/chapter-3/self-attention-mathematics': ['attention-weight-example'],
   '/chapter-3/multi-head-attention': ['two-head-calculation'],
   '/chapter-5/sparse-vs-dense-models': ['moe-routing-lab'],
+  '/chapter-7/tiny-decoder-lab': ['decoder-copy-trace', 'local-decoder-setup'],
   '/chapter-10/dpo': ['reference-relative-example'],
   '/chapter-11/vision-language-bridges': ['visual-token-budget'],
   '/chapter-12/serving-policies-slos-and-fallbacks': ['streaming-latency-trace'],

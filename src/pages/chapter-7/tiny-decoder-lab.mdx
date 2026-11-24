@@ -6,23 +6,25 @@ lang: en
 
 # 7.5 Build, Break, and Resume a Tiny Decoder
 
-Attention formulas become useful engineering knowledge when you can assemble a model, make it learn, and detect an invalid improvement. This lab connects Chapters 3, 4, and 6 with one downloadable, inspectable program.
+Give the decoder four symbols, `12 13 16 14`, and ask it to repeat them. In one held-out example it starts with 7. Does it recover on the next cycle? You can inspect that run here or train the model yourself.
 
 ## Start with the Notebook
 
-[Open the English notebook in Colab](https://colab.research.google.com/github/sungeuns/foundation-model-engineering/blob/main/public/labs/tiny-decoder-lab.ipynb), or [download it for Jupyter](../../labs/tiny-decoder-lab.ipynb). Use a CPU runtime. The exercise generates its own symbolic data and needs no model download or API key. In local Jupyter, select a Python 3.12+ kernel with CPU PyTorch installed. The notebook contains the same lab source as the standalone script, whose setup is shown below.
+- **Read the result in your browser.** The [seed-7 copying trace](#decoder-copy-trace) shows what happens when the decoder has to live with its first mistake. No setup or sign-in is needed.
+- **Run it in Colab.** [Open the English notebook](https://colab.research.google.com/github/sungeuns/foundation-model-engineering/blob/main/public/labs/tiny-decoder-lab.ipynb) and select a CPU runtime. Colab requires a Google sign-in for execution, and resources and session duration vary. Checked as of 2026-11-25. [[3]](#ref-3)
+- **Run it locally.** <a href="../../labs/tiny-decoder-lab.ipynb" download="tiny-decoder-lab.ipynb">Download the English Jupyter notebook</a> and open it in a Python 3.12+ kernel with CPU PyTorch. For a fresh environment, follow the [local setup](#local-decoder-setup).
 
-Before running, predict two results: will changing future symbols alter earlier predictions, and will removing access to previous symbols hurt copying? Run the cells in order, inspect the measured results, then check whether checkpoint replay reproduces the remaining updates. The notebook explains each result without requiring you to read the whole chapter first. The details below define exactly what the experiment tests.
-
-Colab loads notebooks from GitHub and uses a hosted runtime; Google sign-in is needed to run there. Its resources and session lifetime are limited. The downloaded notebook also works in a local Jupyter environment. Launch guidance checked **as of 2026-11-18**. [[3]](#ref-3)
+In the notebook, record your predictions before choosing **Run All**. Does changing future symbols alter earlier predictions? What happens if attention can read only the current symbol? The notebook generates its own data and includes the entire training script. It needs no model download or API key.
 
 **Execution verified as of 2026-11-25:** both notebooks completed all ten code cells in separate fresh Jupyter kernels on Linux (Python 3.12.14) and a native Windows `windows-2025` GitHub Actions runner (Python 3.12.10), both with PyTorch 2.15.0+cpu. Causal invariance, exact checkpoint replay, the deliberately broken-mask and corrupted-checkpoint diagnostics, and the seven-file result ZIP checks passed. The [Windows run](https://github.com/sungeuns/foundation-model-engineering/actions/runs/45434214223) records the result. Hosted Colab execution remains unverified. [[4]](#ref-4)
+
+<a id="local-decoder-setup"></a>
 
 ## Scope and Input Contract
 
 **Deliberately simplified, smoke-tested educational implementation.** This is a one-layer synthetic copying task, not language pretraining or SFT. It omits distributed execution, mixed precision, chat templates, natural-language data, packed samples, remote checkpoint replication, and serving. It does not establish frontier-model scalability. Reference checkpoint: none. There is no teacher or judge model.
 
-To run the standalone script, download [causal_lab.py](../../labs/causal_lab.py) and open a terminal in its folder. Use an isolated environment with Python 3.12+ and CPU PyTorch. Exact trajectories are not promised across releases or hardware [[1]](#ref-1).
+Save the notebook in a new folder and open a terminal there. For the script version, save [causal_lab.py](../../labs/causal_lab.py) in that folder instead. Both use Python 3.12+ and CPU PyTorch. Exact trajectories are not promised across releases or hardware [[1]](#ref-1).
 
 On Linux, with `python3` pointing to Python 3.12 or newer:
 
@@ -30,7 +32,8 @@ On Linux, with `python3` pointing to Python 3.12 or newer:
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install torch==2.15.0 --index-url https://download.pytorch.org/whl/cpu
-python causal_lab.py --output ./runs/causal-lab --steps 160 --seed 7
+python -m pip install jupyterlab
+python -m jupyterlab tiny-decoder-lab.ipynb
 ```
 
 On Windows PowerShell, with Python 3.12 and the `py` launcher installed:
@@ -38,10 +41,11 @@ On Windows PowerShell, with Python 3.12 and the `py` launcher installed:
 ```powershell
 py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install torch==2.15.0+cpu --index-url https://download.pytorch.org/whl/cpu
-.\.venv\Scripts\python.exe causal_lab.py --output .\runs\causal-lab --steps 160 --seed 7
+.\.venv\Scripts\python.exe -m pip install jupyterlab
+.\.venv\Scripts\python.exe -m jupyterlab tiny-decoder-lab.ipynb
 ```
 
-The Windows commands call the environment's interpreter directly. Both examples write results under `runs/causal-lab`; use a new output folder for each experiment. For another platform, follow the [official PyTorch installer](https://pytorch.org/get-started/locally/).
+JupyterLab opens the notebook in your browser. Choose the Python 3 kernel from this environment. For the standalone script, skip the two JupyterLab lines and run `python causal_lab.py --output ./runs/causal-lab --steps 160 --seed 7` on Linux or `.\.venv\Scripts\python.exe causal_lab.py --output .\runs\causal-lab --steps 160 --seed 7` on Windows. Give each script run a fresh output directory. For another platform, use the [PyTorch installer](https://pytorch.org/get-started/locally/). [[5]](#ref-5)
 
 The local generator samples four distinct symbols from IDs 1–16 and repeats that motif to create a 17-token sequence. Rotations belong to the same semantic group; canonicalization happens **before** the 128/16/16 train/validation/test split. No external text, PII, secrets, or third-party dataset rights are involved. The immutable manifest records generator version, seed, grouping rule, mixture, integer-tokenizer version, and every group's symbols. Group IDs can be reconstructed from their hashes. The checkpoint binds the manifest, configuration, code hash, and PyTorch version.
 
@@ -70,6 +74,47 @@ The model has 10,161 trainable parameters. FP32 parameters, gradients, and two A
 Before running, predict the effect of the attention ablation and whether changing future input symbols can alter earlier logits. The script verifies causal invariance, saves a midpoint checkpoint, finishes, restores, and replays the remaining updates. Its checkpoint contains weights, optimizer moments, step and target-token count, torch and sampler RNG states, schedule definition and data cursor, plus configuration and manifest hashes. FP32 has no scaler. A temporary file is renamed into place, and a SHA-256 marker must match before loading. This is a local teaching recovery protocol, not distributed atomic publication or changed-world-size recovery [[2]](#ref-2).
 
 A recorded seed-7 run produced validation loss **0.0453**, test loss **0.0508**, and self-only test loss **2.7042 nats per target**. A uniform predictor over the 16 valid symbols has loss $\log16\approx2.773$. These are measurements of the supplied synthetic task, not externally reported model scores. Exact replay and causal invariance passed. Greedy continuation achieved 98.08% token accuracy and 93.75% whole-sequence accuracy (15/16 held-out sequences). Teacher forcing and free-running generation therefore answer different questions. The [recorded seed-7 packet](../../labs/verified-seed-7.json) preserves the code hash and an example; it excludes machine-specific timing. Other seeds and runtimes can differ; rerun rather than treating these numbers as thresholds.
+
+<a id="decoder-copy-trace"></a>
+
+### Four wrong tokens in one sequence
+
+With seed 7, the decoder copied 15 of the 16 test sequences perfectly. All four wrong tokens occurred in the same sequence. Its prompt was `12 13 16 14`. Read each block of four from left to right. The last block contains only the thirteenth prediction.
+
+| How the next input is chosen | Targets 1–4 | Targets 5–8 | Targets 9–12 | Target 13 |
+| --- | --- | --- | --- | --- |
+| Expected continuation | 12 13 16 14 | 12 13 16 14 | 12 13 16 14 | 12 |
+| Supply the true prefix at every step | **7** 13 16 14 | 12 13 16 14 | 12 13 16 14 | 12 |
+| Feed the model its own predictions | **7** 13 16 14 | **7** 13 16 14 | **7** 13 16 14 | **7** |
+
+The weights, prompt and target are the same in both runs. Only the prefix supplied after the first prediction changes. With true prefixes the next three copies of 12 succeed. With its own prefixes the decoder repeats 7 every fourth position. This gives 204 correct tokens out of 208, yet only 15 completely correct sequences out of 16.
+
+<details>
+<summary>Reproduce the table in the notebook</summary>
+
+Run the notebook with its original settings, then paste this code into a new cell. It restores the midpoint checkpoint created by that run, replays the remaining updates and prints both continuations for every failed free-running sequence. Error positions count from one.
+
+```python
+config = result["config"]
+model, optimizer, sampler, start = lab.load_checkpoint(
+    output / "checkpoint.pt", config, manifest
+)
+lab.advance(model, optimizer, sampler, data["train"], start, config["steps"], config["steps"])
+model.eval()
+rows = data["test"]
+expected = rows[:, 4:]
+free = lab.generate(model, rows[:, :4])[:, 4:]
+with torch.no_grad():
+    forced = model(rows[:, :-1])[:, 3:].argmax(-1)
+
+for i in (free != expected).any(dim=1).nonzero().flatten().tolist():
+    print("prompt", rows[i, :4].tolist(), "expected", expected[i].tolist())
+    for label, prediction in [("true prefix", forced), ("own prefix", free)]:
+        positions = (prediction[i] != expected[i]).nonzero().flatten() + 1
+        print(label, prediction[i].tolist(), "wrong at", positions.tolist())
+```
+
+</details>
 
 Abort on a nonfinite loss/gradient, failed invariance, corrupt checkpoint, or replay mismatch. Do not release a changed lab artifact until those checks pass and the held-out comparison is explained. Keep the previous known-good script and output directory for rollback. Changing a recipe after examining test outcomes requires a new held-out set for a new generalization claim.
 
@@ -105,3 +150,4 @@ Submit the manifest, script hash, trace, results, one failed hypothesis, and a p
 2. <a id="ref-2"></a>PyTorch. *Saving and Loading Models*. [Documentation](https://docs.pytorch.org/tutorials/beginner/saving_loading_models.html).
 3. <a id="ref-3"></a>Google. *Colaboratory FAQ*. [GitHub notebooks, runtimes, and resource limits](https://research.google.com/colaboratory/faq.html).
 4. <a id="ref-4"></a>Foundation Model Engineering. *Verify decoder notebooks on Windows*. [Successful CPU notebook run](https://github.com/sungeuns/foundation-model-engineering/actions/runs/45434214223), checked 2026-11-25.
+5. <a id="ref-5"></a>Project Jupyter. [Starting JupyterLab](https://jupyterlab.readthedocs.io/en/stable/getting_started/starting.html).

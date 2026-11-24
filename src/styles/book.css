@@ -424,7 +424,7 @@ main > details[open] > summary { margin-bottom: .75rem; }
 .page-outline { margin-block: 1rem 2rem; padding: .8rem 1rem; border: 1px solid #d9d4df; border-radius: 8px; background: #f6f3f8; font-size: .95rem; }
 .page-outline summary { cursor: pointer; font-weight: 600; }
 .page-outline ol { padding-left: 1.4rem; margin-bottom: .25rem; }
-.page-outline a { color: #633b7c; text-underline-offset: .15em; }
+.page-outline a { overflow-wrap: anywhere; color: #633b7c; text-underline-offset: .15em; }
 code { font-size: .9em; overflow-wrap: anywhere; }
 pre code { overflow-wrap: normal; }
 @media (max-width: 1100px) { .container { padding: 1.5rem 2rem; } }

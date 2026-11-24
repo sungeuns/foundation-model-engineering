@@ -4,6 +4,7 @@ title: "3.1 Self-Attention Mathematics"
 lang: "en"
 ---
 
+import { withBasePath } from '../../utils/paths.js';
 import AttentionExampleCode from '../../components/chapter-3/AttentionExampleCode.astro';
 import AttentionVisualizer from '../../components/chapter-3/AttentionVisualizer';
 
@@ -97,6 +98,8 @@ A boolean `True` allows a key in this example and in PyTorch’s functional SDPA
 ## Example: Attention Weight Matrix
 
 Follow one attention row all the way to its output. The example below uses four tokens and explicitly authored two-dimensional Q, K, and V vectors. Select a query, compare the weights with and without a causal mask, and inspect how the weighted values add up. These are exact calculations on toy inputs, not attention measured from a trained model.
+
+To work through the numbers first, open the <a href={withBasePath('/labs/attention-worksheet-en.pdf')}>printable attention worksheet (PDF, 2 pages)</a>. The first page asks you to calculate the weights for “cat” and change a future value. The second gives the worked solution.
 
 <AttentionVisualizer client:load lang="en" />
 

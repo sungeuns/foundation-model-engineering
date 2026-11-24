@@ -31,22 +31,31 @@ function headingText(node) {
 function renderedTargets(html) {
   const elementsById = new Map();
   const chapterHeadings = new Map();
-  function visit(node) {
+  const outlineLinks = [];
+  function visit(node, inOutline = false) {
     const id = node.attrs?.find(attr => attr.name === 'id')?.value;
+    if (id === 'pageOutline') {
+      assert.equal(node.tagName, 'details');
+      assert.ok(!node.attrs.some(attr => attr.name === 'hidden'));
+      inOutline = true;
+    }
+    if (inOutline && node.tagName === 'a') {
+      const href = node.attrs.find(attr => attr.name === 'href')?.value;
+      assert.ok(href?.startsWith('#'));
+      outlineLinks.push([decodeURIComponent(href.slice(1)), headingText(node).replace(/\s+/gu, ' ').trim()]);
+    }
     if (id) {
       elementsById.set(id, node.tagName);
       // The layout places authored MDX headings directly beneath main. Widgets
       // can also render named headings, which are outside the compiler's list.
       if (node.parentNode?.tagName === 'main' && ['h2', 'h3'].includes(node.tagName)) {
-        if (id !== 'quizzes' && id !== 'references') {
-          chapterHeadings.set(id, headingText(node).replace(/\s+/gu, ' ').trim());
-        }
+        chapterHeadings.set(id, headingText(node).replace(/\s+/gu, ' ').trim());
       }
     }
-    for (const child of node.childNodes || []) visit(child);
+    for (const child of node.childNodes || []) visit(child, inOutline);
   }
   visit(parse(html));
-  return { elementsById, chapterHeadings };
+  return { elementsById, chapterHeadings, outlineLinks };
 }
 
 for (const lang of ['en', 'ko']) {
@@ -70,7 +79,8 @@ for (const lang of ['en', 'ko']) {
       assert.equal(entry.title, sub.title[lang]);
       assert.ok(Array.isArray(entry.sections));
       const html = readFileSync(join(output, localized[i], 'index.html'), 'utf8');
-      const { elementsById, chapterHeadings } = renderedTargets(html);
+      const { elementsById, chapterHeadings, outlineLinks } = renderedTargets(html);
+      assert.deepEqual(outlineLinks, [...chapterHeadings], `static outline labels, order and targets: ${entry.path}`);
       const labelsById = new Map();
       for (const section of entry.sections) {
         assert.ok(Array.isArray(section) && section.length === 2, entry.path);
@@ -87,6 +97,7 @@ for (const lang of ['en', 'ko']) {
         labelsById.set(id, label);
       }
       for (const [id, label] of chapterHeadings) {
+        if (id === 'quizzes' || id === 'references') continue;
         assert.equal(labelsById.get(id), label, `heading label: ${entry.path}#${id}`);
       }
       if (sub.path === modelPage) {

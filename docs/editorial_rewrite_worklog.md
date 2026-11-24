@@ -265,7 +265,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | Number | Route | October review evidence | EN SHA-256 | KO SHA-256 |
 |---|---|---|---|---|
 | 1.1 | `/chapter-1/symbolism-vs-connectionism` | Inspected 2026-11-15 | 19edbaf2e43d8b24c55efaf3223deb73b85a88a1cd4b2fb5833658311331f991 | db6c3d195dc45b38d3c92d60d574c59f3f54cc11f8d6dfac02c1373887f1635d |
-| 1.2 | `/chapter-1/power-of-representation` | Inspected 2026-11-25 | 594cb7c0c43d5e5ed15a129a3d067bb6076a8a51c9a325fba642f5b85fcbb9d0 | 8142f89a39bbbd517c8f3e365992d9a46b4a4dbf6846f5847df297d61b4c8203 |
+| 1.2 | `/chapter-1/power-of-representation` | Inspected 2026-11-25 | 594cb7c0c43d5e5ed15a129a3d067bb6076a8a51c9a325fba642f5b85fcbb9d0 | 1d914327b1d0f84d6af190450901d013b3dee6ecc439156f61209203c220c6da |
 | 1.3 | `/chapter-1/deep-learning-paradigms` | Inspected 2026-11-15 | f373b59e6d5782c6150b3b363f1d61ba9d3a4ecab555ade160773d88a2489ff5 | 942a6ebe78204301a370fab8741dfd51ef3a63c274cfba57ca39a9ba18852aea |
 | 1.4 | `/chapter-1/bitter-lesson` | Inspected 2026-11-15 | f69188e38bc792ee461c83466da32354065ebdff52e5a7197d8a2d81743e92e3 | 6aa556b9971b28ccd3103e40dc174142ffe1fdf73673b64467fd0ef8dbd0baf1 |
 | 1.5 | `/chapter-1/learning-path-and-mastery` | Inspected 2026-11-17 | 0f8f04bb12ad70521b3c701fae89e83133b936a5d28d74a07b17d6a0f9d55c12 | 7afd35142e5986833e81c484c1c3d7fe0b717d7d728be32693fb4ec93a0ff029 |
@@ -273,7 +273,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 2.2 | `/chapter-2/vanishing-exploding-gradients` | Inspected 2026-11-15 | f883974659fb302e235151e51e0cffb5a6f9418089342fa6be149d94c207ffac | 7a4baf6b5be2bf9ff72621f15581483e6595c47296cb169d5d1c03395b882385 |
 | 2.3 | `/chapter-2/dawn-of-attention` | Inspected 2026-11-15 | e3df7fbeb285121402336d5a6a0c154e791da8c420e0e19716aa9a78ed478b16 | f8ca565f4756b8e2138133b67002a29e007ed381cbd24be6cf79b518888600c0 |
 | 2.4 | `/chapter-2/cnns-for-nlp` | Inspected 2026-11-15 | 37f7b031323ada4d1eb80b89d4ba1a7a33eb6ec127580aaed5e31500107e5ca2 | 4ffc530cb6c1a5483ef59e35462a49712c19200a70593fd408e5698050ec53c5 |
-| 3.1 | `/chapter-3/self-attention-mathematics` | Inspected 2026-11-25 | 8aa11277dc690bf9bf3f07518f910a0b7300cf856519ae4ad567d1165b935eb7 | 7165e5c0e473875ec9e4f84c297b9fc8b9a08d4a1552bceda83616c1674eeb8e |
+| 3.1 | `/chapter-3/self-attention-mathematics` | Inspected 2026-11-25 | 3d5171b29cb8add9577bf4fc5141f1062f110fcced7f7498a817634649280c14 | 20de831f65342bff5532fdb8d8c22fe1bbd0daef0f31510a0abd1042e9b6fcbe |
 | 3.2 | `/chapter-3/multi-head-attention` | Inspected 2026-11-25 | bc5026a7ec1b9aa4d5bc4589f7f6011630bc877efcb8d179954ee0560d8a705f | 4316a26ed2c414ccdb0c4f4ad6642d98286b9350748fd362920a1d183cac8b68 |
 | 3.3 | `/chapter-3/position-encoding-strategy` | Inspected 2026-11-15 | 63c3645268727e12760f56b1748a44bbac8afd1c7f66f9d49329e76e39130fb8 | 17d34127b63e936f20ca9f2440fa2aed52e5291548cf18a9dcf8b4f3fdf7463e |
 | 3.4 | `/chapter-3/layer-normalization-residuals` | Inspected 2026-11-15 | d9c2b8dbee0ba9d5c365d0395014e3e9d6fe06e7f58387401fd6ae625584825f | 7571b6552563c1bc6c771e9a1cb3acc1163645b179e7bb7e6a3dc2769e2cfe5e |
@@ -298,7 +298,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 7.2 | `/chapter-7/zero-redundancy-optimizer` | Inspected 2026-11-15 | b126180d4c8d978f8925ed51d7ace338f8cdf2e7c7ecc1309ef2301714bd4e47 | 27d8e5e67bf17cd5ddd308bffd01bac2f6ed7b1b11bcfea218dd52e9924cd43d |
 | 7.3 | `/chapter-7/model-and-pipeline-parallelism` | Inspected 2026-11-15 | 0832cffc306946b61c817850cb07cdbebf0d06aadfe607b6b7dfe75d14d010bf | b645ef818ecb8e33702468b9dcacf90a130b6c229ed8603d055736e2e62f5db4 |
 | 7.4 | `/chapter-7/flash-attention` | Inspected 2026-11-18 | f305f222c5d296652a665982d6148449b7cebebdd7073ee35ef221b39b750c4c | 4281c70f6433b16e06b9f82fcb6190a5c1d8276ee87e79285ca7ad9cb4b3fcbd |
-| 7.5 | `/chapter-7/tiny-decoder-lab` | Inspected 2026-11-25 | 1eba9359805f6519314d47874c4945234fcb35d3a2c6c10860ab1848d3e78119 | 3e928f4332bcc7efddde406964fb614add0123fb734edced4af6920f3c63f447 |
+| 7.5 | `/chapter-7/tiny-decoder-lab` | Inspected 2026-11-25 | 7c160ef525f9a15ee038febf92bfe2d7470ce1126fd565713003f049fd201fbe | 2c6db6829a15ced3552d7159932596c3dcba11ee031067240f1c6a9d921bf9e2 |
 | 8.1 | `/chapter-8/power-law` | Inspected 2026-11-18 | 4a7985e2e292146826fa76fc39706838e6e5246fcb507f4fec94dc263ef2ba8a | 5d01ec1c25346796843c2fe7b635968a64b28f6333b2925a32884fb9364b884e |
 | 8.2 | `/chapter-8/chinchilla-optimality` | Inspected 2026-11-15 | a5c303a07cd048a5700ec4cf86eeb44387cdcc43775eb4a2c5678f4aed6250d1 | 113d3edaa8047c8e5b5455f712a931429e550d22c1d260be5947dab80f4ef2a6 |
 | 8.3 | `/chapter-8/over-training-vs-optimal-training` | Inspected 2026-11-15 | 0cd59dc676f0efe54f93a85775af740fc13bd689502b3ead940bf61212f2d83c | 21d9ca8bfbe9e711f63a75a24d0760d53ffdd87d8f22954f7ac911f7c0a18248 |

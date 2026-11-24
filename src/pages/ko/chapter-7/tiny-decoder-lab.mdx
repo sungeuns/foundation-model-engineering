@@ -6,23 +6,25 @@ lang: ko
 
 # 7.5 작은 디코더를 학습하고 검증하고 재개하기
 
-어텐션 수식은 모델을 조립하고 학습시키고 잘못된 개선을 가려낼 수 있을 때 공학적 지식이 됩니다. 이 실습은 다운로드하고 내부를 읽어볼 수 있는 하나의 프로그램으로 3·4·6장을 연결합니다.
+디코더에 `12 13 16 14`를 주고 같은 순서로 반복하게 합니다. 학습에 쓰지 않은 예시 하나에서 모델은 첫 기호로 7을 내놓았습니다. 네 자리 뒤 같은 기호를 다시 맞힐 때는 스스로 오류를 바로잡을까요? 이 페이지에서 실행 기록을 읽거나 직접 모델을 학습해 볼 수 있습니다.
 
 ## 노트북으로 먼저 실행하기
 
-[Colab에서 한국어 노트북 열기](https://colab.research.google.com/github/sungeuns/foundation-model-engineering/blob/main/public/labs/tiny-decoder-lab-ko.ipynb) 또는 [Jupyter용 노트북 내려받기](../../../labs/tiny-decoder-lab-ko.ipynb)로 시작하세요. CPU 런타임을 사용합니다. 실습에 필요한 기호 데이터를 직접 생성하므로 모델 다운로드나 API 키는 필요하지 않습니다. 로컬 Jupyter에서는 CPU PyTorch를 설치한 Python 3.12 이상 커널을 선택하세요. 노트북에는 아래에서 설치 방법을 안내하는 독립 실행 스크립트와 같은 실습 소스가 들어 있습니다.
+- **브라우저에서 결과 읽기.** [시드 7의 복사 결과](#decoder-copy-trace)에서 첫 오답이 뒤의 예측에 미친 영향을 확인하세요. 설치나 로그인이 필요 없습니다.
+- **Colab에서 실행하기.** [한국어 노트북](https://colab.research.google.com/github/sungeuns/foundation-model-engineering/blob/main/public/labs/tiny-decoder-lab-ko.ipynb)을 열고 CPU 런타임을 고르세요. 실행하려면 Google 로그인이 필요하며, 사용할 수 있는 자원과 세션 유지 시간은 달라질 수 있습니다. 2026-11-25 기준입니다. [[3]](#ref-3)
+- **내 컴퓨터에서 실행하기.** <a href="../../../labs/tiny-decoder-lab-ko.ipynb" download="tiny-decoder-lab-ko.ipynb">한국어 Jupyter 노트북을 내려받아</a> CPU PyTorch가 설치된 Python 3.12 이상 커널에서 여세요. 처음 환경을 만든다면 [로컬 설치 안내](#local-decoder-setup)를 따라 하세요.
 
-실행 전에 두 가지를 예측해보세요. 미래 기호를 바꾸면 이전 위치의 예측도 달라질까요? 앞선 기호를 보지 못하게 하면 복사 성능이 떨어질까요? 셀을 순서대로 실행해 측정값을 살펴보고, 체크포인트에서 재개한 뒤 남은 갱신이 그대로 재현되는지 확인합니다. 장 전체를 먼저 읽지 않아도 노트북에서 각 결과를 설명합니다. 아래 본문은 실험의 정확한 조건과 한계를 다룹니다.
-
-Colab은 GitHub 노트북을 불러와 호스팅된 런타임에서 실행하며, 실행하려면 Google 로그인이 필요합니다. 자원과 세션 유지 시간에는 제한이 있습니다. 내려받은 노트북은 로컬 Jupyter 환경에서도 실행할 수 있습니다. 실행 경로 안내는 **2026-11-18 기준** 확인했습니다. [[3]](#ref-3)
+노트북에서 **모두 실행** 을 누르기 전에 두 가지를 예측해 보세요. 뒤쪽 기호를 바꾸면 앞쪽 위치의 예측도 달라질까요? 어텐션이 현재 기호만 볼 수 있다면 복사 성능은 어떻게 될까요? 노트북에는 학습 코드가 들어 있고 데이터도 직접 만들기 때문에 모델 다운로드나 API 키가 필요 없습니다.
 
 **2026-11-25 기준 실행 검증:** Linux(Python 3.12.14)와 GitHub Actions의 네이티브 Windows `windows-2025` 실행 환경(Python 3.12.10)에서 한영 노트북을 각각 새 Jupyter 커널로 실행해 코드 셀 10개를 모두 완료했습니다. 두 환경 모두 PyTorch 2.15.0+cpu를 사용했습니다. 인과성 불변 조건, 정확한 체크포인트 재개, 일부러 마스크를 깨뜨리거나 체크포인트를 손상시킨 진단, 파일 7개로 구성된 결과 ZIP 검사를 통과했습니다. [Windows 실행 기록](https://github.com/sungeuns/foundation-model-engineering/actions/runs/45434214223)에서 결과를 확인할 수 있습니다. 호스팅된 Colab에서의 실행은 아직 검증하지 않았습니다. [[4]](#ref-4)
+
+<a id="local-decoder-setup"></a>
 
 ## 범위와 입력 계약
 
 **의도적으로 단순화했으며 smoke test를 거친 교육용 구현입니다.** 한 층짜리 합성 복사 과제이며 언어 사전 학습이나 SFT가 아닙니다. 분산 실행, 혼합 정밀도, chat template, 자연어 데이터, sample packing, 원격 체크포인트 복제, serving을 생략합니다. 프론티어 모델로의 확장성을 입증하지 않습니다. 참조 체크포인트, 교사 모델, judge 모델은 없습니다.
 
-독립 스크립트를 실행하려면 [causal_lab.py](../../../labs/causal_lab.py)를 내려받고 그 폴더에서 터미널을 여세요. Python 3.12 이상과 CPU PyTorch가 있는 격리 환경을 사용합니다. 버전이나 하드웨어가 달라도 같은 수치 경로를 보장하지는 않습니다 [[1]](#ref-1).
+새 폴더에 노트북을 저장하고 그 폴더에서 터미널을 여세요. 스크립트로 실행할 때는 같은 폴더에 [causal_lab.py](../../../labs/causal_lab.py)를 저장합니다. 어느 쪽이든 Python 3.12 이상과 CPU PyTorch가 필요합니다. 버전이나 하드웨어가 달라도 같은 수치 경로를 보장하지는 않습니다 [[1]](#ref-1).
 
 Linux에서는 `python3`가 Python 3.12 이상을 가리키는지 확인한 뒤 실행합니다.
 
@@ -30,7 +32,8 @@ Linux에서는 `python3`가 Python 3.12 이상을 가리키는지 확인한 뒤 
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install torch==2.15.0 --index-url https://download.pytorch.org/whl/cpu
-python causal_lab.py --output ./runs/causal-lab --steps 160 --seed 7
+python -m pip install jupyterlab
+python -m jupyterlab tiny-decoder-lab-ko.ipynb
 ```
 
 Windows에서는 Python 3.12와 `py` 실행기가 설치된 상태에서 PowerShell을 사용합니다.
@@ -38,10 +41,11 @@ Windows에서는 Python 3.12와 `py` 실행기가 설치된 상태에서 PowerSh
 ```powershell
 py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install torch==2.15.0+cpu --index-url https://download.pytorch.org/whl/cpu
-.\.venv\Scripts\python.exe causal_lab.py --output .\runs\causal-lab --steps 160 --seed 7
+.\.venv\Scripts\python.exe -m pip install jupyterlab
+.\.venv\Scripts\python.exe -m jupyterlab tiny-decoder-lab-ko.ipynb
 ```
 
-Windows 명령은 가상 환경의 Python을 직접 호출합니다. 두 예시 모두 `runs/causal-lab` 아래에 결과를 저장합니다. 실험마다 새 출력 폴더를 사용하세요. 다른 플랫폼은 [PyTorch 공식 설치 안내](https://pytorch.org/get-started/locally/)를 따르세요.
+JupyterLab이 브라우저에서 노트북을 열면 방금 만든 환경의 Python 3 커널을 고르세요. 스크립트로 실행할 때는 JupyterLab 관련 마지막 두 줄을 생략합니다. Linux에서는 `python causal_lab.py --output ./runs/causal-lab --steps 160 --seed 7`을, Windows에서는 `.\.venv\Scripts\python.exe causal_lab.py --output .\runs\causal-lab --steps 160 --seed 7`을 실행하세요. 스크립트는 실험마다 새 출력 폴더를 지정합니다. 다른 플랫폼에서는 [PyTorch 공식 설치 안내](https://pytorch.org/get-started/locally/)를 따르세요. [[5]](#ref-5)
 
 로컬 생성기는 ID 1–16에서 서로 다른 기호 네 개를 골라 반복한 17토큰 시퀀스를 만듭니다. 순환 이동한 패턴은 같은 의미 집단으로 묶습니다. 이 정규화는 train/validation/test를 128/16/16개 집단으로 나누기 **전** 에 수행합니다. 외부 문서, 개인정보, 비밀정보, 제3자 데이터 권리는 사용하지 않습니다. 불변 manifest에 생성기 버전, seed, 집단 규칙, 혼합 비율, 정수 tokenizer 버전과 모든 집단의 기호를 기록합니다. 집단 ID는 해시로 재구성할 수 있습니다. 체크포인트는 manifest, 설정, 코드 해시와 PyTorch 버전을 연결합니다.
 
@@ -70,6 +74,47 @@ Warmup과 cosine 계수를 곱하므로 실제 학습률은 정확히 0.003에 �
 실행 전에 attention 제한의 효과와 미래 기호를 바꿀 때 이전 logit이 변할지 예측하세요. 프로그램은 인과성 불변 조건을 검사하고 중간 체크포인트를 저장한 뒤 학습을 마칩니다. 이어서 복원해 후반부를 다시 실행합니다. 체크포인트에는 가중치, optimizer moment, step·감독 토큰 수, torch·sampler RNG, 스케줄 정의, 데이터 커서, 설정·manifest 해시가 있습니다. FP32이므로 scaler는 없습니다. 임시 파일을 rename하고 SHA-256 marker가 일치해야 로드합니다. 로컬 복구 교육 절차이지 분산 atomic publication이나 world size 변경 복구는 아닙니다 [[2]](#ref-2).
 
 Seed 7의 기록된 실행에서 검증 손실은 **0.0453**, test 손실은 **0.0508**, 자기 위치만 보는 모델의 test 손실은 **2.7042 nats/target**이었습니다. 유효 기호 16개에 균등 확률을 주는 기준선은 $\log16\approx2.773$입니다. 제공한 합성 과제의 측정값이며 외부 모델 성능 점수가 아닙니다. 정확한 재개와 인과성 검사는 통과했습니다. Greedy 생성의 토큰 정답률은 98.08%, 전체 시퀀스 정답률은 93.75%(보류 시퀀스 16개 중 15개)였습니다. 정답 문맥을 주는 teacher forcing과 자유 생성은 다른 질문에 답합니다. [Seed 7 기록](../../../labs/verified-seed-7.json)에 코드 해시와 예시를 보존했으며 장비별 실행 시간은 제외했습니다. Seed와 실행 환경에 따라 달라질 수 있으므로 이 숫자를 통과 임계값으로 쓰지 말고 직접 재실행하세요.
+
+<a id="decoder-copy-trace"></a>
+
+### 네 오답이 한 시퀀스에 몰린 이유
+
+시드 7로 학습한 디코더는 테스트 시퀀스 16개 중 15개를 끝까지 맞혔습니다. 틀린 토큰 네 개는 모두 `12 13 16 14`로 시작하는 한 시퀀스에서 나왔습니다. 표를 왼쪽에서 오른쪽으로 네 기호씩 읽어 보세요. 마지막 칸은 열세 번째 예측입니다.
+
+| 다음 입력을 만드는 방법 | 1–4번째 | 5–8번째 | 9–12번째 | 13번째 |
+| --- | --- | --- | --- | --- |
+| 이어져야 할 정답 | 12 13 16 14 | 12 13 16 14 | 12 13 16 14 | 12 |
+| 매번 정답 접두부를 입력 | **7** 13 16 14 | 12 13 16 14 | 12 13 16 14 | 12 |
+| 모델이 방금 낸 예측을 다시 입력 | **7** 13 16 14 | **7** 13 16 14 | **7** 13 16 14 | **7** |
+
+두 번 모두 모델 가중치와 처음 네 기호, 정답은 같습니다. 첫 예측 이후에 입력으로 주는 접두부만 바꿨습니다. 정답 접두부를 주면 뒤에서 12가 나올 세 자리는 모두 맞힙니다. 자신이 생성한 기호를 이어 붙이면 네 자리마다 7이 다시 나옵니다. 이 때문에 정답 토큰은 208개 중 204개여도 끝까지 맞힌 시퀀스는 16개 중 15개입니다.
+
+<details>
+<summary>노트북에서 표 재현하기</summary>
+
+기본 설정으로 노트북을 끝까지 실행하고 새 셀에 아래 코드를 붙여 넣으세요. 방금 저장한 중간 체크포인트에서 학습을 마저 진행한 뒤, 자유 생성에서 틀린 시퀀스마다 두 방식으로 생성한 기호와 오답 위치를 출력합니다. 위치는 1부터 셉니다.
+
+```python
+config = result["config"]
+model, optimizer, sampler, start = lab.load_checkpoint(
+    output / "checkpoint.pt", config, manifest
+)
+lab.advance(model, optimizer, sampler, data["train"], start, config["steps"], config["steps"])
+model.eval()
+rows = data["test"]
+expected = rows[:, 4:]
+free = lab.generate(model, rows[:, :4])[:, 4:]
+with torch.no_grad():
+    forced = model(rows[:, :-1])[:, 3:].argmax(-1)
+
+for i in (free != expected).any(dim=1).nonzero().flatten().tolist():
+    print("prompt", rows[i, :4].tolist(), "expected", expected[i].tolist())
+    for label, prediction in [("true prefix", forced), ("own prefix", free)]:
+        positions = (prediction[i] != expected[i]).nonzero().flatten() + 1
+        print(label, prediction[i].tolist(), "wrong at", positions.tolist())
+```
+
+</details>
 
 손실·기울기가 비유한값이 되거나 불변 조건, 체크포인트 무결성, 재개 일치 검사가 실패하면 중단합니다. 검사를 통과하고 보류 비교를 설명하기 전에는 변경한 실습 산출물을 배포하지 않습니다. 이전 정상 스크립트와 출력 폴더를 보존해 되돌릴 수 있게 하세요. Test 결과를 본 뒤 레시피를 바꾸었다면 새 일반화 주장에는 새로운 보류셋이 필요합니다.
 
@@ -105,3 +150,4 @@ Manifest, 코드 해시, trace, 결과, 틀린 가설 하나, 자연어 일반�
 2. <a id="ref-2"></a>PyTorch. *Saving and Loading Models*. [Documentation](https://docs.pytorch.org/tutorials/beginner/saving_loading_models.html).
 3. <a id="ref-3"></a>Google. *Colaboratory FAQ*. [GitHub notebooks, runtimes, and resource limits](https://research.google.com/colaboratory/faq.html).
 4. <a id="ref-4"></a>Foundation Model Engineering. *Verify decoder notebooks on Windows*. [CPU 노트북 실행 성공 기록](https://github.com/sungeuns/foundation-model-engineering/actions/runs/45434214223), 2026-11-25 확인.
+5. <a id="ref-5"></a>Project Jupyter. [Starting JupyterLab](https://jupyterlab.readthedocs.io/en/stable/getting_started/starting.html).

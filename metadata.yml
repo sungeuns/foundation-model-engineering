@@ -1,0 +1,58 @@
+# OERSI records for the two published editions of the same teaching lab.
+- "@context": https://schema.org/
+  type: LearningResource
+  creativeWorkStatus: Published
+  id: https://sungeuns.github.io/foundation-model-engineering/chapter-7/tiny-decoder-lab/
+  name: Build, Break, and Resume a Tiny Decoder
+  description: >-
+    Train a one-layer decoder on a synthetic copying task in CPU PyTorch.
+    Change future input tokens to test the causal mask, remove access to
+    previous tokens to measure the loss of context, and resume a checkpoint
+    to compare the remaining updates with an uninterrupted run.
+    The guide includes a Jupyter notebook and a standalone Python script.
+  inLanguage: [en]
+  creator:
+    - type: Person
+      givenName: Seongeun
+      familyName: So
+  license: https://opensource.org/license/mit
+  educationalLevel:
+    - https://w3id.org/kim/educationalLevel/level_A
+  learningResourceType:
+    - https://w3id.org/kim/hcrt/experiment
+  about:
+    - https://w3id.org/kim/hochschulfaechersystematik/n079
+  keywords: [PyTorch, causal attention, checkpoint replay]
+  isPartOf:
+    - type: LearningResource
+      id: https://sungeuns.github.io/foundation-model-engineering/
+      name: Foundation Model Engineering
+
+- "@context": https://schema.org/
+  type: LearningResource
+  creativeWorkStatus: Published
+  id: https://sungeuns.github.io/foundation-model-engineering/ko/chapter-7/tiny-decoder-lab/
+  name: 작은 디코더를 학습하고 검증하고 재개하기
+  description: >-
+    CPU용 PyTorch로 한 층짜리 디코더를 학습시켜 기호 복사 과제를 풀어 봅니다.
+    미래 토큰을 바꿔 인과 마스크를 검사하고, 앞선 토큰을 가려 문맥을 잃었을 때
+    복사 성능이 얼마나 달라지는지 측정합니다. 체크포인트에서 재개한 후에는
+    남은 학습 단계가 중단 없이 실행했을 때와 일치하는지 확인합니다.
+    한국어 Jupyter 노트북과 단독 실행용 Python 스크립트가 함께 제공됩니다.
+  inLanguage: [ko]
+  creator:
+    - type: Person
+      givenName: Seongeun
+      familyName: So
+  license: https://opensource.org/license/mit
+  educationalLevel:
+    - https://w3id.org/kim/educationalLevel/level_A
+  learningResourceType:
+    - https://w3id.org/kim/hcrt/experiment
+  about:
+    - https://w3id.org/kim/hochschulfaechersystematik/n079
+  keywords: [PyTorch, 인과 어텐션, 체크포인트 재개]
+  isPartOf:
+    - type: LearningResource
+      id: https://sungeuns.github.io/foundation-model-engineering/ko/
+      name: Foundation Model Engineering

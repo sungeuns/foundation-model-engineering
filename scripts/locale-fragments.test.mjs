@@ -37,6 +37,8 @@ test('shared exercise IDs belong to the same authored content in both translatio
   }
   for (const [route, id] of [
     ['/chapter-3/self-attention-mathematics', 'attention-weight-example'],
+    ['/chapter-7/tiny-decoder-lab', 'decoder-copy-trace'],
+    ['/chapter-7/tiny-decoder-lab', 'local-decoder-setup'],
     ['/chapter-10/dpo', 'reference-relative-example'],
     ['/chapter-12/serving-policies-slos-and-fallbacks', 'streaming-latency-trace'],
     ['/chapter-14/rag-failure-modes-and-operational-design', 'trace-a-rag-answer'],

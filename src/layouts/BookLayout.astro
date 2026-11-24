@@ -1,4 +1,6 @@
 ---
+import type { MarkdownHeading } from 'astro';
+import { chapterHeadingLabel } from '../utils/chapter-heading-label.js';
 import { chapters } from '../data/chapters.js';
 import { site } from '../data/site.js';
 import { searchDescriptions } from '../data/search-descriptions.js';
@@ -44,6 +46,24 @@ const currentSub = chapters
   .flatMap((chapter) => chapter.subs)
   .find((sub) => currentPath === normalizePathname(getLocalePath(sub.path, lang)));
 const localeFragments = sharedLocaleFragments(currentSub?.path, modelSnapshot.models.map(model => model.id));
+type Section = { label: string; href: string };
+const outline: (Section & { children: Section[] })[] = [];
+let currentSection: Section[] | undefined;
+for (const heading of (Astro.props.headings ?? []) as MarkdownHeading[]) {
+  if (heading.depth !== 2 && heading.depth !== 3) continue;
+  const section = {
+    label: chapterHeadingLabel(currentSub?.path, heading),
+    href: `#${encodeURIComponent(heading.slug)}`,
+  };
+  if (heading.depth === 3 && currentSection) {
+    currentSection.push(section);
+  } else {
+    const children: Section[] = [];
+    outline.push({ ...section, children });
+    if (heading.depth === 2) currentSection = children;
+  }
+}
+
 const contentTitle = currentSub?.title?.[lang] || title;
 const pageTitle = isHomePage ? siteTitle : `${contentTitle} | ${siteTitle}`;
 const toHref = (pagePath) => withPagePath(pagePath, basePath);
@@ -257,10 +277,23 @@ if (currentIndex !== -1) {
             {isKo ? '원고 수정일' : 'Manuscript updated'} <time datetime={manuscriptTimestamp}>{manuscriptDate}</time> (UTC)
           </p>
         )}
-        {!isHomePage && (
-          <details class="page-outline" id="pageOutline" hidden>
+        {outline.length > 0 && (
+          <details class="page-outline" id="pageOutline">
             <summary>{isKo ? '이 페이지의 내용' : 'On this page'}</summary>
-            <nav aria-label={isKo ? '페이지 내 목차' : 'On this page'}><ol id="pageOutlineList"></ol></nav>
+            <nav aria-label={isKo ? '페이지 내 목차' : 'On this page'}>
+              <ol id="pageOutlineList">
+                {outline.map(section => (
+                  <li>
+                    <a href={section.href}>{section.label}</a>
+                    {section.children.length > 0 && (
+                      <ol>
+                        {section.children.map(child => <li><a href={child.href}>{child.label}</a></li>)}
+                      </ol>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            </nav>
           </details>
         )}
         <main id="main-content" tabindex="-1">
@@ -355,18 +388,6 @@ if (currentIndex !== -1) {
       });
 
       if (sidebar) setupContentsSearch(sidebar, () => setMenu(false));
-
-      const outline = document.getElementById('pageOutline');
-      const outlineList = document.getElementById('pageOutlineList');
-      document.querySelectorAll<HTMLElement>('main h2[id]').forEach(heading => {
-        const item = document.createElement('li');
-        const link = document.createElement('a');
-        link.href = `#${encodeURIComponent(heading.id)}`;
-        link.textContent = heading.textContent;
-        item.append(link);
-        outlineList?.append(item);
-      });
-      if (outline && outlineList?.children.length) outline.hidden = false;
 
       // Share a specific explanation with a normal fragment link. Only use
       // manuscript headings; component-generated IDs need not survive a reload.
