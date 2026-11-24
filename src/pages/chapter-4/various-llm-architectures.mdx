@@ -281,6 +281,8 @@ GPT-6.1 Terra and Claude Fable/Mythos 5.2 add hosted operating points, but their
 
 Engineering inference: active parameters estimate neither resident weight memory nor lookup traffic. Benchmark recurrent-state compression, sparse retrieval and lexical lookup separately; do not attribute a system-level gain to one component without ablations. This connects Chapters 5, 12 and 13: compute, stored capacity and recoverable context are different budgets.
 
+<a id="glm-54-layer-reuse"></a>
+
 ## GLM-5.4: Reusing Layers Separates Depth from Capacity
 
 **As of 2026-11-24.** Z.ai's November 23 announcement describes a **750B-scale** Loop Transformer adapted from a pretrained GLM-5 base, with **28 shared layers executed twice** [[37]](#ref-37). Exact total/active parameter counts, the complete training mixture and a future weight license remain undisclosed.
@@ -301,11 +303,22 @@ The announcement identifies three supporting mechanisms [[37]](#ref-37):
 | Shared global KV plus a local window | The second pass reuses first-pass sparse KV and retains its own sliding-window KV |
 | Sparse index reuse | The second pass reuses first-pass retrieval indices |
 
-Engineering implication: measure weight storage, persistent cache, temporary buffers and execution time separately. Index reuse saves selection work while the selected values still need attention computation. A cache or recovery implementation must distinguish shared state from iteration-specific state; matching the text prefix alone is insufficient evidence of equivalent continuation.
-
 The reported controlled ablation uses a **30B model**, with about **10% more training compute**, after **200K-context SFT** with thinking enabled. It is not a flagship benchmark result. Adaptive iteration counts remain future work [[37]](#ref-37). For a private evaluation, hold tool access, effort, context and stopping rules fixed; measure task success, total generated tokens, tail latency and budget exhaustion. Fewer output tokens need not mean less internal computation.
 
 **Access boundary:** Coding Plan, ZCode and Z.ai Chat are live; the standard pay-as-you-go API and weights remain planned [[37]](#ref-37). Coding Plan integration documents **1M context**, image input and low/high/max effort; disabling thinking maps to low [[38]](#ref-38). This is a hosted serving contract, not a downloadable configuration. [Section 17.6](/chapter-17/commercial-model-benchmarks) tracks release and evaluation evidence separately.
+
+<a id="glm-54-cache-positions"></a>
+
+### Why can one token position contribute two cache entries?
+
+Z.ai’s architecture guide says the second pass can attend to a first-pass representation and its updated local representation at the same position (as of 2026-11-25) [[43]](#ref-43). Suppose the first-pass index picks positions **1, 5 and 7**, and the second pass reads a local window covering **6 and 7**. These positions are an example chosen for the calculation.
+
+| Source of keys and values | Positions read by this query |
+| --- | --- |
+| Reused first-pass entries | 1, 5, 7 |
+| Local second-pass entries | 6, 7 |
+
+The query sees **five entries at four positions**. If a cache keeps only the latest entry for position 7, the second pass loses access to the earlier representation. This count describes one query’s reads. To budget resident memory you would also need the sizes and lifetimes of the underlying buffers. Compare it with the [dense SmolLM2 cache measurement](/chapter-12/kv-cache-management/#kv-batch-padding), where every layer stores one key and one value for each allocated batch position.
 
 ## GPT-6.2: Documented Interfaces and Undisclosed Internals
 
@@ -413,3 +426,5 @@ For an agent comparison, record whether a result used a single model call or orc
 41. <a id="ref-41"></a>OpenAI. *API changelog, November 17, 2026: GPT-6.2*. Verified 2026-11-24. [Source](https://developers.openai.com/api/docs/changelog).
 
 42. <a id="ref-42"></a>[OpenAI, GPT-6.2 Astra and Sol launch and availability](https://openai.com/index/introducing-gpt-6-2-astra-sol/).
+
+43. <a id="ref-43"></a>[Z.ai, GLM-5.4 architecture guide, hybrid KV cache and shared attention indexing](https://docs.z.ai/guides/llm/glm-5.4). Checked 2026-11-25.

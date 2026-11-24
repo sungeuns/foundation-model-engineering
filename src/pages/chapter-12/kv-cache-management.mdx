@@ -231,15 +231,19 @@ The example was tested with PyTorch 2.15.0 on CPU. **API verification as of 2026
 
 ### Measure the KV cache of a real checkpoint
 
-SmolLM2-135M stores 46,080 bytes of keys and values per position per request in this CPU FP32 experiment. Put a three-token prompt and an eleven-token prompt in one dense batch. Both get eleven slots, so the first forward pass stores 1,013,760 bytes. Of those, 368,640 bytes belong to the shorter prompt’s eight padding positions.
+Start with the pinned SmolLM2-135M `config.json`. It gives 30 attention layers (`num_hidden_layers`), nine query heads (`num_attention_heads`) and three KV heads (`num_key_value_heads`). This model splits its hidden width of 576 evenly across the nine query heads, so one head has 64 coordinates. The notebook runs the model in FP32. Each stored position in one request takes $2 \times 30 \times 3 \times 64 \times 4 = 46{,}080$ bytes, or 45 KiB [[9]](#ref-9).
 
-[Run the English notebook in Colab](https://colab.research.google.com/github/sungeuns/foundation-model-engineering/blob/main/public/labs/kv-cache-payload-en.ipynb) or <a href={withBasePath('/labs/kv-cache-payload-en.ipynb')} download="kv-cache-payload-en.ipynb">download it for Jupyter</a>. Use a CPU runtime with PyTorch installed. The setup cell installs Transformers. The first run downloads the public checkpoint (about 270 MB). Add four tokens to each request and predict the new byte count before running the next cell. It also compares the next-token logits to a full recomputation after each step. This measures the K/V tensor contents. The process also holds model weights, temporary buffers and other memory.
+To adapt the calculation, check your model's per-layer KV shape and the cache dtype at runtime. Use its explicit `head_dim` when given. Divide hidden width by the query-head count only when the attention implementation makes that split. For a sliding-window layer, count the positions it retains. [GLM-5.4's second pass](/chapter-4/various-llm-architectures/#glm-54-cache-positions) shares earlier global keys and values and keeps its own local window. For MLA, count the stored latent and positional components.
+
+[Load the measured two-request batch in the calculator](?kv=1&batch=2&sequence=11&generated=4&layers=30&heads=3&dimension=64&precision=4&budget=24#kv-calculator). One prompt has three tokens, the other eleven. Left padding gives each key tensor the shape `[2, 3, 11, 64]`: two requests, three KV heads, eleven slots and 64 coordinates. The value tensor has the same shape. Across all 30 layers the first pass stores $2 \times 11 \times 45 = 990$ KiB. When each request has fed four more tokens into its cache, the rows are fifteen slots wide and use 1,350 KiB (about 1.318 MiB). The calculator's 24 GiB budget is illustrative. The CPU experiment measures these tensor sizes directly.
+
+[Run the English notebook in Colab](https://colab.research.google.com/github/sungeuns/foundation-model-engineering/blob/main/public/labs/kv-cache-payload-en.ipynb) or <a href={withBasePath('/labs/kv-cache-payload-en.ipynb')} download="kv-cache-payload-en.ipynb">download it for Jupyter</a>. Use a CPU runtime with PyTorch installed. The setup cell installs Transformers. The first run downloads the public checkpoint (about 270 MB). After each step, the notebook counts the bytes in every K and V tensor and compares the next-token logits with a full recomputation.
 
 <a id="kv-batch-padding"></a>
 
 ### Does the padding cost grow as two requests decode?
 
-On 2026-11-25 we paired “Water boils at” (3 tokens) with an 11-token prompt, and with another 3-token prompt as a control. For each pair, a single process advanced one left-padded batch and two independent, unpadded requests one step at a time. SmolLM2-135M has 30 layers, three KV heads per layer and 64 values per head [[9]](#ref-9). Summed across layers, the FP32 keys and values take 45 KiB per stored position.
+Try entering seven prompt slots per request, the mean of three and eleven. The calculator gives 630 KiB at prefill. Where would you actually see that number? On 2026-11-25 we paired “Water boils at” (3 tokens) with an 11-token prompt, and with another 3-token prompt as a control. For each pair, a single CPU process advanced one left-padded batch and two independent, unpadded requests one step at a time.
 
 | Prompt lengths (tokens) | When measured | Dense batch (KiB) | Two separate caches combined (KiB) | Difference (KiB) |
 | --- | --- | ---: | ---: | ---: |

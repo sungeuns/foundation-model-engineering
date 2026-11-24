@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { availableBytes, GiB, kvCapacity } from '../src/components/chapter-12/kv-capacity.mjs';
-import { canonicalKvSearch, defaultBudget, defaultPool, defaultWorkload, kvScenarioSearch, readKvScenario } from '../src/components/chapter-12/kv-scenario.mjs';
+import { canonicalKvSearch, defaultBudget, defaultPool, defaultWorkload, kvScenarioSearch, netBudgetBytes, readKvScenario, smolPaddedWorkload } from '../src/components/chapter-12/kv-scenario.mjs';
 
 const example = { batch: 9, sequence: 8192, generated: 2048, layers: 80, heads: 8, dimension: 128, precision: 2 };
 
@@ -63,8 +63,8 @@ test('partial, ambiguous or out-of-range shared settings never become a differen
   for (const bad of [
     '', '?kv=1&batch=9', search + '&batch=1', search + '&kv=1', search + '&total=80',
     search.replace('kv=1','kv=2'), search.replace('batch=32','batch=257'),
-    search.replace('sequence=8192','sequence=8193'), search.replace('generated=0','generated=1'),
-    search.replace('layers=80','layers=0'), search.replace('heads=8','heads=3'),
+    search.replace('sequence=8192','sequence=0'), search.replace('generated=0','generated=1.5'),
+    search.replace('layers=80','layers=0'), search.replace('heads=8','heads=65'),
     search.replace('dimension=128','dimension=NaN'), search.replace('precision=2','precision=0'),
     search.replace('budget=24','budget='), search.replace('budget=24','total=80&weights=48'),
     search.replace('budget=24','total=1e50&weights=0&reserve=0'),
@@ -73,4 +73,45 @@ test('partial, ambiguous or out-of-range shared settings never become a differen
     assert.equal(readKvScenario(bad), null, bad);
     assert.equal(canonicalKvSearch(bad), '', bad);
   }
+});
+
+test('the measured padded FP32 batch and the 120 MiB notebook challenge round-trip exactly', () => {
+  const budget = 120 / 1024;
+  for (const [workload, promptKiB, peakKiB] of [
+    [smolPaddedWorkload, 990, 1350],
+    [{ ...smolPaddedWorkload, batch: 1, sequence: 3 }, 135, 315],
+    [{ ...smolPaddedWorkload, batch: 1 }, 495, 675],
+    [{ ...smolPaddedWorkload, batch: 4, sequence: 512, generated: 256 }, 90 * 1024, 135 * 1024],
+  ]) {
+    const scenario = { workload, budget, deduct: false, pool: defaultPool };
+    const restored = readKvScenario(kvScenarioSearch(scenario));
+    assert.deepEqual(restored, scenario);
+    const result = kvCapacity(restored.workload, netBudgetBytes(restored.budget));
+    assert.equal(result.prompt.requested, promptKiB * 1024);
+    assert.equal(result.peak.requested, peakKiB * 1024);
+    if (workload.batch === 4) {
+      assert.equal(result.prompt.capacity, 5);
+      assert.equal(result.peak.capacity, 3);
+    }
+  }
+});
+
+test('share links accept only usable budgets and complete integer geometry', () => {
+  const scenario = { workload: smolPaddedWorkload, budget: defaultBudget, deduct: false, pool: defaultPool };
+  const search = kvScenarioSearch(scenario);
+  assert.equal(netBudgetBytes(1 / GiB), 1);
+  assert.equal(netBudgetBytes(0.1), 107374182);
+  for (const budget of [NaN, 0, 0.5 / GiB, -1, Infinity, 2 ** 23]) {
+    assert.equal(netBudgetBytes(budget), null);
+    assert.equal(kvScenarioSearch({ ...scenario, budget }), '');
+    assert.equal(readKvScenario(search.replace('budget=24', 'budget=' + budget)), null);
+  }
+  for (const [key, value] of [['heads', NaN], ['dimension', 0], ['generated', 0.5], ['sequence', -1]]) {
+    assert.equal(kvScenarioSearch({ ...scenario, workload: { ...smolPaddedWorkload, [key]: value } }), '');
+  }
+  const oddWidth = { ...scenario, workload: { ...smolPaddedWorkload, dimension: 63 } };
+  const oddLink = kvScenarioSearch(oddWidth);
+  assert.deepEqual(readKvScenario(oddLink), oddWidth);
+  assert.equal(readKvScenario(oddLink.replace('precision=4', 'precision=0.5')), null);
+  assert.equal(kvScenarioSearch({ ...oddWidth, workload: { ...oddWidth.workload, precision: 0.5 } }), '');
 });

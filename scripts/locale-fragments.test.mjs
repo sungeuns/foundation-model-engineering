@@ -52,6 +52,8 @@ test('shared exercise IDs belong to the same authored content in both translatio
     ['/chapter-4/encoder-only', 'mlm-target-example'],
     ['/chapter-4/decoder-only', 'shifted-target-example'],
     ['/chapter-4/encoder-decoder', 'cross-attention-example'],
+    ['/chapter-4/various-llm-architectures', 'glm-54-layer-reuse'],
+    ['/chapter-4/various-llm-architectures', 'glm-54-cache-positions'],
     ['/chapter-4/hybrid-prefix-lm', 'prefix-mask-test'],
     ['/chapter-5/expert-parallelism', 'expert-dispatch-lab'],
     ['/chapter-5/case-study', 'dropless-routing-example'],

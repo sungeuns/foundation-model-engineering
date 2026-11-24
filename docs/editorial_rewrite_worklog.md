@@ -282,7 +282,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 4.2 | `/chapter-4/decoder-only` | Inspected 2026-11-25 | 566f11bdb11a6760f26ac9639bd0922af4ad46077497b6332ca7d4647a090e8b | 7a42e67720a62c01c9801e20b6ef5523aa9f6fb0fe3b60cdb074afb20dc23897 |
 | 4.3 | `/chapter-4/encoder-decoder` | Inspected 2026-11-25 | a81d35a1f33c94b446e07b1a1c911d1288c7936c2231803a570350bdf7ff76ae | 124605867b0725c421d411857fa79b4d56f1a39a0f1c02d401f7c82686e5128a |
 | 4.4 | `/chapter-4/hybrid-prefix-lm` | Inspected 2026-11-25 | 6edb93ff3d69526c5abd2108193b487cc82eb60c9c9887033237a77e72052127 | 59715e846873b8af91b74291aa803ff3047a646a79042af60da4b04a3dccef60 |
-| 4.5 | `/chapter-4/various-llm-architectures` | Inspected 2026-11-25 | e9f54769b27b48933ef9dc6f131e5311874ba531dc5777e9de0ec7e67c4bd25c | bb7d056170fb61113127870b71a3142a7d5f32e2e7bc28ed000d4405a257ff55 |
+| 4.5 | `/chapter-4/various-llm-architectures` | Mechanical only | fc557244b4454602cfe157b3ea6ddf3d31c883ec9989bd02fa4ce21403de5be3 | 31f75a846fbd8f448d4bc353dffda6fb1cc65ab0426dd544c5789e22e756e972 |
 | 5.1 | `/chapter-5/sparse-vs-dense-models` | Inspected 2026-11-25 | 01f8735ffcc52bb919dfea3402cb6fbdb0313849c20a83c447820f04e5bb6c08 | 7908d7d81bd30342d4223623ac332bf1d17f91a47e55e1deb8ba8d3ee2b88c37 |
 | 5.2 | `/chapter-5/routing-algorithms` | Inspected 2026-11-15 | 3b83671dec53a4a69ee8c357d810ac48b3b2b069f1b54fdb76a8e567ae6ed3e7 | 436d75fa19297b28084c3bf55cb2e92e341e86d33370e1843de1c263a8f9d356 |
 | 5.3 | `/chapter-5/expert-parallelism` | Inspected 2026-11-25 | 75beb517abd6e9d61832a0e3cdb79eac46c214026c2cbd86c6946965d07209d8 | a34266db4231c9ecb6970fbe47c569dce99129dbe3e82c2027c050b8fe1fb9dc |
@@ -320,7 +320,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 11.4 | `/chapter-11/image-diffusion-models` | Inspected 2026-11-24 | 5bb8bc33ff8adf86105e24018b03423e9f19e0d29739f64b843c0cbeadea05e8 | 308de426fdbc7b1c845a4d63be36b83988abe2eb36026affba1dd101194816b7 |
 | 11.5 | `/chapter-11/video-generation-foundations` | Inspected 2026-11-15 | b34544d0352be5feafdfc0d30ac23092d50edf3a3af5f3e4d37cc62531230c20 | 55c0488a07c962041cdbb0cdb945d18c8e136b23dba2aed6f6970f1c33cb4b4b |
 | 11.6 | `/chapter-11/commercial-video-models` | Mechanical only | 12216aad67ffc900bcfe437f20a7fcf9be618ccc5d617f698f4466ef15ff33cb | 6ee6e17876daa24bd17b8d709b7f541276019da545887510035b916819ae13a3 |
-| 12.1 | `/chapter-12/kv-cache-management` | Inspected 2026-11-25 | a7ce8a5dc54ae8b03354c5dd90c17b93d823b1053b4bbf41fff3fda24ad43013 | a8e898bd2c91425f6ec53ec669bbec850d6a02b7c7e0148f22b93ab54f414838 |
+| 12.1 | `/chapter-12/kv-cache-management` | Inspected 2026-11-25 | 935f12739893fa2962ccfe02fcfe5dd9b9b5fb4309120554871df360db5779d5 | 17f463bb01cab5ab4492380b448c1a46a9efdb192771178299124211d1e00c3c |
 | 12.2 | `/chapter-12/paged-attention-vllm` | Inspected 2026-11-25 | 52cf569f107eda54688b02ae4a5149d5191e4e56e3241ffe32a2b53ae8bc66d8 | 14402809f988d4e8b12edd29476af19ece120d3abe6c86ac16ca1a664496bb46 |
 | 12.3 | `/chapter-12/continuous-batching` | Inspected 2026-11-25 | 588de002d211758e1fbb83af67004497e5280cad3512efc790f73f9b3d2a24b3 | 3f9ff09b65675139196bd073123e28a306180a8ec7d07398d1e331351f5a7124 |
 | 12.4 | `/chapter-12/speculative-decoding` | Inspected 2026-11-25 | a5f93ea8411bab0fe68bf277224f8f19f111ac0f0fd73f6b4eda75739a8990b5 | 61986787b62bf6d99f59ab08a66d2ea6312e472faea94ded13c4a7d627d03cc4 |
@@ -723,3 +723,7 @@ For §§13.1 and 17.6, checked Baidu’s pinned model cards, weight indexes and 
 ### November 25, 2026 — Checking the exercises that readers reach from outside the chapter
 
 The §3.1 worksheet and the linked CPU program now apply the same change to the same value vector. Checked both printed solutions, the script output and the padding example. Section 8.5 now scores the same six UTF-8 bytes under two toy vocabularies, with a link from §6.2. Both language editions produced the four published rows. In §17.6 the link from the home page now opens the 272K pricing exercise. The separate short-input example uses the provider’s documented background completion windows and runs without API access. The November 24 model comparison retains its own snapshot. Only the affected passages and examples were checked in §§3.1, 6.2 and 17.6.
+
+### November 25, 2026 — From a checkpoint's cache to its measured tensors
+
+Checked both §12.1 manuscripts against the pinned SmolLM2-135M configuration and the CPU experiment. The padded batch stores 22 positions for 14 real prompt tokens. After four more tokens per request it stores 30 positions. Both notebook editions use this batch and a separate four-request exercise with a 120 MiB payload budget. In §4.5 the two-pass GLM-5.4 example distinguishes four unique token positions from five KV entries available to a query. This was a focused review of the GLM passage, not another review of the entire model catalogue.

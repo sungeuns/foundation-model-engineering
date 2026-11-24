@@ -235,15 +235,19 @@ print("Full, token-wise, and chunked results agree; causality holds.")
 
 ### 실제 체크포인트에서 KV 캐시 용량 재기
 
-CPU에서 FP32로 실행한 SmolLM2-135M은 요청 하나의 토큰 한 자리에 키와 값 46,080바이트를 저장합니다. 3토큰짜리 프롬프트와 11토큰짜리 프롬프트를 밀집 배치로 묶으면 둘 다 11자리를 차지합니다. 처음 처리한 직후 캐시는 1,013,760바이트입니다. 이 중 368,640바이트가 짧은 프롬프트의 패딩 여덟 자리입니다.
+노트북에 고정한 SmolLM2-135M의 `config.json`을 열어 보세요. 어텐션 층은 30개(`num_hidden_layers`), 쿼리 헤드는 9개(`num_attention_heads`), KV 헤드는 3개(`num_key_value_heads`)입니다. 이 모델은 은닉 차원 576을 쿼리 헤드 9개로 균등하게 나누므로 헤드 차원은 64입니다. 노트북에서는 모델을 FP32로 실행합니다. 요청 하나에서 토큰 한 자리의 키와 값을 보관하는 데 $2 \times 30 \times 3 \times 64 \times 4 = 46{,}080$ 바이트, 즉 45 KiB가 듭니다 [[9]](#ref-9).
 
-[Colab에서 한국어 노트북을 실행하거나](https://colab.research.google.com/github/sungeuns/foundation-model-engineering/blob/main/public/labs/kv-cache-payload-ko.ipynb) <a href={withBasePath('/labs/kv-cache-payload-ko.ipynb')} download="kv-cache-payload-ko.ipynb">Jupyter용 파일을 내려받으세요</a>. PyTorch가 설치된 CPU 런타임을 사용합니다. 첫 셀이 Transformers를 설치하고, 처음 실행할 때 공개 체크포인트 약 270 MB를 내려받습니다. 요청마다 토큰을 네 개씩 더 입력하면 캐시가 몇 바이트가 될지 먼저 예상해 보세요. 실습에서는 토큰을 하나 넣을 때마다 다음 토큰의 로짓도 전체 재계산 결과와 비교합니다. 여기서 재는 것은 키와 값 텐서의 크기입니다. 프로세스 전체에는 모델 가중치와 임시 버퍼 등도 들어 있습니다.
+다른 모델의 용량을 구하려면 각 층이 저장하는 K·V의 모양과 실행 시 캐시의 자료형부터 확인하세요. 설정에 `head_dim`이 명시돼 있으면 그 값을 씁니다. 은닉 차원을 쿼리 헤드 수로 나누는 계산은 어텐션 구현이 실제로 그 방식으로 차원을 나눌 때만 맞습니다. 슬라이딩 윈도를 쓰는 층에서는 윈도 안에 남겨 두는 자리만 셉니다. 예를 들어 [GLM-5.4의 두 번째 패스](/ko/chapter-4/various-llm-architectures/#glm-54-cache-positions)는 첫 패스의 전역 키·값을 공유하고 자체 로컬 윈도를 유지합니다. MLA에서는 저장하는 잠재 벡터와 위치 성분의 크기를 구합니다.
+
+[실측한 요청 두 개의 설정으로 계산기를 열어 보세요](?kv=1&batch=2&sequence=11&generated=4&layers=30&heads=3&dimension=64&precision=4&budget=24#kv-calculator). 프롬프트 길이는 각각 3토큰과 11토큰입니다. 왼쪽에 패딩을 넣으면 각 층의 키 텐서 모양은 `[2, 3, 11, 64]`가 됩니다. 차례대로 요청 2개, KV 헤드 3개, 토큰 자리 11개, 헤드당 좌표 64개입니다. 값 텐서도 모양이 같습니다. 프리필 직후 30개 층 전체에서 $2 \times 11 \times 45 = 990$ KiB를 씁니다. 각 요청에서 토큰을 네 개씩 더 처리하면 행마다 15자리가 되어 1,350 KiB(약 1.318 MiB)를 씁니다. 계산기에는 예시 예산으로 24 GiB가 들어 있습니다. CPU 실험에서는 키·값 텐서의 크기를 직접 잽니다.
+
+[Colab에서 한국어 노트북을 실행하거나](https://colab.research.google.com/github/sungeuns/foundation-model-engineering/blob/main/public/labs/kv-cache-payload-ko.ipynb) <a href={withBasePath('/labs/kv-cache-payload-ko.ipynb')} download="kv-cache-payload-ko.ipynb">Jupyter용 파일을 내려받으세요</a>. PyTorch가 설치된 CPU 런타임을 사용합니다. 첫 셀이 Transformers를 설치하고, 처음 실행할 때 공개 체크포인트 약 270 MB를 내려받습니다. 노트북은 매 단계에서 각 층의 키·값 텐서가 몇 바이트인지 합산하고, 다음 토큰의 로짓을 전체 재계산 결과와 비교합니다.
 
 <a id="kv-batch-padding"></a>
 
 ### 두 요청이 토큰을 생성할수록 패딩 비용도 늘어날까?
 
-2026-11-25에 “Water boils at”(3토큰)을 11토큰짜리 프롬프트와 짝지었습니다. 대조군에서는 같은 문장을 다른 3토큰짜리 프롬프트와 묶었습니다. 각 쌍을 한 프로세스에서 두 방식으로 처리했습니다. 왼쪽에 패딩을 넣은 밀집 배치 하나와 패딩 없는 개별 요청 두 개를 매 단계 함께 진행했습니다. SmolLM2-135M은 30개 층 각각에 KV 헤드가 3개이고 헤드 차원은 64입니다 [[9]](#ref-9). 모든 층의 FP32 키와 값을 합하면 토큰 한 자리에 45 KiB가 듭니다.
+계산기에서 프롬프트 길이를 3과 11의 평균인 7로 바꿔 보세요. 프리필 용량이 630 KiB로 줄어듭니다. 어떤 방식으로 처리해야 실제로 이 값이 나올까요? 2026-11-25에 “Water boils at”(3토큰)을 11토큰짜리 프롬프트와 짝지었습니다. 대조군에서는 같은 문장을 다른 3토큰짜리 프롬프트와 묶었습니다. 각 쌍을 CPU 프로세스 하나에서 두 방식으로 처리했습니다. 왼쪽에 패딩을 넣은 밀집 배치 하나와 패딩 없는 개별 요청 두 개를 매 단계 함께 진행했습니다.
 
 | 프롬프트 길이(토큰) | 측정 시점 | 밀집 배치(KiB) | 개별 캐시 두 개의 합(KiB) | 차이(KiB) |
 | --- | --- | ---: | ---: | ---: |
