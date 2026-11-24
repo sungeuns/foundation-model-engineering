@@ -309,7 +309,7 @@ $D$는 별도로 저장하는 레이어 가중치 수가 아니라 실행 횟수
 
 ## GPT-6.2: 공개된 인터페이스와 미공개 내부 구조
 
-**As of 2026-11-24.** OpenAI의 11월 17일 API 변경 기록은 **GPT-6.2 Astra** 와 **GPT-6.2 Sol** 의 API 출시를 알립니다. 둘 다 Responses와 Chat Completions를 지원하지만 도구 호출에는 Responses가 필요합니다 [[41]](#ref-41). 텍스트·이미지 입력과 텍스트 출력을 지원한다는 문서만으로 내부 어텐션 구성, 전문가 라우팅, 매개변수 수, 학습 데이터 혼합을 알 수는 없습니다 [[39]](#ref-39) [[40]](#ref-40).
+**2026-11-25 기준.** OpenAI는 11월 17일 **GPT-6.2 Astra** 와 **GPT-6.2 Sol** 을 API, ChatGPT Work, Codex에 출시했습니다. 가중치는 공개하지 않았습니다. [[42]](#ref-42) 두 모델 모두 텍스트와 이미지를 입력받아 텍스트를 출력합니다. API에서는 Responses와 Chat Completions를 쓸 수 있고, 도구 호출은 Responses에서 지원합니다. 이 인터페이스만으로 내부 어텐션 구성, 전문가 라우팅, 파라미터 수나 학습 데이터 혼합을 알 수는 없습니다. [[39]](#ref-39) [[40]](#ref-40) [[41]](#ref-41)
 
 두 모델의 문서는 **1,050,000토큰 문맥 창**, **최대 입력 922,000토큰**, **최대 출력 128,000토큰** 을 구분하며, 추론 강도 `none`을 거부합니다 [[39]](#ref-39) [[40]](#ref-40). 서비스 통합에 필요한 제약이지만, 서비스 외부에서 아키텍처를 판별할 근거는 아닙니다. 마찬가지로 하위 에이전트에 작업을 위임하는 기능은 문서화된 Responses 기능이지, 모델 내부 전문가의 구성에 관한 증거가 아닙니다.
 
@@ -411,3 +411,5 @@ $D$는 별도로 저장하는 레이어 가중치 수가 아니라 실행 횟수
 40. <a id="ref-40"></a>OpenAI. *GPT-6.2 Sol model documentation*. 확인일 2026-11-24. [Source](https://developers.openai.com/api/docs/models/gpt-6.2-sol).
 
 41. <a id="ref-41"></a>OpenAI. *API changelog, November 17, 2026: GPT-6.2*. 확인일 2026-11-24. [Source](https://developers.openai.com/api/docs/changelog).
+
+42. <a id="ref-42"></a>[OpenAI의 GPT-6.2 Astra·Sol 출시 및 이용 경로 안내](https://openai.com/index/introducing-gpt-6-2-astra-sol/).

@@ -68,3 +68,16 @@ test('a separately identified revision cannot inherit another row’s evaluation
     assert.equal(newer.benchmarkCost, undefined);
   }
 });
+
+test('GPT-6.2 launch access and benchmark profiles refer to the right products', () => {
+  const launch = 'https://openai.com/index/introducing-gpt-6-2-astra-sol/';
+  for (const id of ['gpt-62-astra', 'gpt-62-sol']) {
+    const row = snapshot.models.find(model => model.id === id);
+    assert.equal(row.specification, launch);
+    for (const surface of ['API', 'ChatGPT Work', 'Codex']) {
+      assert.ok(row.access.includes(surface), `${id}: ${surface} in English`);
+      assert.ok(row.accessKo.includes(surface), `${id}: ${surface} in Korean`);
+    }
+    assert.equal(row.evaluationProfile, `${row.model} (Max)`);
+  }
+});

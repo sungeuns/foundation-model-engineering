@@ -11,12 +11,13 @@ lang: ko
 ## 노트북으로 먼저 실행하기
 
 - **로그인 없이 실행 결과 읽기.** [11월 실행 기록](https://nbviewer.org/urls/sungeuns.github.io/foundation-model-engineering/labs/2026-11/tiny-decoder-worked-ko.ipynb)에는 코드와 CPU 출력이 함께 있습니다. 앞쪽 토큰을 가렸을 때 테스트 손실이 얼마나 오르는지, 체크포인트 복사본의 끝에 데이터를 붙였을 때 복원이 왜 중단되는지 확인해 보세요. 한 수열에서 오답이 반복되는 과정은 [복사 결과](#decoder-copy-trace)에서 바로 볼 수 있습니다.
+- **로그인 없이 직접 실행하기.** [Binder에서 한국어 실습을 여세요](https://mybinder.org/v2/gh/sungeuns/foundation-model-engineering/b6a54ff80e80cbf10d68b15d4419bbae2269ef7e?urlpath=lab%2Ftree%2Fpublic%2Flabs%2Ftiny-decoder-lab-ko.ipynb). JupyterLab이 열리면 **Run → Run All Cells** 를 선택하세요. 마지막 셀에 결과 ZIP의 경로가 나옵니다. 임시 세션이 끝나기 전에 왼쪽 파일 목록에서 해당 파일을 내려받으세요. 처음 환경을 준비하는 데 몇 분 걸릴 수 있습니다. [[6]](#ref-6)
 - **Colab에서 실행하기.** [한국어 노트북](https://colab.research.google.com/github/sungeuns/foundation-model-engineering/blob/main/public/labs/tiny-decoder-lab-ko.ipynb)을 열고 CPU 런타임을 고르세요. 실행하려면 Google 로그인이 필요하며, 사용할 수 있는 자원과 세션 유지 시간은 달라질 수 있습니다. 2026-11-25 기준입니다. [[3]](#ref-3)
 - **내 컴퓨터에서 실행하기.** [실습용 노트북을 미리 보거나](https://nbviewer.org/urls/sungeuns.github.io/foundation-model-engineering/labs/tiny-decoder-lab-ko.ipynb) <a href="../../../labs/tiny-decoder-lab-ko.ipynb" download="tiny-decoder-lab-ko.ipynb">내려받아</a> CPU PyTorch가 설치된 Python 3.12 이상 커널에서 여세요. 처음 환경을 만든다면 [로컬 설치 안내](#local-decoder-setup)를 따라 하세요.
 
 노트북에서 **모두 실행** 을 누르기 전에 두 가지를 예측해 보세요. 뒤쪽 기호를 바꾸면 앞쪽 위치의 예측도 달라질까요? 어텐션이 현재 기호만 볼 수 있다면 복사 성능은 어떻게 될까요? 노트북에는 학습 코드가 들어 있고 데이터도 직접 만들기 때문에 모델 다운로드나 API 키가 필요 없습니다.
 
-**2026-11-25 기준 실행 검증:** Linux(Python 3.12.14)와 GitHub Actions의 네이티브 Windows `windows-2025` 실행 환경(Python 3.12.10)에서 한영 노트북을 각각 새 Jupyter 커널로 실행해 코드 셀 10개를 모두 완료했습니다. 두 환경 모두 PyTorch 2.15.0+cpu를 사용했습니다. 인과성 불변 조건, 정확한 체크포인트 재개, 일부러 마스크를 깨뜨리거나 체크포인트를 손상시킨 진단, 파일 7개로 구성된 결과 ZIP 검사를 통과했습니다. [Windows 실행 기록](https://github.com/sungeuns/foundation-model-engineering/actions/runs/45434214223)에서 결과를 확인할 수 있습니다. 호스팅된 Colab에서의 실행은 아직 검증하지 않았습니다. [[4]](#ref-4)
+**2026-11-25 기준 실행 검증:** Linux(Python 3.12.14)와 GitHub Actions의 네이티브 Windows `windows-2025` 실행 환경(Python 3.12.10)에서 한영 노트북을 각각 새 Jupyter 커널로 실행해 코드 셀 10개를 모두 완료했습니다. 두 환경 모두 PyTorch 2.15.0+cpu를 사용했습니다. 인과성 불변 조건, 정확한 체크포인트 재개, 일부러 마스크를 깨뜨리거나 체크포인트를 손상시킨 진단, 파일 7개로 구성된 결과 ZIP 검사를 통과했습니다. [Windows 실행 기록](https://github.com/sungeuns/foundation-model-engineering/actions/runs/45434214223)에서 결과를 확인할 수 있습니다. 공개 Binder에서는 영어판 코드 셀 10개를 Python 3.12.16과 같은 PyTorch 빌드로 실행했습니다. 호스팅된 Colab에서의 실행은 아직 검증하지 않았습니다. [[4]](#ref-4)
 
 <a id="local-decoder-setup"></a>
 
@@ -151,3 +152,4 @@ Manifest, 코드 해시, trace, 결과, 틀린 가설 하나, 자연어 일반�
 3. <a id="ref-3"></a>Google. *Colaboratory FAQ*. [GitHub notebooks, runtimes, and resource limits](https://research.google.com/colaboratory/faq.html).
 4. <a id="ref-4"></a>Foundation Model Engineering. *Verify decoder notebooks on Windows*. [CPU 노트북 실행 성공 기록](https://github.com/sungeuns/foundation-model-engineering/actions/runs/45434214223), 2026-11-25 확인.
 5. <a id="ref-5"></a>Project Jupyter. [Starting JupyterLab](https://jupyterlab.readthedocs.io/en/stable/getting_started/starting.html).
+6. <a id="ref-6"></a>Project Jupyter. [Binder usage guidelines](https://mybinder.readthedocs.io/en/latest/about/user-guidelines.html).

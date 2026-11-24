@@ -282,7 +282,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 4.2 | `/chapter-4/decoder-only` | Inspected 2026-11-25 | 566f11bdb11a6760f26ac9639bd0922af4ad46077497b6332ca7d4647a090e8b | 7a42e67720a62c01c9801e20b6ef5523aa9f6fb0fe3b60cdb074afb20dc23897 |
 | 4.3 | `/chapter-4/encoder-decoder` | Inspected 2026-11-25 | a81d35a1f33c94b446e07b1a1c911d1288c7936c2231803a570350bdf7ff76ae | 124605867b0725c421d411857fa79b4d56f1a39a0f1c02d401f7c82686e5128a |
 | 4.4 | `/chapter-4/hybrid-prefix-lm` | Inspected 2026-11-25 | 6edb93ff3d69526c5abd2108193b487cc82eb60c9c9887033237a77e72052127 | 59715e846873b8af91b74291aa803ff3047a646a79042af60da4b04a3dccef60 |
-| 4.5 | `/chapter-4/various-llm-architectures` | Inspected 2026-11-24 | 028ebccee02c3a1b30297a6c43b9ed91806975ff737f33e8a5ccd5ea26f26a30 | 5d9fb05bb56198c702831691a20832099bac533ece95857c22101dfb884863a8 |
+| 4.5 | `/chapter-4/various-llm-architectures` | Inspected 2026-11-25 | e9f54769b27b48933ef9dc6f131e5311874ba531dc5777e9de0ec7e67c4bd25c | bb7d056170fb61113127870b71a3142a7d5f32e2e7bc28ed000d4405a257ff55 |
 | 5.1 | `/chapter-5/sparse-vs-dense-models` | Inspected 2026-11-25 | 01f8735ffcc52bb919dfea3402cb6fbdb0313849c20a83c447820f04e5bb6c08 | 7908d7d81bd30342d4223623ac332bf1d17f91a47e55e1deb8ba8d3ee2b88c37 |
 | 5.2 | `/chapter-5/routing-algorithms` | Inspected 2026-11-15 | 3b83671dec53a4a69ee8c357d810ac48b3b2b069f1b54fdb76a8e567ae6ed3e7 | 436d75fa19297b28084c3bf55cb2e92e341e86d33370e1843de1c263a8f9d356 |
 | 5.3 | `/chapter-5/expert-parallelism` | Inspected 2026-11-25 | 75beb517abd6e9d61832a0e3cdb79eac46c214026c2cbd86c6946965d07209d8 | a34266db4231c9ecb6970fbe47c569dce99129dbe3e82c2027c050b8fe1fb9dc |
@@ -298,7 +298,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 7.2 | `/chapter-7/zero-redundancy-optimizer` | Mechanical only | b126180d4c8d978f8925ed51d7ace338f8cdf2e7c7ecc1309ef2301714bd4e47 | e2b4c48bc0c2d11efbc40f02c428883a3f92d462adf354587b96bc5de42d1b06 |
 | 7.3 | `/chapter-7/model-and-pipeline-parallelism` | Inspected 2026-11-15 | 0832cffc306946b61c817850cb07cdbebf0d06aadfe607b6b7dfe75d14d010bf | b645ef818ecb8e33702468b9dcacf90a130b6c229ed8603d055736e2e62f5db4 |
 | 7.4 | `/chapter-7/flash-attention` | Mechanical only | f305f222c5d296652a665982d6148449b7cebebdd7073ee35ef221b39b750c4c | 7c296161f2a6d17d2c88531884e7a2ffb62021cfaf28828e9166c201a8df5184 |
-| 7.5 | `/chapter-7/tiny-decoder-lab` | Inspected 2026-11-25 | e1d85a539f075acbaf8b613802db678fd5390d8b915dac5d942120f1c47522d8 | a38d2949de1a4109a8141e166b62fdec78894cfcf41cd04f3827a93d8fd4878a |
+| 7.5 | `/chapter-7/tiny-decoder-lab` | Inspected 2026-11-25 | 85a0e94b1ae18b6da7b3e1aae8478239a6ce95ff03874d94ecfb7f57fd36228c | 7ab42dcffc8d955d2ce55cc01f81042732f5a4e03bb65e08793e18cde7f6f057 |
 | 8.1 | `/chapter-8/power-law` | Inspected 2026-11-18 | 4a7985e2e292146826fa76fc39706838e6e5246fcb507f4fec94dc263ef2ba8a | 5d01ec1c25346796843c2fe7b635968a64b28f6333b2925a32884fb9364b884e |
 | 8.2 | `/chapter-8/chinchilla-optimality` | Inspected 2026-11-15 | a5c303a07cd048a5700ec4cf86eeb44387cdcc43775eb4a2c5678f4aed6250d1 | 113d3edaa8047c8e5b5455f712a931429e550d22c1d260be5947dab80f4ef2a6 |
 | 8.3 | `/chapter-8/over-training-vs-optimal-training` | Inspected 2026-11-15 | 0cd59dc676f0efe54f93a85775af740fc13bd689502b3ead940bf61212f2d83c | 21d9ca8bfbe9e711f63a75a24d0760d53ffdd87d8f22954f7ac911f7c0a18248 |
@@ -354,7 +354,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 17.3 | `/chapter-17/elo-rating-and-leaderboards` | Inspected 2026-11-15 | 14f931df5e4641c576c1763d446b2c663d1f282abf438767e5a330d49b31a9b9 | 1e78f5819e5452372109f72327dad0f7831b3b9ce66750000c9378a906744c30 |
 | 17.4 | `/chapter-17/contamination-issues` | Mechanical only | 38a0cad52c7504804a57a8cc2deed94a3ac2fe68f7648809261abad1cf6b4fa5 | ad7b87426dcdde29f69a6921696a462359e7681d7d3b5ee5c11f3d80ec0a71c7 |
 | 17.5 | `/chapter-17/production-evaluation-and-release-gates` | Inspected 2026-11-25 | d2917516ef75c2ede2cd4db285a221090b09f181104e7112bd388f427ecc5298 | cb7d670ce7898fe43516e3cc8a38e295b6e24bba8e3a65c7579c61f3e03b9fb3 |
-| 17.6 | `/chapter-17/commercial-model-benchmarks` | Inspected 2026-11-25 | 4324c5452ff272c53a0aefbf090cc4be191837e1397dc7e6ea9151a7e027738c | c176b072443536badcd5a17bf25f6fa73877c2a39d98b8902019834de0fd54f8 |
+| 17.6 | `/chapter-17/commercial-model-benchmarks` | Inspected 2026-11-25 | db251f40fd588f3562ec4a2ae401092791d50b6f753d320114e79825853942c7 | b77ee797c1a5a5f5f30aade013de1bb2f9ebb516e2e1301ebcdf9e6dfe4ac009 |
 | 17.7 | `/chapter-17/experimental-design-and-uncertainty` | Inspected 2026-11-25 | a49f4705d53ea21959540b6d9cbaade29cdd63310712a6f8e2d67eb9288746cc | 8040249564bacddeebe7eda07ece30695e580990c258f0393284df9e3d07735f |
 | 18.1 | `/chapter-18/red-teaming` | Mechanical only | fa815b07490b4a1039a2e91d2c98e9f1f212d6479f534afa5f09020cc8f93598 | 5aa628372d20829e842ce6b3fad0133fee7c40e63c345e76f0b823b351df6f59 |
 | 18.2 | `/chapter-18/jailbreaking-and-defense` | Mechanical only | caff93966e1d1a925120d696bf37a09fa46cc63cd9378c818ac9f1d489348afd | 165303014a71dfa4ec8e28c0ac7f38712f5d97fbcd551510aa5539cb33c33ac1 |
@@ -675,3 +675,9 @@ Checked the 320 sinusoidal pairs in §3.3 against float64 PyTorch, including the
 For §7.5, executed both original November release notebooks in separate CPU kernels with Python 3.12.14 and PyTorch 2.15.0+cpu. The held-out losses with full and self-only attention were 0.050811 and 2.704195 nats per target. Both runs detected future leakage when the mask was removed, resumed from the valid checkpoint, and rejected the damaged copy. The recorded notebooks preserve the input notebook hash and measured outputs. The starter notebooks remain available for independent runs.
 
 In §17.1, with 10 successful answers out of 20, drawing nine leaves 10 failing subsets out of 167,960, while drawing eleven always includes a success. The English and Korean readouts preserve nonzero miss probabilities even where the floating-point success estimate rounds to one. Checked the estimator against exact integer combinations across its 2,706,800 supported inputs.
+
+### 2026-11-25 hosted notebooks and model access
+
+Section 7.5 now links to the CPU environment at commit `b6a54ff80e80cbf10d68b15d4419bbae2269ef7e`. The English starter completed all ten code cells in a single anonymous public Binder session with Python 3.12.16 and PyTorch 2.15.0+cpu. Restoring the valid checkpoint reproduced the uninterrupted run. The modified copy was rejected, and the exported result packet passed checksum verification. The Korean starter executed separately in a local kernel. Both translated worked notebooks also rendered their measured outputs with JavaScript disabled.
+
+In sections 4.5 and 17.6, checked GPT-6.2 Astra and Sol access against the launch announcement. The release table now names documented product and API routes and distinguishes the healthcare search configurations from the scored general models. Checked Gemini and Qwen product access against their dated launch posts. Historical rows describe the API access in the source without claiming it was the only way to use a model. The 45 numerical profiles retain the November 24 evaluation snapshot.

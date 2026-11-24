@@ -30,9 +30,7 @@
 
 [![작은 디코더 CPU 실습: 인과 마스크, 과거 문맥 제거, 체크포인트 재개를 검증합니다.](public/social/tiny-decoder-ko.png)](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-7/tiny-decoder-lab/)
 
-작은 디코더를 학습하고 재개하려면 [Colab에서 한국어 노트북을 열거나](https://colab.research.google.com/github/sungeuns/foundation-model-engineering/blob/main/public/labs/tiny-decoder-lab-ko.ipynb) [Linux와 Windows에서 검증한 한국어 노트북을 내려받으세요](https://github.com/sungeuns/foundation-model-engineering/releases/download/2026-11-labs/tiny-decoder-lab-ko.ipynb). CPU PyTorch를 사용하고, 실습에 필요한 합성 토큰을 직접 만듭니다. 모델 다운로드나 API 키는 필요하지 않습니다. 과거 문맥을 가리면 결과가 어떻게 달라질지 먼저 예상한 뒤 실행해 보세요.
-
-Colab 실행에는 Google 로그인이 필요합니다. [CPU 실행 기록](https://nbviewer.org/urls/sungeuns.github.io/foundation-model-engineering/labs/2026-11/tiny-decoder-worked-ko.ipynb)에서는 로그인 없이 코드와 측정 결과를 함께 읽을 수 있습니다. 로컬에서 실행할 때 필요한 Python·PyTorch 환경과 실험의 한계는 [실습 안내](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-7/tiny-decoder-lab/)에 있습니다. 실행 코드는 [causal_lab.py](public/labs/causal_lab.py)에서도 읽을 수 있습니다.
+디코더에 기호 네 개를 보여 준 뒤 앞 문맥을 가려 보세요. 모델은 여전히 그 수열을 복사할 수 있을까요? [Binder에서 한국어 노트북을 실행하거나](https://mybinder.org/v2/gh/sungeuns/foundation-model-engineering/b6a54ff80e80cbf10d68b15d4419bbae2269ef7e?urlpath=lab%2Ftree%2Fpublic%2Flabs%2Ftiny-decoder-lab-ko.ipynb) [코드와 실제 출력](https://nbviewer.org/urls/sungeuns.github.io/foundation-model-engineering/labs/2026-11/tiny-decoder-worked-ko.ipynb)을 바로 읽어 보세요. 둘 다 로그인 없이 열 수 있습니다. 노트북이 합성 데이터를 직접 만들고 CPU에서 학습합니다. [실습 안내](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-7/tiny-decoder-lab/)에는 로컬 설치와 Colab 사용법이 있습니다. 오프라인에서는 [11월 노트북](https://github.com/sungeuns/foundation-model-engineering/releases/tag/2026-11-labs)을 내려받아 실행할 수 있습니다.
 
 후보 둘 다 목표 과제의 정답률이 15%p 올랐습니다. [목표 과제 개선 사례](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-17/experimental-design-and-uncertainty/?scenario=gain#release-lab)와 [기존 능력 하락 사례](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-17/experimental-design-and-uncertainty/?scenario=regression#release-lab)를 각각 실행해 어느 쪽을 배포할지 판단해 보세요. 저장소를 내려받았다면 Python 3.10 이상에서 같은 실험을 실행할 수 있습니다.
 

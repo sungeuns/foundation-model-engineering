@@ -3,7 +3,7 @@
 export const searchDescriptions = {
   '/chapter-1/learning-path-and-mastery': { en: 'Check your prerequisites, choose a foundation-model learning path, and build a portfolio with causal tests, fair comparisons, and release decisions.', ko: '선수 지식을 점검하고 파운데이션 모델 학습 경로를 고르세요. 인과성 검사·공정한 비교·출시 판단을 재현 가능한 포트폴리오로 연결합니다.' },
   '/chapter-6/optimization-mechanics': { en: 'Derive AdamW updates, fix unequal-token gradient weighting, and compare optimizers with matched data, token budgets, and held-out evaluations.', ko: 'AdamW 갱신과 토큰 수가 다른 배치의 기울기 가중을 계산하고, 데이터·토큰 예산·보류 평가를 맞춰 옵티마이저를 비교합니다.' },
-  '/chapter-7/tiny-decoder-lab': { en: 'Train a tiny PyTorch decoder on CPU, test causal masking, remove context access, and replay a checkpoint. Includes English and Korean notebooks.', ko: 'CPU에서 작은 PyTorch 디코더를 학습하고 인과적 마스킹·문맥 제한·체크포인트 재개를 검증합니다. 영문·한국어 실행 노트북을 제공합니다.' },
+  '/chapter-7/tiny-decoder-lab': { en: 'Train a tiny PyTorch decoder on CPU. Run it on Binder without an account, or read the measured losses and see whether checkpoint replay reproduces the next update.', ko: '작은 PyTorch 디코더를 CPU로 학습합니다. Binder에서 로그인 없이 실행하거나, 문맥을 가렸을 때의 손실과 체크포인트 복원 후 다음 학습 결과를 기록에서 확인하세요.' },
   '/chapter-17/experimental-design-and-uncertainty': { en: 'Run a paired evaluation in your browser. Use cluster bootstrap bounds to explain why a target gain of 15 percentage points can still block a release.', ko: '브라우저에서 대응 평가를 실행하세요. 목표 과제 점수가 15%p 올라도 배포가 차단되는 이유를 집단 부트스트랩과 기존 능력의 변화로 확인합니다.' },
 
   '/chapter-15/chain-of-thought': {
