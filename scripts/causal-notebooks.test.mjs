@@ -89,12 +89,21 @@ test('the recorded November runs retain the released source and independently me
       .filter(o => o.output_type === 'stream').map(o => o.text.join('')).join('');
     assert.match(output('validity-gates'), /'causal_invariance': True, 'exact_resume': True/);
     assert.match(output('break-checkpoint'), /'corruption_rejected': True/);
-    const measured = JSON.parse(output('compare-results').match(/^\{[\s\S]+?\n\}/)[0]);
+    const jump = book.cells[1].source.join('').match(/\]\(#cell-id=([\w-]+)\)/);
+    assert.equal(book.cells[1].id, 'recorded-run');
+    assert.ok(jump, 'the worked notebook opens with a link to its saved comparison');
+    const measured = JSON.parse(output(jump[1]).match(/^\{[\s\S]+?\n\}/)[0]);
     for (const key of ['test_nats', 'self_only_test_nats', 'greedy_test_token_accuracy']) {
       assert.equal(measured[key], seed7[key]);
     }
     const route = lang === 'ko' ? 'src/pages/ko' : 'src/pages';
     const preview = 'https://nbviewer.org/urls/sungeuns.github.io/foundation-model-engineering/labs/2026-11/' + name;
-    assert.ok(fs.readFileSync(path.join(ROOT, route, 'chapter-7/tiny-decoder-lab.mdx'), 'utf8').includes(preview));
+    const resultUrl = preview + '#cell-id=' + jump[1];
+    const readme = lang === 'ko' ? 'README.ko.md' : 'README.md';
+    for (const file of [readme, route + '/index.astro', route + '/chapter-7/tiny-decoder-lab.mdx']) {
+      const source = fs.readFileSync(path.join(ROOT, file), 'utf8');
+      const link = file.endsWith('.astro') ? `href="${resultUrl}"` : `](${resultUrl})`;
+      assert.ok(source.includes(link), `${file} must open the measured results in the matching language`);
+    }
   }
 });

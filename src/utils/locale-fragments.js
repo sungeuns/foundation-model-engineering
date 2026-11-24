@@ -24,6 +24,7 @@ const lessonFragments = {
   '/chapter-7/tiny-decoder-lab': ['decoder-copy-trace', 'local-decoder-setup'],
   '/chapter-8/continued-pretraining-and-domain-adaptation': ['token-mixture-example'],
   '/chapter-9/parameter-efficient-fine-tuning-peft': ['lora-projection-count', 'lora-merge-check'],
+  '/chapter-10/human-feedback-loop': ['feedback-exposure-example'],
   '/chapter-10/dpo': ['reference-relative-example'],
   '/chapter-11/vision-language-bridges': ['visual-token-budget', 'receipt-grounding'],
   '/chapter-12/kv-cache-management': ['kv-cache-capacity', 'kv-calculator', 'mixed-request-budget', 'kv-payload-notebook', 'kv-batch-padding'],

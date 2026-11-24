@@ -128,16 +128,32 @@ def save_worked_example(directory, notebook, recorded_run):
     require(locale in ("en", "ko"), "Expected an English or Korean notebook")
     version_note = f"Python {recorded_run['python']} · PyTorch {recorded_run['torch']} · CPU"
     base = "https://sungeuns.github.io/foundation-model-engineering/"
-    if locale == "ko":
-        note = (f"**실행 결과 읽기** ({version_note})\n\n"
-                "코드 셀을 한 커널에서 순서대로 실행했습니다. 예측을 적고 저장된 출력과 "
-                "비교해 보세요. 마지막 셀의 파일 경로는 이 실행에 사용한 임시 폴더입니다. "
-                f"[원문과 직접 실행할 노트북]({base}ko/chapter-7/tiny-decoder-lab/)")
+    if locale == "en":
+        note = ("Can the decoder still copy a repeating pattern when it can only see the current symbol? "
+                "[Compare the saved test losses](#cell-id=compare-results). "
+                "Look for `test_nats` (earlier symbols visible) and `self_only_test_nats` (current symbol only).\n\n"
+                f"The code cells ran in order in one kernel ({version_note}). The last cell shows the "
+                "temporary path used for this run.\n\n"
+                f"[Run the experiment yourself]({base}chapter-7/tiny-decoder-lab/) · "
+                "[Foundation Model Engineering on GitHub](https://github.com/sungeuns/foundation-model-engineering)")
+        source_note = ("## Read the lab source\n\n"
+                       "The next cell contains the complete `public/labs/causal_lab.py` used in this run. "
+                       "nbviewer displays the source in full. The setup cell after it verifies the SHA-256 before import.")
     else:
-        note = (f"**Read the recorded run** ({version_note})\n\n"
-                "The code cells ran in order in one kernel. Write down your predictions, then "
-                "compare them with the saved outputs. The file path in the last cell belongs to "
-                f"this run's temporary folder. [Lesson and starter notebook]({base}chapter-7/tiny-decoder-lab/)")
+        note = ("현재 기호만 보게 해도 디코더가 반복 패턴을 복사할 수 있을까요? "
+                "[저장된 테스트 손실을 비교해 보세요](#cell-id=compare-results). "
+                "`test_nats`는 앞 기호까지 볼 수 있을 때, `self_only_test_nats`는 현재 기호만 볼 때의 손실입니다.\n\n"
+                f"한 커널에서 코드 셀을 차례로 실행했습니다({version_note}). 마지막 셀에 표시된 경로는 "
+                "이 실행에 사용한 임시 폴더입니다.\n\n"
+                f"[직접 실험하기]({base}ko/chapter-7/tiny-decoder-lab/) · "
+                "[Foundation Model Engineering 저장소](https://github.com/sungeuns/foundation-model-engineering)")
+        source_note = ("## 실습 소스 읽기\n\n"
+                       "다음 셀에는 이번 실행에 사용한 `public/labs/causal_lab.py` 전체가 들어 있습니다. "
+                       "nbviewer에서는 소스가 처음부터 끝까지 표시됩니다. 이어지는 준비 셀은 SHA-256으로 소스를 확인한 뒤 불러옵니다.")
+    # Keep the title. Run-all instructions belong to the executable starter.
+    start = next(cell for cell in notebook.cells if cell.id == "start")
+    start.source = start.source.splitlines()[0]
+    next(cell for cell in notebook.cells if cell.id == "source-note").source = source_note
     notebook.cells.insert(1, nbformat.v4.new_markdown_cell(note, id="recorded-run"))
     notebook.metadata.fme.recorded_run = recorded_run
     nbformat.validate(notebook)

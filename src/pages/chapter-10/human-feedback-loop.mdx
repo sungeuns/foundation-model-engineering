@@ -8,25 +8,41 @@ import TrajectoryAdmissionVisualizer from '../../components/chapter-10/Trajector
 
 # 10.1 Human Feedback Loop
 
-Human feedback is a measurement system before it is a training dataset. Product feedback records what users were shown, what they chose to signal, and under which interface and policy. Without exposure and sampling context, a thumbs-up is not an unbiased label of model quality.
+Suppose a new model receives more thumbs-up votes. Did it answer better, or did the product send it easier requests? A feedback log can help answer that question if it records who had a chance to vote on which answer, including the displays that drew no vote.
 
 ---
 
 ## Offline and Online Feedback
 
-**Offline** programs collect controlled demonstrations, rankings, critiques, ties, and abstentions under a rubric. They support balanced sampling and repeat annotation. **Online** programs observe deployed interactions and can find real failures, but contain exposure, position, engagement, survivorship, and selection bias.
+In an **offline** study, reviewers work from a rubric. They can demonstrate a response, rank candidates, critique an answer, or record a tie or an abstention. Researchers can assign the same item to several reviewers. InstructGPT used demonstrations and rankings, and Bai and colleagues collected comparisons of assistant responses. [[1]](#ref-1) [[2]](#ref-2)
 
-Log the candidate set, displayed order, serving policy, model/artifact revision, decoding settings, user-visible latency/errors, and sampling or **propensity** probability. Run randomized A/B or interleaving experiments when causal product decisions require them. Do not infer that the answer receiving more clicks is intrinsically better if it was shown more often or in a favored position.
+**Online** feedback reveals failures that users encounter in the product. Which answer a user sees depends on routing and display order. A user who leaves after a slow response may never vote. Record the candidate answers, which ones appeared and where, the serving policy and model revision, decoding settings, latency, errors, and whether a vote was cast. For a randomized A/B test, randomly assign eligible requests to models and log the probability of each assignment (its propensity). For ranked results, a controlled experiment can interleave the two rankings.
+
+<a id="feedback-exposure-example"></a>
+
+### How can one model get 80% thumbs-up and another 50%?
+
+Suppose each model serves 100 requests. To isolate the effect of routing, assume every display gets exactly one vote, up or down. Each cell shows thumbs-up votes divided by answers displayed.
+
+| Request type | Model A | Model B |
+| --- | --- | --- |
+| Routine | 72/80 (90%) | 18/20 (90%) |
+| Multi-step | 8/20 (40%) | 32/80 (40%) |
+| All requests | 80/100 (80%) | 50/100 (50%) |
+
+The models tie within each request type. Model A got 80 routine requests and B got 20, enough to create the entire 30-percentage-point gap. If the target workload is half routine and half multi-step, both estimates become `0.5 × 90% + 0.5 × 40% = 65%`. In a real log, keep missing votes separate from thumbs-down votes. Matching the request mix alone cannot tell you how users who skipped the vote would have rated the answer.
+
+Selection bias can also arise when deciding which responses enter training. In the exercise below, leave the threshold at 8 and select **Next candidate** twice.
 
 <TrajectoryAdmissionVisualizer client:load />
 
-An admission score is a routing aid, not a license to train only on high-reward trajectories. Selecting only successful or high-scoring outputs narrows support and creates **selection bias**; retain controlled negatives, counterfactual comparisons, and exploration data.
+Only the 9.2-point answer qualifies as a training candidate. The 9.5-point answer fails verification. Keep examples like that failure for comparisons or diagnosis. If only successful trajectories survive, reviewers lose the evidence that a high score can coexist with a wrong answer.
 
 ---
 
 ## Annotation Contract
 
-Write a task-specific rubric with examples of correct, partially correct, unsafe, overly refusing, unverifiable, and out-of-scope answers. Let annotators mark **tie** when responses are equivalent and **abstain** when evidence or expertise is insufficient. Forcing every item into a binary preference manufactures noise.
+Write a task-specific rubric with examples of correct, partially correct, unsafe, overly refusing, unverifiable, and out-of-scope answers. Let annotators mark **tie** when responses are equivalent and **abstain** when evidence or expertise is insufficient. Forcing a winner in either case adds mislabeled comparisons. Human judgments and the reward models fitted to them have distinct limitations. [[3]](#ref-3)
 
 Calibrate annotators on a human gold set, measure **inter-annotator agreement** by domain and difficulty, and adjudicate critical disagreements. Store rubric version, randomized position, annotator qualification, timestamps, confidence, and reason codes. Monitor systematic differences across demographic, language, accessibility, and domain slices without using sensitive attributes beyond consented policy.
 
@@ -36,9 +52,9 @@ Privacy is part of the data contract. Define consent, retention, access, deletio
 
 ## Active Learning Without Feedback Loops
 
-Spend review budget where labels change a decision: policy uncertainty, judge disagreement, high-impact domains, novel clusters, safety-critical actions, and distribution drift. Include a probability sample of ordinary traffic so the dataset does not become only hard cases.
+Use the review budget on cases where a label could change a decision. Prioritize uncertain predictions, disagreements between evaluators, novel requests, shifts in traffic, and errors with serious consequences. Also sample ordinary requests at a known probability.
 
-Log the sampling probability and use stratification or propensity-aware analysis when estimating population metrics. Active-learning data can be excellent for training while being invalid for an unweighted product-quality estimate.
+Record each request’s probability of selection for review, separately from its probability of assignment to a model. To estimate quality across all traffic, weight the results from each request type by its share of traffic, or account for unequal review probabilities when sampling individual requests. A raw average of the hard cases answers a different question.
 
 For verifiable tasks, pair human preference with executable evidence: unit tests, tool-state checks, citations, or environment outcomes. A reward model should not overrule a failed deterministic verifier merely because the explanation is fluent.
 
@@ -70,7 +86,7 @@ For release, use fixed decoding and paired comparisons with uncertainty. Gate ta
 
 <details>
 <summary>Quiz 1: Why is a production thumbs-up not an unbiased quality label?</summary>
-*The user saw a selected model output under a particular position, latency, interface, and policy, and chose whether to respond. Exposure, engagement, and selection processes all affect the observed label.*
+*Routing determines which requests a model sees. Placement and latency can affect who votes. In the example, A receives more routine requests, which explains its 30-percentage-point lead even though the models tie on both request types.*
 </details>
 
 <details>
@@ -85,7 +101,7 @@ For release, use fixed decoding and paired comparisons with uncertainty. Gate ta
 
 <details>
 <summary>Quiz 4: Why retain random traffic alongside active-learning samples?</summary>
-*Uncertainty sampling overrepresents hard and unusual cases. A probability sample supports unbiased population estimates and reveals whether improvements transfer to ordinary traffic.*
+*Reviewers who see mostly uncertain cases can identify failures but cannot estimate typical performance from the raw average. A random sample of ordinary requests, with known sampling probabilities and attention to missing labels, helps test whether gains reach the users who make those requests.*
 </details>
 
 ---
@@ -94,4 +110,4 @@ For release, use fixed decoding and paired comparisons with uncertainty. Gate ta
 
 1. <a id="ref-1"></a>Ouyang, L., et al. (2022). *Training language models to follow instructions with human feedback.* [arXiv:2203.02155](https://arxiv.org/abs/2203.02155).
 2. <a id="ref-2"></a>Bai, Y., et al. (2022). *Training a Helpful and Harmless Assistant with Reinforcement Learning from Human Feedback.* [arXiv:2204.05862](https://arxiv.org/abs/2204.05862).
-3. <a id="ref-3"></a>Casper, S., et al. (2023). *Open Problems and Fundamental Limitations of Reinforcement Learning from Human Feedback.* [TMLR](https://openreview.net/forum?id=bx24KpJ4Eb).
+3. <a id="ref-3"></a>Casper, S., et al. (2023). *Open Problems and Fundamental Limitations of Reinforcement Learning from Human Feedback.* [arXiv:2307.15217](https://arxiv.org/abs/2307.15217).

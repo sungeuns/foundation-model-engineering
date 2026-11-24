@@ -147,8 +147,8 @@ export const searchDescriptions = {
     ko: '생성 템플릿, 검증, 사람의 표본 감사와 계보 추적을 통해 합성 지시 데이터셋을 구성하고 반복 생성에 따른 품질 저하를 관리합니다.',
   },
   '/chapter-10/human-feedback-loop': {
-    en: 'Design human-feedback loops with annotation contracts, offline and online signals, active learning, leakage prevention, and model release gates.',
-    ko: '주석 기준, 오프라인·온라인 신호, 능동 학습과 데이터 누출 방지를 바탕으로 사람 피드백 수집부터 모델 배포까지의 절차를 설계합니다.',
+    en: 'Two models get 80% and 50% positive feedback. Compare their votes by request type to see why both reach 65% on the same mix, then decide which answers belong in training.',
+    ko: '두 모델의 좋아요 비율은 80%와 50%입니다. 두 종류의 요청을 절반씩 반영하면 왜 두 모델의 추정치가 모두 65%가 되는지 계산하고, 어떤 답변을 학습에 쓸지 판단해 보세요.',
   },
   '/chapter-10/ppo-proximal-policy-optimization': {
     en: 'Understand PPO for RLHF through policy, reference, reward, and value models, with rollout rewards, GAE, clipping, and training-stability checks.',

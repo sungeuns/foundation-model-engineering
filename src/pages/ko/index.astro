@@ -23,7 +23,7 @@ const getPath = (p) => `/ko${p}`;
   <LearningRoutes lang="ko" />
 
   <h2>CPU에서 작은 디코더 학습하기</h2>
-  <p>기호 네 개를 반복하도록 학습한 디코더에 평가용 수열 <code>12 13 16 14</code>를 보여 줍니다. 첫 예측은 7입니다. 네 칸 뒤에도 같은 실수가 나올까요? <a href={withPagePath('/ko/chapter-7/tiny-decoder-lab') + '#decoder-copy-trace'}>한 수열의 예측을 따라가거나</a>, <a href="https://nbviewer.org/urls/sungeuns.github.io/foundation-model-engineering/labs/2026-11/tiny-decoder-worked-ko.ipynb">코드와 실제 출력을 함께 읽거나</a>, <a href="https://mybinder.org/v2/gh/sungeuns/foundation-model-engineering/b6a54ff80e80cbf10d68b15d4419bbae2269ef7e?urlpath=lab%2Ftree%2Fpublic%2Flabs%2Ftiny-decoder-lab-ko.ipynb">Binder에서 로그인 없이 직접 학습</a>해 보세요. 로컬 Jupyter에서는 <a href={withBasePath('/labs/tiny-decoder-lab-ko.ipynb')} download="tiny-decoder-lab-ko.ipynb">한국어 노트북을 내려받아</a> 실행할 수 있습니다.</p>
+  <p>기호 네 개를 반복하도록 학습한 디코더에 평가용 수열 <code>12 13 16 14</code>를 보여 줍니다. 첫 예측은 7입니다. 네 칸 뒤에도 같은 실수가 나올까요? <a href={withPagePath('/ko/chapter-7/tiny-decoder-lab') + '#decoder-copy-trace'}>한 수열의 예측을 따라가거나</a>, <a href="https://nbviewer.org/urls/sungeuns.github.io/foundation-model-engineering/labs/2026-11/tiny-decoder-worked-ko.ipynb#cell-id=compare-results">앞 기호를 가리면 테스트 손실이 얼마나 오르는지 확인하거나</a>, <a href="https://mybinder.org/v2/gh/sungeuns/foundation-model-engineering/b6a54ff80e80cbf10d68b15d4419bbae2269ef7e?urlpath=lab%2Ftree%2Fpublic%2Flabs%2Ftiny-decoder-lab-ko.ipynb">Binder에서 로그인 없이 직접 학습</a>해 보세요. 로컬 Jupyter에서는 <a href={withBasePath('/labs/tiny-decoder-lab-ko.ipynb')} download="tiny-decoder-lab-ko.ipynb">한국어 노트북을 내려받아</a> 실행할 수 있습니다.</p>
 
   <h2>이 책에 관하여</h2>
   <p>오프라인에서 읽으려면 <a href={servingGuide.downloads.ko} type="application/epub+zip">서빙 세 절을 모은 전자책(EPUB)</a>을 내려받으세요. KV 메모리와 요청 스케줄링, 스트리밍 지연을 다룹니다.</p>

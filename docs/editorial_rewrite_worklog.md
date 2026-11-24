@@ -298,7 +298,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 7.2 | `/chapter-7/zero-redundancy-optimizer` | Inspected 2026-11-25 | 1d59bd55d74d312c61666b7a80158d28487d57ca3dbe4677029b7cbc03c85296 | 4992cea430e8dd37ecf27e13aa7158d27b9d43445b6cfe248a89dd9bf44558d1 |
 | 7.3 | `/chapter-7/model-and-pipeline-parallelism` | Inspected 2026-11-15 | 0832cffc306946b61c817850cb07cdbebf0d06aadfe607b6b7dfe75d14d010bf | b645ef818ecb8e33702468b9dcacf90a130b6c229ed8603d055736e2e62f5db4 |
 | 7.4 | `/chapter-7/flash-attention` | Mechanical only | f305f222c5d296652a665982d6148449b7cebebdd7073ee35ef221b39b750c4c | 7c296161f2a6d17d2c88531884e7a2ffb62021cfaf28828e9166c201a8df5184 |
-| 7.5 | `/chapter-7/tiny-decoder-lab` | Inspected 2026-11-25 | 85a0e94b1ae18b6da7b3e1aae8478239a6ce95ff03874d94ecfb7f57fd36228c | 7ab42dcffc8d955d2ce55cc01f81042732f5a4e03bb65e08793e18cde7f6f057 |
+| 7.5 | `/chapter-7/tiny-decoder-lab` | Inspected 2026-11-25 | e855d8e90f0da026ba2b97b342f6b6feee3f264d0f46bf8a985ac077ed4eebfc | 9299aa74b6e4dabec77479c7b7525af56a827f90ba8795c58e4d103bc33093e8 |
 | 8.1 | `/chapter-8/power-law` | Inspected 2026-11-18 | 4a7985e2e292146826fa76fc39706838e6e5246fcb507f4fec94dc263ef2ba8a | 5d01ec1c25346796843c2fe7b635968a64b28f6333b2925a32884fb9364b884e |
 | 8.2 | `/chapter-8/chinchilla-optimality` | Inspected 2026-11-15 | a5c303a07cd048a5700ec4cf86eeb44387cdcc43775eb4a2c5678f4aed6250d1 | 113d3edaa8047c8e5b5455f712a931429e550d22c1d260be5947dab80f4ef2a6 |
 | 8.3 | `/chapter-8/over-training-vs-optimal-training` | Inspected 2026-11-15 | 0cd59dc676f0efe54f93a85775af740fc13bd689502b3ead940bf61212f2d83c | 21d9ca8bfbe9e711f63a75a24d0760d53ffdd87d8f22954f7ac911f7c0a18248 |
@@ -309,7 +309,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 9.3 | `/chapter-9/parameter-efficient-fine-tuning-peft` | Inspected 2026-11-25 | a0d3642dd64937bb1c238c59bad386af28be354f34bde124a103ecb3085253fa | f5fbe73bc76153d14da56a9a3cae5ed1014f3dfde883a37321fc21c3ef5276dd |
 | 9.4 | `/chapter-9/prompt-engineering-as-sft` | Inspected 2026-11-15 | a0d054e1053d08fb0459c941fc7b54a7935c42315c12fb0534d6adc5978c2f66 | a8eb98f41ea974270f2121a28d2e2478d1b6f34c5682172c52036eaf58e79a61 |
 | 9.5 | `/chapter-9/synthetic-instructions-and-self-instruct` | Mechanical only | ffbd735a54153fd69c5c1a0717da310c2cc58903b0a34fee751f67e9db76ba0e | e2ba9a38024cd3fcaab7c042fb6300bce232e0b4ff9f22ce7698ec3456a93cb3 |
-| 10.1 | `/chapter-10/human-feedback-loop` | Mechanical only | c721f614debefbefa2a90afe0f4dbc41425deb1e332f9ca1fda7ea4349e85668 | 04484c7249da48a808d45b3a79161557f6ddcd14cd3082c6c336097564f45612 |
+| 10.1 | `/chapter-10/human-feedback-loop` | Inspected 2026-11-25 | 2db3bc89aacdf83843f2ec8830cfc5aef17e84f2c80cfbc96c9035c159af14ab | a2cf730ae30d8e5653c01cf182359d9df11f09fae8ce9b2a1160398a00f41c9e |
 | 10.2 | `/chapter-10/ppo-proximal-policy-optimization` | Mechanical only | 731530d0c49a2d72aceb412ad7635b834d3c04341f5fe838a11788e92127896f | 2aa2a123b0740c73c99d7e1c5c495669e81eb1ca2b113335b2fd0fe90196da50 |
 | 10.3 | `/chapter-10/dpo` | Mechanical only | 61b39b4e59d60952d7a969476024a61f21223d09c62ae9e06e83559eaa04a855 | 5ea81a90b4a14be940d19dde889c28380e3b2198dcf6d9670a6adac402f21d2c |
 | 10.4 | `/chapter-10/kto-and-ipo` | Mechanical only | 61ac741df320db7fb3031414fdacaf5770fa28200d3f91f8d69cec83c273c046 | 6a539344952c0246f5777ddf9e6a1be24babe58b085a53cc1752efa3ea2be7c5 |

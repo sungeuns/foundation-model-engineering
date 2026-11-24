@@ -88,10 +88,10 @@ print({"python": sys.version.split()[0], "torch": str(torch.__version__), "devic
 `),
       md('source-note', `## The complete source travels with the notebook
 
-The following cell is generated from the book's unchanged <code>public/labs/causal_lab.py</code>. It defines a source string, not a second implementation. Expand it to inspect the model, mask, loss and recovery protocol. The next cell verifies its SHA-256 before importing it. Every run uses a fresh directory beside the notebook; previous results are not overwritten.`,
+The following cell contains the full text of the book’s <code>public/labs/causal_lab.py</code>, including the model, mask, loss and recovery checks. The setup cell after it verifies the source’s SHA-256 before importing it. Each run writes its results to a new directory beside the notebook.`,
 `## 실습 소스가 노트북에 함께 들어 있습니다
 
-다음 셀은 책의 <code>public/labs/causal_lab.py</code>를 그대로 포함하도록 생성됩니다. 별도 구현이 아니라 원본 소스 문자열입니다. 셀을 펼쳐 모델, 마스크, 손실과 복구 절차를 확인할 수 있습니다. 다음 셀에서 SHA-256을 대조한 뒤 불러옵니다. 실행할 때마다 노트북 옆에 새 폴더를 만들며 이전 결과를 덮어쓰지 않습니다.`, lang),
+다음 셀에는 책의 <code>public/labs/causal_lab.py</code> 전체가 들어 있습니다. 모델과 마스크의 정의, 손실 계산, 복구 검사를 여기서 확인할 수 있습니다. 이어지는 준비 셀은 SHA-256으로 소스를 확인한 뒤 불러옵니다. 실행 결과는 매번 노트북 옆의 새 폴더에 저장합니다.`, lang),
       code('embedded-source', `SOURCE = r'''${source}'''
 `, { jupyter: { source_hidden: true }, fme_role: 'canonical_source' }),
       code('load-source', `EXPECTED_SOURCE_SHA256 = "${sha256}"
