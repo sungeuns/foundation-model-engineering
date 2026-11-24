@@ -158,10 +158,11 @@ def reflow_tables(main, lang):
 
 def reflow_equation(math, tex):
     # Keep the original operators, operands and TeX annotation. Only rearrange
-    # the presentation rows of the two long display equations on small readers.
+    # the presentation rows of long display equations on small readers.
     product = tex.startswith(r"2\cdot32\cdot8192")
     cost = tex.startswith(r"\text{CostScore}")
-    if not (product or cost):
+    grouped = r"\qquad" in tex and math.get("display") == "block"
+    if not (product or cost or grouped):
         return
     expression = math.find("semantics/mrow")
     if expression is None:
@@ -171,7 +172,8 @@ def reflow_equation(math, tex):
     row = None
     for i, term in enumerate(items):
         op = term.text if term.tag == "mo" else None
-        if i == 0 or op == "=" or (cost and op == "+") or (product and i == 5):
+        group_start = grouped and term.tag == "mspace" and term.get("width") == "2em"
+        if i == 0 or group_start or ((product or cost) and op == "=") or (cost and op == "+") or (product and i == 5):
             row = add(add(add(layout, "mtr"), "mtd"), "mrow")
         row.append(term)
     expression.getparent().replace(expression, layout)
