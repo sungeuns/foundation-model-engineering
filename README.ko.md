@@ -1,18 +1,18 @@
 # 파운데이션 모델 엔지니어링
 
-[English](README.md) · **한국어 소개**
+**[한국어 책 읽기](https://sungeuns.github.io/foundation-model-engineering/ko/)** · [English edition](https://sungeuns.github.io/foundation-model-engineering/) · [English README](README.md)
 
-**모델의 원리를 이해하고, 학습·서빙·평가에서 생기는 문제를 직접 확인하는 무료 교재입니다.** 설명과 수식에 PyTorch 예제, 인터랙티브 도식, CPU 실습을 연결합니다.
+모델 학습부터 서빙과 평가까지 다루는 무료 한영 교재입니다. 브라우저 실습과 CPU에서 실행할 수 있는 PyTorch 예제를 제공합니다.
 
-**[한국어 책 읽기](https://sungeuns.github.io/foundation-model-engineering/ko/)** · [영문 책](https://sungeuns.github.io/foundation-model-engineering/)
+**[24 GiB KV 캐시 계산기 열기](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-12/kv-cache-management/?kv=1&batch=9&sequence=8192&generated=2048&layers=80&heads=8&dimension=128&precision=2&budget=24#kv-calculator)**. 예제의 프롬프트 9개는 22.5 GiB를 차지합니다. 요청마다 2,048토큰을 더 생성한다면 몇 개까지 끝낼 수 있을까요?
 
-책을 읽는 데는 계정이 필요하지 않습니다. 기본적인 Python, 선형대수, 확률 지식을 가정하며, [선수 지식과 학습 경로](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-1/learning-path-and-mastery/)에서 시작할 지점을 고를 수 있습니다.
+[![24 GiB가 남은 예제에서 프롬프트 9개는 22.5 GiB, 10개는 25 GiB, 최대 길이까지 자란 요청 9개는 28.125 GiB입니다.](public/social/kv-budget-ko.png)](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-12/kv-cache-management/?kv=1&batch=9&sequence=8192&generated=2048&layers=80&heads=8&dimension=128&precision=2&budget=24#kv-calculator)
 
 ## 궁금한 문제부터 읽어보세요
 
 | 궁금한 문제 | 읽을 곳 | 직접 확인할 내용 |
 | --- | --- | --- |
-| 가중치는 GPU에 들어가는데, 왜 다음 요청에서 메모리가 부족할까? | [KV 캐시 관리](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-12/kv-cache-management/#kv-cache-capacity) | [24 GiB에 프롬프트 9개를 넣은 계산](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-12/kv-cache-management/?kv=1&batch=9&sequence=8192&generated=2048&layers=80&heads=8&dimension=128&precision=2&budget=24#kv-calculator)을 열고, 생성 길이를 바꿔 동시 처리 한도를 확인하세요. |
+| 가중치는 GPU에 들어가는데, 왜 다음 요청에서 메모리가 부족할까? | [KV 캐시 관리](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-12/kv-cache-management/#kv-cache-capacity) | KV 헤드 수와 저장 정밀도를 바꿔 메모리 부족이 어디서 시작되는지 계산합니다. |
 | 어텐션 가중치는 실제 출력에 어떻게 쓰일까? | [셀프 어텐션의 수학](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-3/self-attention-mathematics/#attention-weight-example) | [두 쪽짜리 활동지와 풀이](https://sungeuns.github.io/foundation-model-engineering/labs/attention-worksheet-ko.pdf)로 직접 계산하고 브라우저에서 같은 입력으로 확인합니다. |
 | 이미지 한 장은 문맥을 몇 자리 차지할까? | [시각 토큰 계산](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-11/vision-language-bridges/#visual-token-budget) | 이미지 크기와 장수를 바꾸며 패치 투영과 교차 어텐션의 디코더 자리 수를 비교합니다. |
 | RAG 답변이 틀렸다. 어디서 근거가 사라졌을까? | [청크 ID 추적 예제](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-14/rag-failure-modes-and-operational-design/#trace-a-rag-answer) | 여섯 사례에서 잃어버린 근거를 추적한 뒤 [재순위화에 넘기는 후보 수](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-14/advanced-retrieval/#rrf-candidate-cutoff)를 바꿔 봅니다. |
@@ -24,6 +24,8 @@
 모델 비교에는 **2026-11-24까지 확인한 자료** 를 반영했습니다. [GLM-5.4의 공개 상태](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-17/commercial-model-benchmarks/#model-glm-54), [Ling-3.2-air의 공개 가중치](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-17/commercial-model-benchmarks/#model-ling-32-air), [GPT-6.2 Sol의 평가 조건](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-17/commercial-model-benchmarks/#model-gpt-62-sol), [GLM-5.4의 레이어 재사용 설명](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-4/various-llm-architectures/#glm-54-레이어-재사용으로-깊이와-용량을-구분하기)으로 바로 이동할 수 있습니다. 이후 바뀔 수 있는 공개 상태와 가격은 연결된 원문에서 다시 확인하세요.
 
 ## 짧은 실습부터 시작하기
+
+어텐션 마스크를 씌워도 미래 토큰의 값이 새어 들어갈까요? 토큰 일곱 개 중 다섯 번째 값만 바꾸고 네 번째 출력을 확인해 보세요. 입력이 고정된 CPU용 PyTorch 예제입니다. [마스크 실험](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-4/hybrid-prefix-lm/#prefix-mask-test) · [Python 코드](public/labs/prefix_mask.py)
 
 [![작은 디코더 CPU 실습: 인과 마스크, 과거 문맥 제거, 체크포인트 재개를 검증합니다.](public/social/tiny-decoder-ko.png)](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-7/tiny-decoder-lab/)
 

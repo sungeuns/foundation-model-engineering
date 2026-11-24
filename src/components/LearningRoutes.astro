@@ -10,8 +10,8 @@ const routes = [
 ];
 ---
 <section class="learning-routes" aria-labelledby="learning-routes-title">
-  <h2 id="learning-routes-title">{ko ? '읽기에서 검증 가능한 역량으로' : 'From reading to demonstrated competence'}</h2>
-  <p>{ko ? '처음부터 순서대로 읽거나, 아래 실습 경로로 핵심 개념을 연결해보세요.' : 'Read in chapter order, or connect the core ideas through these practical milestones.'}</p>
+  <h2 id="learning-routes-title">{ko ? '순서대로 공부하는 경로' : 'Follow a learning path'}</h2>
+  <p>{ko ? 'Python·선형대수·확률의 선수 지식을 확인하고, 학습 갱신식을 유도한 뒤 디코더 실험과 배포 판단으로 이어가세요.' : 'Check your Python, linear algebra and probability prerequisites, then work through an optimizer update, a CPU training run and a release decision.'}</p>
   <ol>
     {routes.map((route, index) => (
       <li>

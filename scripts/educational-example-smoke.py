@@ -4,6 +4,8 @@ Run with a Python environment containing PyTorch. No models or datasets download
 import ast
 from pathlib import Path
 import re
+import runpy
+from xml.etree import ElementTree
 import torch
 
 ROOT = Path(__file__).resolve().parents[1] / 'src/pages'
@@ -212,15 +214,18 @@ for locale in ['', 'ko/']:
     assert torch.allclose(full,torch.cat([first,second],1),atol=1e-10)
 print('EN/KO GoT task history, judge rejection, worker padding and recurrent-state continuation passed')
 
-# Run each printed SDPA example, including its future-value isolation assertions.
-# The float 0/1 comparison is a deliberate failure case described in the lesson.
+# Both editions render the downloadable Python file as their SDPA code block.
+example = runpy.run_path(str(ROOT.parents[1] / 'public/labs/prefix_mask.py'))
+mask = example['allowed']
+assert mask.dtype == torch.bool
+leak = [example['attend'](example[name], mask.float())[3] for name in ('values', 'changed')]
+torch.testing.assert_close(torch.stack(leak), torch.tensor([3.257, 10.465]), atol=.001, rtol=0)
 for locale in ['', 'ko/']:
     lesson = ROOT / f'{locale}chapter-4/hybrid-prefix-lm.mdx'
-    code = re.search(r'```python\n(.*?)\n```', lesson.read_text(), re.S).group(1)
-    example = {}
-    exec(compile(code, str(lesson), 'exec'), example)
-    mask = example['allowed']
-    assert mask.dtype == torch.bool
-    leak = [example['attend'](example[name], mask.float())[3] for name in ('values', 'changed')]
-    torch.testing.assert_close(torch.stack(leak), torch.tensor([3.257, 10.465]), atol=.001, rtol=0)
+    lang = 'ko' if locale else 'en'
+    assert f'<PrefixMaskExample lang="{lang}" />' in lesson.read_text()
+    card = ElementTree.parse(ROOT.parents[1] / 'public/social' / f'prefix-mask-{lang}.svg')
+    labels = {label.text for label in card.iter('{http://www.w3.org/2000/svg}text')}
+    assert f"{example['output'][3]:.1f} → {example['new_output'][3]:.1f}" in labels
+    assert f'{leak[0]:.3f} → {leak[1]:.3f}' in labels
     print(f'{locale or "en/"}: prefix visibility and additive-mask leakage verified')

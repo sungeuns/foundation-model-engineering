@@ -1,0 +1,22 @@
+.logic-gate {
+  margin: 1.5rem 0;
+  padding: clamp(.8rem, 2vw, 1.4rem);
+  background: #f8fafc;
+  color: #172434;
+  border: 1px solid #cbd5df;
+  border-radius: .55rem;
+}
+.logic-gate h3 { margin-top: 0; }
+.logic-gate fieldset { min-width: 0; margin: 1rem 0; padding: .65rem .8rem .85rem; border: 1px solid #cbd5df; }
+.logic-gate legend { padding: 0 .3rem; font-weight: 600; }
+.logic-gate-rule { display: flex; align-items: center; flex-wrap: wrap; gap: .45rem .75rem; }
+.logic-gate select { padding: .35rem; font: inherit; max-width: 100%; }
+.logic-gate-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr)); gap: .6rem 1.2rem; margin-top: .8rem; }
+.logic-gate-controls label, .logic-gate-controls input { display: block; width: 100%; min-width: 0; }
+.logic-gate-controls input { margin: .35rem 0; }
+.logic-gate-controls strong { font-variant-numeric: tabular-nums; }
+.logic-gate :is(input, select):focus-visible { outline: 2px solid #215e95; outline-offset: 2px; }
+.logic-gate table { display: table; width: 100%; margin-bottom: .45rem; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.logic-gate caption { text-align: left; font-weight: 600; margin-bottom: .3rem; }
+.logic-gate :is(th, td) { text-align: center; padding: .35rem .2rem; }
+.logic-gate .logic-gate-result { margin: .65rem 0 0; font-weight: 600; }

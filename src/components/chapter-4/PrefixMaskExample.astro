@@ -1,0 +1,12 @@
+---
+import { readFileSync } from 'node:fs';
+import { Code } from 'astro:components';
+import { withBasePath } from '../../utils/paths.js';
+
+const path = '/labs/prefix_mask.py';
+const source = readFileSync(`public${path}`, 'utf8').trimEnd();
+const label = Astro.props.lang === 'ko' ? 'PyTorch 예제 내려받기' : 'Download the PyTorch example';
+---
+
+<p><a href={withBasePath(path)} download="prefix_mask.py">{label} (prefix_mask.py)</a></p>
+<Code code={source} lang="python" theme="github-dark" />

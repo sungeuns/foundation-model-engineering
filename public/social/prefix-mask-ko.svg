@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" xml:lang="ko" role="img" aria-labelledby="card-title card-description">
+<title id="card-title">T2가 앞선 위치의 출력을 바꿀 수 있을까?</title><desc id="card-description">값이 1부터 7까지인 PyTorch 접두사 마스크 예제. T1에서 읽을 수 있는 위치는 P1, P2, P3, T1입니다. T2를 5에서 105로 올리면 불리언 마스크에서는 T1 출력이 2.5로 유지됩니다. 같은 1과 0을 실수로 넘기면 T1 출력이 3.257에서 10.465로 바뀝니다.</desc>
+<rect width="1200" height="630" fill="#f5f2eb"/>
+<g font-family="Noto Sans CJK KR, DejaVu Sans, sans-serif" fill="#192a30">
+<text x="58" y="83" font-size="54" font-weight="700">T2가 앞선 위치의 출력을 바꿀 수 있을까?</text>
+<text x="60" y="130" font-size="32" fill="#4e5d61">T2의 값만 5에서 105로 바꿉니다.</text>
+<text x="60" y="191" font-size="31" fill="#256257" font-weight="600">T1이 읽을 수 있는 키</text>
+<text x="684" y="191" font-size="31" fill="#4e5d61" font-weight="600">미래 위치의 키</text>
+<rect x="60" y="207" width="140" height="65" rx="8" fill="#d6e9df"/>
+<text x="130" y="252" font-size="38" font-weight="700" text-anchor="middle">P1</text>
+<rect x="216" y="207" width="140" height="65" rx="8" fill="#d6e9df"/>
+<text x="286" y="252" font-size="38" font-weight="700" text-anchor="middle">P2</text>
+<rect x="372" y="207" width="140" height="65" rx="8" fill="#d6e9df"/>
+<text x="442" y="252" font-size="38" font-weight="700" text-anchor="middle">P3</text>
+<rect x="528" y="207" width="140" height="65" rx="8" fill="#d6e9df"/>
+<text x="598" y="252" font-size="38" font-weight="700" text-anchor="middle">T1</text>
+<rect x="684" y="207" width="140" height="65" rx="8" fill="#ebe9e4"/>
+<text x="754" y="252" font-size="38" font-weight="700" text-anchor="middle">T2</text>
+<rect x="840" y="207" width="140" height="65" rx="8" fill="#ebe9e4"/>
+<text x="910" y="252" font-size="38" font-weight="700" text-anchor="middle">T3</text>
+<rect x="996" y="207" width="140" height="65" rx="8" fill="#ebe9e4"/>
+<text x="1066" y="252" font-size="38" font-weight="700" text-anchor="middle">T4</text>
+<text x="60" y="341" font-size="32" fill="#4e5d61">PyTorch SDPA에 전달한 마스크</text>
+<text x="638" y="341" font-size="32" fill="#4e5d61">T1 출력의 변화</text>
+<path d="M60 356H1140M60 452H1140M60 548H1140" fill="none" stroke="#bbc8c1" stroke-width="2"/>
+<text x="62" y="420" font-size="44" font-weight="600">불리언</text><text x="638" y="420" font-size="49" font-weight="700" fill="#256257">2.5 → 2.5</text>
+<text x="62" y="512" font-size="44" font-weight="600">실수형 0/1</text><text x="638" y="512" font-size="49" font-weight="700" fill="#8c411e">3.257 → 10.465</text>
+<text x="60" y="601" font-size="25" fill="#256257">파운데이션 모델 엔지니어링 · 4.4</text>
+</g></svg>

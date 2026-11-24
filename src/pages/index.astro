@@ -9,24 +9,22 @@ import { withBasePath, withPagePath } from '../utils/paths.js';
 ---
 
 <BookLayout title="Home" lang="en">
-  <div style="text-align: right; color: var(--secondary-color); font-size: 0.9rem; margin-bottom: 1rem;">Last update: 2026-11-25</div>
   <h1>Foundation Model Engineering</h1>
-  <p><strong>Learn how foundation models work—and what breaks when you train, serve, and evaluate them.</strong> A free, open-source textbook in English and Korean, with interactive explanations, PyTorch examples, and CPU labs.</p>
-  <p>Looking for one explanation? Open Contents and search for a model such as GLM-5.4 or a metric such as TTFT. For a guided introduction, choose a question below or use the <a href={withPagePath('/chapter-1/learning-path-and-mastery')}>prerequisite check</a> to see which Python, linear algebra, and probability skills you’ll need.</p>
-
-  <p>The November 24 comparison covers <a href={withPagePath('/chapter-17/commercial-model-benchmarks')}>{modelSnapshot.models.length} model profiles</a>. Check how to access <a href={withPagePath('/chapter-17/commercial-model-benchmarks') + '#model-glm-54'}>GLM-5.4</a>, find the context limit in the public <a href={withPagePath('/chapter-17/commercial-model-benchmarks') + '#model-ling-32-air'}>Ling-3.2-air checkpoint</a>, or calculate what one extra input token can do to the <a href={withPagePath('/chapter-17/commercial-model-benchmarks') + '#long-context-cost'}>GPT-6.2 Astra and Sol bill</a>. <a href={withPagePath('/chapter-11/audio-and-speech-integration')}>Speech</a>, <a href={withPagePath('/chapter-11/image-diffusion-models')}>image</a> and <a href={withPagePath('/chapter-11/commercial-video-models')}>video models</a> have their own evaluation chapters.</p>
+  <p>A free English and Korean textbook on training, serving, and evaluating foundation models, with browser experiments and CPU PyTorch labs.</p>
 
   <FeaturedLessons lang="en" />
+
+  <h2>Model selection and cost</h2>
+  <p>The November 24 comparison covers <a href={withPagePath('/chapter-17/commercial-model-benchmarks')}>{modelSnapshot.models.length} model profiles</a>. Check how to access <a href={withPagePath('/chapter-17/commercial-model-benchmarks') + '#model-glm-54'}>GLM-5.4</a>, find the context limit in the public <a href={withPagePath('/chapter-17/commercial-model-benchmarks') + '#model-ling-32-air'}>Ling-3.2-air checkpoint</a>, or calculate what one extra input token can do to the <a href={withPagePath('/chapter-17/commercial-model-benchmarks') + '#long-context-cost'}>GPT-6.2 Astra and Sol bill</a>. <a href={withPagePath('/chapter-11/audio-and-speech-integration')}>Speech</a>, <a href={withPagePath('/chapter-11/image-diffusion-models')}>image</a> and <a href={withPagePath('/chapter-11/commercial-video-models')}>video models</a> have their own evaluation chapters.</p>
+
   <LearningRoutes lang="en" />
 
-  <h2>Build something you can test</h2>
-  <p>In the <a href={withPagePath('/chapter-7/tiny-decoder-lab')}>tiny decoder lab</a>, train a model on a CPU, remove its access to earlier tokens, then check whether it can still copy a sequence. In the <a href={withPagePath('/chapter-17/experimental-design-and-uncertainty') + '#release-lab'}>browser evaluation lab</a>, two candidates gain 15 percentage points on the target task. Run both and find out why only one passes.</p>
-  <p>Start the decoder experiment: <a href="https://colab.research.google.com/github/sungeuns/foundation-model-engineering/blob/main/public/labs/tiny-decoder-lab.ipynb">open the notebook in Colab</a> or <a href={withBasePath('/labs/tiny-decoder-lab.ipynb')} download="tiny-decoder-lab.ipynb">download it for Jupyter</a>. It uses CPU PyTorch and generates its own data. No model download or API key is needed; Colab execution requires Google sign-in.</p>
-  <p>The {chapters.reduce((total, chapter) => total + chapter.subs.length, 0)} lessons connect architectures, training, inference, retrieval, agents, evaluation, and safety. Short quizzes ask you to explain a failure or choose a trade-off. Illustrative calculations and authored simulations are labeled; they are not measurements of a production model.</p>
+  <h2>Train a small decoder on a CPU</h2>
+  <p>How much of a repeating sequence can a decoder copy when it loses access to earlier tokens? Inspect <a href={withPagePath('/chapter-7/tiny-decoder-lab') + '#decoder-copy-trace'}>the predictions token by token</a>, then <a href="https://colab.research.google.com/github/sungeuns/foundation-model-engineering/blob/main/public/labs/tiny-decoder-lab.ipynb">run the experiment in Colab</a> or <a href={withBasePath('/labs/tiny-decoder-lab.ipynb')} download="tiny-decoder-lab.ipynb">download the Jupyter notebook</a>. The code generates its own data. Running it on Colab requires a Google sign-in.</p>
 
-  <h2>Help make the book better</h2>
-  <p>This is an independent project by Seongeun So, developed with AI assistance. Sources and limitations belong next to the claims they support. If an explanation, translation, or experiment does not hold up, <a href="https://github.com/sungeuns/foundation-model-engineering/issues">open an issue</a> with the page and a counterexample.</p>
-  <p>If a lesson helped you, share that lesson with someone working on the same problem. <a href="https://github.com/sungeuns/foundation-model-engineering">Star the repository</a> to bookmark it, or <a href="https://github.com/sungeuns/foundation-model-engineering/blob/main/CONTRIBUTING.md">contribute a correction</a>.</p>
+  <h2>About the book</h2>
+  <p>Seongeun So develops this independent textbook with AI assistance. Browse <a href="#book-contents">all {chapters.reduce((n, chapter) => n + chapter.subs.length, 0)} lessons</a> or <a href="https://github.com/sungeuns/foundation-model-engineering">bookmark the repository on GitHub</a>. If an example behaves differently from the explanation, <a href="https://github.com/sungeuns/foundation-model-engineering/issues/new/choose">report the chapter and the inputs that reproduce it</a>.</p>
+  <p class="last-update">Last update <time datetime="2026-11-25">2026-11-25</time></p>
 
   <h2 id="book-contents">Table of Contents</h2>
   <div class="toc">
@@ -45,6 +43,7 @@ import { withBasePath, withPagePath } from '../utils/paths.js';
 </BookLayout>
 
 <style>
+  .last-update { color: var(--secondary-color); font-size: .9rem; }
   .toc {
     margin-top: 2rem;
   }

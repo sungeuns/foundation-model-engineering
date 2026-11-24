@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" xml:lang="en" role="img" aria-labelledby="card-title card-description">
+<title id="card-title">Can T2 change an earlier output?</title><desc id="card-description">PyTorch prefix-mask example with seven values from 1 to 7. T1 should read only P1, P2, P3 and T1. Raising T2 from 5 to 105 leaves T1 at 2.5 with a Boolean mask. Passing the same ones and zeros as floats changes T1 from 3.257 to 10.465.</desc>
+<rect width="1200" height="630" fill="#f5f2eb"/>
+<g font-family="DejaVu Sans, sans-serif" fill="#192a30">
+<text x="58" y="83" font-size="54" font-weight="700">Can T2 change an earlier output?</text>
+<text x="60" y="130" font-size="32" fill="#4e5d61">Change only the value at T2, from 5 to 105.</text>
+<text x="60" y="191" font-size="31" fill="#256257" font-weight="600">Keys T1 may read</text>
+<text x="684" y="191" font-size="31" fill="#4e5d61" font-weight="600">Future keys</text>
+<rect x="60" y="207" width="140" height="65" rx="8" fill="#d6e9df"/>
+<text x="130" y="252" font-size="38" font-weight="700" text-anchor="middle">P1</text>
+<rect x="216" y="207" width="140" height="65" rx="8" fill="#d6e9df"/>
+<text x="286" y="252" font-size="38" font-weight="700" text-anchor="middle">P2</text>
+<rect x="372" y="207" width="140" height="65" rx="8" fill="#d6e9df"/>
+<text x="442" y="252" font-size="38" font-weight="700" text-anchor="middle">P3</text>
+<rect x="528" y="207" width="140" height="65" rx="8" fill="#d6e9df"/>
+<text x="598" y="252" font-size="38" font-weight="700" text-anchor="middle">T1</text>
+<rect x="684" y="207" width="140" height="65" rx="8" fill="#ebe9e4"/>
+<text x="754" y="252" font-size="38" font-weight="700" text-anchor="middle">T2</text>
+<rect x="840" y="207" width="140" height="65" rx="8" fill="#ebe9e4"/>
+<text x="910" y="252" font-size="38" font-weight="700" text-anchor="middle">T3</text>
+<rect x="996" y="207" width="140" height="65" rx="8" fill="#ebe9e4"/>
+<text x="1066" y="252" font-size="38" font-weight="700" text-anchor="middle">T4</text>
+<text x="60" y="341" font-size="32" fill="#4e5d61">Mask passed to PyTorch SDPA</text>
+<text x="638" y="341" font-size="32" fill="#4e5d61">T1 output before → after</text>
+<path d="M60 356H1140M60 452H1140M60 548H1140" fill="none" stroke="#bbc8c1" stroke-width="2"/>
+<text x="62" y="420" font-size="44" font-weight="600">Boolean</text><text x="638" y="420" font-size="49" font-weight="700" fill="#256257">2.5 → 2.5</text>
+<text x="62" y="512" font-size="44" font-weight="600">Float 0/1</text><text x="638" y="512" font-size="49" font-weight="700" fill="#8c411e">3.257 → 10.465</text>
+<text x="60" y="601" font-size="25" fill="#256257">Foundation Model Engineering · 4.4</text>
+</g></svg>

@@ -19,6 +19,23 @@ const text = (value, x, y, size, opts = '') => `<text x="${x}" y="${y}" font-siz
 const ink = '#192a30', teal = '#256257', muted = '#4e5d61';
 
 const copy = {
+  'prefix-mask': {
+    path: '/chapter-4/hybrid-prefix-lm', number: '4.4', render: prefixMaskSvg,
+    en: {
+      title: 'Can T2 change an earlier output?',
+      setup: 'Change only the value at T2, from 5 to 105.',
+      visible: 'Keys T1 may read', blocked: 'Future keys',
+      mask: 'Mask passed to PyTorch SDPA', result: 'T1 output before → after',
+      boolean: 'Boolean', float: 'Float 0/1',
+    },
+    ko: {
+      title: 'T2가 앞선 위치의 출력을 바꿀 수 있을까?',
+      setup: 'T2의 값만 5에서 105로 바꿉니다.',
+      visible: 'T1이 읽을 수 있는 키', blocked: '미래 위치의 키',
+      mask: 'PyTorch SDPA에 전달한 마스크', result: 'T1 출력의 변화',
+      boolean: '불리언', float: '실수형 0/1',
+    },
+  },
   decoder: {
     path: '/chapter-7/tiny-decoder-lab', number: '7.5',
     en: {
@@ -223,6 +240,46 @@ ${axis}
 <path d="M58 563H1144" stroke="#bbc8c1" stroke-width="2"/>
 ${text(labels.axis, 58, 603, 24, `fill="${muted}"`)}
 ${text(ko ? `파운데이션 모델 엔지니어링 · ${lesson.number}` : `Foundation Model Engineering · ${lesson.number}`, 1144, 603, 21, `text-anchor="end" fill="${teal}"`)}
+</g></svg>\n`;
+}
+
+function prefixMaskSvg(lesson, lang, card) {
+  const c = lesson[lang], ko = lang === 'ko';
+  const positions = ['P1', 'P2', 'P3', 'T1', 'T2', 'T3', 'T4'];
+  const t1 = positions.indexOf('T1');
+  const keys = positions.map((label, index) => {
+    const x = 60 + index * 156;
+    return `<rect x="${x}" y="207" width="140" height="65" rx="8" fill="${index <= t1 ? '#d6e9df' : '#ebe9e4'}"/>
+${text(label, x + 70, 252, 38, 'font-weight="700" text-anchor="middle"')}`;
+  }).join('\n');
+  const values = positions.map((_, index) => index + 1);
+  const changed = values.map((value, index) => positions[index] === 'T2' ? value + 100 : value);
+  // With Q = K = 0, Boolean masking gives equal weight to visible keys.
+  // The additive 0/1 mask instead gives visible keys exp(1) and future keys exp(0).
+  const rows = [false, true].map((additive, row) => {
+    const weights = positions.map((_, index) => additive ? Math.exp(Number(index <= t1)) : Number(index <= t1));
+    const sum = weights.reduce((total, weight) => total + weight, 0);
+    const output = vector => vector.reduce((total, value, index) => total + value * weights[index], 0) / sum;
+    const format = value => value.toFixed(additive ? 3 : 1);
+    const y = 420 + 92 * row;
+    return text(additive ? c.float : c.boolean, 62, y, 44, 'font-weight="600"') +
+      text(`${format(output(values))} → ${format(output(changed))}`, 638, y, 49,
+        `font-weight="700" fill="${additive ? '#8c411e' : teal}"`);
+  }).join('\n');
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" xml:lang="${lang}" role="img" aria-labelledby="card-title card-description">
+<title id="card-title">${escape(c.title)}</title><desc id="card-description">${escape(card.alt)}</desc>
+<rect width="1200" height="630" fill="#f5f2eb"/>
+<g font-family="${ko ? 'Noto Sans CJK KR, DejaVu Sans' : 'DejaVu Sans'}, sans-serif" fill="${ink}">
+${text(c.title, 58, 83, 54, 'font-weight="700"')}
+${text(c.setup, 60, 130, 32, `fill="${muted}"`)}
+${text(c.visible, 60, 191, 31, `fill="${teal}" font-weight="600"`)}
+${text(c.blocked, 684, 191, 31, `fill="${muted}" font-weight="600"`)}
+${keys}
+${text(c.mask, 60, 341, 32, `fill="${muted}"`)}
+${text(c.result, 638, 341, 32, `fill="${muted}"`)}
+<path d="M60 356H1140M60 452H1140M60 548H1140" fill="none" stroke="#bbc8c1" stroke-width="2"/>
+${rows}
+${text(ko ? '파운데이션 모델 엔지니어링 · ' + lesson.number : 'Foundation Model Engineering · ' + lesson.number, 60, 601, 25, `fill="${teal}"`)}
 </g></svg>\n`;
 }
 

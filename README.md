@@ -1,22 +1,18 @@
 # Foundation Model Engineering
 
-**English** · [한국어 소개](README.ko.md)
+**[Read the book in English](https://sungeuns.github.io/foundation-model-engineering/)** · [한국어판](https://sungeuns.github.io/foundation-model-engineering/ko/) · [한국어 README](README.ko.md)
 
-**Understand the model. Measure the trade-offs. Build a system you can test.**
+A free textbook on training, serving, and evaluating foundation models. Work through browser experiments and PyTorch examples you can run on a CPU.
 
-A free textbook for AI engineers, with interactive explanations, PyTorch examples, and CPU labs. Read in **[English](https://sungeuns.github.io/foundation-model-engineering/)** or **[한국어](https://sungeuns.github.io/foundation-model-engineering/ko/)**. No account required.
+**[Try the 24 GiB KV-cache calculator](https://sungeuns.github.io/foundation-model-engineering/chapter-12/kv-cache-management/?kv=1&batch=9&sequence=8192&generated=2048&layers=80&heads=8&dimension=128&precision=2&budget=24#kv-calculator).** In this example, nine prompts take 22.5 GiB. How many requests can finish if each generates another 2,048 tokens?
 
-[![The book's attention demo calculates token weights and an output vector from explicit Q, K, and V vectors.](public/social/attention-demo.png)](https://sungeuns.github.io/foundation-model-engineering/chapter-3/self-attention-mathematics/#attention-weight-example)
-
-*Screenshot of the book's calculated toy-attention demo. [Try it](https://sungeuns.github.io/foundation-model-engineering/chapter-3/self-attention-mathematics/#attention-weight-example): choose a query, mask future tokens, and inspect the weighted output. These are authored vectors, not measurements from a trained model.*
+[![With 24 GiB available, nine prompts take 22.5 GiB, ten take 25 GiB, and nine requests at their full length take 28.125 GiB.](public/social/kv-budget-en.png)](https://sungeuns.github.io/foundation-model-engineering/chapter-12/kv-cache-management/?kv=1&batch=9&sequence=8192&generated=2048&layers=80&heads=8&dimension=128&precision=2&budget=24#kv-calculator)
 
 ## Start with one question
 
-You do not need to read the whole book first.
-
 | Your question | Start here | What you can do |
 | --- | --- | --- |
-| The weights fit. Why does serving run out of memory? | [KV cache management](https://sungeuns.github.io/foundation-model-engineering/chapter-12/kv-cache-management/#kv-cache-capacity) | [Open nine prompts in a 24 GiB budget](https://sungeuns.github.io/foundation-model-engineering/chapter-12/kv-cache-management/?kv=1&batch=9&sequence=8192&generated=2048&layers=80&heads=8&dimension=128&precision=2&budget=24#kv-calculator), then change the generation length and see how many requests still fit. |
+| The weights fit. Why does serving run out of memory? | [KV cache management](https://sungeuns.github.io/foundation-model-engineering/chapter-12/kv-cache-management/#kv-cache-capacity) | Change KV head count and cache precision to find where capacity runs out. |
 | What does an attention weight actually do? | [Self-attention mathematics](https://sungeuns.github.io/foundation-model-engineering/chapter-3/self-attention-mathematics/#attention-weight-example) | Calculate the weights by hand with the [two-page worksheet and solution](https://sungeuns.github.io/foundation-model-engineering/labs/attention-worksheet-en.pdf), then check the same inputs in the browser. |
 | How many context positions does one image use? | [Visual token budget](https://sungeuns.github.io/foundation-model-engineering/chapter-11/vision-language-bridges/#visual-token-budget) | Change image size and count. Compare patch projection with a decoder that reads separate visual memory. |
 | My RAG answer is wrong. Where did the evidence go? | [Trace one answer](https://sungeuns.github.io/foundation-model-engineering/chapter-14/rag-failure-modes-and-operational-design/#trace-a-rag-answer) | Trace six failures by chunk ID, then [change how many candidates reach the reranker](https://sungeuns.github.io/foundation-model-engineering/chapter-14/advanced-retrieval/#rrf-candidate-cutoff). |
@@ -35,6 +31,8 @@ The November 24 comparison includes direct links to each profile. Check [GLM-5.4
 
 ### Try a CPU lab
 
+Can an attention mask leak a future token? Change the fifth value in a seven-token sequence and see whether the fourth output moves. This CPU example uses PyTorch and fixed inputs. [Run the mask test](https://sungeuns.github.io/foundation-model-engineering/chapter-4/hybrid-prefix-lm/#prefix-mask-test) · [Python source](public/labs/prefix_mask.py)
+
 **Train, break, and resume a tiny decoder:** open the [English notebook](https://colab.research.google.com/github/sungeuns/foundation-model-engineering/blob/main/public/labs/tiny-decoder-lab.ipynb) or [Korean notebook](https://colab.research.google.com/github/sungeuns/foundation-model-engineering/blob/main/public/labs/tiny-decoder-lab-ko.ipynb) in Colab. Use a CPU runtime. Predict what removing context will do, train the model, and inspect causal and checkpoint-replay checks. Colab execution requires Google sign-in. For local Jupyter, [download the November notebooks verified on Linux and Windows](https://github.com/sungeuns/foundation-model-engineering/releases/tag/2026-11-labs). No model download or API key is needed. The [guide](https://sungeuns.github.io/foundation-model-engineering/chapter-7/tiny-decoder-lab/) explains Python/PyTorch setup and the experiment's limits.
 
 [Run the release decision lab in your browser](https://sungeuns.github.io/foundation-model-engineering/chapter-17/experimental-design-and-uncertainty/#release-lab). Two candidates gain 15 percentage points on the target task. Which clears the release criteria? You can also run the same script from a checkout with Python 3.10+.
@@ -44,7 +42,7 @@ python public/labs/paired_release.py --scenario gain
 python public/labs/paired_release.py --scenario regression
 ```
 
-Then try `uncertain` and `missing`. The [evaluation guide](https://sungeuns.github.io/foundation-model-engineering/chapter-17/experimental-design-and-uncertainty/) explains why a target improvement can still produce Review or Block. This lab uses Python 3.10+ and the standard library. Both labs use synthetic teaching tasks; their results do not measure natural-language model quality.
+Then try `uncertain` and `missing`. The [evaluation guide](https://sungeuns.github.io/foundation-model-engineering/chapter-17/experimental-design-and-uncertainty/) explains why a target improvement can still produce Review or Block. This lab uses Python 3.10+ and the standard library. The decoder and release examples generate synthetic data so you can reproduce each result.
 
 ### Follow and contribute
 

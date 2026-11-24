@@ -8,204 +8,110 @@ import { LogicGateVisualizer } from '../../components/chapter-1/LogicGateVisuali
 
 # 1.1 Symbolism vs. Connectionism
 
-The quest for artificial intelligence has been defined by a fundamental philosophical and technical schism: **Symbolism** versus **Connectionism**. This debate is not merely historical; it shapes how we understand the capabilities and limitations of modern foundation models.
+A library keeps two catalogs. Each records whether a copy is on loan: 1 means yes, 0 means no. When one catalog says 1 and the other says 0, someone needs to check the record. How would you build that check? How would your answer change if one of the catalogs contained handwritten notes instead of flags?
 
----
+<a id="motivation-why-this-matters-today"></a>
+<a id="the-metaphor-the-recipe-book-vs-the-master-chefs-intuition"></a>
+<a id="the-symbolist-paradigm-intelligence-as-calculation"></a>
+<a id="core-philosophy"></a>
+<a id="limitations"></a>
 
-### **Motivation: Why This Matters Today**
-In the era of massive Foundation Models, understanding this split is not just academic trivia. It provides direct insight into:
-*   **Hallucination and Reliability:** Why LLMs can struggle with factual accuracy when statistical pattern learning is not enough on its own.
-*   **Fast Patterning vs. Deliberate Reasoning:** Connectionist systems are strong at intuitive perception and pattern completion, while symbolic systems were designed around explicit stepwise reasoning. Bridging that gap remains an active research direction.
+## Write a rule for two known facts
 
----
+For two flags $A$ and $B$, the Python expression `A != B` returns whether they disagree. This is **exclusive OR (XOR)**. A rule engine could record which copy it checked, the two input values, and why it flagged them. The rule and its inputs can be inspected separately. This illustrates **symbolism**, the use of explicit symbols and operations on them. Newell and Simon argued that systems manipulating symbols could produce general intelligent action. They presented this as a hypothesis about intelligence. [[1]](#ref-1)
 
-### **The Metaphor: The Recipe Book vs. The Master Chef's Intuition**
+A rule can run exactly as written and still give the librarian the wrong answer. If both records say “on loan” after the copy has been returned, XOR correctly reports agreement. Did the catalogs disagree? No. Is the book on the shelf? That requires fresh evidence.
 
-Imagine you want to build a system that can cook delicious meals.
+<a id="the-connectionist-paradigm-intelligence-as-emergence"></a>
+<a id="core-philosophy-1"></a>
+<a id="the-mathematical-contrast"></a>
+<a id="example-the-connectionist-neuron"></a>
 
-*   **The Symbolist Approach is like a massive Recipe Book.** You sit down with world-class chefs and write down every possible rule: "If the steak is 1 inch thick, grill it for 4 minutes on each side." "If the sauce is too acidic, add a pinch of sugar." The intelligence lies in the **explicit rules** and **logical combinations**.
-*   **The Connectionist Approach is like training a Master Chef from scratch.** You don't give them any recipes. Instead, you let them cook thousands of times, taste the results, and adjust their technique. Over time, they develop an **intuitive understanding** of how ingredients interact. They can't explain the exact rules they follow, but they can create masterpiece dishes.
+## Give the same two facts to a neuron
 
-Modern foundation models are the largest and most commercially important expression of this "master chef" intuition.
+A threshold neuron computes a score $s=w_A A+w_B B+b$. The two weights $w_A,w_B$ determine each input's contribution, and the bias $b$ shifts the cutoff. Our neuron returns 1 when $s\geq0$. With weights $(1,1)$ and bias $-1.5$, the pair $(1,1)$ gets a score of $0.5$. Each of the other three scores is negative. This neuron implements **AND**: both catalogs say the book is on loan.
 
----
+<LogicGateVisualizer client:load lang="en" />
 
-<div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', margin: '20px 0' }}>
+Switch the target rule to **XOR**. Keep both weights at 1 and set the bias to $-0.5$. The neuron now flags $(0,1)$ and $(1,0)$ correctly. It also flags $(1,1)$, where the two catalogs agree. All four possible inputs fit in the table, so we can identify the exact error hidden by the summary “three out of four.”
 
-<div style={{ maxWidth: '600px', width: '100%' }}>
-![Symbolism vs Connectionism](../../assets/images/chapter-1/symbolism_vs_connectionism.png)
-</div>
+<a id="comparison-symbolism-vs-connectionism"></a>
 
-<em style={{ marginTop: '10px', color: '#7f8c8d' }}>Source: AI-generated illustration</em>
+### Why a single threshold cannot separate XOR
 
-</div>
+The input $(0,0)$ must give 0, so $b<0$. The two unequal inputs must each give 1, so $w_A+b\geq0$ and $w_B+b\geq0$. Adding those inequalities and subtracting $b$ gives
 
----
+$$
+w_A+w_B+b \geq -b > 0.
+$$
 
-## A Brief History of the Schism
+The left side is the score for $(1,1)$. It would have to be negative for the neuron to return the correct answer. Changing weights or running an optimizer for longer cannot resolve that contradiction for these two raw inputs. The restriction is on this particular representation and decision rule. [[3]](#ref-3)
 
-The tension between these two schools of thought has driven the famous "AI Winters" and summers.
+<a id="from-rules-to-weights"></a>
 
-1.  **The Dawn (1950s):** Symbolism dominated early AI with high hopes for general problem solvers. Simultaneously, Rosenblatt introduced the **Perceptron** (1958) [[2]](#ref-2), the ancestor of connectionism.
-2.  **The First Winter (1970s):** Minsky and Papert published *Perceptrons* (1969) [[3]](#ref-3), proving that single-layer networks could not solve non-linear problems like XOR. **This event is one of the most famous turning points in AI history.** The critique by Minsky and Papert, who were the top authorities at the time, was devastating. It contributed to a long lull in neural network research funding, and connectionism was pushed to the fringes of academia for years.
-3.  **The Expert System Era (1980s):** Symbolism peaked with expert systems, but hit the "Knowledge Acquisition Bottleneck." At the same time, Backpropagation was popularized by Rumelhart et al. (1986) [[4]](#ref-4), reviving connectionism.
-4.  **The Deep Learning Revolution (2010s-Present):** Massive compute and data allowed connectionism to dominate, leading to the foundation models we use today.
+## Build a representation that separates the cases
 
----
+Give the network two hidden units. The first computes $h_1=\max(0,A-B)$ and the second computes $h_2=\max(0,B-A)$. The first fires when only catalog A reports a loan. The second fires when only B does. Their sum is 1 for either disagreement and 0 for agreement.
 
-## The Symbolist Paradigm: Intelligence as Calculation
-
-Symbolism, often referred to as **Classical AI** or **GOFAI** (Good Old-Fashioned AI), posits that intelligence is the manipulation of explicit symbols based on formal rules.
-
-### Core Philosophy
-*   **Physical Symbol System Hypothesis:** A physical symbol system has the necessary and sufficient means for general intelligent action (Newell & Simon, 1976) [[1]](#ref-1).
-*   **Representation:** Knowledge is represented as facts and rules (e.g., `If animal has feathers and can fly, then it is a bird`).
-*   **Mechanism:** Inference engines apply logical rules (deduction, induction) to derive new knowledge.
-
-### Limitations
-Symbolism hit a wall because extracting every rule of human expertise and coding it manually proved impossible for complex, real-world tasks. It failed at perception and handling ambiguity.
-
----
-
-## The Connectionist Paradigm: Intelligence as Emergence
-
-Connectionism rejects the idea of explicit rules. Instead, it draws inspiration from the biological brain, proposing that intelligence emerges from the interaction of simple, interconnected processing units.
-
-### Core Philosophy
-*   **Distributed Representation:** Knowledge is not stored in a specific location or rule but is distributed across the weights of connections in a network.
-*   **Learning:** The system learns by adjusting connection weights based on data using algorithms like **Backpropagation**.
-*   **Parallel Processing:** Operations occur in parallel across the network.
-
----
-
-## Comparison: Symbolism vs. Connectionism
-
-| Feature | Symbolism (GOFAI) | Connectionism (Deep Learning) |
-| :--- | :--- | :--- |
-| **Basic Unit** | Symbols, Rules, Logic | Neurons, Weights, Continuous Values |
-| **Learning** | Hardcoded by experts (mostly) | Learned from data (Backprop) |
-| **Interpretability** | **High** (Traceable rules) | **Low** (Black box matrices) |
-| **Perception** | Poor (Struggles with images/audio) | Learns useful visual/audio representations; quality varies |
-| **Reasoning** | **Excellent** (Strict logic, math) | Poor (Struggles with long-chain logic) |
-| **Data Requirements** | Low (Needs expert knowledge) | **High** (Needs massive datasets) |
-| **Handling Noise** | Brittle (Fails on unmodeled inputs) | **Robust** (Graceful degradation) |
-
----
-
-## The Mathematical Contrast
-
-We can contrast the two paradigms mathematically.
-
-**Symbolic Inference** often relies on boolean logic and set theory:
-$$\forall x (Bird(x) \land \neg Flightless(x) \rightarrow CanFly(x))$$
-
-**Connectionist Inference** relies on continuous functions and linear algebra:
-$$y = \sigma(\mathbf{W}^T\mathbf{x} + b)$$
-Where $\mathbf{W}$ is the weight matrix, $\mathbf{x}$ is the input vector, $b$ is the bias, and $\sigma$ is a non-linear activation function.
-
----
-
-## From Rules to Weights
-
-Let's see how these look in code. Below is a PyTorch example showing how a Connectionist approach (a simple neural network) learns to solve the XOR problem that Symbolism could easily describe but single-layer Perceptrons failed at.
+This CPU PyTorch example sets the weights by hand so that you can check every intermediate value. The four rows cover the full domain of binary flags. There is no training run.
 
 ```python
 import torch
-import torch.nn as nn
-import torch.optim as optim
 
-# The XOR data
-X = torch.tensor([[0.0, 0.0], [0.0, 1.0], [1.0, 0.0], [1.0, 1.0]], dtype=torch.float32)
-y = torch.tensor([[0.0], [1.0], [1.0], [0.0]], dtype=torch.float32)
+# Each row is one copy's pair of catalog flags. Each column of weights
+# feeds one hidden unit. Negative differences are clipped to zero.
+flags = torch.tensor([[0, 0], [0, 1], [1, 0], [1, 1]], dtype=torch.float32)
+weights = torch.tensor([[1, -1], [-1, 1]], dtype=torch.float32)
+hidden = torch.relu(flags @ weights)
+alerts = hidden.sum(dim=1)
 
-# A simple Multi-Layer Perceptron (MLP)
-class XORModel(nn.Module):
-    def __init__(self):
-        super(XORModel, self).__init__()
-        self.hidden = nn.Linear(2, 2) # Hidden layer
-        self.output = nn.Linear(2, 1) # Output layer
-        self.sigmoid = nn.Sigmoid()
-
-    def forward(self, x):
-        x = self.sigmoid(self.hidden(x))
-        x = self.sigmoid(self.output(x))
-        return x
-
-model = XORModel()
-criterion = nn.BCELoss()
-optimizer = optim.SGD(model.parameters(), lr=0.1)
-
-# Training loop
-for epoch in range(10000):
-    outputs = model(X)
-    loss = criterion(outputs, y)
-    
-    optimizer.zero_grad()
-    loss.backward()
-    optimizer.step()
-    
-    if (epoch + 1) % 2000 == 0:
-        print(f'Epoch [{epoch+1}/10000], Loss: {loss.item():.4f}')
-
-# Test the model
-with torch.no_grad():
-    predicted = model(X)
-    print(f"Predicted outputs:\n{predicted.round()}")
+rule = (flags[:, 0] != flags[:, 1]).float()
+torch.testing.assert_close(alerts, rule)
+print(hidden.tolist())  # [[0.0, 0.0], [0.0, 1.0], [1.0, 0.0], [0.0, 0.0]]
+print(alerts.tolist())  # [0.0, 1.0, 1.0, 0.0]
 ```
 
----
+In a **connectionist** model, interconnected units transform an input through weighted computations. Their weights can be learned from examples. Here the hand-set weights demonstrate what the network can express. To demonstrate learning, you would have to start with other weights, specify an objective, and record what the updates produce. Adding a second linear map alone would leave the network linear. The clipping operation is doing real work.
 
-## Example: The Connectionist Neuron
+<a id="a-brief-history-of-the-schism"></a>
 
-Experiment with a single artificial neuron. Adjust the weights and bias to see how the output changes. Can you make it act like an **AND** gate?
+## What changed between the perceptron and the hidden layer?
 
-<LogicGateVisualizer client:load />
+Rosenblatt's perceptron investigated how connections could change through experience. Minsky and Papert later analyzed mathematical limits of perceptrons, including parity problems. Rumelhart, Hinton and Williams showed how errors propagated backward through a multilayer network could adjust internal connections so that hidden units represented features useful to a task. The catalog example isolates the distinction between choosing a feature by hand and learning it. [[2]](#ref-2) [[3]](#ref-3) [[4]](#ref-4)
 
----
+## Where a foundation model belongs
+
+Now suppose a note reads “back on the shelf since Tuesday.” Extracting the current loan status from many different phrasings is a different job from comparing two bits. A **foundation model** is trained on broad data and can be adapted to many tasks. Such a model could read these notes and propose a status. A program could then apply the explicit comparison. Combining neural and symbolic operations in one system is an active area of research. [[5]](#ref-5) [[6]](#ref-6)
+
+Give the extractor three possible outputs: on loan, returned, or unknown. Route unknowns for review. On a held-out set of notes, count extraction mistakes and abstentions. Separately, run the comparison rule on every pair of known flags. If alerts suddenly double after a new abbreviation appears in the notes, these two checks let you investigate which step changed. [The next section](/chapter-1/power-of-representation) asks how to tell which distinctions an input representation preserves.
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: Why did Symbolism fail at Natural Language Processing (NLP)?</summary>
-*Symbolism relied on rigid grammatical rules and dictionaries. However, human language is highly contextual, ambiguous, and constantly evolving. Rules cannot capture all nuances, idioms, and edge cases. Connectionism succeeds by learning statistical associations from vast amounts of text, capturing context better.*
+<summary>Quiz 1: Both catalogs agree that a returned copy is still on loan. What would a flawless XOR check report?</summary>
+*It reports 0, because the records agree. Detecting the stale status requires a source of information about the return.*
 </details>
 
 <details>
-<summary>Quiz 2: What was the "XOR Problem" and why was it significant?</summary>
-*The XOR (exclusive OR) problem is a simple classification task where the classes are not linearly separable. Minsky and Papert proved that a single-layer perceptron could not learn the XOR function. Their critique became part of the broader slowdown in neural network research for over a decade (the first AI winter), until multi-layer networks and backpropagation were developed.*
+<summary>Quiz 2: With both weights at 1 and bias −0.5, which input defeats the neuron as an XOR detector?</summary>
+*For (1,1) the score is 1.5, so the neuron returns 1. XOR requires 0 because the flags agree.*
 </details>
 
 <details>
-<summary>Quiz 3: Are modern LLMs purely Connectionist?</summary>
-*While their core architecture (Transformer) is purely connectionist, relying on matrix multiplications and continuous representations, the way we use them sometimes bridges the gap. Prompt engineering, chain-of-thought reasoning, and tool use (like calling a calculator API) introduce symbolic-like operations on top of the connectionist core. The research field of "Neuro-symbolic AI" actively tries to combine the strengths of both (Garcez & Lamb, 2020) [[5]](#ref-5).*
+<summary>Quiz 3: What happens if you remove ReLU and sum the two hidden values?</summary>
+*The signed differences cancel on every row: (A − B) + (B − A) = 0. Clipping the negative value lets the positive difference survive.*
 </details>
 
 <details>
-<summary>Quiz 4: Discuss the "Knowledge Acquisition Bottleneck" in Symbolist systems.</summary>
-*The Knowledge Acquisition Bottleneck refers to the difficulty of extracting knowledge from human experts and encoding it into explicit rules. Human experts often rely on intuition and tacit knowledge that they cannot easily verbalize. Furthermore, the number of rules required for complex domains grows exponentially, making manual curation intractable.*
+<summary>Quiz 4: Do four correct outputs show that this network learned, or that it can read a librarian's note?</summary>
+*They establish the behavior of these hand-set weights over all binary inputs. Learning would require evidence of parameter updates. Reading notes would require separate tests on text and a policy for ambiguous notes.*
 </details>
-
-<details>
-<summary>Quiz 5: How does the concept of "Distributed Representation" in Connectionism differ from Symbolic representation?</summary>
-*In Symbolism, a concept is represented by a specific symbol (e.g., a node in a graph or a specific variable). In Connectionism, a concept is represented by a pattern of activity across many units (neurons). No single neuron represents the concept; it is the combination of weights and activations that stores the information. This allows for graceful degradation and generalization.*
-</details>
-
-<details>
-<summary>Quiz 6: Provide a formal mathematical proof showing that a single-layer perceptron with a step function activation cannot solve the XOR problem.</summary>
-*Let the inputs be $x_1, x_2 \in \{0, 1\}$. A single-layer perceptron computes $y = \Theta(w_1 x_1 + w_2 x_2 - \theta)$, where $\Theta$ is the Heaviside step function and $\theta$ is the threshold. For XOR, we need the following inequalities to hold:
-1) For $(0,0) \rightarrow 0$: $0 < \theta$
-2) For $(1,0) \rightarrow 1$: $w_1 \ge \theta$
-3) For $(0,1) \rightarrow 1$: $w_2 \ge \theta$
-4) For $(1,1) \rightarrow 0$: $w_1 + w_2 < \theta$
-From (2) and (3), we have $w_1 + w_2 \ge 2\theta$. Since (1) states $\theta > 0$, this implies $w_1 + w_2 > \theta$. However, this directly contradicts inequality (4), which requires $w_1 + w_2 < \theta$. Therefore, no such weights $w_1, w_2$ and threshold $\theta$ exist, proving that a single-layer perceptron cannot solve XOR.*
-</details>
-
----
 
 ## References
 
-1. <a id="ref-1"></a>Newell, A., & Simon, H. A. (1976). *Computer science as empirical inquiry: Symbols and search*. Communications of the ACM, 19(3), 113-126.
-2. <a id="ref-2"></a>Rosenblatt, F. (1958). *The perceptron: a probabilistic model for information storage and organization in the brain*. Psychological review, 65(6), 386.
-3. <a id="ref-3"></a>Minsky, M., & Papert, S. (1969). *Perceptrons*. MIT Press.
-4. <a id="ref-4"></a>Rumelhart, D. E., Hinton, G. E., & Williams, R. J. (1986). *Learning representations by back-propagating errors*. Nature, 323(6088), 533-536.
-5. <a id="ref-5"></a>Garcez, A. D., & Lamb, L. C. (2020). *Neurosymbolic AI: The 3rd Wave*. [arXiv:2012.05876](https://arxiv.org/abs/2012.05876).
+1. <a id="ref-1"></a>Newell, A., and Simon, H. A. (1976). [Computer Science as Empirical Inquiry: Symbols and Search](https://schiaffonati.faculty.polimi.it/TFI/newell_simon_1976.pdf).
+2. <a id="ref-2"></a>Rosenblatt, F. (1958). [The Perceptron: A Probabilistic Model for Information Storage and Organization in the Brain](https://pubmed.ncbi.nlm.nih.gov/13602029/).
+3. <a id="ref-3"></a>Minsky, M., and Papert, S. (1969). [Perceptrons](https://mitpress.mit.edu/9780262630221/perceptrons/).
+4. <a id="ref-4"></a>Rumelhart, D. E., Hinton, G. E., and Williams, R. J. (1986). [Learning Representations by Back-Propagating Errors](https://www.nature.com/articles/323533a0).
+5. <a id="ref-5"></a>Garcez, A. d’A., and Lamb, L. C. (2020). [Neurosymbolic AI: The 3rd Wave](https://arxiv.org/abs/2012.05876).
+6. <a id="ref-6"></a>Bommasani, R., et al. (2021). [On the Opportunities and Risks of Foundation Models](https://arxiv.org/abs/2108.07258).

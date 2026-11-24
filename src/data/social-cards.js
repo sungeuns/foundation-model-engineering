@@ -1,6 +1,16 @@
 // Focused previews for independently useful lessons. Other pages keep the book cover.
 // Paths are site-root-relative; the layout applies the deployment base.
 export const socialCards = {
+  '/chapter-4/hybrid-prefix-lm': {
+    en: {
+      image: '/social/prefix-mask-en.png',
+      alt: 'PyTorch prefix-mask example with seven values from 1 to 7. T1 should read only P1, P2, P3 and T1. Raising T2 from 5 to 105 leaves T1 at 2.5 with a Boolean mask. Passing the same ones and zeros as floats changes T1 from 3.257 to 10.465.',
+    },
+    ko: {
+      image: '/social/prefix-mask-ko.png',
+      alt: '값이 1부터 7까지인 PyTorch 접두사 마스크 예제. T1에서 읽을 수 있는 위치는 P1, P2, P3, T1입니다. T2를 5에서 105로 올리면 불리언 마스크에서는 T1 출력이 2.5로 유지됩니다. 같은 1과 0을 실수로 넘기면 T1 출력이 3.257에서 10.465로 바뀝니다.',
+    },
+  },
   '/chapter-7/tiny-decoder-lab': {
     en: {
       image: '/social/tiny-decoder-en.png',

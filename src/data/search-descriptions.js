@@ -239,8 +239,8 @@ export const searchDescriptions = {
     ko: 'GraphRAG가 필요한 조건을 판단하고 온톨로지 설계, 개체·관계 추출, 다중 홉 탐색과 그래프 전체 요약 방식을 살펴봅니다.',
   },
   '/chapter-1/symbolism-vs-connectionism': {
-    en: 'Compare symbolic rules and learned neural representations, their mathematical assumptions, and the shift from hand-written knowledge to learned weights.',
-    ko: '기호 규칙과 학습된 신경망 표현의 가정을 비교하고, 사람이 작성한 지식에서 데이터로 학습한 가중치로 옮겨 간 흐름을 살펴봅니다.',
+    en: 'Spot a disagreement between two library catalogs. Test AND and XOR on all four inputs and build a two-unit PyTorch network that detects the mismatch.',
+    ko: '두 도서관 장부의 대출 기록이 일치하는지 확인합니다. 네 가지 입력에 AND와 XOR을 시험하고 두 개의 은닉 유닛을 갖춘 PyTorch 신경망으로 불일치를 찾아보세요.',
   },
   '/chapter-1/power-of-representation': {
     en: 'Swap the adjectives in a film review to see what pooling loses. Fit word scores from ratings and explore a two-dimensional autoencoder bottleneck.',

@@ -1,6 +1,7 @@
 import { availableBytes } from './kv-capacity.mjs';
 
 export const defaultWorkload = { batch: 32, sequence: 8192, generated: 0, layers: 80, heads: 8, dimension: 128, precision: 2 };
+export const nineRequestWorkload = { ...defaultWorkload, batch: 9, generated: 2048 };
 export const defaultPool = { total: '80', weights: '48', reserve: '8' };
 export const defaultBudget = 24;
 

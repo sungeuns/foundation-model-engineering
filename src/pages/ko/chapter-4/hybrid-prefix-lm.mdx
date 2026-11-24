@@ -5,6 +5,7 @@ lang: "ko"
 ---
 
 import PrefixMaskFigure from '../../../components/chapter-4/PrefixMaskFigure.astro';
+import PrefixMaskExample from '../../../components/chapter-4/PrefixMaskExample.astro';
 
 <a id="44-hybrid--prefix-lm"></a>
 
@@ -39,40 +40,17 @@ T1 행을 따라가 보세요. P1, P2, P3, T1 네 곳의 값을 읽어 그다음
 PaLM은 한 블록 안에서 어텐션과 피드포워드 분기를 병렬로 계산합니다. 이는 층 안의 연산을 어떻게 실행할지에 관한 선택입니다. 토큰끼리 어느 방향으로 정보를 주고받을 수 있는지는 어텐션 마스크가 정합니다. [[4]](#ref-4)
 
 <a id="pytorch-implementation-prefix-mask"></a>
+<a id="prefix-mask-test"></a>
 
 ## PyTorch로 미래 토큰이 새어 들어오는지 확인하기
 
 PyTorch의 스케일드 닷 프로덕트 어텐션(SDPA)에서 불리언 마스크의 `True` 는 해당 키를 읽어도 된다는 뜻입니다. 실수형 행렬에 1과 0을 넣어 넘기면 이 숫자는 어텐션 점수에 더해집니다. 이때 0을 더한 키도 소프트맥스 계산에 참여합니다. [[3]](#ref-3)
 
-아래 코드는 CPU에서 패딩이 없는 문장 한 개, 헤드 하나, 위치마다 스칼라 값 하나로 마스크를 검사합니다. 길이가 다른 문장을 묶거나 여러 예제를 이어 붙인다면 유효한 키와 예제 사이의 경계도 마스크에 반영해야 합니다.
+PyTorch가 설치된 환경에서 `python prefix_mask.py` 를 실행해 보세요. CPU에서 패딩 없는 문장 하나를 처리하며, 헤드는 하나이고 각 위치의 값도 스칼라 하나입니다. 길이가 다른 문장을 묶거나 여러 예제를 이어 붙인다면 유효한 키와 예제 사이의 경계도 마스크에 반영해야 합니다.
 
-```python
-import torch
-from torch.nn.functional import scaled_dot_product_attention
+<PrefixMaskExample lang="ko" />
 
-prefix_len, length = 3, 7
-position = torch.arange(length)
-query_pos, key_pos = position[:, None], position[None, :]
-allowed = (key_pos < prefix_len) | (key_pos <= query_pos)
-
-# [batch, heads, positions, features]
-q = k = torch.zeros(1, 1, length, 1)
-values = torch.arange(1, length + 1, dtype=q.dtype).view_as(q)
-
-def attend(v, mask):
-    return scaled_dot_product_attention(q, k, v, attn_mask=mask, dropout_p=0.0).flatten()
-
-output = attend(values, allowed)
-torch.testing.assert_close(output, torch.tensor([2., 2., 2., 2.5, 3., 3.5, 4.]))
-
-changed = values.clone()
-changed[0, 0, 4, 0] += 100  # T2
-new_output = attend(changed, allowed)
-torch.testing.assert_close(new_output[:4], output[:4])
-assert new_output[4] > output[4]
-```
-
-질의와 키를 모두 0으로 두면 볼 수 있는 위치들의 가중치가 같습니다. T1의 출력은 1, 2, 3, 4의 평균인 2.5입니다. T2의 값을 바꿔도 T1의 출력은 그대로입니다. 미래 값이 새는 문제를 재현하려면 `attend(values, allowed.float())` 와 `attend(changed, allowed.float())` 를 차례로 실행해 보세요. T1의 출력이 약 **3.257** 에서 **10.465** 로 뜁니다. 미래 토큰 하나를 바꾼 영향이 앞선 위치까지 번진 것입니다.
+질의와 키를 모두 0으로 두면 볼 수 있는 위치들의 가중치가 같습니다. T1의 출력은 1, 2, 3, 4의 평균인 2.5입니다. T2의 값을 5에서 105로 올려도 불리언 마스크를 쓰면 T1은 **2.5** 그대로입니다. 출력의 둘째 줄을 보세요. 0과 1로 채운 실수형 마스크에서는 T1이 약 **3.257** 에서 **10.465** 로 뜁니다. 모델이 예측해야 할 토큰을 미리 읽을 수 있다는 뜻입니다.
 
 프롬프트 캐시를 재사용할 때도 같은 원리가 적용됩니다. 원문의 끝에 토큰을 추가하면 앞선 원문 위치에서도 새 토큰을 읽을 수 있습니다. 이 경우에는 영향을 받는 원문의 표현을 다시 계산해야 합니다. 번역문만 한 토큰 연장하면 앞선 행에서 볼 수 있는 범위는 그대로입니다.
 

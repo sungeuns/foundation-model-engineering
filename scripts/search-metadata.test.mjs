@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import test from 'node:test';
-import { parse } from 'parse5';
+import { parse, parseFragment } from 'parse5';
 import { chapters } from '../src/data/chapters.js';
 import { searchDescriptions } from '../src/data/search-descriptions.js';
 import { socialCards } from '../src/data/social-cards.js';
+import { defaultBudget, defaultPool, nineRequestWorkload, readKvScenario } from '../src/components/chapter-12/kv-scenario.mjs';
 import { getContentDates, getContentRevisions } from '../src/utils/content-dates.js';
 
 const base = 'https://sungeuns.github.io/foundation-model-engineering';
@@ -157,6 +158,23 @@ test('home notebook download links save the localized notebook file', () => {
     const href = `href="${new URL(base).pathname}/labs/${filename}"`;
     const link = [...html.matchAll(/<a\s[^>]*>/g)].map(([tag]) => tag).find(tag => tag.includes(href));
     assert.ok(link?.includes(`download="${filename}"`), `${edition}/index.html: notebook download`);
+  }
+});
+
+test('the book and README open the same worked KV budget in each edition', () => {
+  for (const edition of ['', '/ko']) {
+    const html = readFileSync(`${outputDir}${edition}/index.html`, 'utf8');
+    const tag = html.match(/<a\b[^>]*href="[^"]*\?kv=1[^"]*"[^>]*>/)?.[0];
+    assert.ok(tag, `${edition}/index.html: worked KV example`);
+    const href = parseFragment(tag).childNodes[0].attrs.find(attr => attr.name === 'href').value;
+    const url = new URL(href, base);
+    assert.equal(url.origin + url.pathname, `${base}${edition}/chapter-12/kv-cache-management/`);
+    assert.equal(url.hash, '#kv-calculator');
+    assert.deepEqual(readKvScenario(url.search), {
+      workload: nineRequestWorkload, budget: defaultBudget, deduct: false, pool: defaultPool,
+    });
+    const readme = readFileSync(edition ? 'README.ko.md' : 'README.md', 'utf8');
+    assert.ok(readme.includes(`](${url.href})`), 'README and book must open the same calculation');
   }
 });
 

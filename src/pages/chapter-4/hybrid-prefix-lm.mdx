@@ -5,6 +5,7 @@ lang: "en"
 ---
 
 import PrefixMaskFigure from '../../components/chapter-4/PrefixMaskFigure.astro';
+import PrefixMaskExample from '../../components/chapter-4/PrefixMaskExample.astro';
 
 # 4.4 Hybrid & Prefix LM
 
@@ -37,40 +38,17 @@ In the original GLM blank-infilling objective, the prefix contains a damaged pas
 PaLM computes attention and feed-forward branches in parallel inside each block. That choice changes how a layer runs. The attention mask separately determines which token positions can exchange information. [[4]](#ref-4)
 
 <a id="pytorch-implementation-prefix-mask"></a>
+<a id="prefix-mask-test"></a>
 
 ## Test for a leak with PyTorch
 
 In PyTorch's scaled dot-product attention (SDPA), a Boolean `True` makes a key visible. Passing a floating-point matrix of ones and zeros instead adds those numbers to the attention scores. A zero in that matrix leaves a forbidden key eligible for softmax. [[3]](#ref-3)
 
-This CPU example uses one unpadded sequence, one head, and one scalar per position. It tests the mask directly. Padding and packed examples need additional masks for valid keys and example boundaries.
+Run `python prefix_mask.py` in an environment with PyTorch installed. The CPU example uses one unpadded sequence, one head, and one scalar per position. Padding and packed examples need additional masks for valid keys and example boundaries.
 
-```python
-import torch
-from torch.nn.functional import scaled_dot_product_attention
+<PrefixMaskExample lang="en" />
 
-prefix_len, length = 3, 7
-position = torch.arange(length)
-query_pos, key_pos = position[:, None], position[None, :]
-allowed = (key_pos < prefix_len) | (key_pos <= query_pos)
-
-# [batch, heads, positions, features]
-q = k = torch.zeros(1, 1, length, 1)
-values = torch.arange(1, length + 1, dtype=q.dtype).view_as(q)
-
-def attend(v, mask):
-    return scaled_dot_product_attention(q, k, v, attn_mask=mask, dropout_p=0.0).flatten()
-
-output = attend(values, allowed)
-torch.testing.assert_close(output, torch.tensor([2., 2., 2., 2.5, 3., 3.5, 4.]))
-
-changed = values.clone()
-changed[0, 0, 4, 0] += 100  # T2
-new_output = attend(changed, allowed)
-torch.testing.assert_close(new_output[:4], output[:4])
-assert new_output[4] > output[4]
-```
-
-With every query and key set to zero, visible keys receive equal weight. T1 returns the mean of 1, 2, 3 and 4, which is 2.5. Changing the value at T2 cannot change T1. To reproduce the leak, call `attend(values, allowed.float())` and then `attend(changed, allowed.float())`. The T1 output jumps from about **3.257** to **10.465**. A change in a future token has reached an earlier row.
+With every query and key set to zero, visible keys receive equal weight. T1 returns the mean of 1, 2, 3 and 4, which is 2.5. Raising T2 from 5 to 105 leaves T1 at **2.5** with the Boolean mask. Look at the second output line. With the float 0/1 mask, T1 jumps from **3.257** to **10.465** (rounded). The model can read a token that it is supposed to predict.
 
 The same boundary matters when reusing a prompt cache. If a new source token becomes part of the bidirectional prefix, earlier source positions can read it. Recompute the affected prefix representations before treating them as final. Adding a target token preserves the earlier rows' visibility.
 

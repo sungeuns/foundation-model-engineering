@@ -264,7 +264,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 
 | Number | Route | October review evidence | EN SHA-256 | KO SHA-256 |
 |---|---|---|---|---|
-| 1.1 | `/chapter-1/symbolism-vs-connectionism` | Mechanical only | 19edbaf2e43d8b24c55efaf3223deb73b85a88a1cd4b2fb5833658311331f991 | 2978c7ef0138a549763c11b391787aabec1fbc4c941cec01146675b80852ef23 |
+| 1.1 | `/chapter-1/symbolism-vs-connectionism` | Inspected 2026-11-25 | 0716f9db3899f06858b670a0db1a2df64c2b7604cfd43271b47e8dc4fde62724 | 53beeda6131ee1bbdbdf19474ab6627888550515acee9b3805e2c6d330f14cd3 |
 | 1.2 | `/chapter-1/power-of-representation` | Inspected 2026-11-25 | 594cb7c0c43d5e5ed15a129a3d067bb6076a8a51c9a325fba642f5b85fcbb9d0 | 1d914327b1d0f84d6af190450901d013b3dee6ecc439156f61209203c220c6da |
 | 1.3 | `/chapter-1/deep-learning-paradigms` | Mechanical only | f373b59e6d5782c6150b3b363f1d61ba9d3a4ecab555ade160773d88a2489ff5 | 73265363881ee05ce8f60d1e80ab001c55ff58d7207f386e7f50a5b0b63353ac |
 | 1.4 | `/chapter-1/bitter-lesson` | Mechanical only | f69188e38bc792ee461c83466da32354065ebdff52e5a7197d8a2d81743e92e3 | d44863149ee015e681a6439ed6e9ff3771e74199015814dbcbc352b61fc0a850 |
@@ -281,7 +281,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 4.1 | `/chapter-4/encoder-only` | Mechanical only | 0c3d099ec9bb466a4cc1a22bd17ff1608388e3ac87ea1da233382efe081e63cd | a594d06325d22f53605f35a62a4e7031f6ef626832e2e8ea43d0352e496e7ea5 |
 | 4.2 | `/chapter-4/decoder-only` | Mechanical only | c0c4d6a6c3109423997c9d58d65f923f6e2375445577a79054e871947dd2a372 | da46705e79b232e46f7d0a0fb4e21a7c8ee6b4d49554290f5b931c21b4222bdd |
 | 4.3 | `/chapter-4/encoder-decoder` | Mechanical only | c0372544843683d2e7b80936ba33fd4c343a4b6850c40844ae59ccc34362f918 | 58320112ec9f19b8f62065ae1a140df644263abfdce47911ee04fda8ea0ff5d0 |
-| 4.4 | `/chapter-4/hybrid-prefix-lm` | Inspected 2026-11-25 | 8c3aedbd0301cf4151c7a7596d23ad6ee3ae0266102a9f7dd5556183c5f7e3b7 | 297baf4e0a9d0e372bc5eb92ad9954b163f6ca66dfa42075b353e6cd427882bd |
+| 4.4 | `/chapter-4/hybrid-prefix-lm` | Inspected 2026-11-25 | 6edb93ff3d69526c5abd2108193b487cc82eb60c9c9887033237a77e72052127 | 59715e846873b8af91b74291aa803ff3047a646a79042af60da4b04a3dccef60 |
 | 4.5 | `/chapter-4/various-llm-architectures` | Inspected 2026-11-24 | 028ebccee02c3a1b30297a6c43b9ed91806975ff737f33e8a5ccd5ea26f26a30 | 5d9fb05bb56198c702831691a20832099bac533ece95857c22101dfb884863a8 |
 | 5.1 | `/chapter-5/sparse-vs-dense-models` | Inspected 2026-11-25 | 01f8735ffcc52bb919dfea3402cb6fbdb0313849c20a83c447820f04e5bb6c08 | 7908d7d81bd30342d4223623ac332bf1d17f91a47e55e1deb8ba8d3ee2b88c37 |
 | 5.2 | `/chapter-5/routing-algorithms` | Inspected 2026-11-15 | 3b83671dec53a4a69ee8c357d810ac48b3b2b069f1b54fdb76a8e567ae6ed3e7 | 436d75fa19297b28084c3bf55cb2e92e341e86d33370e1843de1c263a8f9d356 |
@@ -606,3 +606,9 @@ The 17.6 revision matches the November 23 Ling-3.2-air and November 20 Tencent H
 In 4.4 the revised figure and PyTorch example both use three prefix tokens and four target tokens. All 49 query/key entries were checked in both editions. The CPU regression changes a future value, tests every output against its expected value and exercises the old float-mask counterexample. The current 4.4 hashes bind this editorial review to the two published manuscripts.
 
 In 12.1, inspection covered the nine-request scenario, shareable calculator settings and bilingual links. Seven other Korean pages each changed one cross-reference to point to the matching Korean chapter. Reversing that single href edit reproduces the earlier complete manuscript in every case. These eight pairs carry current hashes and the narrower mechanical review scope. Earlier full-page inspections remain at commit `f857238`.
+
+### 2026-11-25 library records and downloadable mask example
+
+Both editions of 1.1 now follow the same four catalog records through a symbolic rule, a threshold neuron and two ReLU units. The truth table, threshold equality and hand-set PyTorch weights were checked on all four inputs. Review covered the bilingual controls, keyboard input, narrow screens and existing section anchors.
+
+Both editions of 4.4 show the source of the downloadable Python file. The CPU test changes one future value and checks the earlier output with each mask type. Inspection covered all 49 mask entries, both language editions, the shared images and the downloaded file. The November 25 inventory hashes identify the versions reviewed here.

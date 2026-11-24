@@ -11,24 +11,22 @@ const getPath = (p) => `/ko${p}`;
 ---
 
 <BookLayout title="홈" lang="ko">
-  <div style="text-align: right; color: var(--secondary-color); font-size: 0.9rem; margin-bottom: 1rem;">최근 업데이트: 2026-11-25</div>
   <h1>파운데이션 모델 엔지니어링</h1>
-  <p><strong>파운데이션 모델의 원리부터 학습·서빙·평가 과정에서 생기는 문제까지 다룹니다.</strong> 직접 조작하는 시각화, PyTorch 예제, CPU 실습을 담은 무료 오픈소스 교재이며 한국어와 영어로 읽을 수 있습니다.</p>
-  <p>궁금한 대목만 읽으려면 목차에서 GLM-5.4 같은 모델 이름이나 ‘첫 토큰 지연’ 같은 용어를 검색하세요. 처음부터 공부하려면 아래에서 질문을 고르거나 <a href={withPagePath('/ko/chapter-1/learning-path-and-mastery')}>선수 지식 점검</a>에서 Python·선형대수·확률 중 어디를 먼저 보충할지 확인할 수 있습니다.</p>
-
-  <p>11월 24일 기준 <a href={withPagePath('/ko/chapter-17/commercial-model-benchmarks')}>{modelSnapshot.models.length}개 모델의 공개 상태와 평가 조건</a>을 비교할 수 있습니다. <a href={withPagePath('/ko/chapter-17/commercial-model-benchmarks') + '#model-glm-54'}>GLM-5.4</a>는 어떤 경로로 쓸 수 있을까요? <a href={withPagePath('/ko/chapter-17/commercial-model-benchmarks') + '#model-ling-32-air'}>Ling-3.2-air</a>는 공개 가중치로 몇 토큰까지 처리할 수 있을까요? GPT-6.2 Astra와 Sol의 <a href={withPagePath('/ko/chapter-17/commercial-model-benchmarks') + '#long-context-cost'}>긴 문맥 요금</a>도 실제 숫자로 계산해 보세요. <a href={withPagePath('/ko/chapter-11/audio-and-speech-integration')}>음성</a>·<a href={withPagePath('/ko/chapter-11/image-diffusion-models')}>이미지</a>·<a href={withPagePath('/ko/chapter-11/commercial-video-models')}>비디오 모델</a>은 각 장에서 따로 다룹니다.</p>
+  <p>CPU에서 실행하는 PyTorch 예제와 브라우저 실습으로 모델의 학습·서빙·평가를 익히는 무료 한영 교재입니다.</p>
 
   <FeaturedLessons lang="ko" />
+
+  <h2>모델 선택과 비용</h2>
+  <p>11월 24일 기준 <a href={withPagePath('/ko/chapter-17/commercial-model-benchmarks')}>{modelSnapshot.models.length}개 모델의 공개 상태와 평가 조건</a>을 비교할 수 있습니다. <a href={withPagePath('/ko/chapter-17/commercial-model-benchmarks') + '#model-glm-54'}>GLM-5.4</a>는 어떤 경로로 쓸 수 있을까요? <a href={withPagePath('/ko/chapter-17/commercial-model-benchmarks') + '#model-ling-32-air'}>Ling-3.2-air</a>는 공개 가중치로 몇 토큰까지 처리할 수 있을까요? GPT-6.2 Astra와 Sol의 <a href={withPagePath('/ko/chapter-17/commercial-model-benchmarks') + '#long-context-cost'}>긴 문맥 요금</a>도 실제 숫자로 계산해 보세요. <a href={withPagePath('/ko/chapter-11/audio-and-speech-integration')}>음성</a>·<a href={withPagePath('/ko/chapter-11/image-diffusion-models')}>이미지</a>·<a href={withPagePath('/ko/chapter-11/commercial-video-models')}>비디오 모델</a>은 각 장에서 따로 다룹니다.</p>
+
   <LearningRoutes lang="ko" />
 
-  <h2>직접 만들고 검증해보세요</h2>
-  <p><a href={withPagePath('/ko/chapter-7/tiny-decoder-lab')}>작은 디코더 실습</a>에서는 CPU로 모델을 학습합니다. 앞선 토큰을 가려도 기호열을 복사할 수 있을지 예측해 보세요. <a href={withPagePath('/ko/chapter-17/experimental-design-and-uncertainty') + '#release-lab'}>브라우저 평가 실습</a>에서는 두 후보 모두 목표 과제 정답률이 15%p 올랐습니다. 왜 한 후보만 통과하는지 직접 실행해 확인해 보세요.</p>
-  <p>디코더 실습을 시작하려면 <a href="https://colab.research.google.com/github/sungeuns/foundation-model-engineering/blob/main/public/labs/tiny-decoder-lab-ko.ipynb">Colab에서 한국어 노트북을 열거나</a> <a href={withBasePath('/labs/tiny-decoder-lab-ko.ipynb')} download="tiny-decoder-lab-ko.ipynb">Jupyter용으로 내려받으세요</a>. CPU PyTorch로 실행하고 데이터를 직접 생성합니다. 모델 다운로드나 API 키는 필요하지 않으며, Colab에서 실행할 때는 Google 로그인이 필요합니다.</p>
-  <p>총 {chapters.reduce((total, chapter) => total + chapter.subs.length, 0)}개 절에서 아키텍처·학습·추론·검색·에이전트·평가·안전을 연결합니다. 짧은 퀴즈로 실패 원인을 설명하고 트레이드오프를 선택해보세요. 설명용 계산과 시뮬레이션에는 그 성격을 표시하며, 실제 모델의 측정 결과와 구분합니다.</p>
+  <h2>CPU에서 작은 디코더 학습하기</h2>
+  <p>앞선 토큰을 가리면 디코더는 반복되는 기호열을 어디까지 복사할 수 있을까요? <a href={withPagePath('/ko/chapter-7/tiny-decoder-lab') + '#decoder-copy-trace'}>토큰별 예측 기록</a>을 먼저 읽고 <a href="https://colab.research.google.com/github/sungeuns/foundation-model-engineering/blob/main/public/labs/tiny-decoder-lab-ko.ipynb">Colab에서 실행</a>하거나 <a href={withBasePath('/labs/tiny-decoder-lab-ko.ipynb')} download="tiny-decoder-lab-ko.ipynb">Jupyter 노트북을 내려받으세요</a>. 데이터는 코드로 생성합니다. Colab에서 실행하려면 Google 로그인이 필요합니다.</p>
 
-  <h2>함께 고쳐가는 책</h2>
-  <p>Seongeun So가 AI의 도움을 받아 만드는 독립 프로젝트입니다. 주장에는 근거와 한계가 따라야 합니다. 설명·번역·실험에서 문제가 보이면 해당 페이지와 반례를 적어 <a href="https://github.com/sungeuns/foundation-model-engineering/issues">이슈를 남겨주세요</a>.</p>
-  <p>도움이 된 장은 같은 문제를 풀고 있는 동료에게 공유해주세요. <a href="https://github.com/sungeuns/foundation-model-engineering">GitHub star로 저장</a>하거나 <a href="https://github.com/sungeuns/foundation-model-engineering/blob/main/CONTRIBUTING.md">수정에 참여</a>할 수도 있습니다.</p>
+  <h2>이 책에 관하여</h2>
+  <p>Seongeun So가 AI의 도움을 받아 집필한 독립 교재입니다. <a href="#book-contents">전체 {chapters.reduce((n, chapter) => n + chapter.subs.length, 0)}개 절</a>을 둘러보거나 <a href="https://github.com/sungeuns/foundation-model-engineering">GitHub에서 책을 저장</a>할 수 있습니다. 예제가 설명과 다르게 동작하면 해당 장과 재현 조건을 적어 <a href="https://github.com/sungeuns/foundation-model-engineering/issues/new/choose">수정을 요청해 주세요</a>.</p>
+  <p class="last-update">최근 업데이트 <time datetime="2026-11-25">2026-11-25</time></p>
 
   <h2 id="book-contents">목차</h2>
   <div class="toc">
@@ -47,6 +45,7 @@ const getPath = (p) => `/ko${p}`;
 </BookLayout>
 
 <style>
+  .last-update { color: var(--secondary-color); font-size: .9rem; }
   .toc {
     margin-top: 2rem;
   }

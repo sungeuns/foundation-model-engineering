@@ -1,25 +1,24 @@
 ---
 import { withPagePath } from '../utils/paths.js';
+import { defaultBudget, defaultPool, kvScenarioSearch, nineRequestWorkload } from './chapter-12/kv-scenario.mjs';
 const { lang = 'en' } = Astro.props;
 const ko = lang === 'ko';
+const nineRequests = kvScenarioSearch({ workload: nineRequestWorkload, budget: defaultBudget, deduct: false, pool: defaultPool });
 const lessons = [
-  { path: '/chapter-12/kv-cache-management', fragment: 'kv-cache-capacity', label: ['Serving', '서빙'], title: ['The model fits. Why does the next request run out of memory?', '모델은 올라갔는데, 왜 다음 요청에서 메모리가 부족할까?'], detail: ['Calculate KV cache growth as context, batch size, and KV heads change.', '문맥 길이·배치 크기·KV 헤드 수를 바꾸며 캐시 메모리를 계산합니다.'] },
-  { path: '/chapter-3/self-attention-mathematics', fragment: 'attention-weight-example', label: ['Attention', '어텐션'], title: ['What does an attention weight actually do?', '어텐션 가중치는 실제로 무엇을 할까?'], detail: ['Follow a query through dot products, masking, softmax, and a weighted sum.', '쿼리 하나를 따라 내적·마스킹·softmax·가중합을 연결합니다.'] },
-  { path: '/chapter-14/rag-failure-modes-and-operational-design', fragment: 'trace-a-rag-answer', label: ['Retrieval', '검색'], title: ['Your RAG answer is wrong. Which stage failed?', 'RAG 답변이 틀렸다. 어느 단계의 문제일까?'], detail: ['Trace evidence through retrieval, reranking, context packing, and generation.', '검색·재순위화·문맥 구성·생성 과정에서 근거가 어디서 사라지는지 추적합니다.'] },
-  { path: '/chapter-17/experimental-design-and-uncertainty', fragment: 'release-lab', label: ['Evaluation', '평가'], title: ['A higher score is not yet a release decision.', '점수가 올랐다고 바로 배포해도 될까?'], detail: ['Run a paired evaluation and see when uncertainty changes Pass to Review.', '대응 평가를 실행하고 불확실성 때문에 통과가 재검토로 바뀌는 조건을 살펴봅니다.'] },
+  { path: '/chapter-12/kv-cache-management', suffix: nineRequests + '#kv-calculator', title: ['Will nine requests fit in a 24 GiB KV cache?', '24 GiB의 KV 캐시로 요청 9개를 처리할 수 있을까?'], detail: ['The prompts use 22.5 GiB. Check what happens when each request generates another 2,048 tokens.', '프롬프트만 저장하면 22.5 GiB입니다. 각 요청이 2,048토큰을 더 생성할 때도 메모리가 충분한지 계산해 보세요.'] },
+  { path: '/chapter-3/self-attention-mathematics', suffix: '#attention-weight-example', title: ['What does an attention weight actually do?', '어텐션 가중치는 실제로 무엇을 할까?'], detail: ['Follow a query through dot products, masking, softmax, and a weighted sum.', '쿼리 하나를 따라 내적·마스킹·softmax·가중합을 연결합니다.'] },
+  { path: '/chapter-14/rag-failure-modes-and-operational-design', suffix: '#trace-a-rag-answer', title: ['Your RAG answer is wrong. Which stage failed?', 'RAG 답변이 틀렸다. 어느 단계의 문제일까?'], detail: ['Trace evidence through retrieval, reranking, context packing, and generation.', '검색·재순위화·문맥 구성·생성 과정에서 근거가 어디서 사라지는지 추적합니다.'] },
+  { path: '/chapter-17/experimental-design-and-uncertainty', suffix: '#release-lab', title: ['Does a higher score justify a release?', '점수가 올랐다고 바로 배포해도 될까?'], detail: ['Run a paired evaluation and see when uncertainty changes Pass to Review.', '대응 평가를 실행하고 불확실성 때문에 통과가 재검토로 바뀌는 조건을 살펴봅니다.'] },
 ];
 const i = ko ? 1 : 0;
 ---
 <section class="featured-lessons" aria-labelledby="featured-lessons-title">
-  <h2 id="featured-lessons-title">{ko ? '궁금한 문제부터 읽어보세요' : 'Start with a problem you care about'}</h2>
-  <p>{ko ? '책 전체를 순서대로 읽을 필요는 없습니다. 각 장에는 설명, 예제, 이해를 점검할 퀴즈가 있습니다.' : 'You can read a single lesson. Each one includes an explanation, examples, and questions to test your understanding.'}</p>
+  <h2 id="featured-lessons-title">{ko ? '궁금한 문제부터 풀어보세요' : 'Try a worked example'}</h2>
   <ul>
     {lessons.map(lesson => (
-      <li><a href={withPagePath(`${ko ? '/ko' : ''}${lesson.path}`) + `#${encodeURIComponent(lesson.fragment)}`}>
-        <span class="topic">{lesson.label[i]}</span>
+      <li><a href={withPagePath(`${ko ? '/ko' : ''}${lesson.path}`) + lesson.suffix}>
         <strong>{lesson.title[i]}</strong>
         <span class="detail">{lesson.detail[i]}</span>
-        <span class="read">{ko ? '읽고 실험하기 →' : 'Read and experiment →'}</span>
       </a></li>
     ))}
   </ul>
@@ -31,9 +30,7 @@ const i = ko ? 1 : 0;
   a { display: flex; flex-direction: column; height: 100%; box-sizing: border-box; gap: .65rem; border: 1px solid #cbd5e1; border-top: 3px solid #2563eb; border-radius: .5rem; padding: 1.2rem; text-decoration: none; color: #172554; background: #f8fafc; }
   a:hover { background: #eff6ff; border-color: #2563eb; }
   a:focus-visible { outline: 3px solid #2563eb; outline-offset: 3px; }
-  .topic { font-size: .8rem; letter-spacing: .04em; text-transform: uppercase; color: #475569; }
-  strong { font-size: 1.14rem; line-height: 1.45; }
+  strong { color: #163e81; font-size: 1.14rem; line-height: 1.45; text-decoration: underline; text-underline-offset: .16em; }
   .detail { color: #475569; font-size: .95rem; line-height: 1.6; }
-  .read { margin-top: auto; padding-top: .4rem; font-size: .9rem; color: #1d4ed8; }
   @media (max-width: 640px) { ul { grid-template-columns: 1fr; } }
 </style>

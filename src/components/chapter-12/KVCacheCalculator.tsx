@@ -1,7 +1,7 @@
 import { useEffect, useId, useState } from 'react';
 import { availableBytes, GiB, kvCapacity } from './kv-capacity.mjs';
 import {
-  budgetRange, defaultBudget, defaultPool, defaultWorkload, dimensions, headCounts,
+  budgetRange, defaultBudget, defaultPool, defaultWorkload, nineRequestWorkload, dimensions, headCounts,
   kvScenarioSearch, precisions, readKvScenario, sliderRanges,
 } from './kv-scenario.mjs';
 import './kv_cache.css';
@@ -47,7 +47,7 @@ export default function KVCacheCalculator({ lang = 'en' }: { lang?: 'en' | 'ko' 
   const { prompt, peak } = kvCapacity(workload, available);
   const search = kvScenarioSearch({ workload, budget, deduct, pool });
   function workedExample() {
-    setWorkload({ ...defaultWorkload, batch: 9, generated: 2048 });
+    setWorkload(nineRequestWorkload);
     setBudget(defaultBudget);
     setDeduct(false);
   }

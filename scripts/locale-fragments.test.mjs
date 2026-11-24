@@ -21,6 +21,7 @@ test('shared end sections exist in both translations of every canonical chapter'
 
 test('shared exercise IDs belong to the same authored content in both translations', () => {
   const components = [
+    ['/chapter-1/symbolism-vs-connectionism', 'logic-gate-lab', 'LogicGateVisualizer', 'chapter-1'],
     ['/chapter-3/multi-head-attention', 'two-head-calculation', 'MhaVisualizer', 'chapter-3'],
     ['/chapter-5/sparse-vs-dense-models', 'moe-routing-lab', 'MoERouterVisualizer', 'chapter-5'],
     ['/chapter-11/vision-language-bridges', 'visual-token-budget', 'VisionLanguageBridgeVisualizer', 'chapter-11'],
@@ -38,6 +39,7 @@ test('shared exercise IDs belong to the same authored content in both translatio
   }
   for (const [route, id] of [
     ['/chapter-3/self-attention-mathematics', 'attention-weight-example'],
+    ['/chapter-4/hybrid-prefix-lm', 'prefix-mask-test'],
     ['/chapter-7/tiny-decoder-lab', 'decoder-copy-trace'],
     ['/chapter-7/tiny-decoder-lab', 'local-decoder-setup'],
     ['/chapter-10/dpo', 'reference-relative-example'],
