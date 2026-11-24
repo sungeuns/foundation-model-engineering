@@ -1,5 +1,9 @@
 """Audit continued pre-training exposure by source (Python 3, standard library).
 
+Foundation Model Engineering, section 8.5
+English: https://sungeuns.github.io/foundation-model-engineering/chapter-8/continued-pretraining-and-domain-adaptation/#token-mixture-example
+Korean: https://sungeuns.github.io/foundation-model-engineering/ko/chapter-8/continued-pretraining-and-domain-adaptation/#token-mixture-example
+
 Run the two chapter examples: python token_exposure.py
 Audit one run:                python token_exposure.py visits.csv
 

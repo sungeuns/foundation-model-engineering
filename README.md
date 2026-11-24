@@ -12,7 +12,7 @@ A free textbook on training, serving, and evaluating foundation models. Work thr
 
 | Your question | Start here | What you can do |
 | --- | --- | --- |
-| The weights fit. Why does serving run out of memory? | [KV cache management](https://sungeuns.github.io/foundation-model-engineering/chapter-12/kv-cache-management/#kv-cache-capacity) | Change KV head count in the browser or [download the mixed-request workbook (XLSX)](https://sungeuns.github.io/foundation-model-engineering/labs/kv-queue-en.xlsx) to set a different prompt and output cap for each request. |
+| The weights fit. Why does serving run out of memory? | [KV cache management](https://sungeuns.github.io/foundation-model-engineering/chapter-12/kv-cache-management/#kv-cache-capacity) | Measure the tensors in a [CPU notebook](https://sungeuns.github.io/foundation-model-engineering/chapter-12/kv-cache-management/#kv-payload-notebook) or [budget for requests of different lengths (XLSX)](https://sungeuns.github.io/foundation-model-engineering/labs/kv-queue-en.xlsx). |
 | What does an attention weight actually do? | [Self-attention mathematics](https://sungeuns.github.io/foundation-model-engineering/chapter-3/self-attention-mathematics/#attention-weight-example) | Calculate the weights by hand with the [two-page worksheet and solution](https://sungeuns.github.io/foundation-model-engineering/labs/attention-worksheet-en.pdf), then check the same inputs in the browser. |
 | Does BERT score a word it left untouched? | [A five-token example](https://sungeuns.github.io/foundation-model-engineering/chapter-4/encoder-only/#mlm-target-example) | Calculate both losses. Then [change a padding value in cross-attention](https://sungeuns.github.io/foundation-model-engineering/chapter-4/encoder-decoder/#cross-attention-example) and predict which outputs move. |
 | How many context positions does one image use? | [Visual token budget](https://sungeuns.github.io/foundation-model-engineering/chapter-11/vision-language-bridges/#visual-token-budget) | Change image size and count. Compare patch projection with a decoder that reads separate visual memory. |
@@ -140,5 +140,5 @@ That sets Astro's `base` only for the deployment build, so local `npm run dev` r
 
 ## ⚖️ License & Disclaimer
 
-This project is licensed under the [MIT License](LICENSE).
+This project is licensed under the [MIT License](LICENSE). The two SmolLM2 KV cache measurement notebooks include their Apache 2.0 license and original source in each file.
 For more information regarding the project's status as a personal, non-affiliated open-source resource, please see the [DISCLAIMER](DISCLAIMER.md) file.

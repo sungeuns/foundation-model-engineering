@@ -45,7 +45,13 @@ test('EN/KO notebooks share all executable steps without saved outputs or execut
       assert.equal(cell.execution_count, null);
       assert.deepEqual(cell.outputs, []);
     }
-    const code = executable(book).map(c => c.source.join('')).join('\n');
+    // The embedded Python module credits the lesson in its docstring. All
+    // executable source and notebook setup cells must still run offline.
+    const docstring = original.match(/^"""[\s\S]*?"""/)[0];
+    const code = executable(book).map(c => {
+      const source = c.source.join('');
+      return c.id === 'embedded-source' ? source.replace(docstring, '""') : source;
+    }).join('\n');
     assert.doesNotMatch(code, /requests\.|urlopen\(|pip install|torch\.hub|https?:\/\//);
   }
 });

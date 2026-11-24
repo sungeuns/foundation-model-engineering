@@ -1,4 +1,9 @@
-"""Change one future value and check whether it reaches an earlier SDPA row."""
+"""Change one future value and check whether it reaches an earlier SDPA row.
+
+Foundation Model Engineering, section 4.4
+English: https://sungeuns.github.io/foundation-model-engineering/chapter-4/hybrid-prefix-lm/#prefix-mask-test
+Korean: https://sungeuns.github.io/foundation-model-engineering/ko/chapter-4/hybrid-prefix-lm/#prefix-mask-test
+"""
 
 import torch
 from torch.nn.functional import scaled_dot_product_attention

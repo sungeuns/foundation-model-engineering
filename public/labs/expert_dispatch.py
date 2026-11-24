@@ -1,5 +1,9 @@
 """Trace top-1 expert dispatch and the return trip on two local CPU/Gloo ranks.
 
+Foundation Model Engineering, section 5.3
+English: https://sungeuns.github.io/foundation-model-engineering/chapter-5/expert-parallelism/#expert-dispatch-lab
+Korean: https://sungeuns.github.io/foundation-model-engineering/ko/chapter-5/expert-parallelism/#expert-dispatch-lab
+
 Run: torchrun --standalone --nproc-per-node=2 expert_dispatch.py
 Tested on Linux with CPU PyTorch 2.15.0. All inputs are defined below.
 """

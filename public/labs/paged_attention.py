@@ -1,4 +1,9 @@
-"""Trace one decode query through a KV block table. Run with CPU PyTorch."""
+"""Trace one decode query through a KV block table. Run with CPU PyTorch.
+
+Foundation Model Engineering, section 12.2
+English: https://sungeuns.github.io/foundation-model-engineering/chapter-12/paged-attention-vllm/#paged-kv-addresses
+Korean: https://sungeuns.github.io/foundation-model-engineering/ko/chapter-12/paged-attention-vllm/#paged-kv-addresses
+"""
 import torch
 from torch.nn.functional import scaled_dot_product_attention
 

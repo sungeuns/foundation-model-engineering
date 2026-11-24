@@ -1,4 +1,4 @@
-# OERSI records for both textbook editions and their standalone decoder labs.
+# OERSI records for the textbook, CPU notebook labs and three-lesson serving guide in English and Korean.
 - "@context": https://schema.org/
   type: LearningResource
   creativeWorkStatus: Published
@@ -103,6 +103,159 @@
   about:
     - https://w3id.org/kim/hochschulfaechersystematik/n079
   keywords: [PyTorch, 인과 어텐션, 체크포인트 재개]
+  isPartOf:
+    - type: LearningResource
+      id: https://sungeuns.github.io/foundation-model-engineering/ko/
+      name: 파운데이션 모델 엔지니어링
+
+- "@context": https://schema.org/
+  type: LearningResource
+  creativeWorkStatus: Published
+  id: https://github.com/sungeuns/foundation-model-engineering/releases/download/serving-guide-2026-11/llm-serving-en.epub
+  name: LLM Serving in Practice
+  description: >-
+    Three lessons from Foundation Model Engineering in a reflowable English EPUB.
+    Calculate how many requests fit in a KV cache, follow requests through a
+    continuously changing batch, and compare time to first token with delays
+    between streamed tokens. Worked examples, figures and quiz answers are
+    included for offline reading.
+  inLanguage: [en]
+  creator:
+    - type: Person
+      givenName: Seongeun
+      familyName: So
+  datePublished: "2026-11-24"
+  license: https://opensource.org/license/mit
+  educationalLevel:
+    - https://w3id.org/kim/educationalLevel/level_A
+  learningResourceType:
+    - https://w3id.org/kim/hcrt/textbook
+  about:
+    - https://w3id.org/kim/hochschulfaechersystematik/n079
+  keywords: [LLM serving, KV cache, continuous batching, streaming latency]
+  encoding:
+    - type: MediaObject
+      encodingFormat: application/epub+zip
+      contentUrl: https://github.com/sungeuns/foundation-model-engineering/releases/download/serving-guide-2026-11/llm-serving-en.epub
+  isPartOf:
+    - type: LearningResource
+      id: https://sungeuns.github.io/foundation-model-engineering/
+      name: Foundation Model Engineering
+  hasPart:
+    - type: LearningResource
+      id: https://sungeuns.github.io/foundation-model-engineering/chapter-12/kv-cache-management/
+      name: "12.1 KV Cache: How It Works and Memory Use"
+    - type: LearningResource
+      id: https://sungeuns.github.io/foundation-model-engineering/chapter-12/continuous-batching/
+      name: "12.3 Continuous Batching: Request Scheduling and Chunked Prefill"
+    - type: LearningResource
+      id: https://sungeuns.github.io/foundation-model-engineering/chapter-12/serving-policies-slos-and-fallbacks/
+      name: 12.6 Serving Policies, SLOs, and Fallbacks
+
+- "@context": https://schema.org/
+  type: LearningResource
+  creativeWorkStatus: Published
+  id: https://github.com/sungeuns/foundation-model-engineering/releases/download/serving-guide-2026-11/llm-serving-ko.epub
+  name: LLM 서빙 실전
+  description: >-
+    파운데이션 모델 엔지니어링에서 서빙을 다루는 세 절을 모은 한국어 EPUB입니다.
+    KV 캐시에 요청을 몇 개까지 담을 수 있는지 계산하고, 연속 배칭에서 요청이
+    들어오고 빠지는 순서를 따라갑니다. 첫 토큰이 도착하기까지의 시간과 이후
+    토큰 사이의 지연도 비교합니다. 예제, 그림, 퀴즈 풀이를 오프라인으로 읽을 수 있습니다.
+  inLanguage: [ko]
+  creator:
+    - type: Person
+      givenName: Seongeun
+      familyName: So
+  datePublished: "2026-11-24"
+  license: https://opensource.org/license/mit
+  educationalLevel:
+    - https://w3id.org/kim/educationalLevel/level_A
+  learningResourceType:
+    - https://w3id.org/kim/hcrt/textbook
+  about:
+    - https://w3id.org/kim/hochschulfaechersystematik/n079
+  keywords: [LLM 서빙, KV 캐시, 연속 배칭, 스트리밍 지연]
+  encoding:
+    - type: MediaObject
+      encodingFormat: application/epub+zip
+      contentUrl: https://github.com/sungeuns/foundation-model-engineering/releases/download/serving-guide-2026-11/llm-serving-ko.epub
+  isPartOf:
+    - type: LearningResource
+      id: https://sungeuns.github.io/foundation-model-engineering/ko/
+      name: 파운데이션 모델 엔지니어링
+  hasPart:
+    - type: LearningResource
+      id: https://sungeuns.github.io/foundation-model-engineering/ko/chapter-12/kv-cache-management/
+      name: 12.1 KV 캐시 원리와 메모리 계산
+    - type: LearningResource
+      id: https://sungeuns.github.io/foundation-model-engineering/ko/chapter-12/continuous-batching/
+      name: "12.3 연속 배칭: 요청 교체와 청크 프리필"
+    - type: LearningResource
+      id: https://sungeuns.github.io/foundation-model-engineering/ko/chapter-12/serving-policies-slos-and-fallbacks/
+      name: 12.6 서빙 정책, SLO, 그리고 폴백
+
+- "@context": https://schema.org/
+  type: LearningResource
+  creativeWorkStatus: Published
+  id: https://sungeuns.github.io/foundation-model-engineering/chapter-12/kv-cache-management/#kv-payload-notebook
+  name: Measure the memory used by a decoder’s KV cache
+  description: >-
+    Measure key and value tensor bytes for two padded prompts in a CPU Jupyter
+    notebook using SmolLM2-135M. Add four positions per request and compare
+    cached next-token logits with full recomputation at every step.
+    The first run downloads a pinned public checkpoint. The notebook was
+    developed with Codex for Seongeun So’s Foundation Model Engineering.
+  inLanguage: [en]
+  publisher:
+    - type: Person
+      givenName: Seongeun
+      familyName: So
+  license: https://www.apache.org/licenses/LICENSE-2.0
+  educationalLevel:
+    - https://w3id.org/kim/educationalLevel/level_A
+  learningResourceType:
+    - https://w3id.org/kim/hcrt/experiment
+  about:
+    - https://w3id.org/kim/hochschulfaechersystematik/n079
+  keywords: [KV cache, padding, inference, PyTorch, Jupyter]
+  encoding:
+    - type: MediaObject
+      encodingFormat: application/x-ipynb+json
+      contentUrl: https://sungeuns.github.io/foundation-model-engineering/labs/kv-cache-payload-en.ipynb
+  isPartOf:
+    - type: LearningResource
+      id: https://sungeuns.github.io/foundation-model-engineering/
+      name: Foundation Model Engineering
+
+- "@context": https://schema.org/
+  type: LearningResource
+  creativeWorkStatus: Published
+  id: https://sungeuns.github.io/foundation-model-engineering/ko/chapter-12/kv-cache-management/#kv-payload-notebook
+  name: 두 프롬프트로 KV 캐시의 메모리 사용량 재기
+  description: >-
+    CPU에서 SmolLM2-135M에 길이가 다른 두 프롬프트를 넣고 패딩을 포함한 키·값
+    텐서의 바이트 수를 측정하는 Jupyter 실습입니다. 요청마다 토큰을 네 개씩
+    추가하며 매 단계에서 캐시를 사용한 다음 토큰의 로짓을 전체 재계산 결과와
+    비교합니다. 처음 실행할 때 지정된 버전의 공개 체크포인트를 내려받습니다.
+    Seongeun So의 파운데이션 모델 엔지니어링을 위해 Codex의 도움을 받아 작성했습니다.
+  inLanguage: [ko]
+  publisher:
+    - type: Person
+      givenName: Seongeun
+      familyName: So
+  license: https://www.apache.org/licenses/LICENSE-2.0
+  educationalLevel:
+    - https://w3id.org/kim/educationalLevel/level_A
+  learningResourceType:
+    - https://w3id.org/kim/hcrt/experiment
+  about:
+    - https://w3id.org/kim/hochschulfaechersystematik/n079
+  keywords: [KV 캐시, 패딩, 추론, PyTorch, Jupyter]
+  encoding:
+    - type: MediaObject
+      encodingFormat: application/x-ipynb+json
+      contentUrl: https://sungeuns.github.io/foundation-model-engineering/labs/kv-cache-payload-ko.ipynb
   isPartOf:
     - type: LearningResource
       id: https://sungeuns.github.io/foundation-model-engineering/ko/

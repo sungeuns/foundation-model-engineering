@@ -4,7 +4,7 @@ import { canonicalKvSearch } from '../components/chapter-12/kv-scenario.mjs';
 // counterparts from heading order, translated slugs, or reference numbers.
 const lessonFragments = {
   '/chapter-1/symbolism-vs-connectionism': ['logic-gate-lab'],
-  '/chapter-3/self-attention-mathematics': ['attention-weight-example'],
+  '/chapter-3/self-attention-mathematics': ['attention-weight-example', 'batched-padding-example'],
   '/chapter-3/multi-head-attention': ['two-head-calculation'],
   '/chapter-3/layer-normalization-residuals': ['normalization-example', 'pytorch-normalization-check'],
   '/chapter-4/encoder-only': ['mlm-target-example'],
@@ -17,7 +17,7 @@ const lessonFragments = {
   '/chapter-8/continued-pretraining-and-domain-adaptation': ['token-mixture-example'],
   '/chapter-10/dpo': ['reference-relative-example'],
   '/chapter-11/vision-language-bridges': ['visual-token-budget'],
-  '/chapter-12/kv-cache-management': ['kv-cache-capacity', 'kv-calculator', 'mixed-request-budget'],
+  '/chapter-12/kv-cache-management': ['kv-cache-capacity', 'kv-calculator', 'mixed-request-budget', 'kv-payload-notebook'],
   '/chapter-12/paged-attention-vllm': ['paged-kv-addresses'],
   '/chapter-12/speculative-decoding': ['speculative-sampling-example'],
   '/chapter-12/serving-policies-slos-and-fallbacks': ['streaming-latency-trace'],

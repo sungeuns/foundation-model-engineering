@@ -39,6 +39,7 @@ test('shared exercise IDs belong to the same authored content in both translatio
   }
   for (const [route, id] of [
     ['/chapter-3/self-attention-mathematics', 'attention-weight-example'],
+    ['/chapter-3/self-attention-mathematics', 'batched-padding-example'],
     ['/chapter-3/layer-normalization-residuals', 'normalization-example'],
     ['/chapter-3/layer-normalization-residuals', 'pytorch-normalization-check'],
     ['/chapter-4/encoder-only', 'mlm-target-example'],
@@ -52,6 +53,7 @@ test('shared exercise IDs belong to the same authored content in both translatio
     ['/chapter-10/dpo', 'reference-relative-example'],
     ['/chapter-12/kv-cache-management', 'kv-cache-capacity'],
     ['/chapter-12/kv-cache-management', 'mixed-request-budget'],
+    ['/chapter-12/kv-cache-management', 'kv-payload-notebook'],
     ['/chapter-12/paged-attention-vllm', 'paged-kv-addresses'],
     ['/chapter-12/speculative-decoding', 'speculative-sampling-example'],
     ['/chapter-12/serving-policies-slos-and-fallbacks', 'streaming-latency-trace'],

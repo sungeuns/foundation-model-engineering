@@ -273,7 +273,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 2.2 | `/chapter-2/vanishing-exploding-gradients` | Inspected 2026-11-15 | f883974659fb302e235151e51e0cffb5a6f9418089342fa6be149d94c207ffac | 7a4baf6b5be2bf9ff72621f15581483e6595c47296cb169d5d1c03395b882385 |
 | 2.3 | `/chapter-2/dawn-of-attention` | Inspected 2026-11-15 | e3df7fbeb285121402336d5a6a0c154e791da8c420e0e19716aa9a78ed478b16 | f8ca565f4756b8e2138133b67002a29e007ed381cbd24be6cf79b518888600c0 |
 | 2.4 | `/chapter-2/cnns-for-nlp` | Inspected 2026-11-15 | 37f7b031323ada4d1eb80b89d4ba1a7a33eb6ec127580aaed5e31500107e5ca2 | 4ffc530cb6c1a5483ef59e35462a49712c19200a70593fd408e5698050ec53c5 |
-| 3.1 | `/chapter-3/self-attention-mathematics` | Inspected 2026-11-25 | 3d5171b29cb8add9577bf4fc5141f1062f110fcced7f7498a817634649280c14 | 20de831f65342bff5532fdb8d8c22fe1bbd0daef0f31510a0abd1042e9b6fcbe |
+| 3.1 | `/chapter-3/self-attention-mathematics` | Inspected 2026-11-25 | ef9cc6c406b93e84902c0080009a02e8b3c9a64b29a016ab10752ce974e49229 | 999ed01fb864abf45042c9ad3ccef4122d307affa4cd1420e85dcc19c1646d82 |
 | 3.2 | `/chapter-3/multi-head-attention` | Inspected 2026-11-25 | bc5026a7ec1b9aa4d5bc4589f7f6011630bc877efcb8d179954ee0560d8a705f | 4316a26ed2c414ccdb0c4f4ad6642d98286b9350748fd362920a1d183cac8b68 |
 | 3.3 | `/chapter-3/position-encoding-strategy` | Inspected 2026-11-15 | 63c3645268727e12760f56b1748a44bbac8afd1c7f66f9d49329e76e39130fb8 | 17d34127b63e936f20ca9f2440fa2aed52e5291548cf18a9dcf8b4f3fdf7463e |
 | 3.4 | `/chapter-3/layer-normalization-residuals` | Inspected 2026-11-25 | a3587f46c53f4796ac71f768e9561130af2c053e394f20d83a1d8f12a6841487 | a69ef3c4fc27e17f5313847ce8003f1b3acb57db1b99557a5354f904818065ba |
@@ -320,7 +320,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 11.4 | `/chapter-11/image-diffusion-models` | Inspected 2026-11-24 | 5bb8bc33ff8adf86105e24018b03423e9f19e0d29739f64b843c0cbeadea05e8 | 308de426fdbc7b1c845a4d63be36b83988abe2eb36026affba1dd101194816b7 |
 | 11.5 | `/chapter-11/video-generation-foundations` | Inspected 2026-11-15 | b34544d0352be5feafdfc0d30ac23092d50edf3a3af5f3e4d37cc62531230c20 | 55c0488a07c962041cdbb0cdb945d18c8e136b23dba2aed6f6970f1c33cb4b4b |
 | 11.6 | `/chapter-11/commercial-video-models` | Mechanical only | 12216aad67ffc900bcfe437f20a7fcf9be618ccc5d617f698f4466ef15ff33cb | 6ee6e17876daa24bd17b8d709b7f541276019da545887510035b916819ae13a3 |
-| 12.1 | `/chapter-12/kv-cache-management` | Inspected 2026-11-25 | d4bf724a660050e8706c4ba5a44007134571faa457ffeb9e24529f55d2376e71 | e269b5140e261ebf87512782279820fdedb45d5ee5bb9d174daa7c7a4d9875ec |
+| 12.1 | `/chapter-12/kv-cache-management` | Inspected 2026-11-25 | 8ae9f8716ff34e7ede151ca3e7b9cfde3eb2e1665f49fe10d62c65b94a045560 | b4fdaf7266a4de429a38dbe840c389f31dee09a961c069d937e4414700b3d88c |
 | 12.2 | `/chapter-12/paged-attention-vllm` | Inspected 2026-11-25 | 52cf569f107eda54688b02ae4a5149d5191e4e56e3241ffe32a2b53ae8bc66d8 | 14402809f988d4e8b12edd29476af19ece120d3abe6c86ac16ca1a664496bb46 |
 | 12.3 | `/chapter-12/continuous-batching` | Inspected 2026-11-25 | 588de002d211758e1fbb83af67004497e5280cad3512efc790f73f9b3d2a24b3 | 3f9ff09b65675139196bd073123e28a306180a8ec7d07398d1e331351f5a7124 |
 | 12.4 | `/chapter-12/speculative-decoding` | Inspected 2026-11-25 | a5f93ea8411bab0fe68bf277224f8f19f111ac0f0fd73f6b4eda75739a8990b5 | 61986787b62bf6d99f59ab08a66d2ea6312e472faea94ded13c4a7d627d03cc4 |
@@ -653,3 +653,9 @@ In 5.3, the code visible in both editions is also the downloadable two-process C
 The 13.1 CPU examples and browser grid cover a value on a half-step, a rounded code still within range, and a clamped code. The PTQ example accumulates activation maxima over calibration batches and includes both scales in the checkpoint. In 13.2, a five-weight dot product exposes the effect of the input activation on each rounding error. The browser's 693 bit-width and range combinations were checked against a CPU PyTorch calculation with the stated midpoint convention.
 
 In 14.5, ranking the graph nodes places Mina and Vendor Z at exactly the same score. The example includes both at the cutoff and checks the two source passages used to answer the CEO question. Section 14.3 links to that exercise. The 12.1 worked example can be found by its 24 GiB budget and retains its previous heading links. In-book search also indexes the two named exercises rendered by React in 12.1 and 17.7.
+
+### 2026-11-25 batched padding and measured cache payloads
+
+The two-request example in 3.1 verifies valid outputs against independent expected values. With the mask axes reversed, changing a padding value from 90 to 900 changes a valid answer from 50 to 455, even when two implementations agree with each other. The correctly expanded batch mask keeps that answer at 10. The downloadable script preserves the earlier four-token exercise.
+
+In 12.1, both notebook editions use the same pinned checkpoint, tokenizer and executable cells. Independent CPU kernels measured 1,013,760 bytes after prefill and 1,382,400 bytes after four additional positions per request. Eight padding positions account for 368,640 bytes. All four cached next-token logit comparisons passed. The experiment counts logical key/value tensor contents on CPU.

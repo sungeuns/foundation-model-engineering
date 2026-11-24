@@ -161,6 +161,39 @@ test('home notebook download links save the localized notebook file', () => {
   }
 });
 
+test('downloaded Python modules link back to the exercise that supplies them in each edition', () => {
+  const exercises = {
+    'self_attention.py': 'batched-padding-example',
+    'cross_attention.py': 'cross-attention-example',
+    'prefix_mask.py': 'prefix-mask-test',
+    'expert_dispatch.py': 'expert-dispatch-lab',
+    'causal_lab.py': 'local-decoder-setup',
+    'token_exposure.py': 'token-mixture-example',
+    'paged_attention.py': 'paged-kv-addresses',
+    'request_cost.py': 'long-context-cost',
+    'paired_release.py': 'release-lab',
+  };
+  const lessons = chapters.flatMap(chapter => chapter.subs);
+  for (const [file, exercise] of Object.entries(exercises)) {
+    const source = readFileSync(`${outputDir}/labs/${file}`, 'utf8');
+    const docstring = source.match(/^"""([\s\S]*?)"""/)?.[1] || '';
+    assert.match(docstring, /Foundation Model Engineering/, file);
+    const urls = (docstring.match(/https:\/\/[^\s"<>]+/g) || []).filter(url => url.startsWith(base + '/'));
+    const lesson = lessons.find(sub => urls.includes(`${base}${sub.path}/#${exercise}`));
+    assert.ok(lesson, `${file}: canonical English exercise`);
+    assert.ok(docstring.includes(lesson.id.replace('-', '.')), `${file}: lesson number`);
+    for (const locale of ['', '/ko']) {
+      const page = `${base}${locale}${lesson.path}/`;
+      assert.ok(urls.includes(`${page}#${exercise}`), `${file}: ${page}`);
+      const html = readFileSync(`${outputDir}${locale}${lesson.path}/index.html`, 'utf8');
+      const main = html.match(/<main\b[^>]*>([\s\S]+?)<\/main>/)[1];
+      assert.equal(main.split(` id="${exercise}"`).length, 2, `${page}: unique exercise target`);
+      const links = [...main.matchAll(/<a\b[^>]*\bhref="([^"]+)"/g)];
+      assert.ok(links.some(([, href]) => new URL(href, page).href === `${base}/labs/${file}`), `${page}: source download`);
+    }
+  }
+});
+
 test('the two homepages and the six collected lessons link to their serving EPUB', () => {
   const collected = new Set(['kv-cache-management', 'continuous-batching', 'serving-policies-slos-and-fallbacks']);
   for (const route of routes) {

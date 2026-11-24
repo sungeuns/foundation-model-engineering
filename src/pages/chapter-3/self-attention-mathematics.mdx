@@ -87,9 +87,21 @@ For the query at “cat,” the four raw dot products are 1, 2, 1 and −1. Afte
 
 **Runnable CPU example.** Run `python self_attention.py` in an environment with PyTorch installed. The example uses float32 and the four fixed input vectors per role shown in the interactive. It materializes the score matrix and checks all four outputs against PyTorch SDPA with dropout disabled. Changing the last two value vectors then tests whether either of the first two causal outputs changes. The example leaves out training, fused-kernel optimization and KV-cache offsets. [[2]](#ref-2)
 
-<AttentionExampleCode lang="en" />
-
 A boolean `True` allows a key in this example and in PyTorch’s functional SDPA. An entirely blocked query has no distribution over valid keys. Replacing every score in that row with the same finite number makes softmax assign equal weights to *all* keys. This function rejects that input explicitly. [[2]](#ref-2)
+
+<a id="batched-padding-example"></a>
+
+### Which axis does a padding mask hide?
+
+Suppose sequence A has values `[1, 3]` and sequence B has `[10, PAD]`. Set all queries and keys to zero and allow attention in both directions. The visible keys get equal weights, so A's two outputs must both be 2. B's one real query must return 10, whatever value occupies the padding slot.
+
+The key-validity table is `[[True, True], [True, False]]`, one row per sequence. The scores have axes `[batch, head, query, key]`. Passing the table directly aligns its two axes to **query and key**. This happens to fit because both the batch and the query axis have length two. With a padding value of 90, B's first query now reads both values and returns 50. Changing just the pad to 900 raises that output to 455. Even a comparison against native SDPA passes if both implementations get the same mistaken mask. [[2]](#ref-2)
+
+Use `valid[:, None, None, :]` to retain the batch axis and share key validity across heads and queries. The script checks the three real outputs against `[2, 2, 10]` under both padding values. B's second query still produces an output because it can read a valid key. Exclude that padded query from pooling and loss.
+
+A NaN in the value tensor is a separate test. The materialized sum in this script evaluates zero weight times NaN, which can contaminate even a real query. Replacing the known padding value with zero **and** keeping its key masked restores the result. Even a position whose value vector is zero will take a share of the softmax denominator if its key is visible.
+
+<AttentionExampleCode lang="en" />
 
 ---
 

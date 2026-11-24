@@ -1,5 +1,9 @@
 """Uncached Standard text requests, USD. Rates checked 2026-11-24.
 
+Foundation Model Engineering, section 17.6
+English: https://sungeuns.github.io/foundation-model-engineering/chapter-17/commercial-model-benchmarks/#long-context-cost
+Korean: https://sungeuns.github.io/foundation-model-engineering/ko/chapter-17/commercial-model-benchmarks/#long-context-cost
+
 https://developers.openai.com/api/docs/models/gpt-6.2-sol
 https://developers.openai.com/api/docs/models/gpt-6.2-astra
 """

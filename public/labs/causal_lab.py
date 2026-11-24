@@ -1,5 +1,9 @@
 """CPU teaching lab: causal copying, an attention ablation, and exact resume.
 
+Foundation Model Engineering, section 7.5
+English: https://sungeuns.github.io/foundation-model-engineering/chapter-7/tiny-decoder-lab/#local-decoder-setup
+Korean: https://sungeuns.github.io/foundation-model-engineering/ko/chapter-7/tiny-decoder-lab/#local-decoder-setup
+
 Python 3.12+, PyTorch 2.15 CPU. No downloads, credentials, or external data.
 Run: python causal_lab.py --output /tmp/causal-lab --steps 160 --seed 7
 Not a language model benchmark or a distributed training implementation.

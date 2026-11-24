@@ -1,4 +1,9 @@
-"""Two decoder queries over three source tokens and one pad. Requires PyTorch."""
+"""Two decoder queries over three source tokens and one pad. Requires PyTorch.
+
+Foundation Model Engineering, section 4.3
+English: https://sungeuns.github.io/foundation-model-engineering/chapter-4/encoder-decoder/#cross-attention-example
+Korean: https://sungeuns.github.io/foundation-model-engineering/ko/chapter-4/encoder-decoder/#cross-attention-example
+"""
 
 import math
 

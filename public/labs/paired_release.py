@@ -1,5 +1,9 @@
 """Synthetic paired-cluster release exercise. Python 3.10+, standard library only.
 
+Foundation Model Engineering, section 17.7
+English: https://sungeuns.github.io/foundation-model-engineering/chapter-17/experimental-design-and-uncertainty/#release-lab
+Korean: https://sungeuns.github.io/foundation-model-engineering/ko/chapter-17/experimental-design-and-uncertainty/#release-lab
+
 Run: python paired_release.py --scenario uncertain
 No real model scores. Fixed-checkpoint, equally weighted independent clusters.
 Percentile bootstrap is an approximation, especially with few clusters.

@@ -223,7 +223,13 @@ print("Full, token-wise, and chunked results agree; causality holds.")
 
 The example was tested with PyTorch 2.15.0 on CPU. **API verification as of 2026-11-25:** PyTorch documents the boolean-mask convention and the upper-left causal alignment used when the attention matrix is not square [[7]](#ref-7). For a cached chunk, global query positions start at `past_tokens`; the explicit mask above encodes that offset. Extend the checks to padding, RoPE offsets, eviction, and each serving dtype before adapting the idea to a real engine.
 
-To measure the padding cost on a real checkpoint, run the [CPU notebook for SmolLM2-135M](https://github.com/sungeuns/cookbook/blob/4640bbf5e5275380cf6a665e049378db30ae6d29/notebooks/en/measure_kv_cache_payload.ipynb). It puts a three-token prompt and an eleven-token prompt in the same dense batch. The eight padding positions account for 368,640 bytes of key/value tensors. The notebook then feeds four more tokens per request, measures the cache after each forward pass and checks the next-token logits against full recomputation.
+<a id="kv-payload-notebook"></a>
+
+### Measure the KV cache of a real checkpoint
+
+SmolLM2-135M stores 46,080 bytes of keys and values per position per request in this CPU FP32 experiment. Put a three-token prompt and an eleven-token prompt in one dense batch. Both get eleven slots, so the first forward pass stores 1,013,760 bytes. Of those, 368,640 bytes belong to the shorter prompt’s eight padding positions.
+
+[Run the English notebook in Colab](https://colab.research.google.com/github/sungeuns/foundation-model-engineering/blob/main/public/labs/kv-cache-payload-en.ipynb) or <a href={withBasePath('/labs/kv-cache-payload-en.ipynb')} download="kv-cache-payload-en.ipynb">download it for Jupyter</a>. Use a CPU runtime with PyTorch installed. The setup cell installs Transformers. The first run downloads the public checkpoint (about 270 MB). Add four tokens to each request and predict the new byte count before running the next cell. It also compares the next-token logits to a full recomputation after each step. This measures the K/V tensor contents. The process also holds model weights, temporary buffers and other memory.
 
 ## 6. Production Cache Contract
 

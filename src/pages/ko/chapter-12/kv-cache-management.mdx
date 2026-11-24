@@ -227,7 +227,13 @@ print("Full, token-wise, and chunked results agree; causality holds.")
 
 이 예제는 PyTorch 2.15.0 CPU에서 스모크 테스트했습니다. **2026-11-25 기준 API 확인:** PyTorch 문서는 불리언 마스크의 의미와 어텐션 행렬이 정사각형이 아닐 때 사용하는 왼쪽 위 기준의 인과적 정렬을 명시합니다 [[7]](#ref-7). 캐시 뒤에 붙는 청크의 전역 쿼리 위치는 `past_tokens`에서 시작하며, 위의 명시적 마스크는 이 오프셋을 반영합니다. 실제 엔진에 적용하기 전에는 패딩, RoPE 위치 오프셋, 캐시 퇴출, 서빙 정밀도별로 검사를 확장해야 합니다.
 
-실제 체크포인트에서 패딩 비용이 얼마나 되는지 [SmolLM2-135M CPU 실습 노트북(영문)](https://github.com/sungeuns/cookbook/blob/4640bbf5e5275380cf6a665e049378db30ae6d29/notebooks/en/measure_kv_cache_payload.ipynb)으로 확인할 수 있습니다. 3토큰짜리 프롬프트와 11토큰짜리 프롬프트를 같은 밀집 배치로 묶으면, 패딩 여덟 자리의 키와 값만 368,640바이트를 차지합니다. 이어서 요청마다 토큰 네 개를 하나씩 더 입력합니다. 각 단계에서 캐시 크기를 재고, 다음 토큰의 로짓이 전체 문맥을 다시 계산한 결과와 일치하는지 확인합니다.
+<a id="kv-payload-notebook"></a>
+
+### 실제 체크포인트에서 KV 캐시 용량 재기
+
+CPU에서 FP32로 실행한 SmolLM2-135M은 요청 하나의 토큰 한 자리에 키와 값 46,080바이트를 저장합니다. 3토큰짜리 프롬프트와 11토큰짜리 프롬프트를 밀집 배치로 묶으면 둘 다 11자리를 차지합니다. 처음 처리한 직후 캐시는 1,013,760바이트입니다. 이 중 368,640바이트가 짧은 프롬프트의 패딩 여덟 자리입니다.
+
+[Colab에서 한국어 노트북을 실행하거나](https://colab.research.google.com/github/sungeuns/foundation-model-engineering/blob/main/public/labs/kv-cache-payload-ko.ipynb) <a href={withBasePath('/labs/kv-cache-payload-ko.ipynb')} download="kv-cache-payload-ko.ipynb">Jupyter용 파일을 내려받으세요</a>. PyTorch가 설치된 CPU 런타임을 사용합니다. 첫 셀이 Transformers를 설치하고, 처음 실행할 때 공개 체크포인트 약 270 MB를 내려받습니다. 요청마다 토큰을 네 개씩 더 입력하면 캐시가 몇 바이트가 될지 먼저 예상해 보세요. 실습에서는 토큰을 하나 넣을 때마다 다음 토큰의 로짓도 전체 재계산 결과와 비교합니다. 여기서 재는 것은 키와 값 텐서의 크기입니다. 프로세스 전체에는 모델 가중치와 임시 버퍼 등도 들어 있습니다.
 
 <a id="6-production-cache-계약"></a>
 
