@@ -1,12 +1,14 @@
-# Free Programming Books submission — 2026-11-18
+# Free Programming Books submission
 
-Status: **not submitted**. The connected GitHub integration returned HTTP 403, `Resource not accessible by integration`, for a create-issue request to `EbookFoundation/free-programming-books`. No issue URL was returned and no successful publication is claimed. The target's contribution guide explicitly allows link suggestions through issues; current EN/KO lists and open/closed issue/PR searches found no matching repository URL.
+On 2026-11-25 the project submitted both language editions in [EbookFoundation/free-programming-books issue #13663](https://github.com/EbookFoundation/free-programming-books/issues/13663). The issue was open when verified. Its body identifies Codex as submitting for the maintainer, discloses AI assistance, and includes an example CPU lab. The maintainers decide whether to list the book.
+
+The earlier 2026-11-18 attempt returned HTTP 403 and created no issue. Before submitting on November 25, the project checked the English and Korean lists and searched existing issues and pull requests for both titles, the author and the project URL.
 
 Sources checked: [contribution rules](https://github.com/EbookFoundation/free-programming-books/blob/main/docs/CONTRIBUTING.md), [English list](https://github.com/EbookFoundation/free-programming-books/blob/main/books/free-programming-books-subjects.md), [Korean list](https://github.com/EbookFoundation/free-programming-books/blob/main/books/free-programming-books-ko.md), and the AI-disclosed [merged PR 13382](https://github.com/EbookFoundation/free-programming-books/pull/13382). Acceptance remains a maintainer decision. There is no request for stars, votes, or coordinated engagement.
 
 Suggested title: **Book suggestion: Foundation Model Engineering (English and Korean)**
 
-The exact prepared body follows:
+The November 18 draft follows. The linked issue contains the submitted text.
 
 I maintain Foundation Model Engineering and would like to suggest its English and Korean editions for the free books lists.
 

@@ -403,12 +403,12 @@ export const searchDescriptions = {
     ko: 'IPO, KTO, 보수적 DPO의 차이를 비교합니다. 유한한 선호 마진, 짝이 없는 피드백, 레이블 불확실성과 공통 학습 조건을 다룹니다.',
   },
   '/chapter-12/kv-cache-management': {
-    en: 'Estimate KV cache memory from batch size, context length, layers, and KV heads. Explore GQA, MLA, cache quantization, and fragmentation.',
-    ko: '배치 크기, 문맥 길이, 레이어 수와 KV 헤드 수로 캐시 메모리를 계산하고 GQA·MLA·캐시 양자화·메모리 단편화를 살펴봅니다.',
+    en: 'Learn how KV caching speeds up LLM decoding, calculate memory with a worked GQA example and interactive calculator, and verify a PyTorch cache.',
+    ko: 'KV 캐시가 키와 값을 재사용하는 원리, GQA 메모리 계산 공식과 예제를 설명합니다. 용량 계산기로 확인하고 PyTorch 캐시를 전체 재계산과 비교합니다.',
   },
   '/chapter-12/continuous-batching': {
-    en: 'See how continuous batching schedules LLM requests at each decoding step, and explore static batching, chunked prefill, and latency trade-offs.',
-    ko: '연속 배칭이 디코딩 단계마다 요청을 교체하는 원리를 시각화로 살펴보고 정적 배칭, 청크 프리필과 지연 시간의 관계를 이해합니다.',
+    en: 'Trace six requests through static and continuous batching, run a Python scheduler, and compare chunked-prefill token budgets, first-token latency, and inter-token delay.',
+    ko: '여섯 요청을 처리하는 순서로 연속 배칭을 익히고 Python 스케줄러를 실행합니다. 프리필 청크를 나누면 첫 토큰까지의 시간과 토큰 간 지연이 어떻게 달라지는지 살펴보세요.',
   },
   '/chapter-14/rag-failure-modes-and-operational-design': {
     en: 'Diagnose RAG failures across retrieval, routing, and generation. Design confidence thresholds, timeouts, degraded modes, and pipeline evaluations.',

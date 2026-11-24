@@ -1,131 +1,105 @@
-import React, { useState, useEffect } from 'react';
-import './visualizers.css';
+import React, { useEffect, useState } from 'react';
+import './continuous-batching.css';
 
-const REQUESTS = [
-  { id: 'Req A', length: 4, color: '#3b82f6' },
-  { id: 'Req B', length: 2, color: '#ef4444' },
-  { id: 'Req C', length: 6, color: '#10b981' },
-  { id: 'Req D', length: 3, color: '#f59e0b' },
-  { id: 'Req E', length: 5, color: '#8b5cf6' },
-  { id: 'Req F', length: 2, color: '#ec4899' },
+type Request = { id: string; length: number; color: string };
+type Slot = Request & { generated: number };
+type Frame = { slots: (Slot | null)[]; waiting: string[]; finished: string[] };
+const REQUESTS: Request[] = [
+  { id: 'A', length: 4, color: '#93c5fd' },
+  { id: 'B', length: 2, color: '#fda4af' },
+  { id: 'C', length: 6, color: '#6ee7b7' },
+  { id: 'D', length: 3, color: '#fcd34d' },
+  { id: 'E', length: 5, color: '#c4b5fd' },
+  { id: 'F', length: 2, color: '#f9a8d4' },
 ];
+const CAPACITY = 3;
 
-export default function ContinuousBatchingVisualizer({ lang = "en" }: { lang?: "en" | "ko" }) {
-  const translations: Record<string, string> = {"Idle slot": "유휴 슬롯", "Pause": "일시 정지", "Restart": "다시 시작", "Play Simulation": "재생", "Reset": "초기화", "Iteration Step:": "반복 단계:", "Static Batching": "정적 배칭", "Waits for the longest request to finish.": "배치에서 가장 긴 요청이 끝날 때까지 다음 배치를 기다립니다.", "Continuous Batching": "연속 배칭", "Swaps requests at iteration level.": "반복 단계 사이에 요청을 교체합니다.", "Complete workload": "전체 워크로드", "tokens": "토큰"};
-  const t = (text: string) => lang === "ko" ? translations[text] ?? text : text;
+// Fixed, decode-only teaching workload. Frames show the end of an iteration.
+function schedule(continuous: boolean): Frame[] {
+  const waiting = [...REQUESTS];
+  const slots: (Slot | null)[] = Array(CAPACITY).fill(null);
+  const finished: string[] = [];
+  const frames: Frame[] = [{ slots: [...slots], waiting: waiting.map(r => r.id), finished: [] }];
+  while (waiting.length || slots.some(Boolean)) {
+    if (continuous || slots.every(slot => slot === null)) {
+      for (let i = 0; i < CAPACITY && waiting.length; i++) {
+        if (slots[i] === null) slots[i] = { ...waiting.shift()!, generated: 0 };
+      }
+    }
+    for (const slot of slots) {
+      if (slot) {
+        slot.generated += 1;
+        if (slot.generated === slot.length) finished.push(slot.id);
+      }
+    }
+    frames.push({
+      slots: slots.map(slot => slot ? { ...slot } : null),
+      waiting: waiting.map(r => r.id),
+      finished: [...finished],
+    });
+    for (let i = 0; i < CAPACITY; i++) {
+      if (slots[i]?.generated === slots[i]?.length) slots[i] = null;
+    }
+  }
+  return frames;
+}
+const STATIC = schedule(false);
+const CONTINUOUS = schedule(true);
+const LAST_STEP = Math.max(STATIC.length, CONTINUOUS.length) - 1;
+const COMPLETE: Frame = { slots: Array(CAPACITY).fill(null), waiting: [], finished: REQUESTS.map(r => r.id) };
+
+export default function ContinuousBatchingVisualizer({ lang = 'en' }: { lang?: 'en' | 'ko' }) {
+  const ko = lang === 'ko';
   const [step, setStep] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
-
-  const staticSteps = [
-    [null, null, null],
-    [{id:'Req A', p:1, t:4, c:'#3b82f6'}, {id:'Req B', p:1, t:2, c:'#ef4444'}, {id:'Req C', p:1, t:6, c:'#10b981'}],
-    [{id:'Req A', p:2, t:4, c:'#3b82f6'}, {id:'Req B', p:2, t:2, c:'#ef4444'}, {id:'Req C', p:2, t:6, c:'#10b981'}],
-    [{id:'Req A', p:3, t:4, c:'#3b82f6'}, null, {id:'Req C', p:3, t:6, c:'#10b981'}],
-    [{id:'Req A', p:4, t:4, c:'#3b82f6'}, null, {id:'Req C', p:4, t:6, c:'#10b981'}],
-    [null, null, {id:'Req C', p:5, t:6, c:'#10b981'}],
-    [null, null, {id:'Req C', p:6, t:6, c:'#10b981'}],
-    [{id:'Req D', p:1, t:3, c:'#f59e0b'}, {id:'Req E', p:1, t:5, c:'#8b5cf6'}, {id:'Req F', p:1, t:2, c:'#ec4899'}],
-    [{id:'Req D', p:2, t:3, c:'#f59e0b'}, {id:'Req E', p:2, t:5, c:'#8b5cf6'}, {id:'Req F', p:2, t:2, c:'#ec4899'}],
-    [{id:'Req D', p:3, t:3, c:'#f59e0b'}, {id:'Req E', p:3, t:5, c:'#8b5cf6'}, null],
-    [null, {id:'Req E', p:4, t:5, c:'#8b5cf6'}, null],
-    [null, {id:'Req E', p:5, t:5, c:'#8b5cf6'}, null],
-    [null, null, null]
-  ];
-
-  const continuousSteps = [
-    [null, null, null],
-    [{id:'Req A', p:1, t:4, c:'#3b82f6'}, {id:'Req B', p:1, t:2, c:'#ef4444'}, {id:'Req C', p:1, t:6, c:'#10b981'}],
-    [{id:'Req A', p:2, t:4, c:'#3b82f6'}, {id:'Req B', p:2, t:2, c:'#ef4444'}, {id:'Req C', p:2, t:6, c:'#10b981'}],
-    [{id:'Req A', p:3, t:4, c:'#3b82f6'}, {id:'Req D', p:1, t:3, c:'#f59e0b'}, {id:'Req C', p:3, t:6, c:'#10b981'}],
-    [{id:'Req A', p:4, t:4, c:'#3b82f6'}, {id:'Req D', p:2, t:3, c:'#f59e0b'}, {id:'Req C', p:4, t:6, c:'#10b981'}],
-    [{id:'Req E', p:1, t:5, c:'#8b5cf6'}, {id:'Req D', p:3, t:3, c:'#f59e0b'}, {id:'Req C', p:5, t:6, c:'#10b981'}],
-    [{id:'Req E', p:2, t:5, c:'#8b5cf6'}, {id:'Req F', p:1, t:2, c:'#ec4899'}, {id:'Req C', p:6, t:6, c:'#10b981'}],
-    [{id:'Req E', p:3, t:5, c:'#8b5cf6'}, {id:'Req F', p:2, t:2, c:'#ec4899'}, null],
-    [{id:'Req E', p:4, t:5, c:'#8b5cf6'}, null, null],
-    [{id:'Req E', p:5, t:5, c:'#8b5cf6'}, null, null],
-    [null, null, null],
-    [null, null, null],
-    [null, null, null]
-  ];
-
-  const totalSteps = 12;
-
+  const [playing, setPlaying] = useState(false);
   useEffect(() => {
-    let interval;
-    if (isPlaying) {
-      interval = setInterval(() => {
-        setStep(s => {
-          if (s >= totalSteps) {
-            setIsPlaying(false);
-            return s;
-          }
-          return s + 1;
-        });
-      }, 800);
-    }
-    return () => clearInterval(interval);
-  }, [isPlaying]);
+    if (!playing) return;
+    if (step >= LAST_STEP) { setPlaying(false); return; }
+    const timer = window.setTimeout(() => setStep(value => value + 1), 800);
+    return () => window.clearTimeout(timer);
+  }, [playing, step]);
+  const chooseStep = (value: number) => { setPlaying(false); setStep(value); };
+  const requestName = (id: string) => `${ko ? '요청' : 'Request'} ${id}`;
 
-  const renderSlot = (slotData) => {
-    if (!slotData) {
-      return <div className="batch-slot empty">{t("Idle slot")}</div>;
-    }
-    return (
-      <div className="batch-slot filled" style={{ borderColor: slotData.c, backgroundColor: `${slotData.c}20` }}>
-        <div className="slot-header">
-          <span style={{ color: slotData.c, fontWeight: 'bold' }}>{slotData.id}</span>
-          <span className="slot-progress">{slotData.p} / {slotData.t} {t("tokens")}</span>
-        </div>
-        <div className="progress-bar-container">
-          <div
-            className="progress-bar-fill"
-            style={{ width: `${(slotData.p / slotData.t) * 100}%`, backgroundColor: slotData.c }}
-          />
-        </div>
-      </div>
-    );
-  };
-
-  return (
-    <div className="cb-visualizer-container">
-      <p>{lang === "ko" ? "설명용 decode 슬롯 모델: prefill·KV 용량·통신 비용은 생략합니다. 모든 작업이 끝난 뒤의 유휴는 낭비된 연산이 아닙니다." : "Illustrative decode-slot model; prefill, KV capacity and communication are omitted. Idle slots after all work finishes are not wasted computation."}</p>
-      <div className="cb-controls">
-        <button className="cb-btn" onClick={() => { if (step >= totalSteps) setStep(0); setIsPlaying(!isPlaying); }}>
-          {isPlaying ? t("Pause") : step >= totalSteps ? t("Restart") : t("Play Simulation")}
-        </button>
-        <button className="cb-btn" onClick={() => { setStep(0); setIsPlaying(false); }}>{t("Reset")}</button>
-        <label>{lang === "ko" ? "단계 선택" : "Choose step"}<input type="range" min="0" max={totalSteps} value={step} onChange={e=>{setIsPlaying(false);setStep(Number(e.target.value));}}/></label>
-        <div className="cb-step-indicator">{t("Iteration Step:")} {step} / {totalSteps}</div>
-      </div>
-
-      <div className="cb-boards">
-        <div className="cb-board">
-          <h3 className="cb-board-title">{t("Static Batching")}</h3>
-          <p className="cb-board-desc">{t("Waits for the longest request to finish.")}</p>
-          <div className="cb-slots">
-            {staticSteps[step].map((slot, i) => <React.Fragment key={`static-${i}`}>{renderSlot(slot)}</React.Fragment>)}
-          </div>
-        </div>
-
-        <div className="cb-board">
-          <h3 className="cb-board-title">{t("Continuous Batching")}</h3>
-          <p className="cb-board-desc">{t("Swaps requests at iteration level.")}</p>
-          <div className="cb-slots">
-            {continuousSteps[step].map((slot, i) => <React.Fragment key={`cont-${i}`}>{renderSlot(slot)}</React.Fragment>)}
-          </div>
-        </div>
-      </div>
-
-      <div className="cb-queue">
-        <h4>{t("Complete workload")}</h4>
-        <div className="cb-queue-items">
-          {REQUESTS.map(req => (
-            <div key={req.id} className="cb-queue-item" style={{ borderLeft: `4px solid ${req.color}` }}>
-              {req.id} ({req.length}t)
-            </div>
-          ))}
-        </div>
-      </div>
+  return <section className="cb-visualizer-container" aria-label={ko ? '정적 배칭과 연속 배칭 실행 비교' : 'Static and continuous batching comparison'}>
+    <p className="cb-explanation">{ko
+      ? '세 슬롯, 여섯 요청. 모두 시작 전에 도착했고 prefill은 생략합니다. 각 칸은 이번 반복을 끝낸 상태입니다. 완료한 자리는 다음 반복에서 다시 쓸 수 있습니다.'
+      : 'Three slots, six requests, all queued at the start; prefill is omitted. Each card shows the end of this iteration. A completed slot can be reused in the next iteration.'}</p>
+    <div className="cb-controls">
+      <button type="button" className="cb-btn" onClick={() => {
+        if (step === LAST_STEP) setStep(0);
+        setPlaying(value => !value);
+      }}>{playing ? (ko ? '일시 정지' : 'Pause') : step === LAST_STEP ? (ko ? '다시 재생' : 'Replay') : (ko ? '재생' : 'Play')}</button>
+      <button type="button" className="cb-btn" onClick={() => chooseStep(0)}>{ko ? '초기화' : 'Reset'}</button>
+      <button type="button" className="cb-btn" disabled={step === 0} onClick={() => chooseStep(step - 1)}>{ko ? '이전 반복' : 'Previous'}</button>
+      <button type="button" className="cb-btn" disabled={step === LAST_STEP} onClick={() => chooseStep(step + 1)}>{ko ? '다음 반복' : 'Next'}</button>
+      <label className="cb-step-control">{ko ? '반복 선택' : 'Choose iteration'}
+        <input type="range" min="0" max={LAST_STEP} value={step} onChange={event => chooseStep(Number(event.target.value))} />
+      </label>
     </div>
-  );
+    <p className="cb-step-indicator" role="status">{step === 0 ? (ko ? '시작 전: 모든 요청 대기 중' : 'Before execution: all requests queued') : `${ko ? '반복' : 'Iteration'} ${step} / ${LAST_STEP}`}</p>
+    <div className="cb-boards">
+      {([{ title: ko ? '정적 배칭' : 'Static batching', frames: STATIC }, { title: ko ? '연속 배칭' : 'Continuous batching', frames: CONTINUOUS }]).map(({ title, frames }) => {
+        const frame = frames[step] ?? COMPLETE;
+        return <div className="cb-board" key={title}>
+          <h3 className="cb-board-title">{title}</h3>
+          <p className="cb-board-summary">{ko ? `완료 ${frame.finished.length}/6 · 대기 ${frame.waiting.length}` : `Finished ${frame.finished.length}/6 · Queued ${frame.waiting.length}`}</p>
+          <div className="cb-slots">{frame.slots.map((slot, index) => <div key={index} className={`cb-slot ${slot ? 'cb-filled' : 'cb-empty'}`} style={slot ? { borderColor: slot.color } : undefined}>
+            <span className="cb-slot-number">{ko ? '슬롯' : 'Slot'} {index + 1}</span>
+            {slot ? <>
+              <div className="cb-slot-header"><strong style={{ color: slot.color }}>{requestName(slot.id)}</strong><span>{slot.generated}/{slot.length} {ko ? '토큰' : 'tokens'}</span></div>
+              <progress value={slot.generated} max={slot.length} aria-label={requestName(slot.id)} />
+              <span className="cb-slot-state">{slot.generated === slot.length ? (ko ? '이번 반복에서 완료' : 'Finishes this iteration') : (ko ? '생성 중' : 'Generating')}</span>
+            </> : <span>{step === 0 ? (ko ? '아직 배정하지 않음' : 'Not admitted yet') : frame.finished.length === REQUESTS.length ? (ko ? '전체 작업 완료' : 'All work finished') : (ko ? '빈 슬롯' : 'Unfilled slot')}</span>}
+          </div>)}</div>
+          <p className="cb-waiting">{ko ? '대기열' : 'Queue'}: {frame.waiting.length ? frame.waiting.join(', ') : (ko ? '없음' : 'empty')}</p>
+          <p className="cb-completion">{ko ? `전체 완료: 반복 ${frames.length - 1}` : `Workload finishes at iteration ${frames.length - 1}`}</p>
+        </div>;
+      })}
+    </div>
+    <p className="cb-workload">{ko ? '요청별 남은 decode 토큰' : 'Remaining decode tokens'}: {REQUESTS.map(req => `${req.id}=${req.length}`).join(' · ')}</p>
+    <p className="cb-source">{ko
+      ? '직접 만든 교육용 일정입니다. 반복 횟수는 밀리초나 GPU 활용률이 아닙니다. 토큰·KV 예산, 도착 시각, prefill, 통신·스케줄러 비용을 생략합니다. 전체 완료 후의 빈칸은 낭비된 연산이 아닙니다.'
+      : 'Hand-authored teaching workload. Iterations are not milliseconds or GPU utilization. Token/KV budgets, arrival timing, prefill, communication and scheduler costs are omitted. Empty slots after completion are not wasted computation.'}</p>
+  </section>;
 }

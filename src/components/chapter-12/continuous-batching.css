@@ -1,0 +1,21 @@
+.cb-visualizer-container { margin: 1.5rem 0; padding: 1rem; border-radius: 10px; background: #182132; color: #f1f5f9; }
+.cb-visualizer-container p { margin: 0 0 1rem; }
+.cb-visualizer-container .cb-controls { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; margin-bottom: .8rem; }
+.cb-visualizer-container .cb-btn { background: #2c3c53; color: #f1f5f9; border: 1px solid #94a3b8; border-radius: 5px; padding: .5rem .75rem; cursor: pointer; font: inherit; font-size: .85rem; }
+.cb-visualizer-container .cb-btn:disabled { opacity: .5; cursor: default; }
+.cb-visualizer-container button:focus-visible, .cb-visualizer-container input:focus-visible { outline: 3px solid #fcd34d; outline-offset: 3px; }
+.cb-visualizer-container .cb-step-control { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; font-size: .85rem; }
+.cb-visualizer-container input[type=range] { min-width: 0; width: 150px; max-width: 100%; accent-color: #93c5fd; }
+.cb-visualizer-container .cb-step-indicator { color: #e2e8f0; font-size: .9rem; }
+.cb-visualizer-container .cb-boards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem; margin-bottom: 1rem; }
+.cb-visualizer-container .cb-board { min-width: 0; padding: .8rem; background: #0f172a; border-radius: 7px; }
+.cb-visualizer-container .cb-board-title { color: #f1f5f9; margin: 0 0 .4rem; font-size: 1rem; }
+.cb-visualizer-container .cb-board-summary, .cb-visualizer-container .cb-completion, .cb-visualizer-container .cb-waiting { font-size: .8rem; margin: .5rem 0; color: #cbd5e1; }
+.cb-visualizer-container .cb-slots { display: flex; flex-direction: column; gap: .6rem; }
+.cb-visualizer-container .cb-slot { display: flex; flex-direction: column; justify-content: center; gap: .4rem; min-height: 108px; padding: .6rem; border: 2px solid #64748b; border-radius: 6px; font-size: .8rem; box-sizing: border-box; }
+.cb-visualizer-container .cb-empty { border-style: dashed; color: #cbd5e1; }
+.cb-visualizer-container .cb-slot-number, .cb-visualizer-container .cb-slot-state { font-size: .75rem; color: #cbd5e1; }
+.cb-visualizer-container .cb-slot-header { display: flex; flex-wrap: wrap; gap: .3rem; justify-content: space-between; }
+.cb-visualizer-container progress { width: 100%; height: .5rem; accent-color: #93c5fd; }
+.cb-visualizer-container .cb-source, .cb-visualizer-container .cb-workload { font-size: .8rem; color: #cbd5e1; }
+@media (max-width: 600px) { .cb-visualizer-container .cb-boards { grid-template-columns: minmax(0, 1fr); } }

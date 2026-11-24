@@ -1,212 +1,194 @@
 ---
 layout: ../../layouts/BookLayout.astro
-title: 12.3 Continuous Batching
+title: "12.3 Continuous Batching: Request Scheduling and Chunked Prefill"
 lang: en
 ---
 
 import ContinuousBatchingVisualizer from '../../components/chapter-12/ContinuousBatchingVisualizer.tsx';
+import SchedulingVisualizer from '../../components/chapter-12/SchedulingVisualizer.tsx';
 
-# 12.3 Continuous Batching
+# 12.3 Continuous Batching: Request Scheduling and Chunked Prefill
 
-While PagedAttention (discussed in the previous section) brilliantly solved the *spatial* problem of LLM inference—eliminating memory fragmentation and maximizing KV cache utilization—it did not address the *temporal* problem. Memory is only half the equation; how we schedule compute on the GPU determines the ultimate throughput of the system.
+Three requests are generating tokens together. One finishes after two decode iterations; another needs six. Must a fourth request wait four more iterations before it can use the freed slot? **Continuous batching** lets the scheduler admit it at the next iteration boundary, provided token and KV-cache budgets allow it.
 
-In traditional deep learning (e.g., classifying images with a ResNet), batching is straightforward: you group $N$ images, run a single forward pass, and get $N$ predictions simultaneously. All items in the batch take the exact same amount of time to process.
+The previous section explained where growing KV state is stored. This section explains which requests get to compute next. Reusable memory blocks help admission, but a memory allocator alone does not choose an execution schedule.
 
-Autoregressive LLM inference, however, is highly dynamic. A user's prompt might be 10 tokens or 10,000 tokens. The generated response might be a single word ("Yes.") or a massive essay. This dynamic sequence length breaks traditional static batching paradigms, forcing modern inference engines to adopt OS-level scheduling concepts. The result is **Continuous Batching** (also known as iteration-level or in-flight batching), a technique that fundamentally altered the economics of LLM serving.
+## 1. Follow Six Requests Through Three Slots
 
----
+Use the same authored workload throughout this section: requests A–F have **4, 2, 6, 3, 5 and 2 remaining decode tokens**. All six are queued before execution, three slots are available, and each scheduled request produces one token per iteration. Prefill has been excluded so that we can isolate the admission rule. These are iteration counts, not measured milliseconds.
 
-## 1. The Flaw of Static Batching: The Convoy Effect
+In the **static policy used here**, A, B and C form one group. A completed request may return its result and release memory; the restriction is that no replacement joins until that entire group finishes. A particular implementation may mask finished rows or compact them. Neither behavior makes memory retention or dummy computation an inherent requirement of static admission.
 
-Prior to 2022, inference frameworks like HuggingFace Transformers utilized **Static Batching**. In this paradigm, a batch of requests is formed, and the GPU processes them until *every single request* in the batch has emitted an `<EOS>` (End of Sequence) token or reached its maximum length.
+The continuous policy admits waiting requests into freed slots at every boundary. The table shows who runs in each iteration. A check mark means that request finishes **at the end** of that iteration; its replacement can first run in the next row.
 
-Consider a batch of four requests:
-- **Request A:** Generates 10 tokens.
-- **Request B:** Generates 25 tokens.
-- **Request C:** Generates 15 tokens.
-- **Request D:** Generates 100 tokens.
+| Iteration | Static: slots 1 / 2 / 3 | Continuous: slots 1 / 2 / 3 |
+|---|---|---|
+| 1 | A / B / C | A / B / C |
+| 2 | A / B ✓ / C | A / B ✓ / C |
+| 3 | A / — / C | A / D / C |
+| 4 | A ✓ / — / C | A ✓ / D / C |
+| 5 | — / — / C | E / D ✓ / C |
+| 6 | — / — / C ✓ | E / F / C ✓ |
+| 7 | D / E / F | E / F ✓ / — |
+| 8 | D / E / F ✓ | E / — / — |
+| 9 | D ✓ / E / — | E ✓ / — / — |
+| 10 | — / E / — | All requests finished |
+| 11 | — / E ✓ / — | All requests finished |
 
-In static batching, Requests A, B, and C finish very quickly. However, they cannot leave the batch, and their GPU memory cannot be freed, because the batch as a whole is waiting for Request D to finish generating its 100th token.
+B finishes at iteration 2. Continuous batching runs D in that slot at iteration 3; static batching starts D at iteration 7. The same 22 decode tokens finish in **9 rather than 11 iterations**. This does not establish a GPU speedup: iteration duration changes with batch composition, context lengths and kernels. Even the continuous schedule has empty slots once the waiting queue runs out.
 
-This phenomenon is known as the **Convoy Effect** or the *early termination problem*. The GPU ends up doing dummy computations (or masking) for A, B, and C for 90 iterations just to accommodate D. As a result, GPU compute utilization plummets, and new requests waiting in the queue experience severe head-of-line blocking.
+### Explore the Completion Boundaries
 
----
-
-## 2. The Paradigm Shift: Iteration-Level Scheduling
-
-To solve the Convoy Effect, researchers introduced **Iteration-Level Scheduling** in the seminal 2022 paper *Orca: A Distributed Serving System for Transformer-Based Generative Models* [[1]](#ref-1).
-
-Instead of scheduling at the granularity of a *request*, the engine schedules at the granularity of an *iteration* (the generation of a single token). After every forward pass—which generates exactly one token for all active requests—the scheduler pauses and evaluates the batch:
-1. Did any request emit an `<EOS>` token? If yes, immediately evict it from the batch and free its logical KV cache blocks.
-2. Is there space in the batch (and sufficient VRAM)? If yes, immediately pull a new request from the waiting queue and insert it into the active batch.
-
-By continuously swapping requests in and out on a token-by-token basis, the GPU never waits for a long sequence to finish. The batch size remains artificially "full" at all times, maximizing throughput.
-
-### Interactive: Static vs. Continuous Batching
-
-Use the interactive visualizer below to observe the difference. In **Static Batching**, notice how empty slots (wasted compute) accumulate while waiting for the longest request to finish. In **Continuous Batching**, notice how new requests seamlessly slide into the batch the moment a slot opens up.
+Move to iterations 2 and 3 to see B give way to D. Then compare the queues at iteration 5 and the completed workload at iteration 9. The cards show the end of each iteration, including requests that just finished. Step 0 is the state before admission.
 
 <ContinuousBatchingVisualizer client:load />
 
----
+## 2. Admission Needs More Than a Free Slot
 
-## 3. The Compute-Memory Dichotomy: Prefill vs. Decode
+Orca studied scheduling at iteration granularity instead of waiting for a whole request group to finish [[1]](#ref-1). In ordinary autoregressive decoding, one scheduled decode step produces one new token per request. Prefill chunks can produce no output token until the prompt is complete; speculative decoding can produce multiple accepted tokens. An iteration is therefore a scheduling unit, not universally “one token for every active request.”
 
-While continuous batching sounds conceptually simple, implementing it efficiently on GPU hardware is exceptionally difficult. This difficulty arises because LLM inference consists of two entirely different computational phases with conflicting hardware profiles:
+At a boundary, the scheduler accounts for completed or cancelled requests, retains unfinished state, and selects the next work. Releasing a request's KV references need not immediately free physical blocks that other requests or a prefix cache still reference. Admission must satisfy the request limit, token budget, available KV capacity and scheduling policy.
 
-1. **The Prefill Phase (Prompt Processing):** When a new request enters the batch, the model must process its entire input prompt simultaneously to compute the initial KV cache. Mathematically, this is a massive **Matrix-Matrix Multiplication (GEMM)**. It is highly parallelizable, heavily utilizes the GPU's Tensor Cores, and is **Compute-Bound**.
-2. **The Decode Phase (Token Generation):** Once the prompt is processed, the model generates one token at a time. For each token, the model multiplies the new token's query vector against the entire historical KV cache. Mathematically, this is a **Matrix-Vector Multiplication (GEMV)**. It cannot fully utilize Tensor Cores and is severely **Memory-Bandwidth-Bound**.
+Let $B$ be the iteration's input-token budget, $D$ the number of scheduled ordinary decode requests, and $P$ the number of scheduled prefill tokens. In a simplified policy where each decode consumes one input-token position,
 
-When using continuous batching, the scheduler inevitably mixes these two phases. A newly inserted request must undergo its Prefill phase, while the existing requests in the batch are undergoing their Decode phase.
+$$
+D+P\le B.
+$$
 
----
+This is a **work budget**, not the total tokens stored in the KV cache. A request decoding one token may already retain thousands of context tokens. An apparently free request slot can remain unusable when KV capacity is exhausted. Conversely, an empty queue leaves spare capacity no policy can fill.
 
-## 4. Modern SOTA: Chunked Prefill
+## 3. Why Prefill Changes the Latency Trade-off
 
-Mixing prefill and decode creates a massive scheduling collision. Suppose you have 30 requests in the decode phase, generating tokens smoothly every 20 milliseconds. Suddenly, a new request with a massive 50,000-token prompt enters the batch.
+Prefill processes prompt tokens and builds their KV state. Many prompt positions can run in parallel within a forward pass. After the final prompt position, its logits can be used to sample the first output token. Subsequent decode steps extend the sequence using cached state.
 
-Processing a 50k-token prefill might take the GPU 800 milliseconds of pure compute time. Because the GPU is occupied with this massive GEMM operation, the 30 decode requests are "stalled." They will not generate a token for 800ms. To the end users, the text generation will suddenly stutter and freeze. This violates strict Service Level Objectives (SLOs), specifically the **Time-Between-Tokens (TBT)** metric.
+Long prefills often have high arithmetic intensity; small-batch decode often spends much of its time reading weights and KV state. Batch size, context length, architecture and kernel design can change either bottleneck. Decode includes projections, attention and other operations; it is not universally a single GEMV that cannot use Tensor Cores.
 
-To solve this, modern inference engines (such as vLLM, SGLang, and TensorRT-LLM) implement **Chunked Prefill** (first popularized by systems like SARATHI [[2]](#ref-2)).
+If a shared execution pool runs a long prefill before serving existing decode requests, their next token is delayed. **Time to first token (TTFT)** includes a new request's queueing and prompt processing up to its first delivered token. **Inter-token latency (ITL)** measures gaps between successive delivered tokens of an ongoing response. Improving one does not automatically improve the other. Measurements should state whether they are taken at the server or client, since delivery can add delay.
 
-Instead of processing a massive prompt all at once, the scheduler splits the prompt into manageable chunks (e.g., 1,024 or 2,048 tokens). During each iteration, the scheduler "piggybacks" one or more budgeted prefill chunks alongside the ongoing decode requests.
+## 4. Chunked Prefill: Reserve Work, Then Measure Time
 
-![prefill_decode_packing](../../assets/images/chapter-12/prefill_decode_packing.png)
+SARATHI partitions prefill work into chunks and combines prefill with decode work in its batching design [[2]](#ref-2). Chunking provides scheduling boundaries inside a long prompt. It does not make the prompt free or guarantee smooth streaming.
 
-Mixing decode with prefill can improve utilization, but they share bandwidth and kernel resources. Larger chunks may improve throughput while increasing inter-token delay for existing requests. Tune chunk size, token budget and priority against TTFT and inter-token tail-latency SLOs; neither full utilization nor stall-free decode is guaranteed.
+For a small numerical example, set $B=10$ and reserve three token positions for three ongoing decodes. A 20-token prompt can use the remaining seven positions per iteration:
 
----
+| Iteration | Decode input tokens | Prefill input tokens | Prompt tokens still unprocessed |
+|---|---|---|---|
+| 1 | 3 | 7 | 13 |
+| 2 | 3 | 7 | 6 |
+| 3 | 3 | 6 | 0 |
 
-## 5. Engineering the Scheduler (PyTorch Simulation)
+This assumes all three decodes remain active and enough KV memory is available. The prompt reaches its final position in iteration 3, when its first output token can be sampled. The first two chunks do not each produce a user-visible token. Increasing the token budget can finish the prompt sooner, but may lengthen the steps experienced by existing decodes. Token counts alone do not predict milliseconds.
 
-To understand the mechanics of a modern iteration-level scheduler, we can simulate its core event loop in Python. The code below demonstrates how requests are transitioned between states (`waiting`, `prefill`, `decode`, `finished`) at every token generation step.
+As of **2026-11-25**, vLLM's V1 optimization documentation describes prioritizing decode work and using the remaining `max_num_batched_tokens` budget for prefills, splitting prefills that do not fit [[3]](#ref-3). It distinguishes this token budget from the request limit `max_num_seqs`. Record the engine version and effective settings; the example above is an arithmetic model, not a recommended production configuration.
+
+### Read a Shared Execution Timeline
+
+The following existing timeline uses **invented time units**. Compare “Unified serving” and “Chunked prefill”: the first existing decode ends at 66 versus 20, while the new prompt's prefill completes at 60 versus 78. The same amount of prefill work is rearranged. Earlier service for an existing response comes with later completion of the new prompt in this schedule. These are authored timings, not measured TTFT or a prediction for a specific GPU.
+
+<SchedulingVisualizer client:load />
+
+The timeline serializes labeled blocks to explain ordering; it is not a kernel-level depiction of SARATHI's mixed batch. The “Disaggregated” option introduces another resource pool and a KV handoff, which the later disaggregated-serving section examines. It is not an equal-resource speed comparison.
+
+## 5. Run the Decode-Only Schedule
+
+> **Deliberately simplified CPU simulation using the Python standard library.** It reproduces the first table with FIFO admission and fixed remaining decode lengths. All requests arrive before execution and are treated as decode-ready. It omits prefill, real token sampling/EOS, KV allocation, token budgets, cancellation, priority/fairness, concurrency and GPU timing. It does not simulate serving latency or claim production readiness.
 
 ```python
-import torch
-from typing import List
+from collections import deque
 
-class InferenceRequest:
-    def __init__(self, req_id: int, prompt_length: int, max_new_tokens: int):
-        self.req_id = req_id
-        self.prompt_length = prompt_length
-        self.max_new_tokens = max_new_tokens
-        self.generated_tokens = 0
-        self.status = "waiting" # States: waiting, prefill, decode, finished
 
-class ContinuousBatchingScheduler:
-    def __init__(self, max_batch_size: int):
-        self.waiting_queue: List[InferenceRequest] = []
-        self.running_batch: List[InferenceRequest] = []
-        self.max_batch_size = max_batch_size
+def schedule(requests, capacity=3, continuous=True):
+    """Decode-only FIFO model; requests are (ID, remaining_decode_tokens)."""
+    if capacity <= 0 or any(length <= 0 for _, length in requests):
+        raise ValueError("capacity and decode lengths must be positive")
+    if len({name for name, _ in requests}) != len(requests):
+        raise ValueError("request IDs must be unique")
+    waiting = deque(requests)
+    active = [None] * capacity
+    trace, finished = [], {}
+    while waiting or any(request is not None for request in active):
+        # A static group admits replacements only when its survivors are gone.
+        if continuous or all(request is None for request in active):
+            for slot in range(capacity):
+                if active[slot] is None and waiting:
+                    name, length = waiting.popleft()
+                    active[slot] = [name, length]
+        iteration = len(trace) + 1
+        trace.append(tuple(request[0] if request else "-" for request in active))
+        for slot, request in enumerate(active):
+            if request is not None:
+                request[1] -= 1  # one decode token for this active request
+                if request[1] == 0:
+                    finished[request[0]] = iteration
+                    active[slot] = None  # reusable at the next boundary
+    return trace, finished
 
-    def add_request(self, request: InferenceRequest):
-        self.waiting_queue.append(request)
 
-    def _evict_finished_requests(self):
-        """Removes requests that have completed generation."""
-        active = []
-        for req in self.running_batch:
-            # In reality, we also check for the <EOS> token ID here
-            if req.generated_tokens >= req.max_new_tokens:
-                req.status = "finished"
-                print(f"Request {req.req_id} finished.")
-            else:
-                active.append(req)
-        self.running_batch = active
-
-    def _pull_new_requests(self):
-        """Pulls requests from the queue if there is batch capacity."""
-        available_slots = self.max_batch_size - len(self.running_batch)
-
-        while available_slots > 0 and self.waiting_queue:
-            new_req = self.waiting_queue.pop(0)
-            new_req.status = "prefill"
-            self.running_batch.append(new_req)
-            available_slots -= 1
-
-    def step(self, mock_model_forward):
-        """Executes a single iteration (one token generation step)."""
-        # 1. Clean up finished requests from the previous step
-        self._evict_finished_requests()
-
-        # 2. Fill empty slots with new requests
-        self._pull_new_requests()
-
-        if not self.running_batch:
-            return # Engine is idle
-
-        # 3. Separate requests by phase
-        prefill_reqs = [r for r in self.running_batch if r.status == "prefill"]
-        decode_reqs = [r for r in self.running_batch if r.status == "decode"]
-
-        # 4. Execute Forward Pass
-        # A real engine uses Custom CUDA kernels to fuse chunked prefills
-        # with decodes into a single pass.
-        mock_model_forward(prefill_reqs, decode_reqs)
-
-        # 5. Update request states
-        for req in self.running_batch:
-            if req.status == "prefill":
-                # After one iteration, prompt is processed, transition to decode
-                req.status = "decode"
-            elif req.status == "decode":
-                req.generated_tokens += 1
-
-# --- Simulation ---
-def mock_forward(prefill, decode):
-    # Simulates GPU execution time
-    pass
-
-scheduler = ContinuousBatchingScheduler(max_batch_size=4)
-for i in range(6):
-    # Mix of short and long generation requests
-    scheduler.add_request(InferenceRequest(i, prompt_length=100, max_new_tokens=(i+1)*5))
-
-iteration = 0
-while scheduler.waiting_queue or scheduler.running_batch:
-    print(f"Iteration {iteration} | Active Batch Size: {len(scheduler.running_batch)}")
-    scheduler.step(mock_forward)
-    iteration += 1
+requests = [("A", 4), ("B", 2), ("C", 6), ("D", 3), ("E", 5), ("F", 2)]
+static, static_end = schedule(requests, continuous=False)
+continuous, continuous_end = schedule(requests, continuous=True)
+assert (len(static), len(continuous)) == (11, 9)
+assert static_end == {"A": 4, "B": 2, "C": 6, "D": 9, "E": 11, "F": 8}
+assert continuous_end == {"A": 4, "B": 2, "C": 6, "D": 5, "E": 9, "F": 7}
+assert static[2] == ("A", "-", "C")
+assert continuous[2] == ("A", "D", "C")
+print(f"static={len(static)}, continuous={len(continuous)} iterations")
+for iteration, slots in enumerate(continuous, start=1):
+    print(iteration, " ".join(slots))
 ```
 
----
+Expected output:
 
-## 6. Summary and next steps
+```text
+static=11, continuous=9 iterations
+1 A B C
+2 A B C
+3 A D C
+4 A D C
+5 E D C
+6 E F C
+7 E F -
+8 E - -
+9 E - -
+```
 
-Replacing requests at iteration boundaries reduces idle slots caused by unequal generation lengths. Chunked prefill can bound interference with decoding but does not eliminate throughput/latency tradeoffs. KV capacity, token budgets, arrivals and kernel efficiency still determine utilization.
+The completion assertions distinguish the admission policies, and the loop stops as soon as the final request finishes. There is no extra empty “GPU iteration.” Empty input returns an empty trace; zero capacity and nonpositive decode lengths are rejected. Change a remaining length or capacity, then explain which request can enter sooner before running it again.
 
-At small decode batches, active-weight and KV reads can dominate. Larger batches, long contexts and MoE change the bottlenecks and traffic. The next section examines the gains and costs of verifying several candidate tokens together through speculative decoding.
+## 6. Validate a Scheduler on the Workload You Serve
+
+Replay a representative arrival trace with prompt/output lengths and burst patterns preserved. Hold the model, hardware, precision and quality settings fixed. Compare throughput **within** the declared latency budget, alongside TTFT and ITL distributions, queue time, KV occupancy, preemptions, cancellations and errors. Split long and short prompts and low and high load; a good average can hide starvation or tail-latency failures.
+
+Save the request trace identifier, model/runtime versions, scheduler configuration and admission limits with the results. Reject a change that exceeds a predeclared tail-latency or error threshold, even if tokens per second rises. Keep the previous configuration available for rollback. The next section studies another way to change work per iteration: verifying several candidate tokens through speculative decoding.
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: Why does static batching lead to a severe drop in GPU utilization during LLM inference?</summary>
-*Because of the Convoy Effect (or early termination problem). If requests in a batch have varying generation lengths, the shorter requests finish early but cannot free their memory or exit the batch until the longest request finishes. The GPU wastes cycles waiting, rather than processing new requests.*
+<summary>Quiz 1: B finishes at iteration 2. When does D first run under the two policies?</summary>
+*At iteration 3 under continuous admission, after B's slot is released. Under the defined static policy, D waits until A, B and C have all finished at iteration 6, then starts at 7. The difference is admission timing; static admission does not inherently forbid releasing B's memory.*
 </details>
 
 <details>
-<summary>Quiz 2: When do prefill and decode bottlenecks differ?</summary>
-*Prefill can have high arithmetic intensity by processing many tokens together; small-batch decode often stresses memory bandwidth. Batch size, context, architecture and kernels change this, so it is not universally a GEMM-versus-GEMV distinction.*
+<summary>Quiz 2: Why do 9 versus 11 iterations not prove the same wall-clock speedup?</summary>
+*Iterations can differ in batch composition, context lengths and execution time. The example excludes prefill, KV limits and scheduler costs. Measure matched workloads; occupied slots are not a GPU-utilization measurement.*
 </details>
 
 <details>
-<summary>Quiz 3: How does chunked prefill manage decode latency?</summary>
-*It breaks a long prompt into budgeted chunks placed among decode iterations. This can reduce interference, but chunk size and scheduling trade prefill completion against inter-token latency; stalls are not guaranteed to disappear.*
+<summary>Quiz 3: With a ten-token budget and three ongoing decodes, how is a 20-token prompt processed?</summary>
+*Under the stated policy it receives 7, 7 and 6 prefill positions over three iterations. Its first output token can be sampled when the final prompt position is processed. Seven available input positions do not mean only seven KV positions are needed: prior context remains stored.*
 </details>
 
 <details>
-<summary>Quiz 4: In an iteration-level scheduler, at what exact point can a new request from the waiting queue enter the active GPU batch?</summary>
-*At the boundary of any token generation step (iteration). Immediately after a forward pass completes, the scheduler evaluates the batch, evicts any requests that generated an EOS token, and pulls in new requests before the next forward pass begins.*
+<summary>Quiz 4: Can a smaller prefill chunk improve ITL while worsening TTFT?</summary>
+*Yes. It can reduce the work placed ahead of an existing response's next decode, but the new prompt may require more scheduled chunks or wait longer for its share. The effect depends on load and kernels; both latency distributions must be measured.*
 </details>
 
 <details>
-<summary>Quiz 5: How do static and continuous schedulers transition when requests finish?</summary>
-*Define survivors as $C_t=\{r \in B_t : t<E(r)\}$. Static batching retains its batch while $C_t$ is nonempty, then admits a new batch from the queue when no survivors remain. Continuous batching retains $C_t$ and admits queued requests into free slots. A short queue leaves slots empty; real admission must also satisfy token and KV budgets.*
+<summary>Quiz 5: Why can a continuous batch still have an empty slot while requests are waiting?</summary>
+*Token or KV capacity may be exhausted, or admission priorities may defer the waiting work. A request-count slot is only one constraint. When the queue itself empties, no scheduler can keep every slot occupied.*
 </details>
-
----
 
 ## References
 
-1. <a id="ref-1"></a>Yu, G.-I., Jeong, J. S., Kim, G.-W., Kim, S., & Chun, B.-G. (2022). "Orca: A Distributed Serving System for Transformer-Based Generative Models". *16th USENIX Symposium on Operating Systems Design and Implementation (OSDI 22)*. [OSDI 2022](https://www.usenix.org/conference/osdi22/presentation/yu)
-2. <a id="ref-2"></a>Agrawal, A., Panwar, A., Mohan, J., Kwatra, N., Gulavani, B. S., & Ramjee, R. (2023). *SARATHI: Efficient LLM Inference by Piggybacking Decodes with Chunked Prefills*. *arXiv preprint arXiv:2308.16369*. [arXiv:2308.16369](https://arxiv.org/abs/2308.16369)
+1. <a id="ref-1"></a>Yu, G.-I., Jeong, J. S., Kim, G.-W., Kim, S., & Chun, B.-G. (2022). *Orca: A Distributed Serving System for Transformer-Based Generative Models*. [OSDI 2022](https://www.usenix.org/conference/osdi22/presentation/yu).
+2. <a id="ref-2"></a>Agrawal, A., Panwar, A., Mohan, J., Kwatra, N., Gulavani, B. S., & Ramjee, R. (2023). *SARATHI: Efficient LLM Inference by Piggybacking Decodes with Chunked Prefills*. [arXiv:2308.16369](https://arxiv.org/abs/2308.16369).
+3. <a id="ref-3"></a>vLLM contributors. *Optimization and Tuning: Chunked Prefill*. Documentation checked 2026-11-25. [Official documentation](https://docs.vllm.ai/en/stable/configuration/optimization/#chunked-prefill).

@@ -102,9 +102,9 @@
 
 ### **Chapter 12: LLM Inference Optimization (Deep Tech)**
 
-* **12.1 KV Cache Management:** 생성 속도를 높이기 위한 핵심 캐싱 전략.
+* **12.1 KV Cache: How It Works and Memory Use:** KV 캐시의 원리, GQA 메모리 계산 공식과 용량 계산기, PyTorch 재계산 비교.
 * **12.2 PagedAttention (vLLM):** OS의 가상 메모리 개념을 도입한 메모리 단편화 해결.
-* **12.3 Continuous Batching:** 요청별로 처리 속도가 다른 문제를 해결하는 동적 배칭.
+* **12.3 Continuous Batching: Request Scheduling and Chunked Prefill:** 여섯 요청의 실행 순서로 연속 배칭을 따라가고 청크 프리필이 첫 토큰 지연과 토큰 간 지연에 미치는 영향을 비교.
 * **12.4 Speculative Decoding:** 작은 모델로 초안을 잡고 큰 모델로 검수하여 속도를 올리는 기법.
 * **12.5 Long Context Serving:** StreamingLLM, YaRN 등 컨텍스트 윈도우 확장을 위한 시스템 최적화.
 * **12.6 Serving Policies, SLOs, and Fallbacks:** 실제 서비스에서 admission control, latency budget, fairness, 그리고 장애 시 폴백 전략을 어떻게 설계하는지 정리.

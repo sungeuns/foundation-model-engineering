@@ -125,9 +125,9 @@ export const chapters = [
     id: 12,
     title: { en: "12. LLM Inference Optimization", ko: "12. LLM 추론 최적화" },
     subs: [
-      { id: "12-1", title: { en: "12.1 KV Cache Management", ko: "12.1 KV 캐시 관리" }, path: "/chapter-12/kv-cache-management" },
+      { id: "12-1", title: { en: "12.1 KV Cache: How It Works and Memory Use", ko: "12.1 KV 캐시 원리와 메모리 계산" }, path: "/chapter-12/kv-cache-management" },
       { id: "12-2", title: { en: "12.2 PagedAttention (vLLM)", ko: "12.2 PagedAttention (vLLM)" }, path: "/chapter-12/paged-attention-vllm" },
-      { id: "12-3", title: { en: "12.3 Continuous Batching", ko: "12.3 연속 배칭" }, path: "/chapter-12/continuous-batching" },
+      { id: "12-3", title: { en: "12.3 Continuous Batching: Request Scheduling and Chunked Prefill", ko: "12.3 연속 배칭: 요청 교체와 청크 프리필" }, path: "/chapter-12/continuous-batching" },
       { id: "12-4", title: { en: "12.4 Speculative Decoding", ko: "12.4 투기적 디코딩" }, path: "/chapter-12/speculative-decoding" },
       { id: "12-5", title: { en: "12.5 Long Context Serving", ko: "12.5 롱 컨텍스트 서빙" }, path: "/chapter-12/long-context-serving" },
       { id: "12-6", title: { en: "12.6 Serving Policies, SLOs, and Fallbacks", ko: "12.6 서빙 정책, SLO, 그리고 폴백" }, path: "/chapter-12/serving-policies-slos-and-fallbacks" },

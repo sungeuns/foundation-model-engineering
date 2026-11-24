@@ -320,9 +320,9 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 11.4 | `/chapter-11/image-diffusion-models` | Inspected 2026-11-24 | 5bb8bc33ff8adf86105e24018b03423e9f19e0d29739f64b843c0cbeadea05e8 | 308de426fdbc7b1c845a4d63be36b83988abe2eb36026affba1dd101194816b7 |
 | 11.5 | `/chapter-11/video-generation-foundations` | Inspected 2026-11-15 | b34544d0352be5feafdfc0d30ac23092d50edf3a3af5f3e4d37cc62531230c20 | 55c0488a07c962041cdbb0cdb945d18c8e136b23dba2aed6f6970f1c33cb4b4b |
 | 11.6 | `/chapter-11/commercial-video-models` | Inspected 2026-11-24 | 12216aad67ffc900bcfe437f20a7fcf9be618ccc5d617f698f4466ef15ff33cb | 482a6137c8a368e2d9bab31367b349357ab6f294e86318a2aee303bc9c120f57 |
-| 12.1 | `/chapter-12/kv-cache-management` | Inspected 2026-11-18 | 4be195f202603d7c05c414a25c20bb5f69a3b1d7c46512d364edbfdf14d0e047 | 383de00ff5bc97cb8a33ebe6d951bfe3c3fa2217dd78a50501bf9c71ce237913 |
+| 12.1 | `/chapter-12/kv-cache-management` | Inspected 2026-11-25 | 78b62f45004de02e623ea86b97a99cbc4714d3f9e950e07c7d6b27a50c9b5f18 | e9f72fdadd6e55917722bbff5dcf8c13e460aac8ed68fd2baea3a0376feb1b3f |
 | 12.2 | `/chapter-12/paged-attention-vllm` | Inspected 2026-11-18 | 75d76b30c45ca44edbb56072df6f91209343c7d8ad5c69270cd6b6c4e9700dba | e824df912502a5ce75dde4c69fc80d44259c9e9229b55374ba32eb06ba5e0b6a |
-| 12.3 | `/chapter-12/continuous-batching` | Inspected 2026-11-15 | 74904410d90bc4a540c69f408cc3be12c46b2a7560cd831370c05415e2172f8d | e23a378bc1d7f50dfe25e87241187cfcdb1da4df458dc08a375ea87de53d19d1 |
+| 12.3 | `/chapter-12/continuous-batching` | Inspected 2026-11-25 | 6ef1bf606cdf836c97703e2c9518a7f395f6c7242f614fb7e24f7a44ed301b28 | 4c9be3e2b663d439d85799a0f93db2a485fbca65eb945328789a188afd3b65db |
 | 12.4 | `/chapter-12/speculative-decoding` | Inspected 2026-11-15 | c211bce7483db5699601fe8743d1686ab5b645e7c574072d3cd8f2d8daaf0c70 | a3c7a599410b1ee428f27865bd9dbd1979703192f108984ae5fb522cd9ab3bb2 |
 | 12.5 | `/chapter-12/long-context-serving` | Inspected 2026-11-15 | 82f413a5a2e2731fe01603c7036b42dee434b010cc76410eba7e0807d73742e8 | 59933e962b9f0bef0f8b50e9889ec628fd92ade6d7d0fb91636981793bd83052 |
 | 12.6 | `/chapter-12/serving-policies-slos-and-fallbacks` | Inspected 2026-11-15 | 26a7e79fcdf2ad44fe1ea5fe8a94fdb5937c286e2a9e5a62be2f2c476d04fb83 | 0f2934b63b4c0d209d8b70868047a4775737e3b49db829ea0cc2eba8a1d98df5 |

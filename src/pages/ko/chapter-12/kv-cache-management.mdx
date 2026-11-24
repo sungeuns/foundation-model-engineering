@@ -1,16 +1,18 @@
 ---
 layout: ../../../layouts/BookLayout.astro
-title: 12.1 KV Cache Management
+title: 12.1 KV 캐시 원리와 메모리 계산
 lang: ko
 ---
 
 import KVCacheCalculator from '../../../components/chapter-12/KVCacheCalculator.tsx';
 
-# 12.1 KV Cache Management
+# 12.1 KV 캐시 원리와 메모리 계산
 
-자기회귀 serving에는 성격이 다른 두 hardware 구간이 있습니다. **Prefill** 은 prompt를 병렬 처리하므로 행렬 곱셈 처리량이 주된 병목인 경우가 많습니다. **Decode** 는 sequence마다 한 번에 한 token을 생성하며, 매 단계 weight와 attention state를 읽습니다. 따라서 memory bandwidth, cache 용량, scheduler가 성능을 좌우하는 경우가 많습니다. 이 두 구간을 연결하는 상태가 KV cache입니다.
+**KV 캐시(KV cache)는 언어 모델이 이미 처리한 토큰의 어텐션 키(Key)와 값(Value)을 저장하는 공간입니다.** 생성할 때마다 앞부분 전체를 다시 계산하는 대신 이 텐서를 재사용합니다. 중복 연산을 줄이는 대신, 저장한 시퀀스 길이에 따라 메모리 사용량이 늘어납니다 [[8]](#ref-8).
 
-중요한 질문은 “cache가 들어가는가?”만이 아닙니다. 모델 품질을 지키면서 길이가 다른 요청이 섞였을 때 inter-token latency를 예측 가능하게 유지하고, 끝난 요청의 용량을 즉시 회수할 수 있어야 합니다.
+예를 들어 네 토큰의 프롬프트를 처리했다면, 다음 토큰을 처리할 때 앞선 네 토큰의 키와 값을 재사용할 수 있습니다. 새 토큰이 어텐션으로 이전 상태를 읽는 연산까지 없어지는 것은 아닙니다.
+
+**Prefill** 은 프롬프트를 병렬 처리하며 캐시를 채웁니다. **Decode** 는 저장한 상태를 이용해 새 토큰을 처리합니다. Prefill에서는 행렬 곱셈 처리량이, decode에서는 메모리 대역폭·캐시 용량·요청 스케줄링이 병목인 경우가 많습니다. 이 장에서는 메모리 공식을 유도하고 용량 계산기를 사용한 뒤, 작은 PyTorch 캐시 구현을 전체 재계산과 비교합니다.
 
 ## 1. Cache가 절약하는 연산
 
@@ -29,6 +31,12 @@ o_{t+1}=\operatorname{softmax}\left(
 $$
 
 $d_h$ 는 head dimension, $M$ 은 causal 또는 padding mask입니다.
+
+### K와 V는 저장하면서 Q는 저장하지 않는 이유
+
+현재 쿼리는 현재 출력을 계산하는 데 어느 이전 위치가 중요한지 묻습니다. 이후 출력은 각자의 쿼리를 사용하므로, 일반적인 인과적 디코딩에서는 과거 쿼리를 보관할 필요가 없습니다. 반면 이전 키는 매칭에, 이전 값은 가중합에 계속 필요합니다 [[8]](#ref-8).
+
+모델 가중치는 요청들이 공유하지만 KV 상태는 처리한 토큰 시퀀스에 따라 달라집니다. 완성된 답변을 저장하는 것과도 다릅니다. 새로운 내용을 이어서 생성하려면 모델 연산이 필요합니다. 요청 사이에 상태를 공유하려면 아티팩트 설정이 호환되고 접두사를 정확히 재사용할 수 있어야 하며, 문장이 비슷하다는 것만으로는 부족합니다.
 
 복잡도는 정확히 구분해야 합니다. Cache가 없으면 decode $t$ 단계마다 길이 $t$ 인 전체 forward를 다시 실행하므로 self-attention score 연산은 $O(t^2)$ 입니다. 새 token $N$ 개에 대해 합하면 attention은 $O(N^3)$, projection과 MLP는 $O(N^2)$ 입니다. Cache가 있으면 $t$ 단계 attention이 $O(t)$, 전체는 $O(N^2)$ 가 됩니다. 이 표기는 model width와 batch dimension을 생략합니다. 실제 시간은 점근 복잡도보다 memory traffic과 kernel utilization에 좌우되는 경우가 많습니다.
 
@@ -72,6 +80,16 @@ $H_Q$ 를 query head 수라고 하겠습니다.
 - **Grouped-Query Attention (GQA):** $1<H_{KV}<H_Q$, 여러 query head가 하나의 KV head를 공유
 
 Payload는 $H_{KV}$ 에 선형 비례합니다. GQA는 품질·용량·bandwidth trade-off를 제공합니다. 원 논문은 평가한 변환 및 학습 설정에서 MHA에 가까운 품질과 MQA에 가까운 속도를 보고했습니다 [[1]](#ref-1). 임의의 checkpoint가 재학습 없이 head 구조를 바꿔도 품질이 유지된다는 보장은 아닙니다.
+
+메모리 공식에는 쿼리 헤드가 아니라 **KV 헤드 수** 를 넣어야 합니다. 앞의 예제처럼 80개 층, 8,192토큰, 헤드 차원 128, BF16 저장을 고정하고 쿼리 헤드가 64개라고 가정해 봅시다.
+
+| 구조 | KV 헤드 수 | 요청당 (GiB) | 요청 32개 (GiB) |
+|---|---:|---:|---:|
+| MHA | 64 | 20 | 640 |
+| GQA | 8 | 2.5 | 80 |
+| MQA | 1 | 0.3125 | 10 |
+
+이는 설명을 위한 아키텍처의 데이터 용량 계산이며, 모델 벤치마크 측정치나 같은 체크포인트에서 자유롭게 바꾸는 설정이 아닙니다. GQA 행에서 KV 헤드 8개 대신 쿼리 헤드 64개를 넣으면 캐시를 **8배** 크게 추정합니다. 모델 가중치를 4비트로 양자화해도 KV 캐시까지 자동으로 4비트가 되지는 않습니다. 캐시에 실제로 설정한 값당 바이트 수를 사용해야 합니다.
 
 ### Multi-Head Latent Attention
 
@@ -238,3 +256,4 @@ KV caching은 중복 연산을 persistent memory traffic으로 바꿉니다. MQA
 5. <a id="ref-5"></a>DeepSeek-AI. (2026). DeepSeek-V4.1-Flash technical report. [Source](https://arxiv.org/abs/2609.19969).
 6. <a id="ref-6"></a>Li, F. (2026). Validating Hybrid-State Cache Recovery for GLM-5.3-Flash with vLLM and LMCache. [Source](https://arxiv.org/abs/2609.15030).
 7. <a id="ref-7"></a>PyTorch Contributors. *Scaled Dot Product Attention*, PyTorch 2.15 documentation. [Mask and GQA API contract](https://docs.pytorch.org/docs/2.15/generated/torch.nn.functional.scaled_dot_product_attention.html).
+8. <a id="ref-8"></a>Hugging Face. *How caching works*. [Transformers documentation](https://huggingface.co/docs/transformers/cache_explanation).

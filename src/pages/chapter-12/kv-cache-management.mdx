@@ -1,16 +1,18 @@
 ---
 layout: ../../layouts/BookLayout.astro
-title: 12.1 KV Cache Management
+title: "12.1 KV Cache: How It Works and Memory Use"
 lang: en
 ---
 
 import KVCacheCalculator from '../../components/chapter-12/KVCacheCalculator.tsx';
 
-# 12.1 KV Cache Management
+# 12.1 KV Cache: How It Works and Memory Use
 
-Autoregressive serving has two different hardware regimes. **Prefill** processes the prompt in parallel and is commonly limited by matrix-multiplication throughput. **Decode** produces one token per sequence at a time; it repeatedly reads weights and attention state, so memory bandwidth, cache capacity, and scheduling often dominate. The KV cache is the state that connects those phases.
+**A KV cache stores the attention keys and values for tokens a language model has already processed.** During generation, the model reuses these tensors instead of recomputing the entire prefix at every step. This saves computation at the cost of memory that grows with the cached sequence length [[8]](#ref-8).
 
-The engineering question is not merely “does the cache fit?” A useful design must preserve model quality, keep inter-token latency predictable under mixed sequence lengths, and recover capacity when requests finish.
+For example, after processing a four-token prompt, the model can reuse those four tokens' keys and values when processing the next token. The new token still reads the earlier state through attention; caching does not remove that work.
+
+**Prefill** processes the prompt in parallel and populates the cache. **Decode** processes new tokens using the saved state. Prefill is often limited by matrix-multiplication throughput; decode often depends on memory bandwidth, cache capacity, and scheduling. This chapter derives the memory formula, provides a capacity calculator, and checks a small PyTorch cache against full recomputation.
 
 ## 1. What the Cache Actually Saves
 
@@ -29,6 +31,12 @@ o_{t+1}=\operatorname{softmax}\left(
 $$
 
 where $d_h$ is head dimension and $M$ is a causal or padding mask.
+
+### Why Cache K and V, but Not Q?
+
+The current query asks which earlier positions matter for the current output. Future outputs use their own queries, so ordinary causal decoding does not need to retain old queries. It does need earlier keys for matching and earlier values for the weighted sum [[8]](#ref-8).
+
+Model weights are shared across requests; KV state depends on the processed token sequence. KV caching also differs from saving a completed answer: a new continuation still requires model computation. Sharing state between requests needs a compatible artifact configuration and an exactly reusable prefix, not merely similar text.
 
 Complexity needs careful wording. Without a cache, decode step $t$ reruns a length-$t$ forward pass: self-attention score work is $O(t^2)$. Summed across $N$ newly generated tokens, that attention work is $O(N^3)$, while projections and MLP work sum to $O(N^2)$. With a cache, attention at step $t$ is $O(t)$, so its total is $O(N^2)$. These expressions suppress model width and batch dimensions; wall-clock speed is usually governed by memory traffic and kernel utilization, not asymptotic notation alone.
 
@@ -72,6 +80,16 @@ Let $H_Q$ be query heads.
 - **Grouped-Query Attention (GQA):** $1<H_{KV}<H_Q$, with multiple query heads sharing each KV head.
 
 Payload scales linearly with $H_{KV}$. GQA therefore exposes a quality–capacity–bandwidth trade-off. The original study reported quality close to MHA for its evaluated converted and trained models while retaining speed near MQA [[1]](#ref-1). That evidence does not guarantee that an arbitrary checkpoint can change head structure without retraining.
+
+Use the **KV-head count**, not the query-head count, in the memory formula. To see the difference, hold the worked example's 80 layers, 8,192 tokens, head dimension 128, and BF16 storage fixed, and suppose there are 64 query heads:
+
+| Layout | KV heads | Per request (GiB) | 32 requests (GiB) |
+|---|---:|---:|---:|
+| MHA | 64 | 20 | 640 |
+| GQA | 8 | 2.5 | 80 |
+| MQA | 1 | 0.3125 | 10 |
+
+These are calculated payloads for illustrative architectures, not measured model benchmarks or interchangeable settings for one checkpoint. In the GQA row, substituting 64 query heads for eight KV heads overestimates the cache by **8×**. Quantizing model weights to four bits does not by itself make the KV cache four-bit; use the cache's configured bytes per value.
 
 ### Multi-Head Latent Attention
 
@@ -238,3 +256,4 @@ A September GLM-5.3-Flash integration study found that a successful external cac
 5. <a id="ref-5"></a>DeepSeek-AI. (2026). DeepSeek-V4.1-Flash technical report. [Source](https://arxiv.org/abs/2609.19969).
 6. <a id="ref-6"></a>Li, F. (2026). Validating Hybrid-State Cache Recovery for GLM-5.3-Flash with vLLM and LMCache. [Source](https://arxiv.org/abs/2609.15030).
 7. <a id="ref-7"></a>PyTorch Contributors. *Scaled Dot Product Attention*, PyTorch 2.15 documentation. [Mask and GQA API contract](https://docs.pytorch.org/docs/2.15/generated/torch.nn.functional.scaled_dot_product_attention.html).
+8. <a id="ref-8"></a>Hugging Face. *How caching works*. [Transformers documentation](https://huggingface.co/docs/transformers/cache_explanation).
