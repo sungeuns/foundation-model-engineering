@@ -61,6 +61,16 @@ export const socialCards = {
       alt: '두 예시 응답에서 토큰 다섯 개가 요청 후 100~500ms 사이에 도착합니다. 둘 다 첫 토큰 지연과 이후 평균 토큰 간격이 100ms입니다. A에서는 토큰이 100ms마다 도착합니다. B에서는 토큰 네 개가 10ms 간격으로 도착한 뒤 마지막 토큰까지 370ms를 기다립니다.',
     },
   },
+  '/chapter-14/lexical-to-semantic-search': {
+    en: {
+      image: '/social/lexical-dense-en.png',
+      alt: 'Four support titles, query “activation XJ-992-B”. BM25 scores “Device activation guide” at 0.693 and “Device activation XJ-992-B” at 1.897. Both have cosine similarity 1 with the query because the three hand-built topic features omit the code.',
+    },
+    ko: {
+      image: '/social/lexical-dense-ko.png',
+      alt: '문서 제목 네 개에서 “등록 XJ-992-B”를 검색했습니다. BM25 점수는 “기기 등록 안내”가 0.693, “기기 등록 XJ-992-B”가 1.897입니다. 직접 정한 세 가지 주제 특성에는 코드가 없어 두 제목 모두 질의와의 코사인 유사도가 1입니다.',
+    },
+  },
   '/chapter-14/advanced-retrieval': {
     en: {
       image: '/social/rrf-cutoff-en.png',

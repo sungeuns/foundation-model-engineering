@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" xml:lang="en" role="img" aria-labelledby="card-title card-description">
+<title id="card-title">Which search notices the code?</title><desc id="card-description">Four support titles, query “activation XJ-992-B”. BM25 scores “Device activation guide” at 0.693 and “Device activation XJ-992-B” at 1.897. Both have cosine similarity 1 with the query because the three hand-built topic features omit the code.</desc>
+<rect width="1200" height="630" fill="#f5f2eb"/><rect width="12" height="630" fill="#256257"/>
+<g font-family="DejaVu Sans, sans-serif" fill="#192a30">
+<text x="58" y="94" font-size="58" font-weight="700">Which search notices the code?</text>
+<text x="62" y="165" font-size="33" fill="#4e5d61">Query</text>
+<text x="188" y="165" font-size="46" font-weight="700">activation XJ-992-B</text>
+<rect x="59" y="206" width="1082" height="275" rx="14" fill="white" stroke="#c3cec8" stroke-width="2"/>
+<text x="84" y="263" font-size="34" fill="#4e5d61">Document title</text>
+<text x="860" y="263" font-size="34" fill="#4e5d61" text-anchor="end">BM25</text>
+<text x="1106" y="263" font-size="34" fill="#4e5d61" text-anchor="end">Cosine</text>
+<path d="M60 283H1140M60 382H1140" stroke="#c3cec8" stroke-width="2"/>
+<g id="document-A">
+<text x="84" y="341" font-size="38" >Device activation guide</text>
+<text x="860" y="341" font-size="50" fill="#192a30" font-weight="700" text-anchor="end">0.693</text>
+<text x="1106" y="341" font-size="50" font-weight="700" text-anchor="end">1</text>
+</g>
+<g id="document-B">
+<text x="84" y="441" font-size="38" >Device activation XJ-992-B</text>
+<text x="860" y="441" font-size="50" fill="#256257" font-weight="700" text-anchor="end">1.897</text>
+<text x="1106" y="441" font-size="50" font-weight="700" text-anchor="end">1</text>
+</g>
+<text x="60" y="542" font-size="33" fill="#192a30">4 documents · 3 hand-built topic features for cosine</text>
+<path d="M60 568H1140" stroke="#bbc8c1" stroke-width="2"/>
+<text x="60" y="605" font-size="24" fill="#256257">Foundation Model Engineering · 14.1</text>
+</g></svg>

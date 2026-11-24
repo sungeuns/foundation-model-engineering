@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" xml:lang="ko" role="img" aria-labelledby="card-title card-description">
+<title id="card-title">어느 검색 방식이 코드를 알아볼까?</title><desc id="card-description">문서 제목 네 개에서 “등록 XJ-992-B”를 검색했습니다. BM25 점수는 “기기 등록 안내”가 0.693, “기기 등록 XJ-992-B”가 1.897입니다. 직접 정한 세 가지 주제 특성에는 코드가 없어 두 제목 모두 질의와의 코사인 유사도가 1입니다.</desc>
+<rect width="1200" height="630" fill="#f5f2eb"/><rect width="12" height="630" fill="#256257"/>
+<g font-family="Noto Sans CJK KR, DejaVu Sans, sans-serif" fill="#192a30">
+<text x="58" y="94" font-size="58" font-weight="700">어느 검색 방식이 코드를 알아볼까?</text>
+<text x="62" y="165" font-size="33" fill="#4e5d61">검색어</text>
+<text x="188" y="165" font-size="46" font-weight="700">등록 XJ-992-B</text>
+<rect x="59" y="206" width="1082" height="275" rx="14" fill="white" stroke="#c3cec8" stroke-width="2"/>
+<text x="84" y="263" font-size="34" fill="#4e5d61">문서 제목</text>
+<text x="860" y="263" font-size="34" fill="#4e5d61" text-anchor="end">BM25</text>
+<text x="1106" y="263" font-size="34" fill="#4e5d61" text-anchor="end">코사인</text>
+<path d="M60 283H1140M60 382H1140" stroke="#c3cec8" stroke-width="2"/>
+<g id="document-A">
+<text x="84" y="341" font-size="38" >기기 등록 안내</text>
+<text x="860" y="341" font-size="50" fill="#192a30" font-weight="700" text-anchor="end">0.693</text>
+<text x="1106" y="341" font-size="50" font-weight="700" text-anchor="end">1</text>
+</g>
+<g id="document-B">
+<text x="84" y="441" font-size="38" >기기 등록 XJ-992-B</text>
+<text x="860" y="441" font-size="50" fill="#256257" font-weight="700" text-anchor="end">1.897</text>
+<text x="1106" y="441" font-size="50" font-weight="700" text-anchor="end">1</text>
+</g>
+<text x="60" y="542" font-size="33" fill="#192a30">문서 4개 · 직접 정한 주제 특성 3개로 코사인 유사도 계산</text>
+<path d="M60 568H1140" stroke="#bbc8c1" stroke-width="2"/>
+<text x="60" y="605" font-size="24" fill="#256257">파운데이션 모델 엔지니어링 · 14.1</text>
+</g></svg>

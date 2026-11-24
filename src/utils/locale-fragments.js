@@ -32,6 +32,7 @@ const lessonFragments = {
   '/chapter-14/graphrag-and-ontology': ['graph-evidence-example'],
   '/chapter-14/rag-failure-modes-and-operational-design': ['trace-a-rag-answer'],
   '/chapter-16/decision-models-and-selective-prediction': ['calibration-drift-example'],
+  '/chapter-17/academic-benchmarks': ['pass-at-k-example'],
   '/chapter-17/commercial-model-benchmarks': ['long-context-cost', 'ling-32-air-context'],
   '/chapter-17/production-evaluation-and-release-gates': ['release-gate-example'],
   '/chapter-17/llm-as-a-judge': ['translation-rubric-example'],

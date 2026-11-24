@@ -32,7 +32,7 @@
 
 작은 디코더를 학습하고 재개하려면 [Colab에서 한국어 노트북을 열거나](https://colab.research.google.com/github/sungeuns/foundation-model-engineering/blob/main/public/labs/tiny-decoder-lab-ko.ipynb) [Linux와 Windows에서 검증한 한국어 노트북을 내려받으세요](https://github.com/sungeuns/foundation-model-engineering/releases/download/2026-11-labs/tiny-decoder-lab-ko.ipynb). CPU PyTorch를 사용하고, 실습에 필요한 합성 토큰을 직접 만듭니다. 모델 다운로드나 API 키는 필요하지 않습니다. 과거 문맥을 가리면 결과가 어떻게 달라질지 먼저 예상한 뒤 실행해 보세요.
 
-Colab 실행에는 Google 로그인이 필요합니다. 로컬에서 실행할 때 필요한 Python·PyTorch 환경과 실험의 한계는 [실습 안내](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-7/tiny-decoder-lab/)에 있습니다. 실행 코드는 [causal_lab.py](public/labs/causal_lab.py)에서도 읽을 수 있습니다.
+Colab 실행에는 Google 로그인이 필요합니다. [CPU 실행 기록](https://nbviewer.org/urls/sungeuns.github.io/foundation-model-engineering/labs/2026-11/tiny-decoder-worked-ko.ipynb)에서는 로그인 없이 코드와 측정 결과를 함께 읽을 수 있습니다. 로컬에서 실행할 때 필요한 Python·PyTorch 환경과 실험의 한계는 [실습 안내](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-7/tiny-decoder-lab/)에 있습니다. 실행 코드는 [causal_lab.py](public/labs/causal_lab.py)에서도 읽을 수 있습니다.
 
 후보 둘 다 목표 과제의 정답률이 15%p 올랐습니다. [목표 과제 개선 사례](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-17/experimental-design-and-uncertainty/?scenario=gain#release-lab)와 [기존 능력 하락 사례](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-17/experimental-design-and-uncertainty/?scenario=regression#release-lab)를 각각 실행해 어느 쪽을 배포할지 판단해 보세요. 저장소를 내려받았다면 Python 3.10 이상에서 같은 실험을 실행할 수 있습니다.
 

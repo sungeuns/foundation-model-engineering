@@ -20,3 +20,7 @@ On November 25, 2026 (Korea time), Codex submitted the KV cache capacity calcula
 ## Kempner Institute Computing Handbook
 
 On November 25, 2026 (Korea time), Codex opened a content discussion on behalf of Seongeun So about adding a CPU replay exercise to the handbook’s checkpoint section. The issue includes a runnable sampler example. In the accompanying training experiment, restoring the sampler reproduced the next batch after 80 updates, while reseeding it repeated the first batch. The issue was open when verified. [Content proposal #471](https://github.com/KempnerInstitute/kempner-computing-handbook/issues/471)
+
+## DAIR.AI NLP Newsletter
+
+On November 25, 2026 (Korea time), Codex submitted the textbook's [lexical and semantic retrieval exercise](https://sungeuns.github.io/foundation-model-engineering/chapter-14/lexical-to-semantic-search/#lexical-dense-example) through the editor's public Tutorial intake on Seongeun So's behalf. The proposal gives a query for which BM25 separates two support titles while their hand-built topic vectors tie, and discloses AI assistance. The form confirmed “Your response has been recorded.” Publication awaits an editorial decision. [Invitation](https://github.com/dair-ai/dair-ai.github.io/wiki/Guides#nlp-newsletter---request-for-submissions) · [Submission form](https://docs.google.com/forms/d/e/1FAIpQLSeeQCvDGcX11pEntWiRUOM0cgn_KA4QOQz-G3v1JjImJwDg4g/viewform)

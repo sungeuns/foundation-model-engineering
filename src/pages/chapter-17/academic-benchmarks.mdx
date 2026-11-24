@@ -8,121 +8,127 @@ import PassAtKVisualizer from '../../components/chapter-17/PassAtKVisualizer.tsx
 
 # 17.1 Academic Benchmarks
 
-A benchmark is a measurement protocol: item set, prompt/template, harness, tools, decoding budget, answer extractor, grader, and statistic. A score without that protocol is not comparable evidence. Academic benchmarks are useful standardized probes, but production decisions require private tasks and operational metrics.
-
----
+A code generator answers the same problem twenty times. Ten answers pass the tests. If you draw nine of the twenty, what is the chance that they **all fail**? It is small enough for a chart to round the success rate to 100%, yet ten different groups of nine contain only failures. Choosing the unit of measurement makes the difference between an almost certain event and a guarantee. [Work through the draw](#pass-at-k-example).
 
 ## Frontier Benchmark Map
 
-Use benchmark families to sample different capabilities rather than declaring one general-intelligence score.
+Choose a benchmark by the kind of mistake you want to expose. MMLU asks multiple-choice questions across academic subjects [[1]](#ref-1). HumanEval runs tests on generated functions [[2]](#ref-2). SWE-bench starts from a repository and an issue, then checks a proposed change [[4]](#ref-4). Passing a function test and resolving a repository issue require different evidence.
 
-| Family | Examples | Primary capability | Common confound |
-|---|---|---|---|
-| Knowledge/reasoning | MMLU, GPQA | closed-form knowledge and reasoning | contamination, prompt format |
-| Math | GSM8K, MATH | numerical and symbolic reasoning | answer extraction, tool access |
-| Code | HumanEval, MBPP, SWE-bench | generation or repository issue resolution | hidden tests, scaffold, compute |
-| Long context | retrieval and synthesis suites | use of distant evidence | position, truncation, retrieval setup |
-| Agents/tools | WebArena, OS/task suites | multi-step environment success | scaffold, credentials, stochastic state |
-| Safety | policy-specific red-team suites | compliance/refusal calibration | rubric and threat model |
+| Task family | Example | What to check before comparing scores |
+|---|---|---|
+| Knowledge and reasoning | MMLU, GPQA | Identical questions, option order, prompts and scoring rules |
+| Math | GSM8K, MATH | Calculator access, handling of equivalent expressions and units |
+| Code | HumanEval, MBPP, SWE-bench | Test revision, available files, execution environment and attempt budget |
+| Long context | Retrieve and synthesize distant evidence | Position of the evidence and whether it survived truncation |
+| Agents and tools | WebArena, operating-system tasks | Starting state, permissions, side effects and retry budget |
+| Safety | Cases written for a particular policy | Threat model, rubric and severity of each error |
 
-Always record task version/split, contamination status, system prompt, few-shot examples, tool and retrieval access, context/reasoning budget, sampling count, judge, and report date. Agentic results belong to the model-plus-scaffold system.
-
----
+Report which tools and scaffold ran with the model. If a patching agent gains points after receiving a search tool, the measured improvement belongs to that system configuration. HELM illustrates how one protocol can report several metrics, including accuracy and efficiency, across scenarios [[3]](#ref-3).
 
 ## Multimodal Evaluation
 
-**Multimodal evaluation** adds input rendering and perception dependencies. Record image resolution and tiling, video frame sampling and audio inclusion, OCR preprocessing, crop order, media compression, and whether answers require grounded coordinates or temporal evidence.
+Suppose a question asks which train leaves a station at 09:40. Keep the question fixed and swap two rows of the timetable image. Does the answer follow the edited image? Try removing the image as a control. These runs help separate the use of visual evidence from a guess that happens to fit the wording.
 
-Text-only variants can reveal language priors; counterfactual media and shuffled frames test grounding. Evaluate accessibility and language slices and distinguish perception failure from reasoning or answer-format failure. Proprietary media may also impose license and retention constraints.
-
----
+Record image resolution, tiling, crop order, OCR, compression and any accessibility or language variants. For video, record sampled frames and whether the audio track was available. Check the rendered input when the grader flags a wrong answer. An unreadable timetable calls for a different fix from a legible timetable interpreted incorrectly. Respect media licenses and retention limits when keeping those inputs.
 
 ## Metric Design
 
 ### Multiple Choice and Short Answers
 
-Accuracy is meaningful only after defining normalization, option order, scoring mode, and abstention. Compare direct generation with log-probability scoring carefully: chat templates and option-token length can alter results. Randomize option order to diagnose position bias and report calibration or selective accuracy when confidence matters.
+Choose whether the system generates an option label or scores the option strings by log probability. Save the prompt and option tokens in either case. Permuting the displayed options **and remapping the answer key** can expose a preference for the first position. Specify how abstentions affect accuracy and report coverage if the system can decline to answer.
 
 ### Generated Answers
 
-The extractor is part of the metric. Version normalization, units, aliases, numeric tolerance, citation requirements, and invalid-output handling. Inspect a stratified sample of disagreements between exact, rule-based, and LLM graders.
+A grader expecting `0.5 kg` might reject `500 g`. Decide in advance whether unit conversion is permitted and how much numerical error is acceptable. Version the extractor, the equivalence rules, any judge prompt, and citation or format requirements. Inspect disagreements between graders on a sample that includes malformed outputs and different languages.
 
 ### Code and Agents
 
-For $n$ generated code samples with $c$ correct under hidden tests, the unbiased estimator is
+HumanEval counts generated programs that pass the task's tests [[2]](#ref-2). For task $i$, let $n_i$ be the number generated, $c_i$ the number that pass and $k$ the number drawn, with $1\leq k\leq n_i$. Each subset of $k$ indices from that task is equally likely. The only draws without a pass consist entirely of the $n_i-c_i$ failures. With $T$ equally weighted tasks, the estimate is
 
 $$
-\operatorname{pass@}k = 1-\frac{\binom{n-c}{k}}{\binom{n}{k}}, \qquad n\ge k.
+\widehat p_i(k)=1-\frac{\binom{n_i-c_i}{k}}{\binom{n_i}{k}},
+\qquad
+\widehat{\mathrm{pass@}k}=\frac{1}{T}\sum_{i=1}^{T}\widehat p_i(k).
 $$
+
+A binomial coefficient counts subsets and is zero when fewer than $k$ items are available. The first expression is exact for the observed pool. When the answers for each problem are independently sampled from the same decoding configuration, it is also an unbiased estimate of the chance that at least one of $k$ fresh answers passes. A system sending only one answer to a user must still select it. Evaluate the selector and charge for the entire generation and verification budget.
+
+<a id="pass-at-k-example"></a>
+
+### Can nine attempts still all fail?
+
+In the opening example, there are 167,960 ways to draw nine of the twenty answers. To draw nine failures, leave out one of the ten failures. That gives ten all-failure draws, or about **0.00595%** of the total. Move $k$ to 10 in the experiment. Exactly one all-failure draw remains. Move it to 11 and that last possibility disappears.
 
 <PassAtKVisualizer client:load locale="en" />
 
-Report $n$, $k$, temperature, token/compute budget, timeout, sandbox, dependencies, test version, and retry policy. For agents, task success must include side-effect correctness and budget; a verbal claim of success is not completion.
+Average across **problems** before reporting the benchmark. Suppose every one of four programs passes on problem A, while all four fail on problem B. At $k=2$ the two estimates are 1 and 0, so the average is 50%. Pool all eight programs first and the same formula gives 78.6%. That pool includes pairs in which the two programs answer *different problems*.
 
----
+```python
+from fractions import Fraction
+from math import comb
+
+def pass_at_k(n, c, k):
+    if not (0 <= c <= n and 1 <= k <= n):
+        raise ValueError("Expected 0 <= c <= n and 1 <= k <= n")
+    return 1 - Fraction(comb(n - c, k), comb(n, k))
+
+assert 1 - pass_at_k(20, 10, 9) == Fraction(10, 167960)
+assert 1 - pass_at_k(20, 10, 10) == Fraction(1, 184756)
+assert pass_at_k(20, 10, 11) == 1
+
+tasks = [(4, 4), (4, 0)]
+task_mean = sum(pass_at_k(n, c, 2) for n, c in tasks) / len(tasks)
+pooled = pass_at_k(8, 4, 2)
+print(task_mean, pooled)  # 1/2 11/14
+```
+
+For agents, define the success condition in the environment. If the task is to book **one** appointment, inspect the resulting calendar after any retries. Include duplicate bookings, timeouts, and exhausted budgets in the scoring rules.
 
 ## Statistical Comparison
 
-Use a **fixed evaluation harness** and paired cases for champion and candidate. For binary paired outcomes, report the difference with a paired bootstrap confidence interval or exact/approximate paired test. For continuous or judge scores, preserve pairing and cluster repeated variants. Predeclare tie handling, minimum effect, **confidence interval**, sample size/power rationale, and multiple-comparison policy.
+Use a fixed evaluation harness and run both systems on the same problems. Store paired outcomes so that an improvement on one case and a regression on another remain visible. A confidence interval for their difference should respect the sampling unit. If one support ticket has five paraphrases, resample whole tickets. Many generations on a single prompt provide more information about that prompt, while the number of independent tasks stays the same.
 
-A 0.5-point average gain can be noise or can hide a critical regression. Report per-domain/safety/language/tool slice with sample counts and lower bounds. Use several decoding seeds when sampling variance is part of the system and avoid treating repeated samples from one prompt as independent tasks.
-
----
+Before looking at the results, set the minimum useful gain, rules for ties and multiple comparisons, and a sample-size rationale. Report uncertainty and the number of tasks for each important domain, language, safety or tool-use slice. Repeat stochastic runs when decoding variability is part of the question.
 
 ## Contamination and Dynamic Tests
 
-Protect prompt, answer, rubric, solution, semantic neighbors, and teacher-generated variants in an evaluation registry. Scan the final rendered/tokenized training corpus. Public benchmarks can be useful longitudinal anchors but cannot alone establish uncontaminated generalization.
-
-Fresh and dynamic tests reduce direct memorization risk but do not eliminate leakage through templates, judges, logs, or synthetic teachers. Use timestamped private cases and rotate exposed items while maintaining a stable anchor set. See [Contamination Issues](/chapter-17/contamination-issues) for the operational contract.
-
----
+Protect questions, answers, grading rubrics, neighboring examples and teacher-generated variants. Check the final rendered and tokenized training corpus against this registry. Fresh questions reduce direct exposure, but an old solution template or a log of previous evaluations may disclose how to answer them. Keep a dated private set alongside stable anchors for comparing runs over time. [Contamination checks in §17.4](/chapter-17/contamination-issues)
 
 ## Practical Benchmark Checklist
 
-Before publishing or using a score, verify:
+Before using a score for a release, check whether another engineer could reconstruct it.
 
-- exact artifact bundle and harness commit are pinned;
-- task version, split, prompt/template, tools, and budgets are documented;
-- missing/invalid outputs are preserved rather than converted to zero silently;
-- answer extractor, judge, tests, and environment are versioned;
-- paired uncertainty, sample counts, and slice minima are reported;
-- contamination registry and final-corpus scan are recorded;
-- raw outputs and adjudicated disagreements are retained;
-- cost, latency, error, and reproducibility are included for deployment decisions.
-
-The final recommendation should describe a quality/cost/latency/context/openness/safety Pareto surface and call for private evaluation, not name a universal best model.
-
----
-
-The interactive estimator does not model a deployed selector. A best-of-k system must also pay for all candidates and identify a valid answer; use end-to-end success and cost rather than interpreting pass@k as guaranteed selection accuracy.
+- Pin the model artifact, test and harness revisions, task split and evaluation date.
+- Save the system prompt, few-shot examples, templates, tool access and context limits.
+- Record the sampling configuration, $n$, $k$, token and time budgets, dependencies, execution environment and retry policy.
+- Keep raw outputs, failures, timeouts, grader decisions and their denominators. Declare the treatment of missing observations.
+- Report paired uncertainty, slice counts, contamination checks, latency, cost and error rate. Compare the candidates again on protected cases drawn from your own application.
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: Why is a benchmark score inseparable from its harness?</summary>
-*Prompts, templates, tools, budgets, extraction, and grading can change the result. The evaluated object is the model within that complete protocol.*
+<summary>Quiz 1: Ten of twenty programs fail. Why does drawing ten give a different guarantee from drawing eleven?</summary>
+*All ten failures can fill one draw of ten. A draw of eleven must contain at least one passing answer from this pool.*
 </details>
 
 <details>
-<summary>Quiz 2: What does pass@k estimate?</summary>
-*Given n sampled programs and c correct ones, it estimates the probability that at least one of k samples is correct, under the benchmark's sampling and test setup.*
+<summary>Quiz 2: Why did combining two problems into a single pool raise pass@2 from 50% to 78.6%?</summary>
+*The combined pool admits pairs from different problems. A passing solution for the easy problem can mask a failure on the hard one. A user gets two attempts on the same problem.*
 </details>
 
 <details>
-<summary>Quiz 3: Why use paired confidence intervals?</summary>
-*Champion and candidate answer the same cases. Pairing controls item difficulty and estimates the distribution of per-case differences instead of comparing two unrelated averages.*
+<summary>Quiz 3: A model answers correctly after the timetable image is removed. Which follow-up checks whether it used the image?</summary>
+*Edit a relevant entry while keeping the wording fixed and check whether its answer changes accordingly. Compare the results on both images and the text-only control.*
 </details>
 
 <details>
-<summary>Quiz 4: Why can a dynamic benchmark still be contaminated?</summary>
-*Templates, rubrics, judges, or previous prompts can be exposed, and logs can become future training data. Fresh timestamps reduce one route but do not prove lineage isolation.*
+<summary>Quiz 4: Two agents see five paraphrases of each support ticket. What should a paired bootstrap resample?</summary>
+*Resample tickets, retaining their paraphrases and both agents’ outcomes together. Treating each paraphrase as a new independent ticket exaggerates the effective sample size.*
 </details>
-
----
 
 ## References
 
-1. <a id="ref-1"></a>Hendrycks, D., et al. (2021). *Measuring Massive Multitask Language Understanding.* [ICLR](https://openreview.net/forum?id=d7KBjmI3GmQ).
-2. <a id="ref-2"></a>Chen, M., et al. (2021). *Evaluating Large Language Models Trained on Code.* [arXiv:2107.03374](https://arxiv.org/abs/2107.03374).
-3. <a id="ref-3"></a>Liang, P., et al. (2022). *Holistic Evaluation of Language Models.* [arXiv:2211.09110](https://arxiv.org/abs/2211.09110).
-4. <a id="ref-4"></a>Jimenez, C. E., et al. (2024). *SWE-bench: Can Language Models Resolve Real-World GitHub Issues?* [ICLR](https://openreview.net/forum?id=VTF8yNQM66).
+1. <a id="ref-1"></a>Hendrycks, D., et al. (2021). *Measuring Massive Multitask Language Understanding.* [Paper](https://arxiv.org/abs/2009.03300).
+2. <a id="ref-2"></a>Chen, M., et al. (2021). *Evaluating Large Language Models Trained on Code.* [§2.1, Functional Correctness](https://arxiv.org/html/2107.03374v2#S2.SS1).
+3. <a id="ref-3"></a>Liang, P., et al. (2022). *Holistic Evaluation of Language Models.* [Paper](https://arxiv.org/abs/2211.09110).
+4. <a id="ref-4"></a>Jimenez, C. E., et al. (2024). *SWE-bench: Can Language Models Resolve Real-World GitHub Issues?* [Paper](https://arxiv.org/abs/2310.06770).

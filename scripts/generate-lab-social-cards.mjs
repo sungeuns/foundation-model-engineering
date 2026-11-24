@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 import { socialCards } from '../src/data/social-cards.js';
 import { attentionTokens, calculateAttention } from '../src/components/chapter-3/attention-example.mjs';
+import { compareTitles, examples } from '../src/components/chapter-14/lexical-dense.mjs';
 import { denseResults, bm25Results, fuseRanks } from '../src/components/chapter-14/rank-fusion.mjs';
 import { GiB, kvCapacity } from '../src/components/chapter-12/kv-capacity.mjs';
 
@@ -137,6 +138,19 @@ const copy = {
       rows: ['프롬프트 9개', '프롬프트 10개', '최대 길이 요청 9개'],
       length: ['요청당 8,192토큰', '요청당 8,192토큰', '요청당 10,240토큰'],
       limit: '캐시 예산 24 GiB', axis: '조밀 KV 캐시 용량 (GiB)',
+    },
+  },
+  'lexical-dense': {
+    path: '/chapter-14/lexical-to-semantic-search', number: '14.1', render: lexicalDenseSvg,
+    en: {
+      title: 'Which search notices the code?', queryLabel: 'Query',
+      document: 'Document title', cosine: 'Cosine',
+      setup: '4 documents · 3 hand-built topic features for cosine',
+    },
+    ko: {
+      title: '어느 검색 방식이 코드를 알아볼까?', queryLabel: '검색어',
+      document: '문서 제목', cosine: '코사인',
+      setup: '문서 4개 · 직접 정한 주제 특성 3개로 코사인 유사도 계산',
     },
   },
   'rrf-cutoff': {
@@ -327,6 +341,40 @@ ${text(c.result, 638, 341, 32, `fill="${muted}"`)}
 <path d="M60 356H1140M60 452H1140M60 548H1140" fill="none" stroke="#bbc8c1" stroke-width="2"/>
 ${rows}
 ${text(ko ? '파운데이션 모델 엔지니어링 · ' + lesson.number : 'Foundation Model Engineering · ' + lesson.number, 60, 601, 25, `fill="${teal}"`)}
+</g></svg>\n`;
+}
+
+function lexicalDenseSvg(lesson, lang, card) {
+  const c = lesson[lang], ko = lang === 'ko';
+  const query = examples[lang].presets[2];
+  const { rows } = compareTitles(lang, query);
+  const matched = rows.filter(row => row.bm25 > 0);
+  const best = Math.max(...matched.map(row => row.bm25));
+  const tableRows = matched.map((row, i) => {
+    const y = 341 + 100 * i;
+    const scoreColor = row.bm25 === best ? teal : ink;
+    return `<g id="document-${row.id}">
+${text(row.title, 84, y, 38)}
+${text(row.bm25.toFixed(3), 860, y, 50, `fill="${scoreColor}" font-weight="700" text-anchor="end"`)}
+${text(row.cosine, 1106, y, 50, 'font-weight="700" text-anchor="end"')}
+</g>`;
+  }).join('\n');
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" xml:lang="${lang}" role="img" aria-labelledby="card-title card-description">
+<title id="card-title">${escape(c.title)}</title><desc id="card-description">${escape(card.alt)}</desc>
+<rect width="1200" height="630" fill="#f5f2eb"/><rect width="12" height="630" fill="${teal}"/>
+<g font-family="${ko ? 'Noto Sans CJK KR, DejaVu Sans' : 'DejaVu Sans'}, sans-serif" fill="${ink}">
+${text(c.title, 58, 94, 58, 'font-weight="700"')}
+${text(c.queryLabel, 62, 165, 33, `fill="${muted}"`)}
+${text(query, 188, 165, 46, 'font-weight="700"')}
+<rect x="59" y="206" width="1082" height="275" rx="14" fill="white" stroke="#c3cec8" stroke-width="2"/>
+${text(c.document, 84, 263, 34, `fill="${muted}"`)}
+${text('BM25', 860, 263, 34, `fill="${muted}" text-anchor="end"`)}
+${text(c.cosine, 1106, 263, 34, `fill="${muted}" text-anchor="end"`)}
+<path d="M60 283H1140M60 382H1140" stroke="#c3cec8" stroke-width="2"/>
+${tableRows}
+${text(c.setup, 60, 542, 33, `fill="${ink}"`)}
+<path d="M60 568H1140" stroke="#bbc8c1" stroke-width="2"/>
+${text(ko ? '파운데이션 모델 엔지니어링 · ' + lesson.number : 'Foundation Model Engineering · ' + lesson.number, 60, 605, 24, `fill="${teal}"`)}
 </g></svg>\n`;
 }
 

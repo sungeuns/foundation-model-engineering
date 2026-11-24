@@ -151,7 +151,7 @@
 
 ### **Chapter 17: AI Evaluation & Benchmarking**
 
-* **17.1 Academic Benchmarks:** MMLU, GSM8K, HumanEval 등의 구성과 한계.
+* **17.1 Academic Benchmarks:** MMLU·GSM8K·HumanEval의 측정 조건을 살펴보고, pass@k의 실패 확률과 문제별 평균을 검산.
 * **17.2 LLM-as-a-Judge:** 강력한 모델을 이용해 다른 모델의 정성적 답변 평가하기.
 * **17.3 Elo Rating & Leaderboards:** LMSYS Chatbot Arena와 같은 인간 선호도 기반 평가.
 * **17.4 Contamination Issues:** 학습 데이터에 평가셋이 포함되는 문제와 검증법.

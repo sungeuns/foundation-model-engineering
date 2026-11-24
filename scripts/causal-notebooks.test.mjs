@@ -55,3 +55,46 @@ test('EN/KO notebooks share all executable steps without saved outputs or execut
     assert.doesNotMatch(code, /requests\.|urlopen\(|pip install|torch\.hub|https?:\/\//);
   }
 });
+
+test('the recorded November runs retain the released source and independently measured outputs', () => {
+  const labs = path.join(ROOT, 'public/labs');
+  const seed7 = JSON.parse(fs.readFileSync(path.join(labs, 'verified-seed-7.json')));
+  // Digests of the two starter assets published in the 2026-11-labs release.
+  const inputs = {
+    en: '7b1b566af2a034b17c27066465fa46373c073c9110208d13101704fd231bac66',
+    ko: 'abcb60809f0769605bfc16fc5c02f70b55d2440588e4c3bd5b4e934e1aff64da',
+  };
+  for (const [lang, digest] of Object.entries(inputs)) {
+    const name = 'tiny-decoder-worked-' + lang + '.ipynb';
+    const book = JSON.parse(fs.readFileSync(path.join(labs, '2026-11', name)));
+    const code = book.cells.filter(c => c.cell_type === 'code');
+    assert.equal(code.length, 10);
+    assert.deepEqual(code.map(c => c.execution_count), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    for (const cell of code) {
+      for (const item of cell.outputs) {
+        if (item.output_type === 'stream') assert.equal(item.name, 'stdout');
+        else {
+          assert.equal(item.output_type, 'execute_result');
+          assert.deepEqual(Object.keys(item.data), ['text/plain']);
+        }
+      }
+    }
+    assert.equal(book.metadata.fme.locale, lang);
+    assert.equal(book.metadata.fme.recorded_run.input_notebook_sha256, digest);
+    assert.equal(book.metadata.fme.recorded_run.device, 'cpu');
+    const embedded = code.find(c => c.id === 'embedded-source').source.join('');
+    const [, source] = embedded.match(/^SOURCE = r'''([\s\S]+)'''\n?$/);
+    assert.equal(createHash('sha256').update(source).digest('hex'), seed7.config.code_hash);
+    const output = id => code.find(c => c.id === id).outputs
+      .filter(o => o.output_type === 'stream').map(o => o.text.join('')).join('');
+    assert.match(output('validity-gates'), /'causal_invariance': True, 'exact_resume': True/);
+    assert.match(output('break-checkpoint'), /'corruption_rejected': True/);
+    const measured = JSON.parse(output('compare-results').match(/^\{[\s\S]+?\n\}/)[0]);
+    for (const key of ['test_nats', 'self_only_test_nats', 'greedy_test_token_accuracy']) {
+      assert.equal(measured[key], seed7[key]);
+    }
+    const route = lang === 'ko' ? 'src/pages/ko' : 'src/pages';
+    const preview = 'https://nbviewer.org/urls/sungeuns.github.io/foundation-model-engineering/labs/2026-11/' + name;
+    assert.ok(fs.readFileSync(path.join(ROOT, route, 'chapter-7/tiny-decoder-lab.mdx'), 'utf8').includes(preview));
+  }
+});

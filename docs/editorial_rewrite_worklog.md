@@ -298,7 +298,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 7.2 | `/chapter-7/zero-redundancy-optimizer` | Mechanical only | b126180d4c8d978f8925ed51d7ace338f8cdf2e7c7ecc1309ef2301714bd4e47 | e2b4c48bc0c2d11efbc40f02c428883a3f92d462adf354587b96bc5de42d1b06 |
 | 7.3 | `/chapter-7/model-and-pipeline-parallelism` | Inspected 2026-11-15 | 0832cffc306946b61c817850cb07cdbebf0d06aadfe607b6b7dfe75d14d010bf | b645ef818ecb8e33702468b9dcacf90a130b6c229ed8603d055736e2e62f5db4 |
 | 7.4 | `/chapter-7/flash-attention` | Mechanical only | f305f222c5d296652a665982d6148449b7cebebdd7073ee35ef221b39b750c4c | 7c296161f2a6d17d2c88531884e7a2ffb62021cfaf28828e9166c201a8df5184 |
-| 7.5 | `/chapter-7/tiny-decoder-lab` | Inspected 2026-11-25 | 7c160ef525f9a15ee038febf92bfe2d7470ce1126fd565713003f049fd201fbe | 2c6db6829a15ced3552d7159932596c3dcba11ee031067240f1c6a9d921bf9e2 |
+| 7.5 | `/chapter-7/tiny-decoder-lab` | Inspected 2026-11-25 | e1d85a539f075acbaf8b613802db678fd5390d8b915dac5d942120f1c47522d8 | a38d2949de1a4109a8141e166b62fdec78894cfcf41cd04f3827a93d8fd4878a |
 | 8.1 | `/chapter-8/power-law` | Inspected 2026-11-18 | 4a7985e2e292146826fa76fc39706838e6e5246fcb507f4fec94dc263ef2ba8a | 5d01ec1c25346796843c2fe7b635968a64b28f6333b2925a32884fb9364b884e |
 | 8.2 | `/chapter-8/chinchilla-optimality` | Inspected 2026-11-15 | a5c303a07cd048a5700ec4cf86eeb44387cdcc43775eb4a2c5678f4aed6250d1 | 113d3edaa8047c8e5b5455f712a931429e550d22c1d260be5947dab80f4ef2a6 |
 | 8.3 | `/chapter-8/over-training-vs-optimal-training` | Inspected 2026-11-15 | 0cd59dc676f0efe54f93a85775af740fc13bd689502b3ead940bf61212f2d83c | 21d9ca8bfbe9e711f63a75a24d0760d53ffdd87d8f22954f7ac911f7c0a18248 |
@@ -349,7 +349,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 16.5 | `/chapter-16/long-term-memory-for-agents` | Mechanical only | 282f35343780e2c45555ff63e389a1335a91ec8c00f22085e8f8bbd8b97d3f0e | 121d1cb19357df979ff3139d6022f6041bc711842a38f62a81ecf5d87c592fcd |
 | 16.6 | `/chapter-16/agent-reliability-recovery-and-guardrails` | Mechanical only | cd83fc417cb7950d6d24116d1492925a16694aa596d897d0cb4cc7be3f18ca7e | 16b6b0641b20d49d6fd5de7a7568d32d4889fe2fa1f88289396ea078b4874895 |
 | 16.7 | `/chapter-16/decision-models-and-selective-prediction` | Inspected 2026-11-25 | 968048e13fae199978a109f4fef886dcc261832fbbfdd62899e96967209cca9f | 07b1f8a70ee24b852c35c5ee40502166c5d9c9cf63e984d30013442d89da1bc2 |
-| 17.1 | `/chapter-17/academic-benchmarks` | Mechanical only | 2949edf4e9fe1e16fda3f118fa009854dbb67b9501b7989aece12379a4df2686 | 1b13ad1b53dafd3bc3d45f8253913244a7c02ed8336963afc3b707ab4607a567 |
+| 17.1 | `/chapter-17/academic-benchmarks` | Inspected 2026-11-25 | 2bb8eb0b33d4bc24dcae8ae506f5ca0f23f4025551732b56eb2a87c1ea1b776b | 74665b79d10ce15471f22bffafee43cd28ef36d230c23b59c76e37bf4139ee19 |
 | 17.2 | `/chapter-17/llm-as-a-judge` | Inspected 2026-11-25 | c57401335205ae3dc187e512d28443027ed79d13a6858df675662fe7dbe97ce4 | fed0a9a3459a3eb9683eb1576383f225b0943f807dfd1b3564bdb8603f8986d7 |
 | 17.3 | `/chapter-17/elo-rating-and-leaderboards` | Inspected 2026-11-15 | 14f931df5e4641c576c1763d446b2c663d1f282abf438767e5a330d49b31a9b9 | 1e78f5819e5452372109f72327dad0f7831b3b9ce66750000c9378a906744c30 |
 | 17.4 | `/chapter-17/contamination-issues` | Mechanical only | 38a0cad52c7504804a57a8cc2deed94a3ac2fe68f7648809261abad1cf6b4fa5 | ad7b87426dcdde29f69a6921696a462359e7681d7d3b5ee5c11f3d80ec0a71c7 |
@@ -669,3 +669,9 @@ Checked the Ling-3.2-air checkpoint configuration and linked both homepages and 
 ### 2026-11-25 positional coordinates, retrieval rankings and release scenarios
 
 Checked the 320 sinusoidal pairs in §3.3 against float64 PyTorch, including the signed offset in the RoPE example and the last sine coordinate at an odd width. In §14.1 the exact activation code separates two BM25 scores (0.693 and 1.897) whose hand-authored topic vectors tie. A bare code produces an undefined cosine. In §14.3, both editions link to the executable fusion example at the step immediately before document C receives its second reciprocal-rank contribution. In §17.7 the links in the opening comparison identify the target-improvement and retention-regression fixtures individually.
+
+### 2026-11-25 completed decoder notebooks and small pass@k probabilities
+
+For §7.5, executed both original November release notebooks in separate CPU kernels with Python 3.12.14 and PyTorch 2.15.0+cpu. The held-out losses with full and self-only attention were 0.050811 and 2.704195 nats per target. Both runs detected future leakage when the mask was removed, resumed from the valid checkpoint, and rejected the damaged copy. The recorded notebooks preserve the input notebook hash and measured outputs. The starter notebooks remain available for independent runs.
+
+In §17.1, with 10 successful answers out of 20, drawing nine leaves 10 failing subsets out of 167,960, while drawing eleven always includes a success. The English and Korean readouts preserve nonzero miss probabilities even where the floating-point success estimate rounds to one. Checked the estimator against exact integer combinations across its 2,706,800 supported inputs.

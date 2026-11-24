@@ -1,9 +1,10 @@
 """Run both published decoder notebooks in fresh CPU Jupyter kernels.
 
 Requires Python 3.12+, torch, nbclient, nbformat and ipykernel in this interpreter.
-No downloads, additional training runs, saved notebook outputs or global kernelspecs.
+Use --save-executed DIR to export the verified runs for readers without a kernel.
 Each notebook and its generated artifacts live in a separate temporary directory.
 """
+import argparse
 import ast
 import hashlib
 from importlib.metadata import version
@@ -76,8 +77,10 @@ def verify_packet(workdir, source, torch_version):
     return result
 
 
-def execute_notebook(name, source, torch_version):
-    notebook = nbformat.read(LABS / name, as_version=4)
+def execute_notebook(path, source, torch_version):
+    name = path.name
+    input_bytes = path.read_bytes()
+    notebook = nbformat.reads(input_bytes.decode("utf-8"), as_version=4)
     nbformat.validate(notebook)
     cells = [cell for cell in notebook.cells if cell.cell_type == "code"]
     require(notebook.metadata.fme.source_sha256 == hashlib.sha256(source).hexdigest(),
@@ -117,16 +120,52 @@ def execute_notebook(name, source, torch_version):
         result = verify_packet(workdir, source, torch_version)
         print(f"PASS {name}: {len(cells)} cells; causal/replay/leakage/corruption/ZIP checks; "
               f"test={result['test_nats']:.6f}, self-only={result['self_only_test_nats']:.6f} nats", flush=True)
+        return notebook, {**environment, "input_notebook_sha256": hashlib.sha256(input_bytes).hexdigest()}
+
+
+def save_worked_example(directory, notebook, recorded_run):
+    locale = notebook.metadata.fme.locale
+    require(locale in ("en", "ko"), "Expected an English or Korean notebook")
+    version_note = f"Python {recorded_run['python']} · PyTorch {recorded_run['torch']} · CPU"
+    base = "https://sungeuns.github.io/foundation-model-engineering/"
+    if locale == "ko":
+        note = (f"**실행 결과 읽기** ({version_note})\n\n"
+                "코드 셀을 한 커널에서 순서대로 실행했습니다. 예측을 적고 저장된 출력과 "
+                "비교해 보세요. 마지막 셀의 파일 경로는 이 실행에 사용한 임시 폴더입니다. "
+                f"[원문과 직접 실행할 노트북]({base}ko/chapter-7/tiny-decoder-lab/)")
+    else:
+        note = (f"**Read the recorded run** ({version_note})\n\n"
+                "The code cells ran in order in one kernel. Write down your predictions, then "
+                "compare them with the saved outputs. The file path in the last cell belongs to "
+                f"this run's temporary folder. [Lesson and starter notebook]({base}chapter-7/tiny-decoder-lab/)")
+    notebook.cells.insert(1, nbformat.v4.new_markdown_cell(note, id="recorded-run"))
+    notebook.metadata.fme.recorded_run = recorded_run
+    nbformat.validate(notebook)
+    destination = directory / f"tiny-decoder-worked-{locale}.ipynb"
+    nbformat.write(notebook, destination)
+    print(f"Saved {destination}")
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--notebook-dir", type=Path, default=LABS,
+                        help="Directory containing both starter notebooks and their matching causal_lab.py")
+    parser.add_argument("--save-executed", type=Path, metavar="DIR",
+                        help="Write separate worked notebooks after both CPU runs pass")
+    args = parser.parse_args()
     require(sys.version_info >= (3, 12), "Use Python 3.12 or newer")
     torch_version = version("torch")
     print(f"Python {platform.python_version()} | torch {torch_version} | {platform.system()} | CPU", flush=True)
-    source = (LABS / "causal_lab.py").read_bytes()
+    source = (args.notebook_dir / "causal_lab.py").read_bytes()
+    completed = []
     for name in NOTEBOOKS:
-        execute_notebook(name, source, torch_version)
-    print("Both published notebooks passed in separate fresh kernels; temporary artifacts removed.")
+        path = args.notebook_dir / name
+        completed.append(execute_notebook(path, source, torch_version))
+    if args.save_executed:
+        args.save_executed.mkdir(parents=True, exist_ok=True)
+        for notebook, recorded_run in completed:
+            save_worked_example(args.save_executed, notebook, recorded_run)
+    print("Both notebooks passed in separate fresh CPU kernels.")
 
 
 if __name__ == "__main__":

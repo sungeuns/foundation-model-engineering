@@ -10,9 +10,9 @@ lang: ko
 
 ## 노트북으로 먼저 실행하기
 
-- **브라우저에서 결과 읽기.** [시드 7의 복사 결과](#decoder-copy-trace)에서 첫 오답이 뒤의 예측에 미친 영향을 확인하세요. 설치나 로그인이 필요 없습니다.
+- **로그인 없이 실행 결과 읽기.** [11월 실행 기록](https://nbviewer.org/urls/sungeuns.github.io/foundation-model-engineering/labs/2026-11/tiny-decoder-worked-ko.ipynb)에는 코드와 CPU 출력이 함께 있습니다. 앞쪽 토큰을 가렸을 때 테스트 손실이 얼마나 오르는지, 체크포인트 복사본의 끝에 데이터를 붙였을 때 복원이 왜 중단되는지 확인해 보세요. 한 수열에서 오답이 반복되는 과정은 [복사 결과](#decoder-copy-trace)에서 바로 볼 수 있습니다.
 - **Colab에서 실행하기.** [한국어 노트북](https://colab.research.google.com/github/sungeuns/foundation-model-engineering/blob/main/public/labs/tiny-decoder-lab-ko.ipynb)을 열고 CPU 런타임을 고르세요. 실행하려면 Google 로그인이 필요하며, 사용할 수 있는 자원과 세션 유지 시간은 달라질 수 있습니다. 2026-11-25 기준입니다. [[3]](#ref-3)
-- **내 컴퓨터에서 실행하기.** <a href="../../../labs/tiny-decoder-lab-ko.ipynb" download="tiny-decoder-lab-ko.ipynb">한국어 Jupyter 노트북을 내려받아</a> CPU PyTorch가 설치된 Python 3.12 이상 커널에서 여세요. 처음 환경을 만든다면 [로컬 설치 안내](#local-decoder-setup)를 따라 하세요.
+- **내 컴퓨터에서 실행하기.** [실습용 노트북을 미리 보거나](https://nbviewer.org/urls/sungeuns.github.io/foundation-model-engineering/labs/tiny-decoder-lab-ko.ipynb) <a href="../../../labs/tiny-decoder-lab-ko.ipynb" download="tiny-decoder-lab-ko.ipynb">내려받아</a> CPU PyTorch가 설치된 Python 3.12 이상 커널에서 여세요. 처음 환경을 만든다면 [로컬 설치 안내](#local-decoder-setup)를 따라 하세요.
 
 노트북에서 **모두 실행** 을 누르기 전에 두 가지를 예측해 보세요. 뒤쪽 기호를 바꾸면 앞쪽 위치의 예측도 달라질까요? 어텐션이 현재 기호만 볼 수 있다면 복사 성능은 어떻게 될까요? 노트북에는 학습 코드가 들어 있고 데이터도 직접 만들기 때문에 모델 다운로드나 API 키가 필요 없습니다.
 
@@ -73,7 +73,7 @@ Warmup과 cosine 계수를 곱하므로 실제 학습률은 정확히 0.003에 �
 
 실행 전에 attention 제한의 효과와 미래 기호를 바꿀 때 이전 logit이 변할지 예측하세요. 프로그램은 인과성 불변 조건을 검사하고 중간 체크포인트를 저장한 뒤 학습을 마칩니다. 이어서 복원해 후반부를 다시 실행합니다. 체크포인트에는 가중치, optimizer moment, step·감독 토큰 수, torch·sampler RNG, 스케줄 정의, 데이터 커서, 설정·manifest 해시가 있습니다. FP32이므로 scaler는 없습니다. 임시 파일을 rename하고 SHA-256 marker가 일치해야 로드합니다. 로컬 복구 교육 절차이지 분산 atomic publication이나 world size 변경 복구는 아닙니다 [[2]](#ref-2).
 
-Seed 7의 기록된 실행에서 검증 손실은 **0.0453**, test 손실은 **0.0508**, 자기 위치만 보는 모델의 test 손실은 **2.7042 nats/target**이었습니다. 유효 기호 16개에 균등 확률을 주는 기준선은 $\log16\approx2.773$입니다. 제공한 합성 과제의 측정값이며 외부 모델 성능 점수가 아닙니다. 정확한 재개와 인과성 검사는 통과했습니다. Greedy 생성의 토큰 정답률은 98.08%, 전체 시퀀스 정답률은 93.75%(보류 시퀀스 16개 중 15개)였습니다. 정답 문맥을 주는 teacher forcing과 자유 생성은 다른 질문에 답합니다. [Seed 7 기록](../../../labs/verified-seed-7.json)에 코드 해시와 예시를 보존했으며 장비별 실행 시간은 제외했습니다. Seed와 실행 환경에 따라 달라질 수 있으므로 이 숫자를 통과 임계값으로 쓰지 말고 직접 재실행하세요.
+Seed 7의 기록된 실행에서 검증 손실은 **0.0453**, test 손실은 **0.0508**, 자기 위치만 보는 모델의 test 손실은 **2.7042 nats/target**이었습니다. 유효 기호 16개에 균등 확률을 주는 기준선은 $\log16\approx2.773$입니다. 제공한 합성 과제의 측정값이며 외부 모델 성능 점수가 아닙니다. 정확한 재개와 인과성 검사는 통과했습니다. Greedy 생성의 토큰 정답률은 98.08%, 전체 시퀀스 정답률은 93.75%(보류 시퀀스 16개 중 15개)였습니다. 정답 문맥을 주는 teacher forcing과 자유 생성은 다른 질문에 답합니다. [시드 7의 실행 기록](../../../labs/verified-seed-7.json)에는 생성 예시와 [11월 17일에 실행한 스크립트](https://github.com/sungeuns/foundation-model-engineering/blob/143bbfe0ffb1c8e2b1fb3f838f6b1f2b617084c8/public/labs/causal_lab.py)의 SHA-256이 들어 있습니다. 이후 스크립트 첫머리의 설명에 원문 링크를 추가하면서 파일 해시가 바뀌었습니다. 2026-11-25에 수정된 스크립트를 같은 시드 7과 CPU용 PyTorch 2.15.0으로 다시 실행했을 때 기록된 수치와 생성 예시가 모두 일치했습니다. 시드나 실행 환경이 달라지면 값도 달라질 수 있습니다.
 
 <a id="decoder-copy-trace"></a>
 

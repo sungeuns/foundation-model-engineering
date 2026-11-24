@@ -55,8 +55,8 @@ export const searchDescriptions = {
     ko: 'Jev와 OpenAI Decisions를 살펴보고, 같은 40건을 자동 처리하는 동안 오답 비율이 10%에서 30%로 높아지는 이유를 실습으로 확인합니다.',
   },
   '/chapter-17/academic-benchmarks': {
-    en: 'Evaluate language and multimodal models with benchmark methodology, compatible metrics, statistical comparisons, and contamination checks.',
-    ko: '벤치마크 방법론, 호환 가능한 지표, 통계적 비교와 오염 점검을 통해 언어·멀티모달 모델의 평가 결과를 해석합니다.',
+    en: 'Calculate pass@k from a finite pool of answers. See how rounding can hide rare failures and why combining answers across problems inflates the result.',
+    ko: '생성한 답안에서 k개를 고를 때 실패할 확률을 계산합니다. 반올림으로 가려진 실패와 서로 다른 문제의 답안을 합쳐 점수가 부풀려지는 사례를 확인합니다.',
   },
   '/chapter-17/llm-as-a-judge': {
     en: 'Calibrate an LLM judge on a translation that reverses the source meaning. Compare paired verdicts and measure how many critical errors the grader misses.',
