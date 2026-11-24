@@ -35,6 +35,8 @@ Measure the complete distribution rather than a single English average:
 
 A “glitch token” is an operational symptom, not a universal story about one corpus. Reserved, malformed, or extremely rare token IDs can have poorly trained embeddings or unusual behavior. Audit token frequency against the actual pre-training manifest and probe rare/special tokens before launch.
 
+For a worked scoring example, see [what happens to perplexity when `P19` becomes a single token](/chapter-8/continued-pretraining-and-domain-adaptation/#tokenizer-perplexity-example). Both predictors guess uniformly, yet the bits per byte move in opposite directions on two part IDs.
+
 ## 3. Normalization and Special-Token Contract
 
 Normalization can erase distinctions that matter in code, identifiers, accents, or security-sensitive text. Record Unicode normalization, whitespace handling, control-character policy, byte fallback, and invalid-input behavior. Test encode → decode round trips at the byte or declared text-normalization level and retain offset mappings for tasks that point back to source spans.

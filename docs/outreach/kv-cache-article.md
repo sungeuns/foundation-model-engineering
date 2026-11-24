@@ -39,9 +39,9 @@ print(cache_budget // prompt_payload)  # 9 requests at prompt length
 print(cache_budget // peak_payload)    # 7 requests at maximum live length
 ```
 
-Assume the serving pool has 24 GiB left **for KV payload**, after separately reserving weights, activations, workspaces, allocation overhead, and a safety margin. Nine prompts consume 22.5 GiB. But if all nine produce their allowed continuations, they need 28.125 GiB.
+Assume the serving pool has 24 GiB left **for KV payload**, after reserving space for weights, activations, workspaces, allocation overhead, and a safety margin. Nine prompts consume 22.5 GiB. If all nine caches reach maximum length together, they need 28.125 GiB. Only seven full-length caches fit at once.
 
-The admission check passed. The continuation budget did not.
+Can all nine requests finish anyway? Let one generate while the other eight stay at prompt length. Its final step needs `8 × 2.5 + 3.125 = 23.125 GiB`. Free that cache when the request finishes and the next one has more room. This schedule completes all nine within the payload budget, at the cost of making some requests wait. [Follow the nine-request example](https://sungeuns.github.io/foundation-model-engineering/chapter-12/kv-cache-management/#kv-cache-capacity).
 
 A dynamic scheduler can admit more work than a conservative maximum-length reservation, but it needs an explicit response when demand grows: queue, preempt, recompute, or enforce an output limit. Those choices change latency and sometimes user-visible behavior. A payload calculation alone does not predict measured GPU concurrency.
 

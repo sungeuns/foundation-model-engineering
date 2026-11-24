@@ -273,7 +273,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 2.2 | `/chapter-2/vanishing-exploding-gradients` | Inspected 2026-11-15 | f883974659fb302e235151e51e0cffb5a6f9418089342fa6be149d94c207ffac | 7a4baf6b5be2bf9ff72621f15581483e6595c47296cb169d5d1c03395b882385 |
 | 2.3 | `/chapter-2/dawn-of-attention` | Inspected 2026-11-25 | 9d4d10844df85b73e86171a5d6e2fca5ba60492e9c8c588b91cda52c9035b7c3 | 0c1ee582b7fa825c0e51faf268d0b585210bd10aa7a2aa7b75700ecd2b0f9506 |
 | 2.4 | `/chapter-2/cnns-for-nlp` | Inspected 2026-11-25 | 3ea1f3cff839b4a390d8a98af7bf540f1367736bdb09d50869c6a05ba369437c | a44815cf317e2f8a2e4068d1a8584eafc24a81e5c85c4d7e5a09f8ff5c481aa6 |
-| 3.1 | `/chapter-3/self-attention-mathematics` | Inspected 2026-11-25 | ef9cc6c406b93e84902c0080009a02e8b3c9a64b29a016ab10752ce974e49229 | 999ed01fb864abf45042c9ad3ccef4122d307affa4cd1420e85dcc19c1646d82 |
+| 3.1 | `/chapter-3/self-attention-mathematics` | Mechanical only | 45dfc9b6952fe909bf0cb5186bdba1a2a2d787135f4ad7d7f0b21d9934887a72 | ff79c40491b61616307824ec8a574fa980b5e193b938253207a2b998f4893133 |
 | 3.2 | `/chapter-3/multi-head-attention` | Inspected 2026-11-25 | bc5026a7ec1b9aa4d5bc4589f7f6011630bc877efcb8d179954ee0560d8a705f | 4316a26ed2c414ccdb0c4f4ad6642d98286b9350748fd362920a1d183cac8b68 |
 | 3.3 | `/chapter-3/position-encoding-strategy` | Inspected 2026-11-25 | fde9e5daa7404ba9c213feaeac0bb80b8e6342ba2164885a911cb7e98ee4a1ef | 37d4d640ad0c9f5edbda4657a564c77931db24b6a455b646ab77eec260bfc51e |
 | 3.4 | `/chapter-3/layer-normalization-residuals` | Inspected 2026-11-25 | a3587f46c53f4796ac71f768e9561130af2c053e394f20d83a1d8f12a6841487 | a69ef3c4fc27e17f5313847ce8003f1b3acb57db1b99557a5354f904818065ba |
@@ -289,7 +289,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 5.4 | `/chapter-5/collapsing-load-balancing` | Inspected 2026-11-15 | 9eafbfd1e7b75ad8196d586895ed76c5c16b609fb3b6d7c3c6450331d3fbec83 | e882e33f29592a27d156efc7b998c7f7d1fa8a3f2e8f63179ad4319ef47ab56a |
 | 5.5 | `/chapter-5/case-study` | Mechanical only | 233d28301c04e7e23dcd0fcca92bd41c79d09a16fd2a33cf29cc3715df60c1de | a29bae4a04b6688590d092d63d11a3ba43d0a19c6de3f09508e7384eb4f54d1a |
 | 6.1 | `/chapter-6/data-engineering-at-scale` | Inspected 2026-11-15 | c962ed779370d70734cdc1d8dad26fd622732ab5add4b42eb33ca13d4e9e1978 | 196b5d2f730cb1450a5c68054444814151be61cda197d8cad6d5e761caf2e85e |
-| 6.2 | `/chapter-6/tokenization-science` | Inspected 2026-11-25 | 03294acc7ca109e3fed142bcff3754baecb663d9d849ec36774882333833e978 | d4eee208d2b4de687d045f3e745f9a8e4d63b573491deecad3c36dbee6020f31 |
+| 6.2 | `/chapter-6/tokenization-science` | Mechanical only | 7ba6775126c477f22a17c635ab98ad31750024efc719d1a719edaa46b4acc746 | 1885f6495fb1c739c2dd034c5ea36d8267e97382c90d1e9e97665cc1589d31f4 |
 | 6.3 | `/chapter-6/large-scale-training-stability` | Inspected 2026-11-15 | 233421b292101c94f4746e41c29de6422c5c103333a5c1c6968cfe0cd3cc6604 | 149cc8e85a1db21731313a38038b3f3d23c5fdc16711b51534764c5e4fd2da89 |
 | 6.4 | `/chapter-6/infrastructure` | Mechanical only | b6d232e0decc655e38767ca986e99f77e30350ea24241c4bbf8e74737e3779b1 | b51344d034e91b490957311ea8525b46aa9ff09ae2f602ed8481a44513546c06 |
 | 6.5 | `/chapter-6/synthetic-data-for-pre-training` | Mechanical only | 3d2bab63db26c5456f88eab0f51e2e7e70ac49d93d868427783f625e4ae166ee | dd5381b0b44cb0223b04f689d010f40ea3349d668ebf9e79c98fe3d3204af54c |
@@ -303,7 +303,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 8.2 | `/chapter-8/chinchilla-optimality` | Inspected 2026-11-15 | a5c303a07cd048a5700ec4cf86eeb44387cdcc43775eb4a2c5678f4aed6250d1 | 113d3edaa8047c8e5b5455f712a931429e550d22c1d260be5947dab80f4ef2a6 |
 | 8.3 | `/chapter-8/over-training-vs-optimal-training` | Inspected 2026-11-15 | 0cd59dc676f0efe54f93a85775af740fc13bd689502b3ead940bf61212f2d83c | 21d9ca8bfbe9e711f63a75a24d0760d53ffdd87d8f22954f7ac911f7c0a18248 |
 | 8.4 | `/chapter-8/transfer-learning-and-generalization` | Inspected 2026-11-15 | 6149872f6cc783dadf7e47acf48874d9abc6519c56fc7757b4d90f038decb547 | 0ac5c5ffb3ff08bc0fdf8fdde2e69bf8bdc9e69674d6e97a2b7cc3ee5c286290 |
-| 8.5 | `/chapter-8/continued-pretraining-and-domain-adaptation` | Inspected 2026-11-25 | 666b13a66fd23fc03b6f5922512297d52db3890b5a98ce45d3b8b400ad3ec87d | ce9fa54564e85f22fd6c5ebd7ab0ff5f1f49435c2139e40d941846e514da786c |
+| 8.5 | `/chapter-8/continued-pretraining-and-domain-adaptation` | Inspected 2026-11-25 | 146c9a479f119b0ee3b290a511f2990fa43e747091a573ec38f9e760579e2287 | 2df6dca851098e5699cd26d83a4727a860191c4d7348d61bc0615216ab1cf5ca |
 | 9.1 | `/chapter-9/sft-fundamentals` | Mechanical only | b2dbb035ab6f20f9feb26b00ddd7c7682a87073a963c6c684070bd7c7f1bcfe0 | 862868e98d4f3041ce06b9738bc2fc3ddeb8ab262d21f9248abe5b2831f0fcc2 |
 | 9.2 | `/chapter-9/dataset-quality-vs-quantity` | Mechanical only | c1fbbd7fb05803bfad44ce38dbb967c1be944c928bea80897aa0756dc4ac28d6 | 9818a5430db861e431fa0fc861105c64cd5749eb7661fa4b9bbd7891fc486b13 |
 | 9.3 | `/chapter-9/parameter-efficient-fine-tuning-peft` | Inspected 2026-11-25 | a0d3642dd64937bb1c238c59bad386af28be354f34bde124a103ecb3085253fa | f5fbe73bc76153d14da56a9a3cae5ed1014f3dfde883a37321fc21c3ef5276dd |
@@ -354,7 +354,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 17.3 | `/chapter-17/elo-rating-and-leaderboards` | Inspected 2026-11-15 | 14f931df5e4641c576c1763d446b2c663d1f282abf438767e5a330d49b31a9b9 | 1e78f5819e5452372109f72327dad0f7831b3b9ce66750000c9378a906744c30 |
 | 17.4 | `/chapter-17/contamination-issues` | Mechanical only | 38a0cad52c7504804a57a8cc2deed94a3ac2fe68f7648809261abad1cf6b4fa5 | ad7b87426dcdde29f69a6921696a462359e7681d7d3b5ee5c11f3d80ec0a71c7 |
 | 17.5 | `/chapter-17/production-evaluation-and-release-gates` | Inspected 2026-11-25 | d2917516ef75c2ede2cd4db285a221090b09f181104e7112bd388f427ecc5298 | cb7d670ce7898fe43516e3cc8a38e295b6e24bba8e3a65c7579c61f3e03b9fb3 |
-| 17.6 | `/chapter-17/commercial-model-benchmarks` | Inspected 2026-11-25 | 5cda78e16585df3cd672f0fa353e876b99cb3328f53430bc00effaa1afeb536b | 9e3327be40887a981ad0e0ba9f264ea6889efa50eb6e435de9a62a87110746dd |
+| 17.6 | `/chapter-17/commercial-model-benchmarks` | Mechanical only | c653890a6e180e3621e2b609fde35718b7e3d2c92d122abfbcbc6b09f3ff9907 | 49dfce830372ade43ca799603dd721c6f14f29e94f82a3dc0b4241356c433e65 |
 | 17.7 | `/chapter-17/experimental-design-and-uncertainty` | Inspected 2026-11-25 | a49f4705d53ea21959540b6d9cbaade29cdd63310712a6f8e2d67eb9288746cc | 8040249564bacddeebe7eda07ece30695e580990c258f0393284df9e3d07735f |
 | 18.1 | `/chapter-18/red-teaming` | Mechanical only | fa815b07490b4a1039a2e91d2c98e9f1f212d6479f534afa5f09020cc8f93598 | 5aa628372d20829e842ce6b3fad0133fee7c40e63c345e76f0b823b351df6f59 |
 | 18.2 | `/chapter-18/jailbreaking-and-defense` | Mechanical only | caff93966e1d1a925120d696bf37a09fa46cc63cd9378c818ac9f1d489348afd | 165303014a71dfa4ec8e28c0ac7f38712f5d97fbcd551510aa5539cb33c33ac1 |
@@ -718,3 +718,8 @@ For §§13.1 and 17.6, checked Baidu’s pinned model cards, weight indexes and 
 
 - §3.5, §8.1 and §12.1 received bilingual lesson and example checks. The memory example counts two different tensor shapes. The scaling-law exercise separates total and excess loss and holds out the largest trial. The cache example distinguishes simultaneous residency from completion under a sequential schedule.
 - §5.5 and §6.4 received narrower edits. In §5.5 the six-token layout replaces a drawing that suggested tiles of varying size. In §6.4 the transfer example uses effective point-to-point bandwidth. Their inventory rows carry the updated file hashes without claiming a new whole-page review.
+
+
+### November 25, 2026 — Checking the exercises that readers reach from outside the chapter
+
+The §3.1 worksheet and the linked CPU program now apply the same change to the same value vector. Checked both printed solutions, the script output and the padding example. Section 8.5 now scores the same six UTF-8 bytes under two toy vocabularies, with a link from §6.2. Both language editions produced the four published rows. In §17.6 the link from the home page now opens the 272K pricing exercise. The separate short-input example uses the provider’s documented background completion windows and runs without API access. The November 24 model comparison retains its own snapshot. Only the affected passages and examples were checked in §§3.1, 6.2 and 17.6.

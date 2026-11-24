@@ -23,6 +23,13 @@ test('search descriptions have real routes and equivalent language coverage', ()
   }
 });
 
+test('the long-context price link opens the 272K exercise in both editions', () => {
+  for (const locale of ['', '/ko']) {
+    const html = readFileSync(`${outputDir}${locale}/chapter-17/commercial-model-benchmarks/index.html`, 'utf8');
+    assert.match(html, /<a id="long-context-cost"><\/a>\s*<h2\b[^>]*>[^<]*272K/i);
+  }
+});
+
 test('localized Korean lesson names reach the page title and the visible main heading', () => {
   for (const { subs } of chapters) {
     for (const { path, title } of subs) {

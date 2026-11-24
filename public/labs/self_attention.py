@@ -1,6 +1,10 @@
 """CPU PyTorch exercises on causal attention and padding a batch of two sequences.
 
 Source: Foundation Model Engineering, §3.1, Self-Attention Mathematics.
+Worksheet and interactive example:
+https://sungeuns.github.io/foundation-model-engineering/chapter-3/self-attention-mathematics/#attention-weight-example
+https://sungeuns.github.io/foundation-model-engineering/ko/chapter-3/self-attention-mathematics/#attention-weight-example
+Batch padding example:
 English: https://sungeuns.github.io/foundation-model-engineering/chapter-3/self-attention-mathematics/#batched-padding-example
 한국어: https://sungeuns.github.io/foundation-model-engineering/ko/chapter-3/self-attention-mathematics/#batched-padding-example
 """
@@ -67,17 +71,27 @@ if __name__ == "__main__":
     v = torch.tensor([[1, 0], [0, 2], [2, 1], [-1, 1]], dtype=torch.float32)[None, None]
     causal = torch.ones(4, 4, dtype=torch.bool).tril()
 
+    # Worksheet 3: increase only the second coordinate of V(here).
+    change = torch.tensor([0., 8.])
+    changed = v.clone()
+    changed[0, 0, 3] += change
     for label, mask in [("All keys", None), ("Causal", causal)]:
         out, weights = attention(q, k, v, mask)
         expected = F.scaled_dot_product_attention(q, k, v, attn_mask=mask, dropout_p=0.0)
         torch.testing.assert_close(out, expected)
         print(label, "cat weights:", weights[0, 0, 1], "output:", out[0, 0, 1])
+        after, _ = attention(q, k, changed, mask)
+        delta = after - out
+        torch.testing.assert_close(delta, weights[..., 3:4] * change)
+        print(label, "change in cat output:", delta[0, 0, 1])
 
-    # Change only the future values. Check both positions before that change.
-    changed = v.clone()
-    changed[:, :, 2:] += 100
-    before, _ = attention(q, k, v, causal)
-    after, _ = attention(q, k, changed, causal)
-    torch.testing.assert_close(before[:, :, :2], after[:, :, :2])
+    # Worksheet 4: what if we zero the future weights *after* softmax?
+    _, all_weights = attention(q, k, v)
+    _, causal_weights = attention(q, k, v, causal)
+    late_mask = all_weights[0, 0, 1].masked_fill(~causal[1], 0.)
+    mass = late_mask.sum()
+    print(f"Late mask on cat: remaining weight {mass.item():.4f}")
+    assert 0 < mass < 1
+    torch.testing.assert_close(late_mask / mass, causal_weights[0, 0, 1])
 
     batched_padding_example()

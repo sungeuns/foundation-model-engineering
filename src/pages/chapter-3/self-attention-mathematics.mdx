@@ -85,7 +85,9 @@ Where:
 
 For the query at “cat,” the four raw dot products are 1, 2, 1 and −1. After scaling by $1/\sqrt{2}$ and masking future keys, only “The” and “cat” compete. Their weights are about 0.3302 and 0.6698. Multiplying by their values, $[1,0]$ and $[0,2]$, gives $[0.3302,1.3395]$. Open the mask to all four keys and the output becomes about $[0.6455,1.2407]$. You can reproduce both rows with the controls below at temperature 1.
 
-**Runnable CPU example.** Run `python self_attention.py` in an environment with PyTorch installed. The example uses float32 and the four fixed input vectors per role shown in the interactive. It materializes the score matrix and checks all four outputs against PyTorch SDPA with dropout disabled. Changing the last two value vectors then tests whether either of the first two causal outputs changes. The example leaves out training, fused-kernel optimization and KV-cache offsets. [[2]](#ref-2)
+**Runnable CPU example.** Run `python self_attention.py` in an environment with PyTorch installed. The example uses float32 and the four fixed input vectors per role shown in the interactive. It materializes the score matrix and checks all four outputs against PyTorch SDPA with dropout disabled. The example leaves out training, fused-kernel optimization and KV-cache offsets. [[2]](#ref-2)
+
+Try both checks from the worksheet. Add 8 to the second coordinate of the value at “here.” With all keys visible, the second output coordinate at “cat” increases by about 0.4554. With the causal mask, it stays fixed. Now zero the future weights *after* softmax. The weights left for “The” and “cat” sum to only 0.7090. The script checks that dividing by this sum recovers the two causal weights.
 
 A boolean `True` allows a key in this example and in PyTorch’s functional SDPA. An entirely blocked query has no distribution over valid keys. Replacing every score in that row with the same finite number makes softmax assign equal weights to *all* keys. This function rejects that input explicitly. [[2]](#ref-2)
 
