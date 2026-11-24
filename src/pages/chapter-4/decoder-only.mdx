@@ -29,7 +29,7 @@ The training batch contains the entire example. Within each layer, the model can
 
 In **causal self-attention**, a query at position $i$ may read a key at position $j$ when $j \le i$. In the training example, the `red` position may read itself. Its target is the following token, `blue`, one position beyond that diagonal.
 
-<figure>
+<figure style={{ margin: '1.5rem 0' }}>
 
 ![Four-by-four causal mask. Row 1 permits key 1, and each successive row permits one more key through its own position.](../../assets/images/chapter-4/decoder_only_causal_mask_en.svg)
 
@@ -43,7 +43,9 @@ In **causal self-attention**, a query at position $i$ may read a key at position
 
 Let $x_0$ be `BOS`, let $x_1,\ldots,x_T$ be the $T$ target tokens through `EOS`, and write $x_{0:t-1}$ for the visible prefix. A causal language model with parameters $\theta$ assigns the sequence this conditional probability:
 
-$$P_\theta(x_{1:T}\mid x_0)=\prod_{t=1}^T P_\theta(x_t\mid x_{0:t-1}).$$
+$$
+P_\theta(x_{1:T}\mid x_0)=\prod_{t=1}^T P_\theta(x_t\mid x_{0:t-1}).
+$$
 
 The mean training loss per target token is $-\frac{1}{T}\sum_{t=1}^T \log P_\theta(x_t\mid x_{0:t-1})$. Suppose the model assigns the three correct targets probabilities of 0.6, 0.5 and 0.7. The whole continuation gets probability $0.6\times0.5\times0.7=0.21$, giving a mean loss of about 0.520 nats per token.
 

@@ -279,7 +279,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 3.4 | `/chapter-3/layer-normalization-residuals` | Inspected 2026-11-15 | d9c2b8dbee0ba9d5c365d0395014e3e9d6fe06e7f58387401fd6ae625584825f | 7571b6552563c1bc6c771e9a1cb3acc1163645b179e7bb7e6a3dc2769e2cfe5e |
 | 3.5 | `/chapter-3/complexity-analysis` | Inspected 2026-11-15 | 528f765af0e658c5d7116b5d3651be5a3ec6496b5651970285143831e0344b2c | d5da6dea75982e92dc97033508aacd582e677911caa2afbfb61f1356fbf12537 |
 | 4.1 | `/chapter-4/encoder-only` | Mechanical only | 0c3d099ec9bb466a4cc1a22bd17ff1608388e3ac87ea1da233382efe081e63cd | a594d06325d22f53605f35a62a4e7031f6ef626832e2e8ea43d0352e496e7ea5 |
-| 4.2 | `/chapter-4/decoder-only` | Inspected 2026-11-25 | 96c38cb53a2389b38722073f13568be9df6a8004128e3ea1124358c74bd10f94 | e1111f8be84709ef5cbd2b91c0592d37d4626f536e9bb5d83f0662ca038ed4cb |
+| 4.2 | `/chapter-4/decoder-only` | Inspected 2026-11-25 | 566f11bdb11a6760f26ac9639bd0922af4ad46077497b6332ca7d4647a090e8b | 7a42e67720a62c01c9801e20b6ef5523aa9f6fb0fe3b60cdb074afb20dc23897 |
 | 4.3 | `/chapter-4/encoder-decoder` | Mechanical only | c0372544843683d2e7b80936ba33fd4c343a4b6850c40844ae59ccc34362f918 | 58320112ec9f19b8f62065ae1a140df644263abfdce47911ee04fda8ea0ff5d0 |
 | 4.4 | `/chapter-4/hybrid-prefix-lm` | Inspected 2026-11-25 | 6edb93ff3d69526c5abd2108193b487cc82eb60c9c9887033237a77e72052127 | 59715e846873b8af91b74291aa803ff3047a646a79042af60da4b04a3dccef60 |
 | 4.5 | `/chapter-4/various-llm-architectures` | Inspected 2026-11-24 | 028ebccee02c3a1b30297a6c43b9ed91806975ff737f33e8a5ccd5ea26f26a30 | 5d9fb05bb56198c702831691a20832099bac533ece95857c22101dfb884863a8 |
