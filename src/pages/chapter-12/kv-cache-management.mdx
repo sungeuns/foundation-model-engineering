@@ -51,7 +51,7 @@ $$
 \text{bytes}_{KV}=2BSLH_{KV}d_hp,
 $$
 
-where $B$ is concurrent sequences, $S$ cached tokens per sequence, $L$ layers, $H_{KV}$ KV heads, $d_h$ values per head, and $p$ bytes per value. The factor two accounts for keys and values.
+where $B$ is concurrent sequences, $S$ cached tokens per sequence, $L$ layers, $H_{KV}$ KV heads, $d_h$ values per head, and $p$ bytes per value. The factor two accounts for keys and values. For a one-layer example with 4,096 tokens, [compare the attention score matrix with the keys and values retained for decoding](/chapter-3/complexity-analysis/#attention-scores-vs-kv-cache).
 
 For requests of different lengths, sum the token positions they occupy. Count shared blocks once. To estimate physical allocation, include slots lost to padding or block rounding. Also account for block metadata, workspace, extra speculative branches or beams, and the actual split or replication across devices.
 
@@ -71,7 +71,9 @@ This is the aggregate for 32 equal-length sequences, not one request. Nor does t
 
 With the same geometry, one cached token costs 327,680 bytes, or 320 KiB, across all 80 layers. One 8,192-token request therefore needs **2.5 GiB**. Suppose the serving pool has **24 GiB left for KV payload** after reserving weights, activations, workspaces, allocator overhead, and a failure margin. Nine such requests consume 22.5 GiB; ten require 25 GiB. This is a payload bound for that pool, not a measured GPU concurrency limit. If the cache is sharded, apply the actual per-device layout and account for any replicated heads.
 
-Now admit nine requests whose prompts are already 8,192 tokens long and allow each to generate another 2,048 tokens. Each can grow to 3.125 GiB, so the batch can reach **28.125 GiB**. The prompts fit, but the allowed continuations do not. Reserving for the full 10,240-token length permits only seven requests under this simplified budget. A dynamic allocator can admit more initially, but it then needs an explicit queueing, preemption, or output-limit policy. Prefix sharing can reduce the physical payload only when those exact cached prefixes are reusable.
+Give each of the nine requests an output allowance of 2,048 tokens. At its full length of 10,240 tokens, one cache occupies 3.125 GiB. Keeping all nine full-length caches at once would take **28.125 GiB**. The 24 GiB payload budget can hold seven at that length.
+
+Can all nine still finish? Suppose the scheduler decodes one request at a time while the other eight keep only their prompts. As the first request reaches its cap, the pool holds $3.125 + 8 \times 2.5 = 23.125$ GiB. Reclaim its cache as soon as it finishes, then decode the next request. Each round needs less space, so all nine can finish within the budget. The waiting requests pay for that choice in latency. This schedule assumes independent caches. Sharing an exact prefix can change the physical payload.
 
 ![KV payload against a 24 GiB budget. Nine prompts use 22.5 GiB, ten use 25 GiB, and nine requests at their output limit use 28.125 GiB.](../../assets/images/chapter-12/kv-budget-en.svg)
 

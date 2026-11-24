@@ -1,14 +1,16 @@
 ---
 layout: ../../../layouts/BookLayout.astro
-title: "3.5 복잡도 분석"
+title: "3.5 어텐션 연산량과 KV 캐시 메모리"
 lang: "ko"
 ---
 
 import ComplexityVisualizer from '../../../components/chapter-3/ComplexityVisualizer';
 
-# 3.5 Complexity Analysis (복잡도 분석)
+<a id="35-complexity-analysis-복잡도-분석"></a>
 
-복잡도는 비용을 추정하는 모델이지 지연 시간 벤치마크가 아닙니다. 어텐션 커널과 전체 레이어, 이미 주어진 토큰의 병렬 처리와 아직 모르는 토큰의 생성을 구분해야 합니다. 그래야 프롬프트 prefill은 빠르지만 decode는 느릴 수 있는 이유를 이해할 수 있습니다.
+# 3.5 어텐션 연산량과 KV 캐시 메모리
+
+프롬프트를 4,096토큰에서 8,192토큰으로 늘려 봅시다. 모든 어텐션 점수를 행렬로 저장한다면 그 행렬은 네 배가 되지만, 일반적인 KV 캐시는 두 배만 커집니다. 두 텐서에서 토큰 수가 늘어나는 축이 다르기 때문입니다. [한 층의 바이트 수를 직접 세어 보고](#attention-scores-vs-kv-cache), 프롬프트 전체를 읽을 때와 토큰 하나를 더 생성할 때의 연산을 비교해 봅시다.
 
 ## 어떤 연산을 비교하는가
 
@@ -25,7 +27,7 @@ import ComplexityVisualizer from '../../../components/chapter-3/ComplexityVisual
 
 ## 어텐션 비용 유도
 
-한 헤드의 $Q,K,V$ 모양을 $[n,d]$ 로 두면, $QK^T$ 는 폭 $d$ 의 내적을 $n^2$ 번 계산합니다. $[n,n]$ 확률 행렬과 $V$ 의 곱도 같은 차수이고 softmax는 $O(n^2)$ 연산을 추가합니다. 반면 $[n,d]$ 입력과 $[d,d]$ 투영 행렬의 곱은 $O(nd^2)$ 입니다.
+헤드 하나의 차원이 $d_h$ 라면 쿼리·키·값의 행렬 모양은 각각 $[n,d_h]$ 입니다. $QK^T$ 를 만들 때 길이 $d_h$ 인 내적을 $n^2$ 번 계산합니다. $[n,n]$ 확률 행렬에 $V$ 를 곱하는 연산량도 같은 차수입니다. 쿼리 헤드가 $H$ 개이고 $d=Hd_h$ 라면, 모든 헤드에서 두 행렬 곱을 수행하는 연산량은 $O(n^2d)$ 입니다. 소프트맥스도 헤드마다 $n^2$ 개의 점수를 읽습니다. 반면 $[n,d]$ 입력에 $[d,d]$ 가중치 행렬을 한 번 곱하는 투영 비용은 $O(nd^2)$ 입니다.
 
 어텐션 한 층은 허용된 query–key 위치를 직접 연결하며 인과 마스크는 과거로 가시 범위를 제한합니다. 일반적인 RNN은 순환 단계를 거쳐 신호를 전달합니다. 합성곱이 먼 위치를 연결하려면 충분한 깊이가 필요합니다. 로그 깊이는 적절한 dilation 구성의 결과이지 임의의 고정 폭 합성곱의 성질은 아닙니다.
 
@@ -35,25 +37,42 @@ import ComplexityVisualizer from '../../../components/chapter-3/ComplexityVisual
 
 자기회귀 decode에서는 다음 토큰이 직전에 생성한 토큰에 의존합니다. KV 캐시를 쓰면 새 query 하나가 저장된 key $n$ 개를 보므로 핵심 어텐션 비용은 $O(nd)$ 이며 투영과 FFN 비용이 더해집니다. 여러 토큰 생성은 여전히 순차 단계가 필요합니다. 일반적인 비선형 RNN은 두 모드 모두 순환 의존성을 가지며, 특수한 상태공간 scan은 20장에서 따로 다룹니다.
 
-## 전체 점수 행렬의 메모리
+<a id="전체-점수-행렬의-메모리"></a>
+<a id="attention-scores-vs-kv-cache"></a>
 
-단순 구현의 $[B,H,n,n]$ 점수 텐서는 $BHn^2s$ 바이트입니다. $B$ 는 배치 크기, $H$ 는 헤드 수, $s$ 는 점수당 바이트 수입니다. 이는 하나의 텐서일 뿐 전체 학습 메모리가 아닙니다. 타일 기반 정확 어텐션은 이차 점수 행렬 전체를 장치에 저장하지 않을 수 있지만 밀집 어텐션의 이차 연산량은 남습니다. 7장에서 FlashAttention을 다룹니다. [[2]](#ref-2)
+## 어텐션 점수가 네 배가 될 때 KV 캐시는 왜 두 배만 커질까?
 
-> **교육용 원시 용량 계산.** 텐서를 실제 할당하지 않습니다. 가중치·그래디언트·옵티마이저 상태, 점수 외 활성화, 임시 버퍼, collective, 체크포인트와 평가 비용은 제외합니다.
+그룹 쿼리 어텐션(GQA) 한 층에서 요청 하나를 처리한다고 합시다. 쿼리 헤드는 32개, KV 헤드는 8개이고 헤드 하나의 차원은 128입니다. GQA에서는 여러 쿼리 헤드가 같은 키와 값 헤드를 사용합니다 [[4]](#ref-4). 점수·키·값은 모두 원소 하나당 2바이트로 저장한다고 가정합니다.
+
+| 프롬프트 길이 | 프리필의 전체 점수 텐서 한 개 | 디코딩에 쓸 키와 값의 합계 |
+| --- | ---: | ---: |
+| 4,096토큰 | 1,024 MiB | 16 MiB |
+| 8,192토큰 | 4,096 MiB | 32 MiB |
+
+점수 행렬은 쿼리 헤드마다 토큰 하나에 행 하나와 열 하나가 대응합니다. 프롬프트 길이가 두 배가 되면 행과 열이 모두 두 배로 늘어납니다. 반면 캐시에는 새 토큰마다 KV 헤드별로 키 벡터 하나와 값 벡터 하나만 추가합니다. 표의 점수 용량은 마스크로 가린 자리까지 포함해 전체 행렬을 실제로 저장하는 구현을 가정한 값입니다. [FlashAttention](/ko/chapter-7/flash-attention/)은 블록 단위로 계산해 이 행렬 전체를 장치 메모리에 쓰는 일을 피합니다 [[2]](#ref-2). 여러 층과 요청에 남겨 둘 키·값의 합계는 [KV 캐시 계산기](/ko/chapter-12/kv-cache-management/#kv-cache-capacity)에서 구할 수 있습니다.
+
+아래 Python 코드는 텐서를 만들지 않고 모양만으로 원소 수를 셉니다. 가중치, 작업 공간, 패딩, 할당기 부가 비용은 계산에서 제외합니다.
 
 ```python
-def score_memory_mib(n, batch=1, heads=8, bytes_per_score=4):
-    if min(n, batch, heads, bytes_per_score) < 1:
-        raise ValueError("positive dimensions required")
-    return batch * heads * n * n * bytes_per_score / 2**20
+from math import prod
 
-for n in [1000, 5000, 10000, 50000]:
-    print(f"n={n:,}: {score_memory_mib(n):,.2f} MiB")
+def attention_bytes(tokens):
+    # One sequence, one layer. All three tensors store 2-byte elements.
+    score_shape = (1, 32, tokens, tokens)
+    key_shape = value_shape = (1, 8, tokens, 128)
+    return 2 * prod(score_shape), 2 * (prod(key_shape) + prod(value_shape))
+
+for tokens in (4096, 8192):
+    scores, kv = attention_bytes(tokens)
+    print(tokens, scores // 2**20, kv // 2**20)
+# tokens, score MiB, KV MiB
+# 4096 1024 16
+# 8192 4096 32
 ```
 
 ## 비용 모델 살펴보기
 
-아래 수치는 공통 인자 $d$ 를 나눈 성장 항입니다. 실측 FLOPs나 속도가 아니며 투영을 제외합니다. 같은 단위로 정규화해야 교차 지점의 의미를 읽을 수 있습니다.
+아래 수치는 공통 인자 $d$ 를 나눈 성장 항입니다. 실측 FLOPs나 속도가 아니며 투영을 제외합니다. 시퀀스 길이를 은닉 차원과 같은 512로 두면 두 값은 모두 262,144입니다. 길이를 두 배로 늘려 어느 쪽이 더 빠르게 커지는지 확인해 보세요.
 
 <ComplexityVisualizer client:load lang="ko" />
 
@@ -90,3 +109,4 @@ for n in [1000, 5000, 10000, 50000]:
 
 2. <a id="ref-2"></a>Dao et al. (2022). [FlashAttention](https://arxiv.org/abs/2205.14135).
 3. <a id="ref-3"></a>Kitaev et al. (2020). [Reformer: The Efficient Transformer](https://arxiv.org/abs/2001.04451).
+4. <a id="ref-4"></a>Ainslie 외 (2023). [GQA: Training Generalized Multi-Query Transformer Models from Multi-Head Checkpoints](https://arxiv.org/abs/2305.13245).

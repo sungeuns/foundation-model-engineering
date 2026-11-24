@@ -125,7 +125,7 @@ export default function KVCacheCalculator({ lang = 'en' }: { lang?: 'en' | 'ko' 
         <p>{number(row.tokens)} {t('tokens per request','토큰/요청')}</p>
         <strong className="kv-size-display" data-kv-result={stage + '-total'}>{memory(row.requested)}</strong>
         <p>{t('Per sequence','시퀀스당')} <b data-kv-result={stage === 'peak' ? 'per-sequence' : 'prompt-per-sequence'}>{memory(row.perSequence)}</b></p>
-        <p>{t('Sequences within budget','들어가는 시퀀스 수')} <b data-kv-result={stage === 'peak' ? 'capacity' : 'prompt-capacity'}>{row.capacity === null ? '—' : number(row.capacity)}</b></p>
+        <p>{t('Max concurrent requests','동시에 담을 수 있는 최대 요청 수')} <b data-kv-result={stage === 'peak' ? 'capacity' : 'prompt-capacity'}>{row.capacity === null ? '—' : number(row.capacity)}</b></p>
         {row.balance !== null && available !== null && available >= 0 && <p className={'kv-budget-status' + (row.balance < 0 ? ' is-over' : '')}>
           {memory(Math.abs(row.balance))} {row.balance < 0 ? t('over budget','초과') : t('remaining','남음')}</p>}
       </div>)}</div>

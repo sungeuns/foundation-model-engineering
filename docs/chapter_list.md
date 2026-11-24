@@ -23,7 +23,7 @@
 * **3.2 Multi-head Attention (MHA):** 다양한 관점에서 특징을 추출하는 병렬 어텐션 구조.
 * **3.3 Position Encoding Strategy:** 위치·차원별 사인과 코사인 값을 PyTorch로 검산하고 RoPE 점곱에서 상대 위치의 역할을 계산.
 * **3.4 Layer Normalization & Residuals:** 두 특성값으로 LayerNorm·RMSNorm과 엡실론의 효과를 검산하고, 잔차 분기를 0으로 둘 때 Pre-LN과 Post-LN의 출력 비교.
-* **3.5 Complexity Analysis:** 시퀀스 길이에 따른 $O(n^2)$ 복잡도와 메모리 병목 현상.
+* **3.5 Attention Compute and KV Cache Memory:** 프롬프트 길이를 두 배로 늘려 어텐션 점수와 KV 캐시의 크기를 비교하고, 프리필과 디코딩의 연산량을 구분합니다.
 * **Summary:** Transformer 계열 Foundation Model의 내부 로직을 수학적, 구조적으로 파헤칩니다.
 
 ### **Chapter 4: LLM Architectures & Paradigms**
@@ -41,7 +41,7 @@
 * **5.2 Routing Algorithms:** Top-k routing, Noisy Top-k, Expert choice routing.
 * **5.3 Expert Parallelism:** 전문가 배치와 토큰 전송을 구분하고, CPU 프로세스 두 개에서 여섯 토큰이 원래 순서로 돌아오는지 검산.
 * **5.4 Collapsing & Load Balancing:** 특정 전문가에게 연산이 쏠리는 문제와 해결책(Auxiliary Loss).
-* **5.5 Case Study:** Mixtral, DBRX, DeepSeek-V3, GLM-5.2와 DeepSeek-V4.1-Flash의 단계별 연산까지 MoE 라우팅, sparse attention, MTP, post-training/serving pipeline을 뜯어보기.
+* **5.5 MoE Routing in Mixtral, DBRX, and DeepSeek:** Mixtral, DBRX, DeepSeek-V3, GLM-5.2와 DeepSeek-V4.1-Flash의 단계별 연산까지 MoE 라우팅, sparse attention, MTP, post-training/serving pipeline을 뜯어보기.
 * **Summary:** 거대 모델을 효율적으로 운영하기 위한 핵심 기술인 MoE의 라우팅 매커니즘과 분산 처리 기법을 정리합니다.
 
 ### **Chapter 6: Foundation Model Pre-training (The Engineering)**
@@ -49,7 +49,7 @@
 * **6.1 Data Engineering at Scale:** Common Crawl 정제, Deduplication, 중복 제거 알고리즘.
 * **6.2 Tokenization Science:** 바이트 수준 BPE와 WordPiece, 어휘 크기의 비용. SmolLM2에서 한글 한 글자의 토큰과 원문 위치, BOS·EOS·UNK가 ID를 공유할 때의 검사 방법을 확인.
 * **6.3 Large-scale Training Stability:** Loss Spike 대응, Gradient Clipping, z-loss 등 학습 기법.
-* **6.4 Infrastructure:** TPU(Pod) vs GPU(H100/B200) 클러스터 구성, NVLink/InfiniBand 및 네트워킹(NCCL).
+* **6.4 Training Cluster Networks and GPU Interconnects:** GPU·TPU 클러스터의 연결 구조, 집단 통신, 전력과 냉각이 학습 속도에 주는 제약을 살펴봅니다.
 * **6.5 Synthetic Data for Pre-training:** 데이터 고갈 문제와 AI 생성 데이터의 활용 가능성.
 * **6.6 Optimization Mechanics and Fair Experiments:** 최적화의 원리와 공정한 실험.
 * **Summary:** 수조 개의 토큰을 안정적으로 학습시키기 위한 데이터 전처리와 인프라 엔지니어링의 정수를 담습니다.
@@ -65,7 +65,7 @@
 
 ### **Chapter 8: Scaling Laws & Compute Optimality**
 
-* **8.1 The Power Law:** 모델 크기와 데이터 양에 따른 성능 예측.
+* **8.1 Neural Scaling Laws and Loss Forecasts:** 모델 크기와 데이터 양에 따른 성능 예측.
 * **8.2 Chinchilla Optimality:** 주어진 연산 자원 내에서 가장 효율적인 파라미터-데이터 비율.
 * **8.3 Over-training vs Optimal-training:** Llama 3처럼 가이드라인 이상으로 학습시키는 이유.
 * **8.4 Transfer Learning & Generalization:** 사전 학습 지식이 전이되는 원리.

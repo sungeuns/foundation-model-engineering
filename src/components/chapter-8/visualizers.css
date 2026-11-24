@@ -279,74 +279,32 @@
 
 /* PowerLawVisualizer Styles */
 .power-law-container {
-  background: rgba(30, 30, 47, 0.7);
-  backdrop-filter: blur(10px);
+  margin: 1.5rem 0;
+  padding: clamp(0.75rem, 3vw, 1.5rem);
+  border: 1px solid #405473;
   border-radius: 12px;
-  padding: 25px;
-  color: #fff;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  margin: 25px 0;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #162335;
+  color: #ecf3fc;
 }
-
-.power-law-container h3 {
-  margin-top: 0;
-  color: #f8fafc;
-  font-size: 1.5rem;
-  font-weight: 600;
-  background: linear-gradient(135deg, #60a5fa 0%, #a855f7 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.power-law-container .controls {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  margin-bottom: 2rem;
-}
-
-.power-law-container label {
-  font-size: 0.95rem;
-  color: #cbd5e1;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.power-law-container input[type="range"] {
-  width: 100%;
-  accent-color: #3b82f6;
-}
-
-.metrics {
-  display: flex;
-  gap: 2rem;
-  font-size: 0.9rem;
-  color: #94a3b8;
-}
-
-.metrics strong {
-  color: #f8fafc;
-  font-size: 1.1rem;
-}
-
-.power-law-svg {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  padding: 10px;
-}
-
-.power-law-svg line {
-  stroke: rgba(255, 255, 255, 0.2);
-}
-
-.power-law-svg text {
-  fill: #94a3b8;
-}
+.power-law-container h3 { margin-top: 0; color: #f7faff; }
+.power-law-container p { color: #d5e0ef; }
+.power-law-container label { display: block; color: #f7faff; }
+.power-law-container label strong { white-space: nowrap; }
+.power-law-container input { display: block; width: 100%; min-height: 32px; margin: 0.2rem 0 0.8rem; accent-color: #80ccff; }
+.power-law-svg { display: block; width: 100%; max-width: 34rem; margin: auto; }
+.power-law-svg line { stroke: #65758c; }
+.power-law-svg text { fill: #e3ebf7; font: 13px system-ui, sans-serif; }
+.power-law-svg path { fill: none; stroke-width: 2.5; }
+.power-law-svg .power-law-total { stroke: #8bd9ff; }
+.power-law-svg circle { fill: #8bd9ff; }
+.power-law-svg .power-law-excess { stroke: #ffca80; }
+.power-law-svg path.power-law-excess { stroke-dasharray: 6 4; }
+.power-law-svg rect { fill: #ffca80; }
+.power-law-x-label, .power-law-y-label { color: #e3ebf7; font-size: 0.85rem; }
+.power-law-x-label { text-align: center; }
+.power-law-container table { display: table; width: 100%; max-width: 34rem; margin: 1rem auto 0; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.power-law-container table :is(th, td) { padding: 0.35rem 0.2rem; border: 0; border-bottom: 1px solid #50637d; background: #162335; color: #ecf3fc; text-align: right; font-size: 0.9rem; }
+.power-law-container table th:first-child { text-align: left; }
 
 /* OvertrainingVisualizer Styles */
 .overtraining-container {

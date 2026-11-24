@@ -21,7 +21,7 @@ export const servingGuide = {
     '/chapter-12/serving-policies-slos-and-fallbacks',
   ],
   downloads: {
-    en: `${servingGuideRelease}/llm-serving-en.epub`,
-    ko: `${servingGuideRelease}/llm-serving-ko.epub`,
+    en: `${servingGuideRelease}/llm-serving-en-r2.epub`,
+    ko: `${servingGuideRelease}/llm-serving-ko-r2.epub`,
   },
 };

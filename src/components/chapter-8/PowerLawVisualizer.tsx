@@ -1,73 +1,84 @@
-import React, { useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import './visualizers.css';
 
-export default function PowerLawVisualizer({ lang = "en" }: { lang?: "en" | "ko" }) {
-  const translations: Record<string,string> = {"Interactive Scaling Law: Loss vs. Compute": "스케일링 법칙: 손실과 연산량", "Compute (Log Scale)": "연산량 (로그 척도)", "Loss (Log Scale)": "손실 (로그 척도)"};
-  const t = (s: string) => lang === "ko" ? (translations[s] ?? s) : s;
+const floor = 1.5;
+const excessAt = (logBudget: number) => 10 * 10 ** (-0.05 * logBudget);
+const x = (logBudget: number) => 38 + (logBudget - 1) * 35;
+const y = (loss: number) => 172 - Math.log(loss / floor) / Math.log(12 / floor) * 152;
+const curve = (offset: number) => Array.from({ length: 81 }, (_, index) => {
+  const logBudget = 1 + index / 10;
+  return `${index === 0 ? 'M' : 'L'}${x(logBudget)},${y(excessAt(logBudget) + offset)}`;
+}).join(' ');
 
-  const [computeLog, setComputeLog] = useState<number>(2); // 10^2 to 10^8
+const labels = {
+  en: {
+    title: 'What changes when compute doubles?',
+    intro: 'Compare two budgets on the example curve. The dashed line shows excess loss above the assumed floor of 1.5 nats per token.',
+    budget: 'Starting compute budget (relative units)',
+    axis: 'Relative compute budget · log scale',
+    loss: 'Loss in nats per token · log scale',
+    chart: 'Total and excess loss against relative compute budget',
+    description: 'The solid total-loss curve lies above the dashed excess-loss line. Markers show the starting budget; the table also evaluates twice that budget.',
+    total: 'Total loss', excess: 'Excess loss', decrease: 'Decrease', measure: 'Loss', floor: 'Floor',
+  },
+  ko: {
+    title: '연산량을 두 배로 늘리면 손실은 얼마나 줄어들까?',
+    intro: '예제 곡선에서 두 연산 예산을 비교합니다. 점선은 전체 손실에서 가정한 하한인 토큰당 1.5 nat를 뺀 초과 손실입니다.',
+    budget: '시작 연산 예산(상대 단위)',
+    axis: '상대 연산 예산 · 로그 척도',
+    loss: '토큰당 손실(nat) · 로그 척도',
+    chart: '상대 연산 예산에 따른 전체 손실과 초과 손실',
+    description: '실선은 전체 손실, 그 아래 점선은 초과 손실입니다. 표식은 시작 예산을 가리킵니다. 아래 표에서 예산을 두 배로 늘렸을 때의 손실을 비교할 수 있습니다.',
+    total: '전체 손실', excess: '초과 손실', decrease: '감소율', measure: '손실', floor: '하한',
+  },
+};
 
-  // L(C) = a * C^(-alpha) + E
-  const a = 10;
-  const alpha = 0.05;
-  const E = 1.5;
-
-  const computeFLOPs = Math.pow(10, computeLog);
-  const currentLoss = a * Math.pow(computeFLOPs, -alpha) + E;
-
-  // Generate curve points
-  const points = [];
-  for (let i = 1; i <= 9; i += 0.1) {
-    const c = Math.pow(10, i);
-    const l = a * Math.pow(c, -alpha) + E;
-    points.push({ logC: i, logL: Math.log10(l) });
-  }
-
-  // SVG mapping
-  const mapX = (logC: number) => (logC - 1) * (400 / 8);
-  const mapY = (logL: number) => 300 - ((logL - 0.1) * 300);
-
-  const pathD = points.map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${mapX(p.logC)} ${mapY(p.logL)}`).join(' ');
+export default function PowerLawVisualizer({ lang = 'en' }: { lang?: 'en' | 'ko' }) {
+  const t = labels[lang];
+  const id = useId();
+  const [logBudget, setLogBudget] = useState(2);
+  const [ready, setReady] = useState(false);
+  useEffect(() => setReady(true), []);
+  const budget = 10 ** logBudget;
+  const format = new Intl.NumberFormat(lang);
+  const excess = excessAt(logBudget);
+  const doubled = excessAt(Math.log10(2 * budget));
+  const rows = [
+    { name: t.total, value: excess + floor, next: doubled + floor },
+    { name: t.excess, value: excess, next: doubled },
+  ];
 
   return (
-    <div className="power-law-container">
-      <h3>{t("Interactive Scaling Law: Loss vs. Compute")}</h3>
-      <p>{lang === "ko" ? "가상의 계수로 계산한 L = 10C⁻⁰·⁰⁵ + 1.5입니다. 실제 모델의 학습 예측이나 FLOPs 추정이 아닙니다. 하한 때문에 log L 대 log C는 완전한 직선이 아닙니다." : "An authored curve L = 10C⁻⁰·⁰⁵ + 1.5, not a fitted model or FLOPs estimate. The floor makes log L versus log C curve rather than remain a straight line."}</p><div className="controls">
-        <label>
-          {lang === "ko" ? "무차원 연산 예산 (10" : "Dimensionless compute budget (10"}<sup>{computeLog.toFixed(1)}</sup> )
-          <input
-            type="range"
-            min="1"
-            max="9"
-            step="0.1"
-            value={computeLog}
-            onChange={(e) => setComputeLog(parseFloat(e.target.value))}
-          />
-        </label>
-        <div className="metrics">
-          <span>{lang === "ko" ? "예제 손실:" : "Example loss:"} <strong>{currentLoss.toFixed(3)}</strong></span>
-          <span>{lang === "ko" ? "가정한 손실 하한:" : "Assumed loss floor:"} <strong>{E.toFixed(3)}</strong></span>
-        </div>
-      </div>
-      <svg width="100%" height="320" viewBox="-20 -20 440 340" className="power-law-svg" role="img" aria-label={t(t("Interactive Scaling Law: Loss vs. Compute"))}>
-        {/* Axes */}
-        <line x1="0" y1="300" x2="400" y2="300" stroke="#ccc" strokeWidth="2" />
-        <line x1="0" y1="0" x2="0" y2="300" stroke="#ccc" strokeWidth="2" />
-
-        {/* Asymptote */}
-        <line x1="0" y1={mapY(Math.log10(E))} x2="400" y2={mapY(Math.log10(E))} stroke="#ff6b6b" strokeDasharray="5,5" strokeWidth="2" />
-        <text x="310" y={mapY(Math.log10(E)) - 10} fill="#ff6b6b" fontSize="12">L_irreducible</text>
-
-        {/* Curve */}
-        <path d={pathD} fill="none" stroke="#4dabf7" strokeWidth="3" />
-
-        {/* Current Point */}
-        <circle cx={mapX(computeLog)} cy={mapY(Math.log10(currentLoss))} r="6" fill="#1c7ed6" />
-
-        {/* Labels */}
-        <text x="160" y="330" fill="#888" fontSize="14">{t("Compute (Log Scale)")}</text>
-        <text x="-180" y="-15" fill="#888" fontSize="14" transform="rotate(-90)">{t("Loss (Log Scale)")}</text>
+    <section className="power-law-container" aria-labelledby={`${id}-heading`}>
+      <h3 id={`${id}-heading`}>{t.title}</h3>
+      <p>{t.intro}</p>
+      <label htmlFor={`${id}-budget`}>{t.budget}: <strong>{format.format(budget)} → {format.format(2 * budget)}</strong></label>
+      <input id={`${id}-budget`} type="range" min="1" max="8" step="1" value={logBudget}
+        disabled={!ready} aria-valuetext={format.format(budget)}
+        onChange={event => setLogBudget(Number(event.currentTarget.value))} />
+      <div className="power-law-y-label">{t.loss}</div>
+      <svg className="power-law-svg" viewBox="0 0 346 205" role="img" aria-labelledby={`${id}-title ${id}-desc`}>
+        <title id={`${id}-title`}>{t.chart}</title>
+        <desc id={`${id}-desc`}>{t.description}</desc>
+        {[1.5, 3, 6, 12].map(value => <g key={value}>
+          <line x1="38" x2="318" y1={y(value)} y2={y(value)} />
+          <text x="31" y={y(value) + 4} textAnchor="end">{value}</text>
+        </g>)}
+        <text x="315" y={y(floor) - 5} textAnchor="end">{t.floor}</text>
+        {['10', '10³', '10⁵', '10⁷', '10⁹'].map((label, index) => <g key={label}>
+          <line x1={x(2 * index + 1)} x2={x(2 * index + 1)} y1="172" y2="178" />
+          <text x={x(2 * index + 1)} y="196" textAnchor="middle">{label}</text>
+        </g>)}
+        <path className="power-law-total" d={curve(floor)} />
+        <path className="power-law-excess" d={curve(0)} />
+        <circle className="power-law-total" cx={x(logBudget)} cy={y(rows[0].value)} r="4" />
+        <rect className="power-law-excess" x={x(logBudget) - 3.5} y={y(excess) - 3.5} width="7" height="7" />
       </svg>
-    </div>
+      <div className="power-law-x-label">{t.axis}</div>
+      <table>
+        <thead><tr><th scope="col">{t.measure}</th><th scope="col">C</th><th scope="col">2C</th><th scope="col">{t.decrease}</th></tr></thead>
+        <tbody>{rows.map(row => <tr key={row.name}><th scope="row">{row.name}</th><td>{row.value.toFixed(3)}</td><td>{row.next.toFixed(3)}</td><td>{((1 - row.next / row.value) * 100).toFixed(2)}%</td></tr>)}</tbody>
+      </table>
+    </section>
   );
 }

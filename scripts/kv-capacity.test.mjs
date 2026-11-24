@@ -5,12 +5,15 @@ import { canonicalKvSearch, defaultBudget, defaultPool, defaultWorkload, kvScena
 
 const example = { batch: 9, sequence: 8192, generated: 2048, layers: 80, heads: 8, dimension: 128, precision: 2 };
 
-test('nine prompts fit, ten prompts exceed the pool, and only seven full continuations fit', () => {
+test('nine prompts fit, ten prompts exceed the pool, and only seven full-length caches fit at once', () => {
   const budget = availableBytes(['80', '48', '8']);
   assert.equal(budget, 24 * GiB);
   const {prompt, peak} = kvCapacity(example, budget);
   assert.deepEqual(prompt, { tokens: 8192, perSequence: 2.5 * GiB, requested: 22.5 * GiB, capacity: 9, balance: 1.5 * GiB });
   assert.deepEqual(peak, { tokens: 10240, perSequence: 3.125 * GiB, requested: 28.125 * GiB, capacity: 7, balance: -4.125 * GiB });
+  const oneAtCapWithEightWaitingPrompts = peak.perSequence + (example.batch - 1) * prompt.perSequence;
+  assert.equal(oneAtCapWithEightWaitingPrompts, 23.125 * GiB);
+  assert.ok(oneAtCapWithEightWaitingPrompts <= budget);
   assert.equal(kvCapacity({...example, batch: 10}, budget).prompt.balance, -GiB);
   assert.equal(kvCapacity(example, prompt.perSequence * 9).prompt.capacity, 9);
   assert.equal(kvCapacity(example, prompt.perSequence * 9 - 1).prompt.capacity, 8);

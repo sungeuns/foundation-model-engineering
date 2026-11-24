@@ -28,7 +28,7 @@ export const chapters = [
       { id: "3-2", title: { en: "3.2 Multi-head Attention (MHA)", ko: "3.2 멀티 헤드 어텐션" }, path: "/chapter-3/multi-head-attention" },
       { id: "3-3", title: { en: "3.3 Position Encoding Strategy", ko: "3.3 위치 인코딩 전략" }, path: "/chapter-3/position-encoding-strategy" },
       { id: "3-4", title: { en: "3.4 Layer Normalization & Residuals", ko: "3.4 레이어 정규화 및 잔차" }, path: "/chapter-3/layer-normalization-residuals" },
-      { id: "3-5", title: { en: "3.5 Complexity Analysis", ko: "3.5 복잡도 분석" }, path: "/chapter-3/complexity-analysis" },
+      { id: "3-5", title: { en: "3.5 Attention Compute and KV Cache Memory", ko: "3.5 어텐션 연산량과 KV 캐시 메모리" }, path: "/chapter-3/complexity-analysis" },
     ]
   },
   {
@@ -50,7 +50,7 @@ export const chapters = [
       { id: "5-2", title: { en: "5.2 Routing Algorithms", ko: "5.2 라우팅 알고리즘" }, path: "/chapter-5/routing-algorithms" },
       { id: "5-3", title: { en: "5.3 Expert Parallelism", ko: "5.3 전문가 병렬화" }, path: "/chapter-5/expert-parallelism" },
       { id: "5-4", title: { en: "5.4 Collapsing & Load Balancing", ko: "5.4 전문가 붕괴와 부하 분산" }, path: "/chapter-5/collapsing-load-balancing" },
-      { id: "5-5", title: { en: "5.5 Case Study", ko: "5.5 사례 연구" }, path: "/chapter-5/case-study" },
+      { id: "5-5", title: { en: "5.5 MoE Routing in Mixtral, DBRX, and DeepSeek", ko: "5.5 Mixtral·DBRX·DeepSeek의 MoE 라우팅" }, path: "/chapter-5/case-study" },
     ]
   },
   {
@@ -60,7 +60,7 @@ export const chapters = [
       { id: "6-1", title: { en: "6.1 Data Engineering at Scale", ko: "6.1 대규모 데이터 엔지니어링" }, path: "/chapter-6/data-engineering-at-scale" },
       { id: "6-2", title: { en: "6.2 Tokenization Science", ko: "6.2 토큰화의 과학" }, path: "/chapter-6/tokenization-science" },
       { id: "6-3", title: { en: "6.3 Large-scale Training Stability", ko: "6.3 대규모 학습 안정성" }, path: "/chapter-6/large-scale-training-stability" },
-      { id: "6-4", title: { en: "6.4 Infrastructure", ko: "6.4 인프라" }, path: "/chapter-6/infrastructure" },
+      { id: "6-4", title: { en: "6.4 Training Cluster Networks and GPU Interconnects", ko: "6.4 학습 클러스터의 네트워크와 GPU 연결" }, path: "/chapter-6/infrastructure" },
       { id: "6-5", title: { en: "6.5 Synthetic Data for Pre-training", ko: "6.5 사전 학습을 위한 합성 데이터" }, path: "/chapter-6/synthetic-data-for-pre-training" },
       { id: "6-6", title: { en: "6.6 Optimization Mechanics and Fair Experiments", ko: "6.6 최적화의 원리와 공정한 실험" }, path: "/chapter-6/optimization-mechanics" },
     ]
@@ -80,7 +80,7 @@ export const chapters = [
     id: 8,
     title: { en: "8. Scaling Laws & Compute Optimality", ko: "8. 스케일링 법칙 및 컴퓨팅 최적성" },
     subs: [
-      { id: "8-1", title: { en: "8.1 The Power Law", ko: "8.1 거듭제곱 법칙" }, path: "/chapter-8/power-law" },
+      { id: "8-1", title: { en: "8.1 Neural Scaling Laws and Loss Forecasts", ko: "8.1 신경망 스케일링 법칙과 손실 예측" }, path: "/chapter-8/power-law" },
       { id: "8-2", title: { en: "8.2 Chinchilla Optimality", ko: "8.2 친칠라 최적성" }, path: "/chapter-8/chinchilla-optimality" },
       { id: "8-3", title: { en: "8.3 Over-training vs Optimal-training", ko: "8.3 과도한 학습 vs 최적 학습" }, path: "/chapter-8/over-training-vs-optimal-training" },
       { id: "8-4", title: { en: "8.4 Transfer Learning & Generalization", ko: "8.4 전이 학습 및 일반화" }, path: "/chapter-8/transfer-learning-and-generalization" },

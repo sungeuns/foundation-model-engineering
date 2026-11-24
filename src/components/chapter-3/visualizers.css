@@ -120,3 +120,34 @@
 .sav-explanation p {
   margin: 0.25rem 0;
 }
+
+.complexity-comparison {
+  margin: 1.5rem 0;
+  padding: 1.1rem;
+  border: 1px solid #b8c8d6;
+  border-radius: .5rem;
+  background: #f6f9fb;
+  color: #152e40;
+}
+.complexity-comparison h3 { margin: 0 0 1rem; }
+.complexity-comparison fieldset {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: .9rem;
+  padding: 0;
+  border: 0;
+  margin: 0;
+}
+.complexity-comparison label { flex: 1 1 12rem; }
+.complexity-comparison input { display: block; width: 100%; margin: .5rem 0 0; }
+.complexity-comparison button { min-height: 2.5rem; padding: .35rem .7rem; font: inherit; }
+.complexity-comparison dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  gap: .75rem;
+  border-top: 1px solid #b8c8d6;
+  margin: 1rem 0 0;
+  padding-top: .85rem;
+}
+.complexity-comparison dd { margin: .15rem 0 0; font-size: 1.3rem; font-weight: 650; font-variant-numeric: tabular-nums; }

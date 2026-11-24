@@ -1,66 +1,84 @@
 ---
 layout: ../../layouts/BookLayout.astro
-title: "5.5 Case Study: MoE Architecture and Systems Trade-offs"
+title: "5.5 MoE Routing in Mixtral, DBRX, and DeepSeek"
 lang: "en"
-description: "An evidence-based study of historical and recent Mixture of Experts (MoE) architectures, including Mixtral 8x7B, DBRX, Grok-1, and DeepSeek-V3, analyzing their routing strategies, parameter efficiency, and engineering breakthroughs."
 ---
 
-# 5.5 Case Study: MoE Architecture and Systems Trade-offs
+<a id="55-case-study-moe-architecture-and-systems-trade-offs"></a>
 
-The transition from dense monolithic networks to sparse Mixture of Experts (MoE) is not merely a hardware optimization; it is a fundamental shift in how we conceptualize model capacity. Dense blocks execute their full transformations for each token; MoE blocks selectively activate experts. Embedding lookup and other components require separate accounting. MoE shatters this linearity. By decoupling the parameter count from the floating-point operations (FLOPs) required per token, MoE architectures allow models to absorb vast amounts of world knowledge while potentially reducing active arithmetic; latency still depends on dispatch, memory traffic, and batching.
+# 5.5 MoE Routing in Mixtral, DBRX, and DeepSeek
 
-In this case study, we will perform a technical teardown of four seminal MoE architectures: **Mixtral 8x7B**, **DBRX**, **Grok-1**, and **DeepSeek-V3**. Rather than just listing their specifications, we will dissect the specific engineering trade-offs and routing innovations each team made to push the Pareto frontier of scale and efficiency.
+Mixtral 8x7B selects two of eight experts in each layer. DBRX selects four of sixteen. Each routes a token to a quarter of its experts, yet Mixtral has 28 possible expert sets per layer and DBRX has 1,820. What can you infer from those counts? Start with the weights a server must hold, then follow the work it actually performs for one token. [[1]](#ref-1) [[8]](#ref-8)
 
 ---
 
-## 1. Mixtral 8x7B: The Open-Source MoE Catalyst
+<a id="1-mixtral-8x7b-the-open-source-moe-catalyst"></a>
+
+## 1. Expert weights in Mixtral 8x7B
 
 Mixtral 8x7B provided public weights and a technical report for inspecting sparse MoE behavior directly. [[1]](#ref-1) It does not establish GPT-4 parameter counts or internal architecture, which remain undisclosed.
 
-### The "8x7B" Misnomer
-The name "8x7B" is a brilliant marketing move, but a technical misnomer. A common misconception is that Mixtral is an ensemble of eight independent 7-billion-parameter models, which would total 56 billion parameters. In reality, Mixtral has **47B total parameters**, with only **13B active** during the forward pass for any given token.
+<a id="the-8x7b-misnomer"></a>
 
-Why 47B? In the Transformer architecture, the self-attention mechanism and the token embeddings are **shared** across all experts. Only the Feed-Forward Network (FFN) layers are replicated.
-If $P_{attn}$ represents the attention parameters and $P_{ffn}$ represents the FFN parameters of a dense 7B model, the total parameter count for Mixtral is roughly:
+### Counting parameters across eight experts
 
-$$ P_{total} = P_{attn} + (8 \times P_{ffn}) \approx 47B $$
+Mixtral stores one set of shared weights, including attention and embeddings, plus separate feed-forward weights for each expert. The paper reports roughly 47 billion parameters in total and 13 billion active per token. [[1]](#ref-1)
 
-### Routing Mechanism
-Mixtral employs a standard Top-2 routing mechanism out of 8 experts ($K=2, N=8$). For a given input state $x$, the router computes a gating vector $G(x)$ using a softmax over the top-2 logits. The output of the MoE layer is the weighted sum of the two selected experts:
+Let $P_s$ count all shared parameters and let $P_e$ count the parameters of one expert per layer, summed across layers. Experts within a layer have equal size, so the choice of expert does not change the count.
 
-$$ y = \sum_{i=1}^{2} G(x)_i E_i(x) $$
+$$ P_{\mathrm{total}}=P_s+8P_e,\qquad P_{\mathrm{active}}\approx P_s+2P_e. $$
 
-By activating only two experts per token, Mixtral uses roughly 13B active parameters while retaining 47B total parameters. That active-parameter count does not guarantee the latency of a dense 13B model: all expert weights still occupy memory, routing creates communication, and kernel utilization depends on batch shape. Mixtral nevertheless showed that sparse MoE could be trained efficiently and, when quantized, deployed beyond hyperscaler clusters.
+<a id="routing-mechanism"></a>
+
+### Sending a token to two experts
+
+For input state $x$, let $S(x)$ contain the indices of the two experts with the highest router scores. Applying a softmax to those two scores gives weights $g_i(x)$ that sum to one. If expert $i$ returns $E_i(x)$, their combined output is
+
+$$ y = \sum_{i\in S(x)}g_i(x)E_i(x). $$
+
+The next token may need an expert that this token skipped. A server that keeps every expert resident must budget for the full weights. Latency also depends on where each token is dispatched and how much work each expert receives in the batch.
 
 ---
 
-## 2. DBRX: The Power of Fine-Grained Experts
+<a id="2-dbrx-the-power-of-fine-grained-experts"></a>
 
-While Mixtral proved the viability of coarse-grained MoE, Databricks' DBRX took a different path by introducing a **fine-grained MoE architecture** based on the MegaBlocks framework [[2]](#ref-2).
+## 2. Expert combinations in DBRX
 
-### The Combinatorial Explosion
-DBRX features 132B total parameters with 36B active parameters. Instead of using 8 large experts and selecting 2, DBRX uses **16 smaller experts and selects 4** ($K=4, N=16$).
+DBRX also routes tokens to feed-forward experts. Databricks reports 132 billion total parameters and 36 billion active per token. [[8]](#ref-8)
 
-While both Mixtral and DBRX activate 25% of their FFN parameters, the mathematical implications for representation power are vastly different. The number of possible routing combinations (expert paths) a token can take through a single layer is determined by the binomial coefficient $\binom{N}{K}$:
+<a id="the-combinatorial-explosion"></a>
+
+### How many groups of four can the router choose?
+Each layer selects $K$ distinct experts from $N$ equally sized experts. Ignoring order, there are $\binom{N}{K}$ possible sets.
 
 *   **Mixtral (8 choose 2):** $\binom{8}{2} = 28$ possible paths.
 *   **DBRX (16 choose 4):** $\binom{16}{4} = 1820$ possible paths.
 
 DBRX offers about 65 times as many unordered expert subsets per layer. That combinatorial count does not measure learned specialization, realized expressivity, or quality by itself: expert size, routing, data, and optimization differ.
 
-### Dropless Routing (MegaBlocks)
-Traditional MoE implementations enforce a strict "capacity factor" for each expert to maintain static tensor shapes for GPU operations. If an expert receives too many tokens, the excess tokens are simply **dropped** (passed through via residual connection without FFN processing), degrading performance.
+<a id="dropless-routing-megablocks"></a>
+<a id="dropless-routing-example"></a>
 
-DBRX utilizes MegaBlocks, which reformulates MoE computation using **block-sparse matrix multiplications**. This allows for dynamically sized experts, completely eliminating token dropping ("dropless routing") and avoiding the wasted compute associated with padding under-utilized experts.
+### How MegaBlocks processes overflow assignments
 
-![MegaBlocks Dropless Block-Sparse Routing](../../assets/images/chapter-5/megablocks-dropless-routing.png)
-*Source: AI-generated illustration*
+Route six tokens through one layer. To make the counts easy to follow, choose one expert per token. Expert A gets four assignments (T1–T4), B gets two (T5–T6), and C gets none. Each bracket below holds **two token rows**. This is an example tile size.
+
+| Expert | Two reserved rows per expert | Two-row tiles allocated as needed |
+| --- | --- | --- |
+| A | `[T1 T2]` · T3 and T4 overflow | `[T1 T2]` `[T3 T4]` |
+| B | `[T5 T6]` | `[T5 T6]` |
+| C | `[empty empty]` | No tile |
+
+The fixed layout leaves two rows empty at C while two assignments at A miss this layer’s expert computation. Giving A a second tile processes all six. MegaBlocks handles uneven token counts with block-based operations. The expert weights keep their shape as the **number of blocks** varies. With counts of three, two and one instead, the two-row tiles would still leave two padding rows. [[2]](#ref-2)
+
 
 ---
 
-## 3. Grok-1: Brute Force Scaling
+<a id="3-grok-1-brute-force-scaling"></a>
 
-Developed by xAI, Grok-1 [[3]](#ref-3) is a testament to brute-force scaling. At the time of its open release, it was one of the largest open-source models in existence, boasting a massive **314B total parameters**.
+## 3. Weight storage in Grok-1
+
+xAI reports 314 billion total parameters for its Grok-1 base model. [[3]](#ref-3)
 
 Grok-1 uses Top-2 expert routing [[3]](#ref-3). Selecting two of eight experts does not establish that exactly one quarter of total model parameters are active: shared attention, embeddings, and expert sizes also matter. A total-parameter fraction is not a substitute for a documented active-parameter definition.
 
@@ -207,9 +225,10 @@ In the next chapter, **Chapter 6: Foundation Model Pre-training**, we will desce
 ## References
 
 1. <a id="ref-1"></a>Jiang, A. Q., et al. (2024). *Mixtral of Experts*. arXiv preprint. [arXiv:2401.04088](https://arxiv.org/abs/2401.04088).
-2. <a id="ref-2"></a>Gale, T., et al. (2022). *MegaBlocks: Efficient Routing for Mixture-of-Experts*. arXiv preprint. [arXiv:2211.15841](https://arxiv.org/abs/2211.15841).
+2. <a id="ref-2"></a>Gale, T., et al. (2022). *MegaBlocks: Efficient Sparse Training with Mixture-of-Experts*. arXiv preprint. [arXiv:2211.15841](https://arxiv.org/abs/2211.15841).
 3. <a id="ref-3"></a>xAI. (2024). "Open Release of Grok-1." "xAI Blog". [Link](https://x.ai/blog/grok-os).
 4. <a id="ref-4"></a>DeepSeek-AI. (2024). *DeepSeek-V3 Technical Report*. arXiv preprint. [arXiv:2412.19437](https://arxiv.org/abs/2412.19437).
 5. <a id="ref-5"></a>Z.ai. (2026). *GLM-5.2: From Long Context to Long-Horizon Agents*. [Z.ai](https://z.ai/blog/glm-5.2).
 6. <a id="ref-6"></a>Z.ai. (2026). *GLM-5.2 model card and configuration*. [Hugging Face](https://huggingface.co/zai-org/GLM-5.2).
 7. <a id="ref-7"></a>DeepSeek-AI. (2026). DeepSeek-V4.1-Flash: Pushing the Limits of KV Cache Compression. [Source](https://arxiv.org/abs/2609.19969).
+8. <a id="ref-8"></a>Databricks (2024). [Introducing DBRX](https://www.databricks.com/blog/introducing-dbrx-new-state-art-open-llm).

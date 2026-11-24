@@ -1,71 +1,54 @@
 ---
 layout: ../../layouts/BookLayout.astro
-title: 8.1 The Power Law
+title: 8.1 Neural Scaling Laws and Loss Forecasts
 lang: en
 ---
 
 import PowerLawVisualizer from '../../components/chapter-8/PowerLawVisualizer.tsx';
 
-# 8.1 The Power Law: The Thermodynamics of Deep Learning
+<a id="81-the-power-law-the-thermodynamics-of-deep-learning"></a>
 
-Before 2020, deep learning architecture design was largely driven by intuition, heuristics, and trial-and-error. Engineers would build a model, train it, and hope the loss curve converged to a satisfactory number. The paradigm shifted as researchers found repeatable empirical trends that can often be approximated by **scaling laws** within a defined model, data, and optimization regime.
+# 8.1 Neural Scaling Laws and Loss Forecasts
 
-If backpropagation is the mechanics of deep learning, scaling laws are its thermodynamics. They describe the macroscopic behavior of the system—how the final loss of a model behaves as you scale up the fundamental resources: **Compute, Data, and Parameters**. 
+A team expects a 3.4% drop in validation loss if it doubles its training budget. What exactly falls by 3.4%? On a curve with a positive floor, the loss **above the floor** and the **total loss** have different percentage changes. You can [work through the difference with two budgets](#scaling-loss-floor) before using a fitted curve to price a larger run.
 
-This regularity lets teams use smaller pilot runs to forecast a larger run, but the forecast is conditional on the data, architecture, optimization, and extrapolation range and must carry uncertainty.
+<a id="the-empirical-discovery"></a>
 
----
+## What the experiments measured
 
-## The Empirical Discovery
+Hestness et al. found ranges where test error followed a power law as training data grew across several domains [[1]](#ref-1). Kaplan et al. measured language-model cross-entropy under three different constraints. They reported exponents around 0.076 for non-embedding parameter count $N$ with ample data, 0.095 for dataset size $D$ with large models and early stopping, and 0.050 for optimally allocated training compute $C$ with ample data. Their equations (1.1–1.3) fitted power laws directly to total test loss over the measured range [[2]](#ref-2).
 
-While early observations of predictable scaling were documented by Hestness et al. in 2017 [[1]](#ref-1), the definitive formalization for modern Large Language Models (LLMs) was published by OpenAI's Kaplan et al. in 2020 [[2]](#ref-2). 
+An exponent alone cannot tell a team how to spend a new compute budget. Kaplan et al. favored increasing model size faster than dataset size. Hoffmann et al. later varied both parameter count and training tokens and found that the two should increase by roughly the same **factor** along their compute-optimal frontier. Doubling both uses about four times the training compute under the dense-model approximation $C\propto ND$. The relationship is conditional on the training setup and objective [[2]](#ref-2) [[4]](#ref-4).
 
-By training dozens of Transformer models ranging from thousands to billions of parameters, they discovered that the cross-entropy test loss ($L$) decreases as a simple **power law** with respect to three variables, provided the other two are not acting as bottlenecks:
+<a id="the-mathematical-formulation"></a>
+<a id="the-irreducible-loss-floor"></a>
 
-1.  **$N$ (Parameters)**: The number of non-embedding parameters.
-2.  **$D$ (Data)**: The number of tokens trained on.
-3.  **$C$ (Compute)**: The total floating-point operations (FLOPs) used during training.
+## What a fitted floor can tell you
 
-### The Mathematical Formulation
+One possible forecast for total held-out cross-entropy, in nats per token, is
 
-The power law relationship can be expressed through three independent equations:
+$$
+L(C) = E + AC^{-\alpha}, \qquad L(C)-E=AC^{-\alpha}.
+$$
 
-$$ L(N) = \left(\frac{N_c}{N}\right)^{\alpha_N} + L_{\text{irreducible}} $$
+$C$ is a positive compute budget in fixed units, $A$ is a positive amplitude, $\alpha$ is a positive exponent, and $E$ is the asymptote assumed by this model. Hoffmann et al. included an additive term in their joint fit over parameters and training tokens. Their idealized interpretation relates it to the expected uncertainty of the next token given its context [[4]](#ref-4). With only a few measured budgets, several combinations of floor and exponent can explain almost the same losses. A fitted $E$ therefore carries estimation uncertainty. Changing the tokenizer, available context or evaluation distribution can also change what a loss per token measures.
 
-$$ L(D) = \left(\frac{D_c}{D}\right)^{\alpha_D} + L_{\text{irreducible}} $$
+<a id="log-log-linearity"></a>
+<a id="scaling-loss-floor"></a>
 
-$$ L(C) = \left(\frac{C_c}{C}\right)^{\alpha_C} + L_{\text{irreducible}} $$
+## Compare total loss with excess loss
 
-Where:
-*   $\alpha_N, \alpha_D, \alpha_C$ are the scaling exponents that dictate how fast the loss drops. Kaplan found these to be approximately $\alpha_N \approx 0.076$, $\alpha_D \approx 0.095$, and $\alpha_C \approx 0.050$.
-*   $N_c, D_c, C_c$ are constants representing characteristic scales.
-*   $L_{\text{irreducible}}$ is the **inherent entropy** of the dataset. 
+Take the illustrative curve $L(C)=1.5+10C^{-0.05}$ with a dimensionless compute budget. Moving from $C=100$ to $C=200$ takes total loss from **9.443 to 9.173** nats per token. Subtract the assumed floor of 1.5 at both budgets and excess loss moves from **7.943 to 7.673**. Both fall by about 0.271 nats per token using unrounded values. The same decrease amounts to **2.87% of total loss** and **3.41% of excess loss** because the starting values differ.
 
-> **A numerical intuition.** If the excess loss above the floor scales as $C^{-0.05}$, doubling compute multiplies that excess loss by $2^{-0.05} \approx 0.966$: about a 3.4% reduction. This is an illustration of the fitted equation, not a measured improvement for a particular model. The total loss falls by less than 3.4% when the floor is positive.
-
-### The Irreducible Loss Floor
-
-The term $L_{\text{irreducible}}$ represents a theoretical minimum. Natural language contains inherent ambiguity, noise, and unobserved context. Even a theoretical model with infinite parameters and infinite compute cannot perfectly predict the next token every single time. As models grow exponentially larger, the returns diminish as the loss curve flattens out, asymptotically approaching this entropy floor.
-
----
-
-## Log-Log Linearity
-
-The power law is most clearly visualized on a log-log plot. If we ignore the irreducible loss for a moment (assuming we are far from the floor), taking the logarithm of the compute scaling equation yields:
-
-$$ \log L(C) \approx -\alpha_C \log C + \log(C_c^{\alpha_C}) $$
-
-This is the equation of a straight line ($y = mx + b$). A fitted line becomes useful when it forecasts a larger, held-out pilot run. Straightness among smaller runs alone does not validate a hundredfold extrapolation.
+The excess loss traces a straight line on logarithmic axes: $\log(L-E)=\log A-\alpha\log C$. The total includes the additive floor, so its slope changes. In the calculator below, increase the starting budget by a factor of ten. Which percentage drop stays the same when you double that new budget?
 
 <PowerLawVisualizer client:load />
 
----
-
 ## Extrapolating with Constraints and Uncertainty
 
-Scaling-law forecasts are engineering estimates, not exact predictions. Use the same tokenizer, data snapshot, architecture family, evaluation harness, and training-quality criteria across a factorial pilot grid of model sizes $N$, token budgets $D$, and multiple seeds. Tune learning rate, batch, and warmup for each scale rather than turning small-model under-training into an apparent scaling law.
+Keep the tokenizer, data snapshot, architecture family and evaluation procedure fixed across pilots. Vary model size and token budget and replicate runs with different seeds. Tune the learning rate and warmup at each scale so a poorly optimized pilot does not masquerade as a scaling effect.
 
-The following educational fit constrains amplitude and exponent to be positive and the floor to lie between zero and the smallest observed loss. Compute is measured in PetaFLOPs: **1 ExaFLOP = 1,000 PetaFLOPs**, so the target is `1e3`, not `1e6`.
+This PyTorch fit uses five **illustrative** validation losses. It fits the four smaller runs, constrains the amplitude and exponent to be positive, and keeps the floor between zero and the smallest training-point loss. It predicts the held-out fifth point before looking at its loss. Budgets count operations: **1 ExaFLOP = 1,000 PetaFLOPs**.
 
 ```python
 import torch
@@ -89,63 +72,56 @@ class ConstrainedPowerLaw(nn.Module):
         floor = self.min_loss * torch.sigmoid(self.raw_floor_fraction)
         return amplitude * compute.pow(-exponent) + floor
 
-model = ConstrainedPowerLaw(validation_loss.min())
+training_compute = compute_pf[:-1]
+training_loss = validation_loss[:-1]
+model = ConstrainedPowerLaw(training_loss.min())
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
 for _ in range(5_000):
-    prediction = model(compute_pf)
-    loss = F.mse_loss(torch.log(prediction), torch.log(validation_loss))
+    prediction = model(training_compute)
+    loss = F.mse_loss(torch.log(prediction), torch.log(training_loss))
     optimizer.zero_grad()
     loss.backward()
     optimizer.step()
 
-one_exaflop_pf = torch.tensor([1_000.])
-print(model(one_exaflop_pf).item())
+with torch.no_grad():
+    forecast = model(compute_pf[-1]).item()
+actual = validation_loss[-1].item()
+print(f"forecast={forecast:.3f}, actual={actual:.3f}, error={forecast - actual:+.3f}")
 ```
 
-Five aggregate points are still insufficient for a funding decision. Resample whole pilot runs with a **bootstrap** to obtain parameter and forecast intervals; do not resample individual validation tokens as if training runs were independent. Perform a **leave-largest-out** test: fit without the largest run and forecast it. Report that error and reject extrapolations far beyond the validated compute ratio.
+The code gives a forecast of **2.921** against an illustrative held-out loss of **2.910**, an overestimate of **0.011 nats per token**. The held-out error tests whether four smaller points forecast a run about 3.3 times larger than the largest training point. To estimate uncertainty with replicated pilots, bootstrap whole runs within each scale and refit. Report the spread of forecast losses, the leave-largest-out error, and the largest compute ratio you have checked. For a budget decision also compare downstream evaluations and GPU-hours based on achieved FLOP/s, including evaluation, checkpointing and restarts.
 
-Reserve the largest planned pilot scale as a genuine forecast holdout. Compare predicted and actual validation loss, downstream checkpoint probes, achieved FLOP/s, restart overhead, and total cost. Convert peak FLOPs into GPU-hours using measured utilization and include data, checkpoint, evaluation, and failure overhead. A go/no-go band should include uncertainty and business value, not only a point estimate.
+<a id="the-mirage-of-emergent-abilities"></a>
 
----
+## Why a smooth loss curve can coexist with a jump in accuracy
 
-## The "Mirage" of Emergent Abilities
-
-A critical nuance in scaling laws is the distinction between **cross-entropy loss** and **downstream task accuracy**. 
-
-Cross-entropy often follows a smooth trend within a fitted regime, while capabilities on specific benchmarks can appear to show sudden, discontinuous jumps. Neither behavior is guaranteed outside the measured model, data, and optimization range.
-
-However, researchers like Schaeffer et al. (2023) [[3]](#ref-3) argue that this emergence is largely a mirage caused by the choice of metric. Cross-entropy is continuous; it measures the probability distribution over tokens. If a model improves its probability assigned to the correct answer from 1% to 10%, the loss drops smoothly. But on a multiple-choice benchmark, the model will still score 0% until that probability surpasses the competing incorrect options, at which point the accuracy suddenly spikes to 100%. 
-
-Metric choice can create or amplify apparent thresholds, as Schaeffer et al. demonstrate for studied settings [[3]](#ref-3). That result does not settle every emergence claim; engineers should inspect continuous metrics, contamination, prompting, and confidence intervals rather than treating either smoothness or discontinuity as universal.
-
----
+Consider a two-option question. If the model raises the probability of the correct option from 0.49 to 0.51, its log loss on the answer falls from about 0.713 to 0.673 nats. Yet choosing the most probable option changes the score for this one question from zero to one. On a benchmark, the size of a jump also depends on how many items cross such a boundary. Schaeffer et al. showed how the scoring rule can produce apparent thresholds in the settings they studied [[3]](#ref-3). Examine item-level probabilities and task scores together before interpreting a change in capability.
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: Why do researchers explicitly exclude embedding parameters when calculating $N$ for scaling laws?</summary>
-*Embedding parameters scale strictly with the vocabulary size (which is fixed) and the hidden dimension, rather than the depth or structural complexity of the core computational engine. Including them distorts the relationship between actual compute capability and loss, especially for smaller models where embeddings make up a disproportionately large fraction of total parameters.*
+<summary>Quiz 1: A pilot reports parameters including embeddings. Can you insert that count into Kaplan’s parameter-limited fit?</summary>
+*First recover the non-embedding count used for that fit. The embedding share can differ across models, especially when the vocabulary size changes. Match the counting convention and evaluation data before comparing the loss.*
 </details>
 
 <details>
-<summary>Quiz 2: In the equation $L(C) = (C_c / C)^{\alpha_C} + L_{\text{irreducible}}$, what physical or theoretical limit does $L_{\text{irreducible}}$ represent?</summary>
-*It represents the inherent entropy (or Bayes risk) of the dataset. Natural language contains inherent ambiguity, noise, and unobserved context. Even a theoretical model with infinite parameters and infinite compute cannot perfectly predict the next token every time; it can only approach this fundamental entropy floor.*
+<summary>Quiz 2: A fitted curve approaches 1.5 nats per token. What evidence would support using that value in a larger forecast?</summary>
+*Check a larger held-out run and see how much the estimated floor moves when you change the pilot subset or seed. Several floors can fit the same narrow range. Estimating the entropy of the token source would require separate evidence about its distribution.*
 </details>
 
 <details>
-<summary>Quiz 3: According to Kaplan's original findings, if you have a 10x increase in your compute budget, should you scale your model size and data equally?</summary>
-*No. Kaplan et al. concluded that performance scales more efficiently by allocating the majority of new compute to model size (parameters) rather than data. They suggested scaling parameters much faster than the dataset size. (Note: This conclusion was later famously challenged and corrected by the Chinchilla scaling laws, which advocated for a balanced 1:1 scaling approach).*
+<summary>Quiz 3: A team doubles both model size and token count. Under the dense training approximation, how much compute should it budget?</summary>
+*About four times the original compute because the two factors multiply. Hoffmann et al. reported similar growth factors along their empirical optimum. The absolute number of tokens per parameter depends on the recipe and objective.*
 </details>
 
 <details>
-<summary>Quiz 4: If scaling laws are so reliable, why do models sometimes experience sudden "loss spikes" during mid-training that deviate from the predicted curve?</summary>
-*Scaling laws predict the optimal, converged loss under stable training conditions. Loss spikes are optimization failures—often caused by bad data batches, learning rate mismanagement, or numerical instability (like exploding gradients in FP16). They represent a failure of the optimizer to navigate the loss landscape, not a breakdown of the theoretical scaling limit.*
+<summary>Quiz 4: Why does doubling compute cut excess loss by the same percentage at every starting point in the example?</summary>
+*The ratio of excess losses is $2^{-0.05}$ at every budget. Total loss includes the fixed 1.5 nats per token. As the excess shrinks, the floor makes up more of the total and the percentage reduction in total loss gets smaller.*
 </details>
-
----
 
 ## References
 
 1. <a id="ref-1"></a>Hestness, J., et al. (2017). *Deep Learning Scaling is Predictable, Empirically*. [arXiv:1712.00409](https://arxiv.org/abs/1712.00409).
-2. <a id="ref-2"></a>Kaplan, J., et al. (2020). *Scaling Laws for Neural Language Models*. [arXiv:2001.08361](https://arxiv.org/abs/2001.08361).
+2. <a id="ref-2"></a>Kaplan, J., et al. (2020). *Scaling Laws for Neural Language Models*, §1.2. [arXiv:2001.08361](https://arxiv.org/abs/2001.08361).
 3. <a id="ref-3"></a>Schaeffer, R., et al. (2023). *Are Emergent Abilities of Large Language Models a Mirage?*. [arXiv:2304.15004](https://arxiv.org/abs/2304.15004).
+4. <a id="ref-4"></a>Hoffmann, J., et al. (2022). *Training Compute-Optimal Large Language Models*, §3. [arXiv:2203.15556](https://arxiv.org/abs/2203.15556).

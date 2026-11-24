@@ -1,14 +1,16 @@
 ---
 layout: ../../layouts/BookLayout.astro
-title: "3.5 Complexity Analysis"
+title: "3.5 Attention Compute and KV Cache Memory"
 lang: "en"
 ---
 
 import ComplexityVisualizer from '../../components/chapter-3/ComplexityVisualizer';
 
-# 3.5 Complexity Analysis
+<a id="35-complexity-analysis"></a>
 
-Complexity is a budget model, not a latency benchmark. Distinguish the attention kernel from the complete layer, and parallel processing of known tokens from generation of unknown tokens. Those distinctions explain why a model can prefill a prompt efficiently yet decode slowly.
+# 3.5 Attention Compute and KV Cache Memory
+
+Double the prompt length from 4,096 to 8,192 tokens. A decoder that writes out every attention score now needs four times the space for those scores. Its ordinary KV cache only doubles. The two objects have different shapes. [Count the bytes in one layer](#attention-scores-vs-kv-cache), then compare how the work changes between prompt prefill and generating one more token.
 
 ## Count the operation being compared
 
@@ -25,7 +27,7 @@ An attention layer therefore costs $O(n^2d+nd^2)$; an FFN adds another width-dep
 
 ## Derive the attention terms
 
-For one head, $Q,K,V$ have shape $[n,d]$. Forming $QK^T$ computes $n^2$ dot products of width $d$, and multiplying the $[n,n]$ probability matrix by $V$ has the same leading cost. Softmax adds $O(n^2)$ work. Projecting an input $[n,d]$ through a $[d,d]$ matrix instead costs $O(nd^2)$.
+For a head of width $d_h$, the query, key and value matrices each have shape $[n,d_h]$. Forming $QK^T$ computes $n^2$ dot products of width $d_h$. Multiplying the $[n,n]$ probabilities by $V$ takes the same order of work. With $H$ query heads and $d=Hd_h$, the two matrix products together scale as $O(n^2d)$. Softmax also visits the $n^2$ scores in each head. By comparison, a single input projection from $[n,d]$ through a $[d,d]$ matrix costs $O(nd^2)$.
 
 One attention layer directly connects visible query–key positions; causal masking limits visibility to the past. An ordinary RNN passes a signal through recurrent steps. A convolution needs enough depth to cover the desired distance: logarithmic depth assumes a suitable dilation schedule, not arbitrary fixed-width convolutions.
 
@@ -35,25 +37,42 @@ During teacher-forced training or prefill, all input tokens are known. Their que
 
 During autoregressive decoding, the next token depends on the sampled previous token. With a KV cache, one new query attends to $n$ stored keys, costing $O(nd)$ for the attention core plus projections and FFN work. Generating many tokens still requires sequential decoding steps. Vanilla nonlinear RNNs have a recurrent dependency during both modes; specialized state-space scans are a separate case discussed in Chapter 20.
 
-## Materialized attention memory
+<a id="materialized-attention-memory"></a>
+<a id="attention-scores-vs-kv-cache"></a>
 
-A naive score tensor of shape $[B,H,n,n]$ consumes $BHn^2s$ bytes, where $B$ is batch size, $H$ is head count and $s$ is bytes per score. This is one tensor, not total training memory. Tiled exact attention can avoid storing the complete quadratic score matrix in device memory without removing quadratic dense-attention arithmetic; Chapter 7 explains FlashAttention. [[2]](#ref-2)
+## Why do attention scores quadruple while the KV cache only doubles?
 
-> **Educational payload estimate.** No tensor is allocated. This excludes weights, gradients, optimizer state, activations other than scores, temporary buffers, collectives, checkpoints and evaluation overhead.
+Take one request and one grouped-query attention layer with 32 query heads, 8 KV heads, and 128 values per head. In grouped-query attention, several query heads share a key and value head [[4]](#ref-4). Suppose scores, keys and values each use two bytes per element.
+
+| Prompt length | One dense prefill score tensor | Keys and values kept for decoding |
+| --- | ---: | ---: |
+| 4,096 tokens | 1,024 MiB | 16 MiB |
+| 8,192 tokens | 4,096 MiB | 32 MiB |
+
+The score tensor has a row **and** a column per prompt token in each query head. Doubling the prompt doubles both dimensions. The cache adds one key vector and one value vector per new token in each KV head. Doubling the prompt only doubles the number of stored positions. The table counts a *full* score tensor, including any masked slots, if an implementation materializes it. [FlashAttention](/chapter-7/flash-attention/) tiles the computation so it can avoid writing that tensor to device memory [[2]](#ref-2). The [KV cache budget](/chapter-12/kv-cache-management/#kv-cache-capacity) counts cached keys and values across layers and requests.
+
+The following Python counts elements from their shapes. It allocates no tensors and excludes weights, workspaces, padding and allocator overhead.
 
 ```python
-def score_memory_mib(n, batch=1, heads=8, bytes_per_score=4):
-    if min(n, batch, heads, bytes_per_score) < 1:
-        raise ValueError("positive dimensions required")
-    return batch * heads * n * n * bytes_per_score / 2**20
+from math import prod
 
-for n in [1000, 5000, 10000, 50000]:
-    print(f"n={n:,}: {score_memory_mib(n):,.2f} MiB")
+def attention_bytes(tokens):
+    # One sequence, one layer. All three tensors store 2-byte elements.
+    score_shape = (1, 32, tokens, tokens)
+    key_shape = value_shape = (1, 8, tokens, 128)
+    return 2 * prod(score_shape), 2 * (prod(key_shape) + prod(value_shape))
+
+for tokens in (4096, 8192):
+    scores, kv = attention_bytes(tokens)
+    print(tokens, scores // 2**20, kv // 2**20)
+# tokens, score MiB, KV MiB
+# 4096 1024 16
+# 8192 4096 32
 ```
 
 ## Explore the cost model
 
-The following values divide out a common factor $d$ from the growth terms. They are not measured FLOPs or speed and exclude projections. Normalize to the same units before interpreting the crossover.
+The following values divide out a common factor $d$ from the growth terms. They are not measured FLOPs or speed and exclude projections. Set the sequence length to the hidden width of 512. Both displayed terms are then 262,144. Double the length and compare which term grows faster.
 
 <ComplexityVisualizer client:load lang="en" />
 
@@ -88,3 +107,4 @@ Linear attention targets sequence-linear arithmetic at fixed feature dimension. 
 1. <a id="ref-1"></a>Vaswani, A., et al. (2017). *Attention is all you need*. Advances in neural information processing systems, 30. [arXiv:1706.03762](https://arxiv.org/abs/1706.03762).
 2. <a id="ref-2"></a>Dao et al. (2022). [FlashAttention](https://arxiv.org/abs/2205.14135).
 3. <a id="ref-3"></a>Kitaev et al. (2020). [Reformer: The Efficient Transformer](https://arxiv.org/abs/2001.04451).
+4. <a id="ref-4"></a>Ainslie et al. (2023). [GQA: Training Generalized Multi-Query Transformer Models from Multi-Head Checkpoints](https://arxiv.org/abs/2305.13245).

@@ -277,7 +277,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 3.2 | `/chapter-3/multi-head-attention` | Inspected 2026-11-25 | bc5026a7ec1b9aa4d5bc4589f7f6011630bc877efcb8d179954ee0560d8a705f | 4316a26ed2c414ccdb0c4f4ad6642d98286b9350748fd362920a1d183cac8b68 |
 | 3.3 | `/chapter-3/position-encoding-strategy` | Inspected 2026-11-25 | fde9e5daa7404ba9c213feaeac0bb80b8e6342ba2164885a911cb7e98ee4a1ef | 37d4d640ad0c9f5edbda4657a564c77931db24b6a455b646ab77eec260bfc51e |
 | 3.4 | `/chapter-3/layer-normalization-residuals` | Inspected 2026-11-25 | a3587f46c53f4796ac71f768e9561130af2c053e394f20d83a1d8f12a6841487 | a69ef3c4fc27e17f5313847ce8003f1b3acb57db1b99557a5354f904818065ba |
-| 3.5 | `/chapter-3/complexity-analysis` | Inspected 2026-11-15 | 528f765af0e658c5d7116b5d3651be5a3ec6496b5651970285143831e0344b2c | d5da6dea75982e92dc97033508aacd582e677911caa2afbfb61f1356fbf12537 |
+| 3.5 | `/chapter-3/complexity-analysis` | Inspected 2026-11-25 | 4fa50d4c3dc2ab7d3d3342dd207680fcbd5f5bc0ec089b4725f1a863335a9212 | 9480dd96b0734e9ab0d45990ea72fea9c76e501d5673bd58b5b32babcf39f030 |
 | 4.1 | `/chapter-4/encoder-only` | Inspected 2026-11-25 | d1ead46157733149700b6dbe04d9b4b762b926993bb8fbd5656077c6183979a9 | 20c6167fe0147b402577fea44ad27b8267f000770e267848e558f60acc6969cf |
 | 4.2 | `/chapter-4/decoder-only` | Inspected 2026-11-25 | 566f11bdb11a6760f26ac9639bd0922af4ad46077497b6332ca7d4647a090e8b | 7a42e67720a62c01c9801e20b6ef5523aa9f6fb0fe3b60cdb074afb20dc23897 |
 | 4.3 | `/chapter-4/encoder-decoder` | Inspected 2026-11-25 | a81d35a1f33c94b446e07b1a1c911d1288c7936c2231803a570350bdf7ff76ae | 124605867b0725c421d411857fa79b4d56f1a39a0f1c02d401f7c82686e5128a |
@@ -287,11 +287,11 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 5.2 | `/chapter-5/routing-algorithms` | Inspected 2026-11-15 | 3b83671dec53a4a69ee8c357d810ac48b3b2b069f1b54fdb76a8e567ae6ed3e7 | 436d75fa19297b28084c3bf55cb2e92e341e86d33370e1843de1c263a8f9d356 |
 | 5.3 | `/chapter-5/expert-parallelism` | Inspected 2026-11-25 | 75beb517abd6e9d61832a0e3cdb79eac46c214026c2cbd86c6946965d07209d8 | a34266db4231c9ecb6970fbe47c569dce99129dbe3e82c2027c050b8fe1fb9dc |
 | 5.4 | `/chapter-5/collapsing-load-balancing` | Inspected 2026-11-15 | 9eafbfd1e7b75ad8196d586895ed76c5c16b609fb3b6d7c3c6450331d3fbec83 | e882e33f29592a27d156efc7b998c7f7d1fa8a3f2e8f63179ad4319ef47ab56a |
-| 5.5 | `/chapter-5/case-study` | Inspected 2026-11-15 | f9e6e1c0fde57aac1cbcf9f3303676fb84e6e31a7b7f11e026ef961b61d8b0c8 | dd5217b2e0027bf27ea9b37275452ae728ce3a4f7471bf309303cf6888761297 |
+| 5.5 | `/chapter-5/case-study` | Mechanical only | 233d28301c04e7e23dcd0fcca92bd41c79d09a16fd2a33cf29cc3715df60c1de | a29bae4a04b6688590d092d63d11a3ba43d0a19c6de3f09508e7384eb4f54d1a |
 | 6.1 | `/chapter-6/data-engineering-at-scale` | Inspected 2026-11-15 | c962ed779370d70734cdc1d8dad26fd622732ab5add4b42eb33ca13d4e9e1978 | 196b5d2f730cb1450a5c68054444814151be61cda197d8cad6d5e761caf2e85e |
 | 6.2 | `/chapter-6/tokenization-science` | Inspected 2026-11-25 | 03294acc7ca109e3fed142bcff3754baecb663d9d849ec36774882333833e978 | d4eee208d2b4de687d045f3e745f9a8e4d63b573491deecad3c36dbee6020f31 |
 | 6.3 | `/chapter-6/large-scale-training-stability` | Inspected 2026-11-15 | 233421b292101c94f4746e41c29de6422c5c103333a5c1c6968cfe0cd3cc6604 | 149cc8e85a1db21731313a38038b3f3d23c5fdc16711b51534764c5e4fd2da89 |
-| 6.4 | `/chapter-6/infrastructure` | Inspected 2026-11-15 | db766374738bc9706d644b19fc1d6ff8dcddbe74bc265f21de02ac95efbffa6d | 04218b7b41cc9ee92416a1f69070eebbbb6afcb6994a1fff5c98fe3e8b5de264 |
+| 6.4 | `/chapter-6/infrastructure` | Mechanical only | b6d232e0decc655e38767ca986e99f77e30350ea24241c4bbf8e74737e3779b1 | b51344d034e91b490957311ea8525b46aa9ff09ae2f602ed8481a44513546c06 |
 | 6.5 | `/chapter-6/synthetic-data-for-pre-training` | Mechanical only | 3d2bab63db26c5456f88eab0f51e2e7e70ac49d93d868427783f625e4ae166ee | dd5381b0b44cb0223b04f689d010f40ea3349d668ebf9e79c98fe3d3204af54c |
 | 6.6 | `/chapter-6/optimization-mechanics` | Inspected 2026-11-17 | 942111c9629675b61e7af38dd1e0bb94a0dbe0aeff5c9d142fd7c7d0cc167b3e | 948f68b51e05f15a67755538714f595ff03ec214fe3c5d518eb6ebbff8000c22 |
 | 7.1 | `/chapter-7/data-parallelism` | Mechanical only | 8c37d63a720ee64a8c4f37ac09c3062f12df4870500f1ee54d598637de7e8b8c | 7b3a07ce3c7c5ba3deb802af571117fcae1656b049e6b412614823b96c01b65d |
@@ -299,7 +299,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 7.3 | `/chapter-7/model-and-pipeline-parallelism` | Inspected 2026-11-15 | 0832cffc306946b61c817850cb07cdbebf0d06aadfe607b6b7dfe75d14d010bf | b645ef818ecb8e33702468b9dcacf90a130b6c229ed8603d055736e2e62f5db4 |
 | 7.4 | `/chapter-7/flash-attention` | Mechanical only | f305f222c5d296652a665982d6148449b7cebebdd7073ee35ef221b39b750c4c | 7c296161f2a6d17d2c88531884e7a2ffb62021cfaf28828e9166c201a8df5184 |
 | 7.5 | `/chapter-7/tiny-decoder-lab` | Inspected 2026-11-25 | e855d8e90f0da026ba2b97b342f6b6feee3f264d0f46bf8a985ac077ed4eebfc | 9299aa74b6e4dabec77479c7b7525af56a827f90ba8795c58e4d103bc33093e8 |
-| 8.1 | `/chapter-8/power-law` | Inspected 2026-11-18 | 4a7985e2e292146826fa76fc39706838e6e5246fcb507f4fec94dc263ef2ba8a | 5d01ec1c25346796843c2fe7b635968a64b28f6333b2925a32884fb9364b884e |
+| 8.1 | `/chapter-8/power-law` | Inspected 2026-11-25 | d9ddae9989d61f9dec504a5b8a86c009fe5bb57658d489991f81c1d33d3c66f6 | 482270405ec30af6901da2b5baeffa4f2321c13de63203f3ea1861b0cc526e93 |
 | 8.2 | `/chapter-8/chinchilla-optimality` | Inspected 2026-11-15 | a5c303a07cd048a5700ec4cf86eeb44387cdcc43775eb4a2c5678f4aed6250d1 | 113d3edaa8047c8e5b5455f712a931429e550d22c1d260be5947dab80f4ef2a6 |
 | 8.3 | `/chapter-8/over-training-vs-optimal-training` | Inspected 2026-11-15 | 0cd59dc676f0efe54f93a85775af740fc13bd689502b3ead940bf61212f2d83c | 21d9ca8bfbe9e711f63a75a24d0760d53ffdd87d8f22954f7ac911f7c0a18248 |
 | 8.4 | `/chapter-8/transfer-learning-and-generalization` | Inspected 2026-11-15 | 6149872f6cc783dadf7e47acf48874d9abc6519c56fc7757b4d90f038decb547 | 0ac5c5ffb3ff08bc0fdf8fdde2e69bf8bdc9e69674d6e97a2b7cc3ee5c286290 |
@@ -320,7 +320,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 11.4 | `/chapter-11/image-diffusion-models` | Inspected 2026-11-24 | 5bb8bc33ff8adf86105e24018b03423e9f19e0d29739f64b843c0cbeadea05e8 | 308de426fdbc7b1c845a4d63be36b83988abe2eb36026affba1dd101194816b7 |
 | 11.5 | `/chapter-11/video-generation-foundations` | Inspected 2026-11-15 | b34544d0352be5feafdfc0d30ac23092d50edf3a3af5f3e4d37cc62531230c20 | 55c0488a07c962041cdbb0cdb945d18c8e136b23dba2aed6f6970f1c33cb4b4b |
 | 11.6 | `/chapter-11/commercial-video-models` | Mechanical only | 12216aad67ffc900bcfe437f20a7fcf9be618ccc5d617f698f4466ef15ff33cb | 6ee6e17876daa24bd17b8d709b7f541276019da545887510035b916819ae13a3 |
-| 12.1 | `/chapter-12/kv-cache-management` | Inspected 2026-11-25 | 77d67f8b9d9f673da82caab028ba83d26d05ac39c859f34e4416ff28608ac5fb | 68cb301badb2236bf919bc2e750050c20d192757268c7b334c48b65e9f61ad77 |
+| 12.1 | `/chapter-12/kv-cache-management` | Inspected 2026-11-25 | a7ce8a5dc54ae8b03354c5dd90c17b93d823b1053b4bbf41fff3fda24ad43013 | a8e898bd2c91425f6ec53ec669bbec850d6a02b7c7e0148f22b93ab54f414838 |
 | 12.2 | `/chapter-12/paged-attention-vllm` | Inspected 2026-11-25 | 52cf569f107eda54688b02ae4a5149d5191e4e56e3241ffe32a2b53ae8bc66d8 | 14402809f988d4e8b12edd29476af19ece120d3abe6c86ac16ca1a664496bb46 |
 | 12.3 | `/chapter-12/continuous-batching` | Inspected 2026-11-25 | 588de002d211758e1fbb83af67004497e5280cad3512efc790f73f9b3d2a24b3 | 3f9ff09b65675139196bd073123e28a306180a8ec7d07398d1e331351f5a7124 |
 | 12.4 | `/chapter-12/speculative-decoding` | Inspected 2026-11-25 | a5f93ea8411bab0fe68bf277224f8f19f111ac0f0fd73f6b4eda75739a8990b5 | 61986787b62bf6d99f59ab08a66d2ea6312e472faea94ded13c4a7d627d03cc4 |
@@ -713,3 +713,8 @@ A delayed-script replay on §1.4 also caught an early input that moved the alloc
 For §7.2, compared the original four-rank figure with each ZeRO stage, then ran the replacement CPU exercise with four Gloo workers. Rank 2 received mean gradients 12.5 and 15. Its updated weights were 3.75 and 4.5. Each rank checked the gathered weights against a single unsharded update. The separate 16-byte Adam example gives 128, 56, 44 and 32 persistent bytes per worker for eight weights.
 
 For §§13.1 and 17.6, checked Baidu’s pinned model cards, weight indexes and actual shard headers for the three ERNIE 5.5 Flash Preview checkpoints. The selected expert weight uses 2, 4 and 8 MiB respectively, excluding scales. The default stores 128 KiB of companion scales. The training method is attributed to the model card.
+
+### November 25, 2026 — Attention memory, expert routing, and loss forecasts
+
+- §3.5, §8.1 and §12.1 received bilingual lesson and example checks. The memory example counts two different tensor shapes. The scaling-law exercise separates total and excess loss and holds out the largest trial. The cache example distinguishes simultaneous residency from completion under a sequential schedule.
+- §5.5 and §6.4 received narrower edits. In §5.5 the six-token layout replaces a drawing that suggested tiles of varying size. In §6.4 the transfer example uses effective point-to-point bandwidth. Their inventory rows carry the updated file hashes without claiming a new whole-page review.

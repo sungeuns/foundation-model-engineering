@@ -1,67 +1,84 @@
 ---
 layout: ../../../layouts/BookLayout.astro
-title: "5.5 사례 연구: MoE 아키텍처와 시스템 절충"
+title: "5.5 Mixtral·DBRX·DeepSeek의 MoE 라우팅"
 lang: "ko"
-description: "Mixtral 8x7B, DBRX, Grok-1, DeepSeek-V3를 포함한 과거·최근 Mixture of Experts (MoE) 아키텍처의 라우팅 전략, 파라미터 효율성 및 엔지니어링 혁신에 대한 심층 분석."
 ---
 
-# 5.5 사례 연구: MoE 아키텍처와 시스템 절충
+<a id="55-사례-연구-moe-아키텍처와-시스템-절충"></a>
 
+# 5.5 Mixtral·DBRX·DeepSeek의 MoE 라우팅
 
-MoE는 모델 용량과 토큰당 연산을 분리하는 설계입니다. Dense 블록은 토큰마다 전체 변환을 실행하고 MoE는 expert를 선택적으로 활성화합니다. 임베딩 lookup과 공유 구성 요소는 별도 회계가 필요합니다. 활성 연산을 줄일 수 있지만 실제 지연은 dispatch·메모리 전송·배치에 달려 있습니다.
-
-이번 케이스 스터디에서는 네 가지 기념비적인 **MoE** 아키텍처인 **Mixtral 8x7B** , **DBRX** , **Grok-1** , 그리고 **DeepSeek-V3** 를 기술적으로 해부해 보겠습니다. 단순히 스펙을 나열하는 것을 넘어, 각 연구팀이 규모와 효율성의 파레토 프론티어(Pareto frontier)를 돌파하기 위해 선택한 구체적인 엔지니어링 트레이드오프와 라우팅 혁신을 분석합니다.
+Mixtral 8x7B는 층마다 전문가 8개 중 2개를, DBRX는 16개 중 4개를 고릅니다. 어느 쪽이든 토큰 하나에 배정되는 전문가의 비율은 4분의 1입니다. 그런데 한 층에서 고를 수 있는 전문가 조합은 각각 28가지와 1,820가지입니다. 이 수가 무엇을 알려 주는지 살펴본 뒤, 실제로 메모리에 올리는 가중치와 토큰 하나가 거치는 계산을 구분해 봅시다. [[1]](#ref-1) [[8]](#ref-8)
 
 ---
 
-## 1. Mixtral 8x7B: 오픈소스 MoE의 촉매제
+<a id="1-mixtral-8x7b-오픈소스-moe의-촉매제"></a>
+
+## 1. Mixtral 8x7B의 전문가 가중치
 
 Mixtral 8x7B의 공개 가중치와 기술 보고서는 희소 MoE를 직접 검증할 수 있는 사례를 제공했습니다. [[1]](#ref-1) 이를 GPT-4의 규모나 내부 구조에 대한 증거로 사용할 수는 없습니다. 해당 세부 사항은 공개되지 않았습니다.
 
-### "8x7B"라는 이름의 오해
-"8x7B"라는 이름은 훌륭한 마케팅 용어이지만, 기술적으로는 오해의 소지가 있습니다. 가장 흔한 오해는 Mixtral이 70억(7B) 개의 파라미터를 가진 독립적인 모델 8개의 앙상블이며, 따라서 총 560억(56B) 개의 파라미터를 가질 것이라는 생각입니다. 하지만 실제 Mixtral의 총 파라미터 수는 **47B** 개이며, 특정 토큰에 대한 포워드 패스(Forward pass) 동안 활성화되는 파라미터는 **13B** 개뿐입니다.
+<a id="8x7b라는-이름의-오해"></a>
 
-왜 47B일까요? Transformer 아키텍처에서 Self-Attention 메커니즘과 토큰 임베딩은 모든 전문가(Expert) 간에 **공유** 됩니다. 오직 Feed-Forward Network (FFN) 레이어만이 복제됩니다.
-Dense 7B 모델의 어텐션 파라미터를 $P_{attn}$ , FFN 파라미터를 $P_{ffn}$ 이라고 할 때, Mixtral의 대략적인 총 파라미터 수는 다음과 같이 계산됩니다.
+### 8개 전문가의 파라미터는 어떻게 세나?
 
-$$ P_{total} = P_{attn} + (8 \times P_{ffn}) \approx 47B $$
+Mixtral은 어텐션과 임베딩 등 공통 가중치를 한 벌만 보관하고 피드포워드 블록의 가중치를 전문가별로 둡니다. 논문은 전체 파라미터를 약 470억 개, 토큰당 활성 파라미터를 약 130억 개로 집계합니다. [[1]](#ref-1)
 
-### 라우팅 메커니즘 (Routing Mechanism)
-Mixtral은 8개의 전문가 중 2개를 선택하는 표준적인 Top-2 라우팅 메커니즘($K=2, N=8$)을 사용합니다. 주어진 입력 상태 $x$ 에 대해, 라우터는 Top-2 로짓(Logits)에 소프트맥스(Softmax)를 적용하여 게이팅 벡터 $G(x)$ 를 계산합니다. **MoE** 레이어의 출력은 선택된 두 전문가의 가중합(Weighted sum)이 됩니다.
+모든 층의 공통 파라미터 수를 $P_s$, 층마다 전문가 하나씩의 파라미터 수를 합친 값을 $P_e$ 라고 합시다. 한 층의 전문가들은 크기가 같으므로 어떤 전문가를 골라도 개수는 같습니다.
 
-$$ y = \sum_{i=1}^{2} G(x)_i E_i(x) $$
+$$ P_{\mathrm{total}}=P_s+8P_e,\qquad P_{\mathrm{active}}\approx P_s+2P_e. $$
 
-토큰당 단 두 개의 전문가만 활성화하므로 Mixtral은 약 13B의 active parameter만 계산하면서 47B의 전체 parameter를 유지합니다. 다만 이 숫자가 dense 13B와 같은 latency를 보장하지는 않습니다. 모든 expert weight를 메모리에 올려야 하고, routing communication과 batch shape에 따른 kernel utilization 차이가 남습니다. 그럼에도 Mixtral은 sparse MoE가 효율적으로 학습되고, 양자화하면 hyperscaler 밖에서도 배포될 수 있음을 보여 주었습니다.
+<a id="라우팅-메커니즘-routing-mechanism"></a>
+
+### 토큰 하나를 두 전문가에 보내기
+
+입력 상태를 $x$, 전문가 $i$ 의 출력을 $E_i(x)$ 라고 씁니다. 라우터는 점수가 가장 높은 전문가 두 개의 인덱스를 집합 $S(x)$ 로 고릅니다. 이 두 점수에 소프트맥스를 적용해 가중치 $g_i(x)$ 를 구하면 층의 전문가 출력은 다음과 같습니다.
+
+$$ y = \sum_{i\in S(x)}g_i(x)E_i(x). $$
+
+이번 토큰이 고르지 않은 전문가를 다음 토큰이 고를 수도 있습니다. 모든 전문가를 장치에 상주시킨 서버라면 가중치 용량은 전체 파라미터를 기준으로 잡아야 합니다. 실제 지연 시간은 어떤 장치로 토큰을 보내는지, 각 전문가가 한 번에 몇 개를 처리하는지에도 달려 있습니다.
 
 ---
 
-## 2. DBRX: Fine-Grained 전문가의 힘
+<a id="2-dbrx-fine-grained-전문가의-힘"></a>
 
-Mixtral이 Coarse-Grained (거친 입자의) **MoE** 의 실행 가능성을 증명했다면, Databricks의 **DBRX** 는 MegaBlocks 프레임워크 [[2]](#ref-2) 를 기반으로 한 **Fine-Grained (세밀한) MoE 아키텍처** 를 도입하여 다른 길을 개척했습니다.
+## 2. DBRX의 전문가 조합
 
-### 조합의 폭발 (Combinatorial Explosion)
-**DBRX** 는 총 132B 파라미터를 가지며, 활성 파라미터는 36B입니다. 8개의 거대한 전문가 중 2개를 선택하는 대신, **DBRX** 는 **16개의 더 작은 전문가를 사용하고 4개를 선택** ($K=4, N=16$) 합니다.
+DBRX의 기본 단위도 피드포워드 전문가입니다. Databricks는 모델 전체 1,320억 개 중 토큰당 활성 파라미터를 360억 개로 보고했습니다. [[8]](#ref-8)
 
-Mixtral과 **DBRX** 모두 사용 가능한 FFN 파라미터의 25%를 활성화하지만, 표현력(Representation power) 측면에서 수학적 의미는 완전히 다릅니다. 단일 레이어를 통과할 때 토큰이 취할 수 있는 가능한 라우팅 조합(전문가 경로)의 수는 이항 계수 $\binom{N}{K}$ 로 결정됩니다.
+<a id="조합의-폭발-combinatorial-explosion"></a>
+
+### 네 전문가를 고르는 방법은 몇 가지일까?
+한 층에서 크기가 같은 전문가 $N$ 개 중 서로 다른 $K$ 개를 고릅니다. 순서를 구분하지 않을 때 가능한 집합 수는 $\binom{N}{K}$ 입니다.
 
 *   **Mixtral (8 choose 2):** $\binom{8}{2} = 28$ 개의 가능한 경로.
 *   **DBRX (16 choose 4):** $\binom{16}{4} = 1820$ 개의 가능한 경로.
 
 DBRX는 레이어당 순서 없는 expert 부분집합을 약 65배 많이 제공합니다. 그러나 조합 수만으로 학습된 전문화·실제 표현력·품질을 측정할 수는 없습니다. expert 크기·routing·데이터·최적화도 다릅니다.
 
-### Dropless Routing (MegaBlocks)
-전통적인 **MoE** 구현은 GPU 연산을 위한 정적 텐서(Static tensor) 형태를 유지하기 위해 각 전문가에게 엄격한 "용량 계수(Capacity factor)"를 강제합니다. 만약 한 전문가에게 너무 많은 토큰이 몰리면, 초과된 토큰은 단순히 **버려집니다 (Dropped)**. 즉, FFN 처리를 거치지 않고 Residual connection을 통해 그대로 통과하게 되어 성능 저하를 유발합니다.
+<a id="dropless-routing-megablocks"></a>
+<a id="dropless-routing-example"></a>
 
-**DBRX** 는 Block-Sparse 행렬 곱셈을 사용하여 **MoE** 연산을 재구성한 MegaBlocks를 활용합니다. 이를 통해 전문가의 크기를 동적으로 조정할 수 있으며, 토큰이 버려지는 현상을 완전히 제거하는 **Dropless Routing** (드롭리스 라우팅)을 구현합니다. 또한 활용도가 낮은 전문가를 패딩(Padding)하는 데 낭비되는 연산량도 방지합니다.
+### 토큰을 버리지 않는 MegaBlocks의 계산 방식
 
-![MegaBlocks의 Dropless Block-Sparse Routing 시각화](../../../assets/images/chapter-5/megablocks-dropless-routing.png)
-*출처: AI 생성 이미지*
+훈련 중 여섯 토큰을 보냅니다. 계산을 따라가기 쉽도록 토큰마다 전문가를 하나만 고른다고 합시다. A에 네 개(T1–T4), B에 두 개(T5–T6)가 배정되고 C에는 하나도 가지 않습니다. 아래 대괄호 하나는 **토큰 두 개분의 계산 공간**입니다. 실제 커널의 블록 크기와 별개로 정한 예제입니다.
+
+| 전문가 | 전문가당 두 자리로 고정 | 필요한 수만큼 두 자리 블록 배정 |
+| --- | --- | --- |
+| A | `[T1 T2]` · T3, T4 초과 | `[T1 T2]` `[T3 T4]` |
+| B | `[T5 T6]` | `[T5 T6]` |
+| C | `[빈칸 빈칸]` | 배정할 블록 없음 |
+
+고정 방식에서는 C의 두 자리가 비어 있어도 A의 초과 토큰 두 개가 이 층의 전문가 계산을 건너뜁니다. 오른쪽은 A에 블록을 하나 더 주어 여섯 토큰을 모두 처리합니다. MegaBlocks는 전문가별로 배정된 토큰 수를 블록 단위 연산으로 처리합니다. 달라지는 것은 전문가의 가중치 크기가 아니라 **블록 수**입니다. A, B, C에 토큰이 각각 3개, 2개, 1개라면 두 자리 블록에는 총 두 자리가 비게 됩니다. [[2]](#ref-2)
+
 
 ---
 
-## 3. Grok-1: 브루트 포스 스케일링 (Brute Force Scaling)
+<a id="3-grok-1-브루트-포스-스케일링-brute-force-scaling"></a>
 
-xAI가 개발한 **Grok-1** [[3]](#ref-3) 은 무식할 정도의 크기 확장이 가진 힘을 보여줍니다. 오픈 소스로 공개될 당시, 이 모델은 무려 **314B** 에 달하는 총 파라미터를 자랑하며 현존하는 가장 큰 오픈 소스 모델 중 하나로 자리 잡았습니다.
+## 3. Grok-1의 가중치 저장 용량
+
+xAI가 공개한 Grok-1 기본 모델의 전체 파라미터 수는 3,140억 개입니다. [[3]](#ref-3)
 
 Grok-1은 Top-2 expert routing을 사용합니다 [[3]](#ref-3). 여덟 expert 중 둘을 고른다고 전체 파라미터의 정확히 1/4이 활성화되는 것은 아닙니다. 공유 어텐션·임베딩·expert 크기도 포함해야 합니다. 총파라미터의 단순 비율로 문서화된 활성 파라미터 정의를 대신하지 않습니다.
 
@@ -217,9 +234,10 @@ Mixtral에서 DeepSeek-V3로 이어지는 **MoE** 아키텍처의 진화는 지�
 ## References
 
 1. <a id="ref-1"></a>Jiang, A. Q., et al. (2024). *Mixtral of Experts*. arXiv preprint. [arXiv:2401.04088](https://arxiv.org/abs/2401.04088).
-2. <a id="ref-2"></a>Gale, T., et al. (2022). *MegaBlocks: Efficient Routing for Mixture-of-Experts*. arXiv preprint. [arXiv:2211.15841](https://arxiv.org/abs/2211.15841).
+2. <a id="ref-2"></a>Gale, T., et al. (2022). *MegaBlocks: Efficient Sparse Training with Mixture-of-Experts*. arXiv preprint. [arXiv:2211.15841](https://arxiv.org/abs/2211.15841).
 3. <a id="ref-3"></a>xAI. (2024). "Open Release of Grok-1." "xAI Blog". [Link](https://x.ai/blog/grok-os).
 4. <a id="ref-4"></a>DeepSeek-AI. (2024). *DeepSeek-V3 Technical Report*. arXiv preprint. [arXiv:2412.19437](https://arxiv.org/abs/2412.19437).
 5. <a id="ref-5"></a>Z.ai. (2026). *GLM-5.2: From Long Context to Long-Horizon Agents*. [Z.ai](https://z.ai/blog/glm-5.2).
 6. <a id="ref-6"></a>Z.ai. (2026). *GLM-5.2 model card and configuration*. [Hugging Face](https://huggingface.co/zai-org/GLM-5.2).
 7. <a id="ref-7"></a>DeepSeek-AI. (2026). DeepSeek-V4.1-Flash: Pushing the Limits of KV Cache Compression. [Source](https://arxiv.org/abs/2609.19969).
+8. <a id="ref-8"></a>Databricks (2024). [Introducing DBRX](https://www.databricks.com/blog/introducing-dbrx-new-state-art-open-llm).

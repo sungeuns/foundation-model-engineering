@@ -239,8 +239,12 @@ test('the two homepages and the six collected lessons link to their serving EPUB
     assert.equal(epubLinks.length, home || collected.has(lesson) ? 1 : 0, route);
     if (!epubLinks.length) continue;
     const [link] = epubLinks;
-    assert.equal(link[1], `https://github.com/sungeuns/foundation-model-engineering/releases/download/serving-guide-2026-11/llm-serving-${lang}.epub`, route);
+    assert.equal(link[1], `https://github.com/sungeuns/foundation-model-engineering/releases/download/serving-guide-2026-11/llm-serving-${lang}-r2.epub`, route);
     assert.ok(link[0].includes('type="application/epub+zip"'), route);
+    if (home) {
+      const readme = readFileSync(lang === 'en' ? 'README.md' : 'README.ko.md', 'utf8');
+      assert.ok(readme.includes(`(${link[1]})`), `${lang}: README links to the same edition`);
+    }
     if (!home) assert.ok(link.index < html.indexOf('<main'), `${route}: keep self-downloads outside exported lesson text`);
   }
 });

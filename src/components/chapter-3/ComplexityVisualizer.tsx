@@ -1,72 +1,39 @@
-import React, { useState } from 'react';
+import { useEffect, useId, useState } from 'react';
+import './visualizers.css';
 
-interface ComplexityVisualizerProps {
-  lang?: 'en' | 'ko';
-}
-
-export default function ComplexityVisualizer({ lang = 'en' }: ComplexityVisualizerProps) {
-  const [seqLen, setSeqLen] = useState(1000);
-  const d = 512;
-
-  const attnOps = seqLen * seqLen;
-  const rnnOps = seqLen * d;
-
-  const labels = {
-    en: {
-      label: "Sequence Length (n):",
-      attn: "Attention-core growth term / d: n²",
-      rnn: `RNN growth term / d: n × d; d=${d}`
-    },
-    ko: {
-      label: "시퀀스 길이 (n):",
-      attn: "어텐션 핵심 성장 항 / d: n²",
-      rnn: `RNN 성장 항 / d: n × d; d=${d} 가정`
-    }
-  };
-
-  const t = labels[lang] || labels.en;
+export default function ComplexityVisualizer({ lang = 'en' }: { lang?: 'en' | 'ko' }) {
+  const ko = lang === 'ko';
+  const width = 512;
+  const maxLength = 5000;
+  const id = useId();
+  const [length, setLength] = useState(width);
+  const [ready, setReady] = useState(false);
+  useEffect(() => setReady(true), []);
+  const format = new Intl.NumberFormat(ko ? 'ko-KR' : 'en-US');
 
   return (
-    <div style={{
-      padding: '20px',
-      marginTop: '2rem',
-      marginBottom: '2rem',
-      background: 'rgba(255, 255, 255, 0.7)',
-      backdropFilter: 'blur(10px)',
-      WebkitBackdropFilter: 'blur(10px)',
-      border: '1px solid rgba(255, 255, 255, 0.3)',
-      boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.1)',
-      borderRadius: '12px'
-    }}>
-      <div style={{ textAlign: 'center' }}>
-        <label style={{ fontWeight: 'bold', marginRight: '10px', color: '#1e293b' }}>{t.label}</label>
-        <input
-          aria-label={t.label}
-          type="range"
-          min="100"
-          max="5000"
-          step="100"
-          value={seqLen}
-          onChange={(e) => setSeqLen(parseInt(e.target.value))}
-          style={{ width: '60%', verticalAlign: 'middle' }}
-        />
-        <span style={{ fontWeight: 'bold', color: '#8e44ad', marginLeft: '10px' }}>{seqLen.toLocaleString()}</span>
-      </div>
-
-      <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: '20px' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '0.9rem', color: '#7f8c8d' }}>{t.attn}</div>
-          <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#e74c3c', marginTop: '10px' }}>
-            {attnOps.toLocaleString()}
-          </div>
+    <section className="complexity-comparison" aria-labelledby={id}>
+      <h3 id={id}>{ko ? '은닉 차원 512에서의 연산량 비교' : 'Compare growth at a hidden width of 512'}</h3>
+      <fieldset disabled={!ready}>
+        <label>
+          {ko ? '시퀀스 길이' : 'Sequence length'} <strong>{format.format(length)}</strong>
+          <input type="range" min="100" max={maxLength} step="4" value={length}
+            onChange={event => setLength(event.currentTarget.valueAsNumber)} />
+        </label>
+        <button type="button" disabled={length * 2 > maxLength} onClick={() => setLength(length * 2)}>
+          {ko ? '길이 두 배로' : 'Double the length'}
+        </button>
+      </fieldset>
+      <dl aria-live="polite" aria-atomic="true">
+        <div>
+          <dt>{ko ? '어텐션 핵심 연산' : 'Attention core'} · n²</dt>
+          <dd>{format.format(length * length)}</dd>
         </div>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '0.9rem', color: '#7f8c8d' }}>{t.rnn}</div>
-          <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#27ae60', marginTop: '10px' }}>
-            {rnnOps.toLocaleString()}
-          </div>
+        <div>
+          <dt>{ko ? '순환층 연산' : 'Recurrent layer'} · n × 512</dt>
+          <dd>{format.format(length * width)}</dd>
         </div>
-      </div>
-    </div>
+      </dl>
+    </section>
   );
 }

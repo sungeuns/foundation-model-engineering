@@ -283,8 +283,8 @@ export const searchDescriptions = {
     ko: '두 특성에 10을 더하면 LayerNorm과 RMSNorm 중 어느 쪽의 출력이 달라질까요? 브라우저에서 엡실론을 바꾸고, PyTorch와 Pre-LN·Post-LN 예제로 확인합니다.',
   },
   '/chapter-3/complexity-analysis': {
-    en: 'Analyze Transformer computation and memory complexity, compare sequence-model costs, and visualize the quadratic growth of attention.',
-    ko: 'Transformer의 연산량과 메모리 복잡도를 분석하고 시퀀스 모델별 비용을 비교하며, 어텐션의 제곱 증가를 시각화로 확인합니다.',
+    en: 'Double a prompt from 4,096 to 8,192 tokens and count the bytes in attention scores and the KV cache. Compare prefill with one decoding step.',
+    ko: '프롬프트를 4,096토큰에서 8,192토큰으로 늘려 어텐션 점수와 KV 캐시의 크기를 직접 계산하고, 프리필과 디코딩 한 단계에 필요한 연산을 비교합니다.',
   },
   '/chapter-4/encoder-only': {
     en: 'Why can BERT score a word it never masked? Trace one attention row, compare two masked language modeling losses in PyTorch, and see how padding affects each calculation.',
@@ -319,8 +319,8 @@ export const searchDescriptions = {
     ko: 'MoE의 전문가 붕괴를 진단하고 부하 분산 손실, 용량 계수, 토큰 드롭, 라우터 z-loss와 보조 손실 없는 라우팅을 비교합니다.',
   },
   '/chapter-5/case-study': {
-    en: 'Study MoE architecture case studies through expert granularity, routing, active parameters, and the limits of publicly disclosed model details.',
-    ko: '전문가의 세분화, 라우팅, 활성 파라미터를 중심으로 MoE 아키텍처 사례를 비교하고 공개된 모델 정보의 한계를 살펴봅니다.',
+    en: 'Mixtral selects two of eight experts, DBRX four of sixteen. Count the expert combinations, then follow six token assignments through fixed-capacity and dropless routing.',
+    ko: 'Mixtral은 전문가 8개 중 2개를, DBRX는 16개 중 4개를 선택합니다. 가능한 조합을 세고, 토큰 여섯 개를 배정해 고정 용량 방식과 드롭리스 라우팅을 비교해 보세요.',
   },
   '/chapter-6/data-engineering-at-scale': {
     en: 'Design pre-training data pipelines with immutable manifests, evaluation quarantine, deterministic sharding, resumable loading, and acceptance tests.',
@@ -351,8 +351,8 @@ export const searchDescriptions = {
     ko: '파이프라인·텐서·시퀀스·문맥 병렬화를 비교하고, 3D 병렬화에서 통신 비용과 실행 스케줄이 어떻게 결합되는지 이해합니다.',
   },
   '/chapter-8/power-law': {
-    en: 'Understand empirical neural scaling laws, log-log relationships, extrapolation uncertainty, and why apparent emergence depends on measurement.',
-    ko: '신경망의 경험적 스케일링 법칙, 로그-로그 관계와 외삽의 불확실성을 이해하고, 창발적으로 보이는 현상이 측정에 좌우되는 이유를 살펴봅니다.',
+    en: 'Double a training budget and compare total loss with loss above the assumed floor. Fit a power law in PyTorch and check its forecast on a held-out run.',
+    ko: '연산 예산을 두 배로 늘려 전체 손실과 가정한 하한 위의 손실이 각각 얼마나 줄어드는지 계산합니다. PyTorch로 곡선을 맞추고 따로 남긴 실행 결과로 예측을 검증합니다.',
   },
   '/chapter-8/chinchilla-optimality': {
     en: 'Study Chinchilla compute allocation through model size, training tokens, and the Gopher comparison, with a training-budget calculation example.',
@@ -403,8 +403,8 @@ export const searchDescriptions = {
     ko: 'IPO, KTO, 보수적 DPO의 차이를 비교합니다. 유한한 선호 마진, 짝이 없는 피드백, 레이블 불확실성과 공통 학습 조건을 다룹니다.',
   },
   '/chapter-12/kv-cache-management': {
-    en: 'Calculate how many requests fit a 24 GiB KV cache. Compare prompt and generation lengths, change the number of KV heads, and verify the cache in PyTorch.',
-    ko: '24 GiB의 KV 캐시에 요청을 몇 개 넣을 수 있을까요? 프롬프트와 생성 길이, KV 헤드 수를 바꾸며 메모리를 계산하고 PyTorch 구현을 검증합니다.',
+    en: 'A KV cache stores earlier tokens’ attention keys and values for reuse. Compare outputs in PyTorch and see why a 24 GiB cache fits nine requests at 2.5 GiB each.',
+    ko: 'KV 캐시는 이전 토큰의 어텐션 키와 값을 저장해 다음 토큰을 생성할 때 다시 씁니다. PyTorch로 캐시 사용 여부에 따른 출력을 비교하고, 요청당 2.5 GiB일 때 24 GiB에 왜 9개까지 들어가는지 계산해 보세요.',
   },
   '/chapter-12/continuous-batching': {
     en: 'Trace six requests through static and continuous batching, run a Python scheduler, and compare chunked-prefill token budgets, first-token latency, and inter-token delay.',

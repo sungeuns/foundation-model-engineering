@@ -1,71 +1,54 @@
 ---
 layout: ../../../layouts/BookLayout.astro
-title: 8.1 The Power Law
+title: 8.1 신경망 스케일링 법칙과 손실 예측
 lang: ko
 ---
 
 import PowerLawVisualizer from '../../../components/chapter-8/PowerLawVisualizer.tsx';
 
-# 8.1 The Power Law: 딥러닝의 열역학
+<a id="81-the-power-law-딥러닝의-열역학"></a>
 
-2020년 이전의 딥러닝 아키텍처 설계는 직관, 휴리스틱(heuristics), 그리고 시행착오에 크게 의존했습니다. 엔지니어들은 모델을 만들고 학습시키면서 손실(loss) 곡선이 만족스러운 수치로 수렴하기만을 바랐습니다. 하지만 특정 모델·데이터·최적화 조건 안에서 신경망 성능이 **Scaling Laws (스케일링 법칙)** 로 근사할 수 있는 반복적인 경험적 경향을 보인다는 연구가 축적되면서 패러다임이 바뀌었습니다.
+# 8.1 신경망 스케일링 법칙과 손실 예측
 
-Backpropagation (오차역전파)이 딥러닝의 '역학(mechanics)'이라면, Scaling Laws 는 '열역학(thermodynamics)'에 비유할 수 있습니다. 이는 시스템의 거시적인 동작, 즉 **Compute (연산량), Data (데이터), Parameters (파라미터 수)** 라는 세 가지 핵심 자원을 확장함에 따라 모델의 최종 손실(Loss)이 어떻게 변화하는지를 설명합니다.
+연산 예산을 두 배로 늘리면 검증 손실이 3.4% 줄어든다는 예측을 받았습니다. 여기서 3.4%는 무엇을 기준으로 계산했을까요? 곡선에 양의 하한이 있으면 **전체 손실** 과 **하한을 뺀 초과 손실** 의 감소율이 달라집니다. [두 예산의 손실을 직접 비교](#scaling-loss-floor)해 보면 큰 학습의 비용을 추정할 때 확인할 숫자가 보입니다.
 
-이러한 규칙성은 작은 파일럿 실행으로 큰 실행을 예측하는 데 도움을 주지만, 예측은 데이터·아키텍처·최적화·외삽 범위에 조건부이며 반드시 불확실성을 포함해야 합니다.
+<a id="경험적-발견-the-empirical-discovery"></a>
 
----
+## 기존 연구는 무엇을 측정했을까?
 
-## 경험적 발견 (The Empirical Discovery)
+Hestness 등은 여러 분야에서 학습 데이터가 늘 때 테스트 오차가 멱법칙을 따르는 구간을 관찰했습니다 [[1]](#ref-1). Kaplan 등은 언어 모델의 교차 엔트로피를 서로 다른 세 조건에서 측정했습니다. 데이터가 충분할 때 임베딩을 제외한 파라미터 수 $N$ 에 대한 지수는 약 0.076이었습니다. 큰 모델을 조기 종료하며 데이터셋 크기 $D$ 를 바꾼 경우에는 약 0.095, 충분한 데이터를 두고 학습 연산량 $C$ 를 최적으로 배분했을 때는 약 0.050이었습니다. 논문의 식 (1.1–1.3)은 측정한 범위에서 **전체 테스트 손실** 에 직접 멱함수를 맞췄습니다 [[2]](#ref-2).
 
-예측 가능한 확장에 대한 초기 관찰은 2017년 Hestness 등에 의해 문서화되었지만 [[1]](#ref-1), 현대의 Large Language Models (LLMs)를 위한 결정적인 공식화는 2020년 OpenAI의 Kaplan 연구진에 의해 발표되었습니다 [[2]](#ref-2). 
+연산 예산을 어떻게 배분할지는 지수 하나로 결정할 수 없습니다. Kaplan 등은 데이터셋보다 모델 크기를 더 빠르게 늘리는 배분을 제안했습니다. 이후 Hoffmann 등은 파라미터 수와 학습 토큰 수를 모두 바꿔 실험했습니다. 주어진 연산량에서 손실이 가장 작았던 지점들을 따라가면 두 수가 대략 같은 **배수** 로 증가했습니다. 밀집 모델의 근사식 $C\propto ND$ 에서 두 수를 각각 두 배로 늘리면 연산량은 약 네 배가 됩니다. 이런 예측은 학습 설정과 목표가 같을 때 적용할 수 있는 조건부 추정입니다 [[2]](#ref-2) [[4]](#ref-4).
 
-수천 개에서 수십억 개의 파라미터를 가진 수십 개의 Transformer 모델을 학습시킨 결과, 이들은 세 가지 변수 중 어느 하나라도 병목(bottleneck)으로 작용하지 않는 한, Cross-entropy test loss ($L$)가 **Power Law (멱법칙)** 에 따라 감소한다는 사실을 발견했습니다.
+<a id="수학적-공식-the-mathematical-formulation"></a>
+<a id="환원-불가능한-손실의-하한선-the-irreducible-loss-floor"></a>
 
-1. **$N$ (Parameters)** : 임베딩(embedding)을 제외한 파라미터의 수.
-2. **$D$ (Data)** : 학습에 사용된 토큰(tokens)의 수.
-3. **$C$ (Compute)** : 학습 중 사용된 총 부동소수점 연산량 (FLOPs).
+## 곡선에서 추정한 하한은 무엇일까?
 
-### 수학적 공식 (The Mathematical Formulation)
+고정된 검증 세트의 전체 교차 엔트로피를 토큰당 nat 단위로 예측하는 식의 한 예입니다.
 
-Power law 관계는 세 가지 독립적인 방정식으로 표현할 수 있습니다:
+$$
+L(C) = E + AC^{-\alpha}, \qquad L(C)-E=AC^{-\alpha}.
+$$
 
-$$ L(N) = \left(\frac{N_c}{N}\right)^{\alpha_N} + L_{\text{irreducible}} $$
+$C$ 는 일정한 단위로 센 양의 연산 예산이고, $A$ 는 양의 계수, $\alpha$ 는 양의 지수입니다. $E$ 는 이 모형이 가정한 점근값입니다. Hoffmann 등도 파라미터 수와 학습 토큰 수에 따른 손실을 추정할 때 이런 상수항을 뒀습니다. 연구진은 이상적인 경우 이를 주어진 문맥에서 다음 토큰을 예측할 때 남는 불확실성과 연결했습니다 [[4]](#ref-4). 측정한 예산이 몇 개뿐이면 서로 다른 하한과 지수의 조합으로도 관측값을 비슷하게 설명할 수 있습니다. 그래서 추정한 하한 $E$ 에도 오차가 따릅니다. 토크나이저, 문맥 길이, 평가 데이터 분포를 바꾸면 토큰당 손실의 의미 또한 달라질 수 있습니다.
 
-$$ L(D) = \left(\frac{D_c}{D}\right)^{\alpha_D} + L_{\text{irreducible}} $$
+<a id="log-log-선형성-log-log-linearity"></a>
+<a id="scaling-loss-floor"></a>
 
-$$ L(C) = \left(\frac{C_c}{C}\right)^{\alpha_C} + L_{\text{irreducible}} $$
+## 전체 손실과 초과 손실 비교하기
 
-여기서:
-* $\alpha_N, \alpha_D, \alpha_C$ 는 손실이 얼마나 빨리 떨어지는지를 결정하는 스케일링 지수입니다. Kaplan은 이 값들을 대략 $\alpha_N \approx 0.076$, $\alpha_D \approx 0.095$, $\alpha_C \approx 0.050$ 으로 추정했습니다.
-* $N_c, D_c, C_c$ 는 특성 척도(characteristic scales)를 나타내는 상수입니다.
-* $L_{\text{irreducible}}$ 은 데이터셋에 내재된 **본질적 엔트로피 (inherent entropy)** 입니다.
+설명을 위해 연산 예산 $C$ 를 상대 단위로 놓고 $L(C)=1.5+10C^{-0.05}$ 라는 곡선을 그려 봅시다. $C=100$ 에서 $C=200$ 으로 늘리면 전체 손실은 토큰당 **9.443에서 9.173 nat** 로 줄어듭니다. 양쪽에서 가정한 하한 1.5를 빼면 초과 손실은 **7.943에서 7.673 nat** 가 됩니다. 반올림하기 전 값으로 계산하면 둘 다 토큰당 약 0.271 nat 줄었습니다. 기준이 되는 시작값이 다르므로 **전체 손실은 2.87%**, **초과 손실은 3.41%** 감소합니다.
 
-> **숫자로 보는 직관.** 하한을 넘는 초과 손실이 $C^{-0.05}$ 에 비례한다면, 연산량을 두 배로 늘릴 때 초과 손실에는 $2^{-0.05} \approx 0.966$ 이 곱해집니다. 약 3.4% 줄어드는 셈입니다. 이는 피팅한 식의 성질을 보여 주는 예이며 특정 모델의 실측 개선량이 아닙니다. 손실 하한이 양수라면 전체 손실의 감소율은 3.4%보다 작습니다.
-
-### 환원 불가능한 손실의 하한선 (The Irreducible Loss Floor)
-
-$L_{\text{irreducible}}$ 항은 이론적인 최솟값을 의미합니다. 자연어에는 본질적인 모호성, 노이즈, 그리고 관찰되지 않은 컨텍스트가 포함되어 있습니다. 무한한 파라미터와 무한한 연산량을 가진 이론적인 모델조차도 매번 다음 토큰을 완벽하게 예측할 수는 없으며, 단지 이 근본적인 엔트로피 하한선에 근접할 수 있을 뿐입니다. 모델이 기하급수적으로 커짐에 따라 수확 체감의 법칙이 적용되어 손실 곡선은 평평해지며 이 하한선에 점근적으로 다가갑니다.
-
----
-
-## Log-Log 선형성 (Log-Log Linearity)
-
-Power law 는 Log-Log 그래프(양대수 그래프)에서 가장 명확하게 시각화됩니다. 환원 불가능한 손실을 잠시 무시하고(하한선에서 멀리 떨어져 있다고 가정), 연산량 확장에 대한 방정식에 로그를 취하면 다음과 같습니다:
-
-$$ \log L(C) \approx -\alpha_C \log C + \log(C_c^{\alpha_C}) $$
-
-이는 직선의 방정식 ($y = mx + b$)과 같습니다. 피팅한 직선은 학습에 쓰지 않은 더 큰 파일럿 실행의 결과를 예측할 수 있을 때 실용적인 의미가 있습니다. 작은 실행들이 직선에 놓인다는 사실만으로 100배 규모의 외삽을 검증한 것은 아닙니다.
+두 축에 로그를 취하면 초과 손실은 $\log(L-E)=\log A-\alpha\log C$ 라는 직선이 됩니다. 전체 손실에는 상수항이 더해져 기울기가 달라집니다. 아래에서 시작 예산을 열 배로 옮겨 보세요. 새 예산을 다시 두 배로 늘렸을 때도 그대로인 감소율은 어느 쪽인가요?
 
 <PowerLawVisualizer lang="ko" client:load />
 
----
-
 ## 제약과 불확실성을 포함한 외삽
 
-스케일링 법칙 예측은 정확한 예언이 아니라 엔지니어링 추정입니다. 같은 토크나이저, 데이터 스냅샷, 아키텍처 계열, 평가 하네스, 학습 품질 기준으로 모델 크기 $N$, 토큰 예산 $D$, 여러 시드의 요인 파일럿 그리드를 구성합니다. 작은 모델의 과소 학습을 스케일링 법칙으로 오해하지 않도록 규모마다 학습률, 배치, 워밍업을 조정합니다.
+파일럿 학습에서 토크나이저, 데이터 스냅샷, 아키텍처 계열, 평가 방식을 고정합니다. 모델 크기와 학습 토큰 수를 바꾸고 시드를 달리해 반복합니다. 규모에 맞춰 학습률과 워밍업을 조정해야 최적화가 덜 된 모델을 스케일링 효과로 오해하는 일을 줄일 수 있습니다.
 
-다음 교육용 피팅은 진폭·지수를 양수로, 하한을 0과 최소 관측 손실 사이로 제한합니다. 연산량 단위는 PetaFLOPs입니다. **1 ExaFLOP = 1,000 PetaFLOPs**이므로 목표는 `1e6`이 아니라 `1e3`입니다.
+아래 PyTorch 예제의 검증 손실 다섯 개는 **설명을 위해 만든 값** 입니다. 작은 규모 네 개만 사용해 계수와 지수는 양수로, 하한은 0과 피팅에 사용한 최소 손실 사이로 제한합니다. 가장 큰 예산의 손실은 예측이 끝난 뒤에 비교합니다. 여기서 연산 예산은 누적 연산 횟수입니다. **1 ExaFLOP = 1,000 PetaFLOPs** 입니다.
 
 ```python
 import torch
@@ -89,63 +72,56 @@ class ConstrainedPowerLaw(nn.Module):
         floor = self.min_loss * torch.sigmoid(self.raw_floor_fraction)
         return amplitude * compute.pow(-exponent) + floor
 
-model = ConstrainedPowerLaw(validation_loss.min())
+training_compute = compute_pf[:-1]
+training_loss = validation_loss[:-1]
+model = ConstrainedPowerLaw(training_loss.min())
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
 for _ in range(5_000):
-    prediction = model(compute_pf)
-    loss = F.mse_loss(torch.log(prediction), torch.log(validation_loss))
+    prediction = model(training_compute)
+    loss = F.mse_loss(torch.log(prediction), torch.log(training_loss))
     optimizer.zero_grad()
     loss.backward()
     optimizer.step()
 
-one_exaflop_pf = torch.tensor([1_000.])
-print(model(one_exaflop_pf).item())
+with torch.no_grad():
+    forecast = model(compute_pf[-1]).item()
+actual = validation_loss[-1].item()
+print(f"forecast={forecast:.3f}, actual={actual:.3f}, error={forecast - actual:+.3f}")
 ```
 
-다섯 개 집계 점만으로 자금 결정을 내리기에는 부족합니다. 전체 파일럿 실행을 **부트스트랩** 재표집하여 파라미터·예측 구간을 만듭니다. 개별 검증 토큰을 독립 학습 실행처럼 재표집하면 안 됩니다. **최대 규모 제외(leave-largest-out)** 시험도 수행합니다. 가장 큰 실행을 빼고 피팅한 뒤 그 실행을 예측하여 오차를 보고하고, 검증한 연산 비율을 크게 넘는 외삽은 거부합니다.
+코드를 실행하면 예측값은 **2.921**, 예제에서 따로 남겨 둔 값은 **2.910** 입니다. 토큰당 **0.011 nat** 만큼 높게 예측한 셈입니다. 홀드아웃 오차를 보면 작은 규모 네 개로, 그중 가장 큰 예산의 약 3.3배인 학습을 얼마나 잘 예측했는지 알 수 있습니다. 규모별로 파일럿을 반복했다면 같은 규모 안에서 학습 실행 단위로 부트스트랩 재표집한 뒤 곡선을 다시 맞춰 보세요. 예측 손실의 분포, 최대 규모 제외(leave-largest-out) 오차, 검증한 최대 연산 배수를 함께 보고합니다. 실제 예산을 결정할 때는 다운스트림 평가 결과와 실측 FLOP/s로 계산한 GPU 시간도 비교해야 합니다. 평가·체크포인트 저장·재시작 시간도 비용에 포함하세요.
 
-계획한 파일럿 중 가장 큰 규모는 진짜 예측 홀드아웃으로 남깁니다. 예측·실제 검증 손실, 다운스트림 체크포인트 프로브, 실측 FLOP/s, 재시작 오버헤드, 총비용을 비교합니다. 최대 FLOPs가 아니라 실측 활용률로 GPU 시간을 환산하고 데이터, 체크포인트, 평가, 장애 오버헤드를 포함합니다. 실행 여부 구간에는 점 추정뿐 아니라 불확실성과 사업 가치를 반영합니다.
+<a id="창발적-능력의-신기루-the-mirage-of-emergent-abilities"></a>
 
----
+## 손실은 조금 줄었는데 정확도가 뛸 수 있는 이유
 
-## 창발적 능력의 "신기루" (The "Mirage" of Emergent Abilities)
-
-스케일링 법칙에서 반드시 짚고 넘어가야 할 중요한 미묘함은 **Cross-entropy loss** 와 **Downstream task accuracy (하위 작업 정확도)** 간의 차이입니다.
-
-Cross-entropy loss는 피팅한 범위 안에서 매끄러운 추세를 보이는 경우가 많지만, 특정 벤치마크 성능은 갑작스럽고 불연속적인 도약처럼 보일 수 있습니다. 어느 동작도 측정한 모델·데이터·최적화 범위 밖에서 보장되지는 않습니다.
-
-하지만 Schaeffer 등 (2023)의 연구 [[3]](#ref-3)는 이러한 창발성이 평가지표(metric)의 선택에 의해 발생하는 신기루에 불과하다고 주장합니다. Cross-entropy 는 연속적(continuous)이며 토큰에 대한 확률 분포를 측정합니다. 만약 모델이 정답에 부여하는 확률을 1%에서 10%로 향상시킨다면, 손실(loss)은 매끄럽게 감소합니다. 하지만 객관식 벤치마크에서는 그 확률이 경쟁하는 오답들의 확률을 뛰어넘을 때까지 모델의 점수는 계속 0점일 것이며, 정답 확률이 오답 확률을 넘어서는 순간 정확도는 갑자기 100%로 치솟게 됩니다.
-
-Schaeffer 등의 연구는 조사한 설정에서 지표 선택이 겉보기 임계값을 만들거나 키울 수 있음을 보여줍니다 [[3]](#ref-3). 모든 창발 논쟁이 끝났다는 뜻은 아닙니다. 엔지니어는 매끄러움과 불연속성 어느 쪽도 보편 법칙으로 두지 말고 연속 지표, 오염, 프롬프팅, 신뢰 구간을 함께 검사해야 합니다.
-
----
+보기가 두 개인 문제에서 정답에 부여한 확률이 0.49에서 0.51로 바뀌었다고 합시다. 정답의 로그 손실은 약 0.713 nat에서 0.673 nat로 조금 줄어듭니다. 반면 확률이 높은 보기를 고르면 이 한 문제의 점수는 0점에서 1점이 됩니다. 벤치마크 평균이 얼마나 뛸지는 이런 경계를 넘은 문항 수에 달려 있습니다. Schaeffer 등은 조사한 과제에서 채점 방식이 겉보기 임계점을 만들 수 있음을 보였습니다 [[3]](#ref-3). 모델 능력이 달라졌는지 판단하려면 문항별 확률의 변화도 점수와 함께 살펴보세요.
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: 스케일링 법칙을 위해 파라미터 수 $N$ 을 계산할 때, 연구자들이 임베딩(embedding) 파라미터를 명시적으로 제외하는 이유는 무엇일까요?</summary>
-*임베딩 파라미터는 핵심 연산 엔진의 깊이나 구조적 복잡성이 아니라, (고정된) 어휘 사전(vocabulary)의 크기와 은닉 차원(hidden dimension)에 엄격하게 비례하여 커집니다. 이를 포함시키면 실제 연산 능력과 손실 간의 관계가 왜곡될 수 있으며, 특히 전체 파라미터에서 임베딩이 차지하는 비중이 비정상적으로 큰 소규모 모델에서 이러한 왜곡이 심하게 나타나기 때문입니다.*
+<summary>Quiz 1: 한 파일럿의 파라미터 수에는 임베딩이 포함되어 있습니다. 이 수치를 Kaplan 등의 모델 크기별 손실 식에 그대로 넣어도 될까요?</summary>
+*먼저 해당 연구와 같은 방식으로 임베딩을 뺀 수를 구해야 합니다. 특히 어휘 수가 달라지면 모델에서 임베딩이 차지하는 비중도 달라집니다. 파라미터를 세는 방식과 평가 데이터를 맞춘 뒤 손실을 비교하세요.*
 </details>
 
 <details>
-<summary>Quiz 2: 방정식 $L(C) = (C_c / C)^{\alpha_C} + L_{\text{irreducible}}$ 에서, $L_{\text{irreducible}}$ 이 나타내는 물리적 또는 이론적 한계는 무엇입니까?</summary>
-*이는 데이터셋의 본질적 엔트로피(또는 베이즈 위험, Bayes risk)를 나타냅니다. 자연어에는 피할 수 없는 모호성, 노이즈, 관찰되지 않은 컨텍스트가 포함되어 있습니다. 무한한 파라미터와 무한한 연산량을 가진 이론적인 모델조차도 매번 다음 토큰을 완벽하게 예측할 수는 없으며, 단지 이 근본적인 엔트로피 하한선에 근접할 수 있을 뿐입니다.*
+<summary>Quiz 2: 추정한 손실 곡선이 토큰당 1.5 nat에 가까워집니다. 이 값을 큰 규모의 예측에 쓰기 전에 무엇을 확인해야 할까요?</summary>
+*더 큰 홀드아웃 학습의 손실을 예측해 보고, 피팅에 쓴 파일럿이나 시드를 바꾸면 하한이 얼마나 움직이는지 확인합니다. 좁은 범위의 관측값에는 여러 하한이 비슷하게 들어맞을 수 있습니다. 토큰을 생성하는 분포의 엔트로피를 추정하려면 별도의 근거가 필요합니다.*
 </details>
 
 <details>
-<summary>Quiz 3: Kaplan의 초기 연구 결과에 따르면, 연산량(Compute budget)이 10배 증가했을 때 모델 크기와 데이터 양을 동일한 비율로 확장해야 합니까?</summary>
-*아닙니다. Kaplan 연구진은 새로운 연산량의 대부분을 데이터보다는 모델 크기(파라미터)에 할당하는 것이 성능 확장에 더 효율적이라고 결론지었습니다. 즉, 데이터 크기보다 파라미터를 훨씬 더 빠르게 확장해야 한다고 제안했습니다. (참고: 이 결론은 훗날 Chinchilla 스케일링 법칙에 의해 반박되었으며, 1:1의 균형 잡힌 확장 접근법으로 정정되었습니다).*
+<summary>Quiz 3: 밀집 모델에서 파라미터 수와 학습 토큰 수를 각각 두 배로 늘렸다면 연산 예산은 몇 배 필요할까요?</summary>
+*두 수를 곱해 연산량을 근사하므로 약 네 배입니다. Hoffmann 등이 보고한 것은 실험에서 최적이었던 지점들을 따라 두 수가 비슷한 배수로 증가한다는 관찰입니다. 파라미터 하나당 몇 토큰이 필요한지는 학습 설정과 목표에 따라 달라집니다.*
 </details>
 
 <details>
-<summary>Quiz 4: 스케일링 법칙이 그토록 신뢰할 수 있다면, 왜 모델 학습 도중에 예상 곡선을 벗어나는 갑작스러운 "Loss Spikes (손실 급증)" 현상이 발생하는 것일까요?</summary>
-*스케일링 법칙은 안정적인 학습 조건 하에서의 최적화되고 수렴된 최종 손실을 예측합니다. Loss Spikes 는 잘못된 데이터 배치, 학습률(learning rate) 관리 실패, 또는 수치적 불안정성(예: FP16에서의 Gradient 폭발) 등으로 인해 발생하는 최적화 실패입니다. 이는 이론적인 스케일링 한계가 무너진 것이 아니라, 옵티마이저(optimizer)가 손실 공간(loss landscape)을 탐색하는 데 실패했음을 의미합니다.*
+<summary>Quiz 4: 예제에서 시작 예산이 얼마든 연산량을 두 배로 늘리면 초과 손실의 감소율이 같은 이유는 무엇일까요?</summary>
+*두 예산의 초과 손실을 나누면 항상 $2^{-0.05}$ 입니다. 전체 손실에는 토큰당 1.5 nat라는 고정된 하한이 들어갑니다. 초과 손실이 작아질수록 하한이 차지하는 비중이 커져 전체 손실의 감소율은 작아집니다.*
 </details>
-
----
 
 ## References
 
-1. <a id="ref-1"></a>Hestness, J., et al. (2017). *Deep Learning Scaling is Predictable, Empirically.* [arXiv:1712.00409](https://arxiv.org/abs/1712.00409).
-2. <a id="ref-2"></a>Kaplan, J., et al. (2020). *Scaling Laws for Neural Language Models.* [arXiv:2001.08361](https://arxiv.org/abs/2001.08361).
-3. <a id="ref-3"></a>Schaeffer, R., et al. (2023). *Are Emergent Abilities of Large Language Models a Mirage?* [arXiv:2304.15004](https://arxiv.org/abs/2304.15004).
+1. <a id="ref-1"></a>Hestness, J., et al. (2017). *Deep Learning Scaling is Predictable, Empirically*. [arXiv:1712.00409](https://arxiv.org/abs/1712.00409).
+2. <a id="ref-2"></a>Kaplan, J., et al. (2020). *Scaling Laws for Neural Language Models*, §1.2. [arXiv:2001.08361](https://arxiv.org/abs/2001.08361).
+3. <a id="ref-3"></a>Schaeffer, R., et al. (2023). *Are Emergent Abilities of Large Language Models a Mirage?*. [arXiv:2304.15004](https://arxiv.org/abs/2304.15004).
+4. <a id="ref-4"></a>Hoffmann, J., et al. (2022). *Training Compute-Optimal Large Language Models*, §3. [arXiv:2203.15556](https://arxiv.org/abs/2203.15556).

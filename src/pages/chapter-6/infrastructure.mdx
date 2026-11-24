@@ -1,14 +1,16 @@
 ---
 layout: ../../layouts/BookLayout.astro
-title: 6.4 Infrastructure
+title: "6.4 Training Cluster Networks and GPU Interconnects"
 lang: en
 ---
 
 import ClusterTopologyExplorer from '../../components/chapter-6/ClusterTopologyExplorer.tsx';
 
-# 6.4 Infrastructure
+<a id="64-infrastructure"></a>
 
-A distributed training run is limited by its slowest useful path: arithmetic, memory, communication, data loading, or recovery. More accelerators can increase capacity while reducing efficiency if the system spends too much time waiting for other ranks. Infrastructure design starts with the intended model, precision, parallel layout, sequence lengths, and workload—not the largest advertised cluster.
+# 6.4 Training Cluster Networks and GPU Interconnects
+
+Suppose a GPU needs 4 GiB from its neighbor before it can start the next computation. At an effective 100 GiB/s, that transfer takes 40 ms. What matters for training is how much of that time overlaps useful work and which other ranks need the same link. Start by tracing the physical route of the data.
 
 **Design references checked as of 2026-10-13.** The examples below illustrate hardware and networking contracts. They are not a catalogue of the newest products or a ranking of provider performance.
 

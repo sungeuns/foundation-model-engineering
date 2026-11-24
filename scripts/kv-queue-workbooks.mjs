@@ -37,7 +37,7 @@ const copy = {
     exercise: 'Three workloads for the same cache',
     notesIntro: 'Start on the Queue sheet. Keep the 24 GiB net budget, 80 layers, 8 KV heads, 128 values per head and 2 bytes per value.',
     cases: [
-      ['Nine equal requests', 'Start with nine prompts of 8,192 tokens and an output cap of 2,048 tokens per request. The last prompt fits. Will the pool still fit all nine continuations?', 'Prompts 22.5 GiB. At the caps 28.125 GiB. The queue exceeds the budget by 4.125 GiB.'],
+      ['Nine equal requests', 'Start with nine prompts of 8,192 tokens and an output cap of 2,048 tokens per request. All nine prompts fit. Can the pool hold nine full-length caches at once?', 'Prompts 22.5 GiB. At the caps 28.125 GiB. The queue exceeds the budget by 4.125 GiB.'],
       ['Five long and four short', `Change requests 6–9 (B${firstMixedShort}:C${lastMixedShort}) to 4,096 prompt tokens and 1,024 output tokens each. Leave requests 1–5 as they were.`, 'Prompts 17.5 GiB. At the caps 21.875 GiB. The queue has 2.125 GiB left.'],
       ['One longer continuation', `From the mixed queue, change only the first request’s output cap (C${first}) to 12,288. Predict which total stays the same.`, 'Prompts still use 17.5 GiB. At the caps the queue needs 25 GiB, which is 1 GiB over budget.'],
     ],
@@ -59,7 +59,7 @@ const copy = {
     exercise: '같은 KV 캐시로 세 가지 대기열 비교하기',
     notesIntro: '요청 대기열 시트에서 시작하세요. 순예산 24 GiB, 레이어 80개, KV 헤드 8개, 헤드 차원 128, 값당 2바이트는 그대로 둡니다.',
     cases: [
-      ['길이가 같은 요청 9개', '기본값은 요청마다 프롬프트 8,192토큰, 출력 한도 2,048토큰입니다. 아홉 번째 프롬프트까지 저장할 수 있다면, 아홉 요청 모두 출력 한도까지 생성할 수 있을까요?', '프롬프트는 22.5 GiB, 출력 한도에 도달하면 28.125 GiB입니다. 예산보다 4.125 GiB 더 필요합니다.'],
+      ['길이가 같은 요청 9개', '기본값은 요청마다 프롬프트 8,192토큰, 출력 한도 2,048토큰입니다. 아홉 프롬프트는 모두 들어갑니다. 최대 길이의 캐시 아홉 개를 동시에 담을 수도 있을까요?', '프롬프트는 22.5 GiB, 출력 한도에 도달하면 28.125 GiB입니다. 예산보다 4.125 GiB 더 필요합니다.'],
       ['긴 요청 5개와 짧은 요청 4개', `6~9번 요청(B${firstMixedShort}:C${lastMixedShort})을 각각 프롬프트 4,096토큰, 출력 한도 1,024토큰으로 바꾸세요. 1~5번 요청은 그대로 둡니다.`, '프롬프트는 17.5 GiB, 출력 한도에 도달하면 21.875 GiB입니다. 2.125 GiB가 남습니다.'],
       ['출력이 더 길어진 요청 1개', `바로 앞의 혼합 대기열에서 1번 요청의 출력 한도(C${first})만 12,288로 바꾸세요. 어느 합계가 그대로일까요?`, '프롬프트는 여전히 17.5 GiB입니다. 한도까지 생성하면 합계가 25 GiB가 되어 1 GiB가 부족합니다.'],
     ],
