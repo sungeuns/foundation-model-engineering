@@ -267,6 +267,11 @@ if (currentIndex !== -1) {
             {isKo ? '원고 수정일' : 'Manuscript updated'} <time datetime={manuscriptTimestamp}>{manuscriptDate}</time> (UTC)
           </p>
         )}
+        {currentSub && (
+          <p class="print-source" data-nosnippet>
+            {isKo ? '온라인 원문' : 'Online lesson'}{' '}<a href={canonicalUrl}>{canonicalUrl}</a>
+          </p>
+        )}
         {outline.length > 0 && (
           <details class="page-outline" id="pageOutline">
             <summary>{isKo ? '이 페이지의 내용' : 'On this page'}</summary>

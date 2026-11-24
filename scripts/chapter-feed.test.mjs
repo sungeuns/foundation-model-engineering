@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { chapterFeed } from '../src/utils/chapter-feed.js';
+import { chapterFeed, chapterFeedHub } from '../src/utils/chapter-feed.js';
 import { chapters } from '../src/data/chapters.js';
 
 const subs = chapters.flatMap(chapter => chapter.subs);
@@ -32,6 +32,11 @@ test('feeds use locale-specific revisions and real timestamps in newest-first or
   assert.ok(ko.includes(`/foundation-model-engineering/ko${subs[0].path}/`));
   assert.match(ko, /원고 수정: 2026-11-16 03:00:00 UTC/);
   assert.match(ko, /\/ko\/feed.xml/);
+  for (const feed of [en, ko]) {
+    assert.ok(feed.includes(`<atom:link href="${chapterFeedHub}" rel="hub" />`));
+    assert.equal([...feed.matchAll(/rel="self"/g)].length, 1);
+    assert.equal([...feed.matchAll(/rel="hub"/g)].length, 1);
+  }
   assert.equal(en, chapterFeed({ ...options, revisions }), 'a rebuild must not change item identifiers');
 });
 

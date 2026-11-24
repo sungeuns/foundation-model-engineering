@@ -1,0 +1,12 @@
+.speculative-example fieldset { min-width: 0; margin: 0; padding: .6rem 1rem; border: 1px solid #a2b5c4; }
+.speculative-example legend, .speculative-example caption { font-weight: 600; }
+.speculative-example label { justify-content: space-between; }
+.speculative-example table { display: table; width: 100%; font-variant-numeric: tabular-nums; }
+.speculative-example caption { text-align: start; margin: 1rem 0 .4rem; }
+.speculative-example :is(td, th) { padding: .4rem .6rem; }
+.speculative-example th:first-child { text-align: start; }
+.speculative-example td, .speculative-example thead th:not(:first-child) { text-align: end; }
+.speculative-example td { white-space: nowrap; }
+@media (max-width: 360px) {
+  .speculative-example :is(td, th) { padding-inline: .35rem; }
+}

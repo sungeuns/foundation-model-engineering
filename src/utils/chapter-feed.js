@@ -3,6 +3,9 @@ import { searchDescriptions } from '../data/search-descriptions.js';
 import { site } from '../data/site.js';
 import { withBasePath, withPagePath } from './paths.js';
 
+// The public hub documents RSS discovery and its publisher POST at this URL.
+export const chapterFeedHub = 'https://pubsubhubbub.appspot.com/';
+
 const escapeXml = value => String(value)
   .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
   .replaceAll('"', '&quot;').replaceAll("'", '&apos;');
@@ -44,6 +47,7 @@ export function chapterFeed({ lang, basePath, origin = site.url, revisions }) {
     <description>${escapeXml(description)}</description>
     <language>${lang}</language>
     <atom:link href="${escapeXml(feed)}" rel="self" type="application/rss+xml" />
+    <atom:link href="${chapterFeedHub}" rel="hub" />
 ${items}
   </channel>
 </rss>

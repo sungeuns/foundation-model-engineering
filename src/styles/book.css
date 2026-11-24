@@ -184,6 +184,7 @@ header .book-title {
   color: var(--accent-color);
 }
 
+.print-source { display: none; }
 .manuscript-revision {
   margin: 0 0 1rem;
   color: var(--secondary-color);
@@ -395,12 +396,25 @@ pre code { overflow-wrap: normal; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; } }
 @media print {
-  .sidebar, .menu-toggle, .sidebar-backdrop, .header-actions, .page-outline, .navigation-links, .skip-link { display: none !important; }
+  .sidebar, .menu-toggle, .sidebar-backdrop, .header-actions, .page-outline, .navigation-links, .skip-link, .breadcrumbs { display: none !important; }
+  body, .content-wrapper { display: block; }
   .content-wrapper { margin: 0; width: 100%; }
   .container { max-width: none; padding: 0; }
+  .print-source { display: block; margin: .3rem 0; font-size: 9pt; overflow-wrap: anywhere; }
   main { font-size: 11pt; }
-  main > table { display: table; font-size: 9pt; }
-  pre { white-space: pre-wrap; }
+  main > table { display: table; width: 100%; overflow: visible; font-size: 9pt; line-height: 1.4; }
+  main > table :is(th, td) { padding: .35em .45em; overflow-wrap: break-word; }
+  main pre {
+    padding: .65rem .8rem !important;
+    overflow: visible;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    line-height: 1.45;
+    color: #17212b !important;
+    background: #fff !important;
+    border: 1px solid #b8bdc2;
+  }
+  main pre code, main pre code span { color: inherit !important; background: transparent !important; overflow-wrap: anywhere; }
   h2, h3 { break-after: avoid; }
 }
 

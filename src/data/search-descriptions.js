@@ -187,8 +187,8 @@ export const searchDescriptions = {
     ko: 'KV 캐시 단편화, 블록 테이블, 비연속 메모리 할당과 쓰기 시 복사 기반 캐시 공유를 통해 vLLM의 PagedAttention을 이해합니다.',
   },
   '/chapter-12/speculative-decoding': {
-    en: 'Learn speculative decoding through draft-and-verify execution, rejection sampling, acceptance rates, and the serving conditions that determine speedup.',
-    ko: '초안 생성과 검증, 거절 샘플링, 수락률을 통해 추측 디코딩을 이해하고 실제 속도 향상을 결정하는 서빙 조건을 살펴봅니다.',
+    en: 'Change two token probabilities and see why speculative decoding needs residual sampling. Redrawing from the target gives 62.5% where it should give 75%.',
+    ko: '두 토큰의 확률을 바꿔 투기적 디코딩에서 왜 잔여 분포가 필요한지 확인합니다. 목표 분포에서 다시 뽑으면 75%여야 할 확률이 62.5%로 바뀝니다.',
   },
   '/chapter-12/long-context-serving': {
     en: 'Analyze long-context serving through prefill and decode costs, StreamingLLM, YaRN, chunked prefill, and disaggregated inference scheduling.',

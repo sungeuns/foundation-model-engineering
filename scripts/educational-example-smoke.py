@@ -6,6 +6,8 @@ from pathlib import Path
 import re
 import runpy
 from xml.etree import ElementTree
+from math import nextafter
+from unittest.mock import Mock
 import torch
 
 ROOT = Path(__file__).resolve().parents[1] / 'src/pages'
@@ -229,3 +231,16 @@ for locale in ['', 'ko/']:
     assert f"{example['output'][3]:.1f} → {example['new_output'][3]:.1f}" in labels
     assert f'{leak[0]:.3f} → {leak[1]:.3f}' in labels
     print(f'{locale or "en/"}: prefix visibility and additive-mask leakage verified')
+
+# Filtered tokens have zero probability, even at the upper RNG boundary.
+upper_boundary = Mock()
+upper_boundary.random.return_value = nextafter(1.0, 0.0)
+for locale in ['', 'ko/']:
+    sampler = definitions(locale + 'chapter-12/speculative-decoding.mdx')
+    filtered = [0.1] * 10 + [0.0, 0.0]
+    assert sampler['draw'](filtered, upper_boundary) == 9
+    committed, accepted = sampler['verify_draft_tokens'](
+        [[0.0, 1.0]], [[1.0, 0.0], [0.0, 1.0]], [1], upper_boundary
+    )
+    assert (committed, accepted) == ([0], 0)
+print('EN/KO speculative sampling respects zero-probability tokens and disjoint support')

@@ -12,3 +12,7 @@ Both proposals were open at verification. Listing decisions belong to the respec
 ## Python Trending Weekly
 
 On November 25, 2026 (Korea time), Codex recommended the English CPU copying trace on behalf of the maintainer. The recommendation describes the fixed-seed experiment, links directly to the 13-token comparison and discloses the project's use of AI. The newsletter explicitly accepts author submissions through GitHub. The editor decides whether to publish a recommendation. [Submission #107](https://github.com/chinesehuazhou/python-weekly/issues/107) · [Editorial FAQ](https://weekly.pythoncat.top/en/subscribe/)
+
+## One2N inference engineering reading list
+
+On November 25, 2026 (Korea time), Codex submitted the KV cache capacity calculator for section 1.3. The proposal links to the nine-request example and its tests, states the assumptions, and identifies the book maintainer and AI assistance. Both of the reading list's local checks passed. The PR was open when verified. [Submission #30](https://github.com/one2nc/awesome-inference-engineering/pull/30)

@@ -323,7 +323,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 12.1 | `/chapter-12/kv-cache-management` | Mechanical only | 328b3bb27441c78f0bf3b6998407c4da3374bb8ce00b98bc5d23d83d2706d51a | b01a4f5cb3560cb0e76c8555a6c65e08851bbf29f9df4ea6ea7f859a7cb8b9f7 |
 | 12.2 | `/chapter-12/paged-attention-vllm` | Mechanical only | 75d76b30c45ca44edbb56072df6f91209343c7d8ad5c69270cd6b6c4e9700dba | 2446c00fd36edfd6fda8dc1aaf18805e0de0af19615ad504eb4e9acac8356917 |
 | 12.3 | `/chapter-12/continuous-batching` | Inspected 2026-11-25 | 6ef1bf606cdf836c97703e2c9518a7f395f6c7242f614fb7e24f7a44ed301b28 | 4c9be3e2b663d439d85799a0f93db2a485fbca65eb945328789a188afd3b65db |
-| 12.4 | `/chapter-12/speculative-decoding` | Inspected 2026-11-15 | c211bce7483db5699601fe8743d1686ab5b645e7c574072d3cd8f2d8daaf0c70 | a3c7a599410b1ee428f27865bd9dbd1979703192f108984ae5fb522cd9ab3bb2 |
+| 12.4 | `/chapter-12/speculative-decoding` | Inspected 2026-11-25 | a5f93ea8411bab0fe68bf277224f8f19f111ac0f0fd73f6b4eda75739a8990b5 | 61986787b62bf6d99f59ab08a66d2ea6312e472faea94ded13c4a7d627d03cc4 |
 | 12.5 | `/chapter-12/long-context-serving` | Inspected 2026-11-15 | 82f413a5a2e2731fe01603c7036b42dee434b010cc76410eba7e0807d73742e8 | 59933e962b9f0bef0f8b50e9889ec628fd92ade6d7d0fb91636981793bd83052 |
 | 12.6 | `/chapter-12/serving-policies-slos-and-fallbacks` | Inspected 2026-11-25 | 8222c69fc753a073f358acef599ad825d1193693daa931acbd774081c82f2b46 | 35067207b0e514380e54bb373c7b545a075fc1999f3e039eb327edb1e13ba1a5 |
 | 13.1 | `/chapter-13/ptq-vs-qat` | Mechanical only | 6961419a7297e663a0894db1a8fd075b0153ae00ca4a904bbf5137dde68f3eda | 20342b8f4e7499012cbd810bd0e9cb2781a3c0537b308a95abf74bd334ca88e5 |
@@ -612,3 +612,8 @@ In 12.1, inspection covered the nine-request scenario, shareable calculator sett
 Both editions of 1.1 now follow the same four catalog records through a symbolic rule, a threshold neuron and two ReLU units. The truth table, threshold equality and hand-set PyTorch weights were checked on all four inputs. Review covered the bilingual controls, keyboard input, narrow screens and existing section anchors.
 
 Both editions of 4.4 show the source of the downloadable Python file. The CPU test changes one future value and checks the earlier output with each mask type. Inspection covered all 49 mask entries, both language editions, the shared images and the downloaded file. The November 25 inventory hashes identify the versions reviewed here.
+
+### 2026-11-25 speculative sampling
+
+Both editions of 12.4 now follow the same two-token distribution from proposal to rejection and replacement. The worked example accounts for the accepted mass, the residual, the biased result of redrawing from the original target and the case of no rejections. The cost example states its independence and stopping assumptions. The tree-decoding example was checked against the authors’ September preprint.
+The Python example was checked over 225 pairs of three-token distributions, every possible rejection depth in a three-token chain, the all-accepted case and trailing zero-probability tokens at the upper random-number boundary.

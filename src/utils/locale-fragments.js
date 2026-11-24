@@ -12,6 +12,7 @@ const lessonFragments = {
   '/chapter-10/dpo': ['reference-relative-example'],
   '/chapter-11/vision-language-bridges': ['visual-token-budget'],
   '/chapter-12/kv-cache-management': ['kv-cache-capacity', 'kv-calculator'],
+  '/chapter-12/speculative-decoding': ['speculative-sampling-example'],
   '/chapter-12/serving-policies-slos-and-fallbacks': ['streaming-latency-trace'],
   '/chapter-14/advanced-retrieval': ['rrf-candidate-cutoff'],
   '/chapter-14/rag-failure-modes-and-operational-design': ['trace-a-rag-answer'],
