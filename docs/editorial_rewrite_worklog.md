@@ -267,7 +267,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 1.1 | `/chapter-1/symbolism-vs-connectionism` | Inspected 2026-11-25 | 0716f9db3899f06858b670a0db1a2df64c2b7604cfd43271b47e8dc4fde62724 | 53beeda6131ee1bbdbdf19474ab6627888550515acee9b3805e2c6d330f14cd3 |
 | 1.2 | `/chapter-1/power-of-representation` | Inspected 2026-11-25 | 594cb7c0c43d5e5ed15a129a3d067bb6076a8a51c9a325fba642f5b85fcbb9d0 | 1d914327b1d0f84d6af190450901d013b3dee6ecc439156f61209203c220c6da |
 | 1.3 | `/chapter-1/deep-learning-paradigms` | Mechanical only | f373b59e6d5782c6150b3b363f1d61ba9d3a4ecab555ade160773d88a2489ff5 | 73265363881ee05ce8f60d1e80ab001c55ff58d7207f386e7f50a5b0b63353ac |
-| 1.4 | `/chapter-1/bitter-lesson` | Mechanical only | f69188e38bc792ee461c83466da32354065ebdff52e5a7197d8a2d81743e92e3 | d44863149ee015e681a6439ed6e9ff3771e74199015814dbcbc352b61fc0a850 |
+| 1.4 | `/chapter-1/bitter-lesson` | Inspected 2026-11-25 | a9734cd48043475a436dce8ac4bf6dcb9695e12adb0c518f95cc022c5b926370 | 8ef44e8465f5b8d8cb23f7e97b9192f976d086b6aee03d576c860691ca039c0e |
 | 1.5 | `/chapter-1/learning-path-and-mastery` | Inspected 2026-11-17 | 0f8f04bb12ad70521b3c701fae89e83133b936a5d28d74a07b17d6a0f9d55c12 | 7afd35142e5986833e81c484c1c3d7fe0b717d7d728be32693fb4ec93a0ff029 |
 | 2.1 | `/chapter-2/markov-chains-to-rnns` | Inspected 2026-11-15 | 0ce137827271786ce59fbb687ede850189b1842843a7e11d9420e8d51da672c8 | 0d4b5440f58a02205e9c981af00a3d028f6e7081b2923f0a609a0f0f9e581e2a |
 | 2.2 | `/chapter-2/vanishing-exploding-gradients` | Inspected 2026-11-15 | f883974659fb302e235151e51e0cffb5a6f9418089342fa6be149d94c207ffac | 7a4baf6b5be2bf9ff72621f15581483e6595c47296cb169d5d1c03395b882385 |
@@ -362,7 +362,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 18.4 | `/chapter-18/scalable-oversight` | Inspected 2026-11-15 | ddc4e57280940d9f2de2d5e5f551b035d60ae4feeb324a2a84256e798feb9c7f | 5536d313417dd89e9909d73ed8762c85d7450129338432d8a05ea21c7ee99f3b |
 | 19.1 | `/chapter-19/mechanistic-interpretability` | Mechanical only | e78ed254abbd08dcc580e5d937948f89757d22138640f21b47a48ef61b6769c4 | 146df874ff1cb000e3684a35ed34035a22b496a75e3fbe70e205b649ec302ee4 |
 | 19.2 | `/chapter-19/logit-lens-and-attention-visualization` | Mechanical only | 8f6a64cbb90f5881b4fda6b927ecbdb6a9fe1fcf319cb3bdb5c873bce37a80e5 | e8c6c59743939cc2e865e2b40d86cfd76e6139a553fd10b7f5e46bcd71324f4b |
-| 19.3 | `/chapter-19/probing-classifiers` | Mechanical only | ff555220f028dcfb555ef1730dbcd13126125884b4b81d97723d546b0156ce69 | ce3910c423dc09e77e395dabc340a4387d0c06021bd34f35616bf205efccce6d |
+| 19.3 | `/chapter-19/probing-classifiers` | Inspected 2026-11-25 | 6d7d4b08cae758a1f6f870ea72a84bad1349d927760d019854ccddfd4d192236 | 5b7ae21b8b7bf3ee95074cedf1d249fce089aeaf0aff5f288d649b0875fedff7 |
 | 19.4 | `/chapter-19/sparse-autoencoders-sae` | Mechanical only | 1c9eeb21d547629108ec41532289a1de144a79897f4e85d20b421ac6603187fd | 223a4aa84b4b0a99a418e04aae959b76c0b804a2ca4a1eb0fe600388a503b075 |
 | 20.1 | `/chapter-20/state-space-models-ssm` | Inspected 2026-11-15 | 62c29a98f3b7b0a6ec6474bcb6d941c649a324cb4c28be9a9f6c7938f0a939a5 | 21d0a1a63ca16d7a1777695359d7abc310d56a9d594b70b0097af63e11def139 |
 | 20.2 | `/chapter-20/mamba-and-s6` | Inspected 2026-11-18 | a89134b1f0ca60b397d0fd46c4bcfa0a1ce045cd294ff4895af664f745a59255 | f4805c489887aa69e2c78a4c55b8d10219d9a37aecdcf070a4b5f7d1b10ec988 |
@@ -699,3 +699,9 @@ In §12.1, ran the pinned FP32 CPU experiment from `public/labs/kv_batch_padding
 In §6.2, checked the SmolLM2-135M tokenizer’s declared aliases, token IDs, decoded strings and character offsets at revision `93efa2f`. A case that allows the literal end-of-text token at its exact source span accepts ID zero there. A small WordLevel tokenizer still rejects a genuine unknown in ordinary text. The English and Korean examples contain the same executable checks.
 
 In §11.1, rendered three 512 × 384 receipts with identical pixels outside the total line. With a fixed prompt and default processor, SmolVLM-256M-Instruct returned the two printed amounts but omitted the line label twice. It answered `1` when the line was absent. Both editions distinguish the amount, evidence and abstention checks.
+
+### 2026-11-25 compute allocation and linear probes
+
+In §1.4, checked the Gopher and Chinchilla parameter and token counts against Table 1 of Hoffmann et al. and the five-shot MMLU results against Table 6. Ran the three allocations from each edition's Python block and checked the displayed curve at its initial point and both slider endpoints. The numbers in the comparison figure remain readable with JavaScript disabled.
+
+In §19.3, ran both projection examples on CPU. Applied the frozen readout to the raw-space and standardized-space results and checked the resulting margins. Checked all 101 center gaps in both distributions, in English and Korean at 375px and 1280px, against the plotted points and the displayed counts. The fixed threshold classified 74/80 points at the initial gap and 64/80 after the shift. Also checked the static reading view. The tested LinearProbeVisualizer.tsx SHA-256 was `9dd0c27ea052eba45f50e610ce5ae3c63c92ea4ee23e9fab2f67c0242654f197`.

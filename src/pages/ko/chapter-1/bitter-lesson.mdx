@@ -5,184 +5,94 @@ lang: "ko"
 ---
 
 import { ScaleVisualizer } from '../../../components/chapter-1/ScaleVisualizer.tsx';
-
+import ChinchillaBudgetFigure from '../../../components/chapter-1/ChinchillaBudgetFigure.astro';
 
 <a id="14-the-bitter-lesson"></a>
 
 # 1.4 리처드 서튼의 ‘쓴 교훈’
 
-2019년, 강화 학습의 개척자 중 한 명인 리처드 서튼(Richard Sutton)은 <strong>"The Bitter Lesson" (쓴 교훈)</strong>이라는 제목의 짧은 에세이를 썼습니다. 이 글은 현대 AI 분야에서 가장 영향력 있는 텍스트 중 하나가 되었으며, 이후 파운데이션 모델의 부상과 강하게 맞물려 읽히게 되었습니다.
+체스 프로그램에 다음 수를 고를 시간을 두 배로 준다고 해봅시다. 몇 수 앞까지 내다보는 프로그램이라면 1초가 더 생길 때 상대의 대응을 조금 더 살펴볼 수 있습니다. 정해진 규칙만 차례로 적용하는 프로그램이라면 아무리 기다려도 같은 수를 둡니다. 리처드 서튼은 체스와 바둑, 음성 인식의 역사를 돌아보며 연산이 저렴해질수록 어떤 방법이 그 혜택을 누렸는지 물었습니다. 2019년에 쓴 에세이 《쓴 교훈》의 출발점입니다. [[1]](#ref-1)
 
-**비하인드 스토리:** 이 에세이가 발표되었을 때 AI 학계에서는 적지 않은 논쟁이 일어났습니다. 특정 분야의 규칙과 휴리스틱을 오랫동안 다듬어 온 연구자들에게는, 서튼의 주장이 그 전통 전체를 지나치게 단순화한 비판처럼 들릴 수도 있었기 때문입니다. 하지만 몇 년 뒤 대규모 신경망 모델들이 실제로 강한 성과를 내기 시작하면서, 이 글은 도발적인 주장이라기보다 AI 발전의 방향을 설명하는 유용한 관점으로 다시 읽히게 되었습니다.
+<a id="비유-장인匠人-vs-자동화된-공장"></a>
+<a id="the-lesson-stated-교훈의-내용"></a>
+<a id="인간의-지식-vs-컴퓨팅"></a>
+<a id="the-two-pillars-search-and-learning-탐색과-학습"></a>
 
-이 교훈을 간단한 비유를 통해 이해해 봅시다.
+## 1초가 더 생기면 어디에 쓸까?
 
----
+**탐색** 은 지금 내릴 결정에 연산을 씁니다. 내가 한 수를 두었을 때 상대가 어떻게 받을지 따져 보는 식입니다. **학습** 은 앞으로의 결정이 달라지도록 연산을 씁니다. 언어 모델은 학습 예제를 더 읽으면서 자신의 예측을 실제 다음 토큰과 비교하고 가중치를 갱신합니다. 두 방법을 함께 쓸 수도 있습니다. 바둑판에서 어느 쪽이 유리한지 학습해 두면, 대국 중에는 유망한 수부터 탐색할 수 있습니다. [[1]](#ref-1)
 
-### **비유: 장인(匠人) vs. 자동화된 공장**
+이 관찰을 언어 모델 개발에 적용하면 질문이 한층 구체적이 됩니다. 학습용 연산을 더 쓸 수 있다면 어디에 쓰는 편이 좋을까요? 모델을 키우면 토큰 하나를 처리하는 비용이 늘어납니다. 예산이 같다면 학습할 수 있는 토큰은 줄어듭니다.
 
-당신이 복잡한 기계를 생산하고 싶다고 가정해 봅시다.
+<a id="the-scaling-law-스케일링-법칙"></a>
+<a id="chinchilla-budget-example"></a>
 
-*   <strong>장인 (인간의 지식)</strong>은 평생을 바쳐 하나의 설계를 완성합니다. 모든 톱니바퀴와 레버를 손으로 직접 깎습니다. 결과물은 아름답고 잘 작동하지만, 만드는 데 수개월이 걸리고 쉽게 대량 생산(scale)할 수 없습니다.
-*   <strong>자동화된 공장 (컴퓨팅 & 학습)</strong>은 매우 단순하고 일반적인 설계로 시작합니다. 톱니바퀴를 깎는 구체적인 방법은 모릅니다. 하지만 하루에 수백만 번의 실험을 수행하면서 프로세스를 자동으로 개선할 수 있습니다. 곧 공장은 장인이 상상할 수 있었던 것보다 더 복잡한 기계를 더 빠르게 생산해 냅니다.
+## Chinchilla는 Gopher와 같은 연산 예산을 어떻게 썼을까?
 
-여기서 장인에게 '쓴(bitter)' 부분은, 평생 다듬어 온 전문 기술이 결국 더 단순하지만 연산량과 데이터를 크게 확장할 수 있는 시스템에 의해 추월될 수 있다는 점입니다.
+호프만 연구팀은 Gopher를 학습시키는 데 들인 연산량을 다르게 배분해 봤습니다. 2022년 논문에 실린 두 모델의 파라미터 수를 먼저 비교해 보세요. 학습 토큰 수로 눈을 옮기면 두 모델의 순서가 뒤집힙니다. [[3]](#ref-3)
 
----
+<ChinchillaBudgetFigure lang="ko" />
 
-## The Lesson Stated (교훈의 내용)
+Chinchilla의 파라미터는 Gopher의 4분의 1이지만, 학습에 사용한 토큰은 약 4.7배였습니다. 논문 표 6에서 두 모델은 MMLU 57개 과제를 예시 다섯 개씩 주고 푸는 조건으로 평가받았습니다. 평균 정답률은 Gopher가 60.0%, Chinchilla가 67.6%였습니다. 연구팀은 데이터 종류별 추출 비율을 비롯한 학습 설정도 바꿨습니다. 더 작은 모델을 더 오래 학습시킬 근거는 생겼지만, 7.6%포인트 차이 중 얼마가 토큰 수만의 효과인지는 이 비교로 가려낼 수 없습니다. [[3]](#ref-3)
 
-서튼의 핵심 논지는 단순하지만 심오합니다:
+스케일링 연구에서는 여러 규모로 학습한 모델의 검증 토큰 손실을 측정하고 그 값에 곡선을 맞춥니다. 캐플런 연구팀은 관측 범위에서 손실이 멱법칙을 따른다는 결과를 보고했습니다. 호프만 연구팀이 사용한 식의 한 형태는 다음과 같습니다.
 
-> "70년간의 AI 연구에서 얻을 수 있는 가장 큰 교훈은, 계산(computation)을 활용하는 일반적인 방법이 가장 효과적이며, 그것도 압도적인 차이로 효과적이라는 것이다."
+$$
+L(N,D)=L_\infty+\frac{A}{N^\alpha}+\frac{B}{D^\beta},\qquad C\approx6ND.
+$$
 
-이 교훈이 AI 연구자들에게 '쓰다'고 하는 이유는, 인간의 지식, 직관, 그리고 hand-crafted feature에 크게 의존하는 방법들이 장기적으로는 정체 구간에 들어가는 경우가 많기 때문입니다. 그리고 시간이 지나면, 대규모 연산을 바탕으로 탐색하고 학습하는 일반적 방법이 그 자리를 대신하는 경우가 반복해서 나타납니다.
+$N$은 파라미터 수, $D$는 학습 토큰 수, $L$은 곡선이 예측하는 검증 손실입니다. 손실의 하한 $L_\infty$와 양의 계수 $A,B$, 지수 $\alpha,\beta$는 실험값에 맞춰 추정합니다. $C$는 파라미터 행렬 곱셈이 연산량의 대부분을 차지하는 밀집 트랜스포머의 학습 FLOPs를 근사합니다. 그림에 나온 반올림된 수로 $6ND$를 계산하면 두 모델의 값이 조금 다릅니다. 연구팀이 보고한 학습 연산량은 같지만 이 근사식에는 토큰 위치 사이의 어텐션 연산 등 일부 비용이 빠져 있기 때문입니다. [[2]](#ref-2) [[3]](#ref-3)
 
-### 인간의 지식 vs. 컴퓨팅
+<a id="code-example-scaling-law-시뮬레이션"></a>
 
-서튼은 AI 역사에서 반복되는 패턴을 관찰했습니다:
-1.  연구자들은 인간의 지식을 인코딩하여 지능을 구축하려고 시도합니다 (예: 체스 규칙, 시각 특징).
-2.  이것은 단기적으로는 잘 작동하며 연구자들을 기분 좋게 만듭니다.
-3.  장기적으로 무어의 법칙(Moore's Law)에 의해 컴퓨팅은 훨씬 더 저렴해집니다.
-4.  컴퓨팅을 활용하는 방법(무차별 대입 탐색 또는 거대 신경망 등)이 결국 인간 지식 기반의 방법들을 압도합니다.
+## 같은 예산을 세 가지로 나눠 보기
 
----
-
-## The Two Pillars: Search and Learning (탐색과 학습)
-
-서튼은 컴퓨팅 자원과 함께 끊임없이 확장되는 두 가지 범주의 방법을 식별합니다:
-
-1.  **Search (탐색):** 방대한 가능성의 공간을 탐색하는 것 (예: AlphaGo의 몬테카를로 트리 탐색).
-2.  **Learning (학습):** 방대한 양의 데이터를 기반으로 파라미터를 조정하는 것 (예: Transformer 학습).
-
-Foundation model은 이 "학습(Learning)" 축이 대규모로 구현된 대표적 사례입니다. 문법, 물리학, 코드에 대한 규칙집을 명시적으로 넣기보다, 대규모 데이터와 최적화를 통해 유용한 구조를 내부적으로 학습합니다.
-
----
-
-<div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', margin: '20px 0' }}>
-
-<div style={{ maxWidth: '600px', width: '100%' }}>
-![Scaling Laws Chart](../../../assets/images/chapter-1/scaling_laws_chart.png)
-</div>
-
-<em style={{ marginTop: '10px', color: '#7f8c8d' }}>출처: AI 생성 이미지</em>
-
-</div>
-
----
-
-## The Scaling Law (스케일링 법칙)
-
-The Bitter Lesson의 구체적인 수학적 발현이 바로 **Scaling Law (스케일링 법칙)** 입니다. OpenAI 등의 연구에 따르면 거대 언어 모델의 성능은 세 가지 요소에 따라 예측 가능하게 확장됩니다:
-
-1.  **Model Size ($N$):** 파라미터 수.
-2.  **Dataset Size ($D$):** 토큰 수.
-3.  **Compute ($C$):** 학습에 사용된 총 부동 소수점 연산량 (FLOPs).
-
-실제 스케일링 법칙 논문들은 보통 더 정교한 경험적 곡선을 맞추지만, 여기서는 간단한 설명용 형태로 다음과 같이 볼 수 있습니다:
-$$L(N,D)=L_\infty+\frac{A}{N^\alpha}+\frac{B}{D^\beta},\qquad C\approx6ND.$$
-여기서 $L$은 검증 토큰 손실, $L_\infty$는 적합한 비감소 항, $A,B$는 양의 적합 계수, $\alpha,\beta$는 지수입니다. 연산량 근사는 회계 가정을 명시한 밀집 Transformer 학습에 해당합니다. 따라서 $N,D,C$는 독립적인 세 조절 변수가 아닙니다. 이 경험적 형태가 추론 능력, 안전성, 특정 아키텍처를 보장하지는 않습니다. 8장에서 적합 불확실성, 추론 비용, 근사의 한계를 다룹니다.
-
----
-
-## Code Example: Scaling Law 시뮬레이션
-
-여기서 거대 모델을 직접 학습시킬 수는 없지만, 멱법칙 특성을 따라 컴퓨팅(모델 크기 $\times$ 데이터 크기)과 그에 따른 손실(loss) 사이의 관계를 시뮬레이션해 볼 수 있습니다.
+아래 파이썬 예제는 단위가 없는 모델 크기와 데이터 양을 사용합니다. 식은 아래 실습과 같고, 계수는 계산을 쉽게 따라갈 수 있도록 정했습니다. 예산을 $ND=100$으로 고정한 채 모델 크기를 10에서 20으로 늘리면 어떻게 될까요?
 
 ```python
-import torch
-import matplotlib.pyplot as plt
-
-# 시뮬레이션된 스케일링 법칙 파라미터
-alpha = 0.34  # 모델 크기에 대한 지수
-beta = 0.28   # 데이터 크기에 대한 지수
-
-# PyTorch를 사용하여 N과 D의 범위 정의
-N_range = torch.logspace(1, 5, 20)
-D_range = torch.logspace(1, 5, 20)
-
-# N과 D에 대한 그리드 생성
-N_grid, D_grid = torch.meshgrid(N_range, D_range, indexing='ij')
-
-# PyTorch 연산을 사용하여 손실 그리드 계산
-Loss = 1.0 / (N_grid**alpha) + 1.0 / (D_grid**beta)
-
-# 플로팅을 위해 numpy로 변환 (matplotlib은 numpy를 필요로 함)
-Loss_np = Loss.numpy()
-N_np = N_range.numpy()
-D_np = D_range.numpy()
-
-# 결과 플로팅
-plt.figure(figsize=(10, 6))
-CS = plt.contourf(N_np, D_np, Loss_np.T, levels=20, cmap='viridis')
-plt.xscale('log')
-plt.yscale('log')
-plt.xlabel('Model Size (N)')
-plt.ylabel('Dataset Size (D)')
-plt.title('Simulated Scaling Law: Loss as a function of N and D')
-plt.colorbar(CS, label='Loss')
-plt.show()
-
-print("이 설명용 곡선은 연산량 증가에 따른 모델링된 손실 감소를 보여 줍니다.")
+budget = 100
+for model_size in (5, 10, 20):
+    tokens = budget / model_size
+    loss = 0.5 + model_size ** -0.3 + tokens ** -0.3
+    print(f"N={model_size:2d}  D={tokens:4.1f}  L={loss:.3f}")
 ```
 
----
+손실은 차례로 **1.524, 1.502, 1.524** 입니다. $N$을 두 배로 늘리면 $D$는 절반이 됩니다. 여기서 첫 번째와 세 번째 손실이 같은 이유는 이 식에서 $N$과 $D$를 맞바꿔도 두 항의 합이 같기 때문입니다. 실험에서 추정한 계수와 지수를 쓰면 손실이 가장 낮은 지점은 $N=D$에서 벗어날 수 있습니다.
 
-## Example: The Power of Scale
+<a id="example-the-power-of-scale"></a>
 
-가상의 연산 예산과 모델·데이터 배분을 바꾸며 명시된 곡선의 손실을 비교합니다. FLOPs만으로 특정 능력을 추론하지 않습니다.
+## 연산 예산과 배분을 직접 바꿔 보기
 
 <ScaleVisualizer client:load lang="ko" />
 
----
+<a id="앞으로의-과제-시퀀스-모델링의-도전"></a>
 
-## 앞으로의 과제: 시퀀스 모델링의 도전
-
-우리는 규모(scale)와 일반적인 방법이 강력하다는 것을 보았습니다. 하지만 이를 언어와 같은 시퀀스 데이터에 어떻게 적용할까요?
-- 과거 토큰의 기억을 어떻게 효율적으로 유지할까요?
-- 시퀀스가 극도로 길어지면 어떻게 될까요?
-- 단순한 마르코프 체인에서 복잡한 신경망으로 어떻게 이동했을까요?
-
-이러한 질문들은 우리가 시퀀스 데이터를 위해 특별히 설계된 모델들의 진화를 탐구할 **챕터 2: 시퀀스 모델링 시대**로 이어집니다.
-
----
+실제 학습 예산을 배분할 때는 모델 크기를 달리하되 학습 FLOPs가 비슷한 실험을 여럿 비교해 보세요. 같은 토크나이저와 같은 검증 토큰으로 손실을 비교한 뒤, 사용할 서비스의 과제에서도 성능을 확인합니다. [8.2절](/ko/chapter-8/chinchilla-optimality/)에서 이 배분을 계산하는 방법을 더 살펴봅니다. [2.1절](/ko/chapter-2/markov-chains-to-rnns/)에서는 다음 토큰 하나를 예측할 때 앞의 문맥을 얼마나 활용할 수 있는지 알아봅니다.
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: 왜 서튼의 교훈은 '쓰다(bitter)'고 불리나요?</summary>
-*연구자들에게 쓴 이유는, 특정 규칙과 휴리스틱을 설계하는 인간의 독창성이 결국 대규모 계산과 함께 확장되는 단순하고 일반적인 방법보다 덜 효과적이라는 점을 시사하기 때문입니다. 이는 AI를 '가르치고' 싶어 하는 전문가들의 자존심에 상처를 줍니다.*
+<summary>Quiz 1: 체스 프로그램이 이전보다 두 배 많은 국면을 탐색합니다. 실제로 더 나은 수를 두는지 어떻게 검사할까요?</summary>
+*같은 국면과 같은 평가 함수를 사용하고 탐색 예산만 달리합니다. 기준이 되는 수와 비교하거나, 같은 상대와 백·흑을 바꾸어 대국해 결과를 비교할 수 있습니다. 살펴본 국면의 수만 세면 연산이 늘었다는 사실까지만 알 수 있습니다.*
 </details>
 
 <details>
-<summary>Quiz 2: The Bitter Lesson이 인간 전문가가 AI 연구에서 쓸모없다는 것을 의미하나요?</summary>
-*아닙니다. 인간의 전문 지식은 특징과 규칙을 설계하는 것에서 확장 가능한 아키텍처, 손실 함수, 그리고 데이터 파이프라인을 설계하는 것으로 이동합니다. 초점이 "무엇을 생각할 것인가"에서 "어떻게 배울 것인가"로 바뀝니다.*
+<summary>Quiz 2: 예제에서 (5, 20)과 (20, 5)의 손실은 왜 같을까요?</summary>
+*모델 크기 항과 데이터 양 항의 계수와 지수가 각각 같기 때문입니다. 두 변수를 맞바꿔도 합이 그대로입니다. 연산 예산을 고정했다는 사실만으로 이 대칭성이 생기지는 않습니다.*
 </details>
 
 <details>
-<summary>Quiz 3: 현대의 LLM은 어떻게 The Bitter Lesson을 반영하고 있나요?</summary>
-*LLM은 문법이나 논리에 대한 하드코딩된 규칙이 없습니다. 그것들은 단순히 수십억 개의 파라미터로 확장되고 수조 개의 토큰으로 학습된 단순한 다음 토큰 예측기입니다. 그들의 지능은 서튼이 예측한 대로 규모(scale)의 창발적 속성입니다.*
+<summary>Quiz 3: Gopher에 토큰 1조 개를 더 학습시킬 때의 이득을 두 모델의 MMLU 점수 차이로 계산할 수 있을까요?</summary>
+*두 실험은 파라미터 수, 토큰 수, 학습 설정이 함께 달랐습니다. Gopher에서 토큰을 늘리는 효과를 추정하려면 모델과 데이터 분포, 평가 방식은 고정하고 학습 토큰 수를 바꿔야 합니다.*
 </details>
 
 <details>
-<summary>Quiz 4: The Bitter Lesson은 특화된 AI 하드웨어 설계에 어떤 시사점을 주나요?</summary>
-*The Bitter Lesson은 하드웨어가 특정 알고리즘을 위한 특화된 연산보다는, 연산량과 함께 잘 확장되는 일반적이고 고도로 병렬화 가능한 연산(예: 행렬 곱셈)에 최적화되어야 함을 시사합니다. 이는 왜 특정 알고리즘 전용 아키텍처보다 GPU나 TPU가 지배적인 위치를 차지하게 되었는지를 설명합니다.*
+<summary>Quiz 4: 밀집 모델의 학습 연산량 근사식에서 6은 어디에서 나오나요?</summary>
+*주요 행렬 곱셈의 순전파에서는 파라미터 하나와 토큰 하나당 곱셈과 덧셈에 약 2 FLOPs가 듭니다. 가중치와 입력에 대한 기울기를 계산하는 데 약 4 FLOPs가 더 듭니다. 토큰 위치 간 어텐션이나 활성값 재계산 등은 실제 총량에 영향을 줍니다.*
 </details>
-
-<details>
-<summary>Quiz 5: "The Bitter Lesson"은 거대 모델의 "창발성(Emergence)" 개념과 어떤 관련이 있나요?</summary>
-*창발성은 작은 모델에서는 나타나지 않지만 큰 모델에서는 나타나는 능력을 말합니다. The Bitter Lesson은 우리가 컴퓨팅과 데이터를 확장함에 따라, 수동으로 규칙을 프로그래밍해서는 얻을 수 없었던 예상치 못한 창발적 능력이 나타날 것임을 예측합니다.*
-</details>
-
-<details>
-<summary>Quiz 6: Transformer 모델 학습을 위한 표준 연산량 근사식인 $C \approx 6ND$를 유도하고, 상수 $6$이 도출되는 과정을 설명하시오.</summary>
-*Transformer 모델에서 정방향 패스(Forward pass) 시 각 파라미터는 토큰당 1회의 곱셈-덧셈(Multiply-Accumulate) 연산에 참여하며, 이는 파라미터당 $2$ FLOPs에 해당합니다. 따라서 정방향 패스는 토큰당 $2N$ FLOPs가 필요합니다. 역방향 패스(Backward pass)에서는 정방향 패스의 약 2배의 연산량이 소요됩니다: 활성화 함수(Activation)에 대한 기울기를 구하는 데 $2N$ FLOPs, 가중치(Weight)에 대한 기울기를 구하는 데 $2N$ FLOPs가 필요합니다. 이를 모두 합산하면 전체 학습 단계(Forward + Backward)에서 토큰당 $2N + 2N + 2N = 6N$ FLOPs가 소요됩니다. 여기에 데이터셋의 총 토큰 수 $D$를 곱하면 전체 연산량 $C \approx 6ND$가 도출됩니다.*
-</details>
-
----
 
 ## References
 
-1. <a id="ref-1"></a>Sutton, R. (2019). *The Bitter Lesson*. [Link](http://www.incompleteideas.net/IncIdeas/BitterLesson.html)
-2. <a id="ref-2"></a>Kaplan, J., McCandlish, S., Henighan, T., Brown, T. B., Chess, B., Child, R., ... & Amodei, D. (2020). *Scaling laws for neural language models*. [arXiv:2001.08361](https://arxiv.org/abs/2001.08361).
-3. <a id="ref-3"></a>**추천 인터뷰**: [Dwarkesh Patel's Interview with Rich Sutton](https://www.youtube.com/watch?v=21EYKqUsPfg) '쓴 교훈'과 AI의 미래에 대한 서튼의 생각을 더 깊이 들을 수 있는 훌륭한 인터뷰입니다.
+1. <a id="ref-1"></a>Sutton, R. (2019). [The Bitter Lesson](https://bitterlesson.org/).
+2. <a id="ref-2"></a>Kaplan, J., et al. (2020). [Scaling Laws for Neural Language Models](https://arxiv.org/abs/2001.08361).
+3. <a id="ref-3"></a>Hoffmann, J., et al. (2022). [Training Compute-Optimal Large Language Models](https://arxiv.org/html/2203.15556), 표 1·6과 4.1절.

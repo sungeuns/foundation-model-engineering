@@ -38,6 +38,8 @@ test('shared exercise IDs belong to the same authored content in both translatio
     }
   }
   for (const [route, id] of [
+    ['/chapter-1/bitter-lesson', 'chinchilla-budget-example'],
+    ['/chapter-19/probing-classifiers', 'probe-projection-coordinates'],
     ['/chapter-6/tokenization-science', 'tokenizer-acceptance-probes'],
     ['/chapter-11/vision-language-bridges', 'receipt-grounding'],
     ['/chapter-3/self-attention-mathematics', 'attention-weight-example'],

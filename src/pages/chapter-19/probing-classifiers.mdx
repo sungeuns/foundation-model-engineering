@@ -128,15 +128,56 @@ A robust probe card includes:
 
 ## 5. From Decodability to Intervention
 
-Decodability is correlational. Amnesic probing asks whether downstream behavior changes after removing probe-accessible information [[3]](#ref-3). For a probe matrix $W$, a single linear null-space projection can be written
+Decodability is correlational. Amnesic probing tests whether downstream behavior changes when an activation is altered to remove a probe's signal [[3]](#ref-3). For a matrix $A$ whose rows give the directions to remove, the Euclidean projection onto its null space is
 
 $$
-P=I-W^\top(WW^\top)^\dagger W,\qquad h'=Ph,
+P_A=I-A^\top(AA^\top)^\dagger A,
 $$
 
-where ${}^\dagger$ is the Moore–Penrose pseudoinverse. INLP repeats probe fitting and projection until the selected linear probe family can no longer recover the label.
+where the dagger denotes the Moore–Penrose pseudoinverse. The rows of $A$ and the activation being projected must use the same coordinates.
 
-The careful interpretation is “the intervention reduced information recoverable by this probe family.” It did not erase every nonlinear encoding of the concept, and it may have removed unrelated information that shared the same subspace. Later work reports that INLP can introduce non-targeted changes and finds Mean Projection or LEACE more targeted in evaluated settings [[5]](#ref-5).
+<a id="probe-projection-coordinates"></a>
+
+### Which direction did the probe learn?
+
+The probe above reads $z=D^{-1}(h-\mu)$, where $h$ is the raw activation, $\mu$ is the training mean and $D$ is the diagonal matrix of training scales. For a binary probe, subtract the class-0 readout row from the class-1 row to get $w$. The class-1 minus class-0 logit is $wz+(b_1-b_0)$. There are two ways to bring this margin back to its value at the training mean.
+
+- To minimize the Euclidean change in **raw activations**, use the raw normal $A=wD^{-1}$ and set $h'=\mu+P_A(h-\mu)$.
+- To minimize the Euclidean change in **standardized activations**, project $z$ using $w$, then undo standardization with $h'=\mu+D P_w z$.
+
+Suppose the two readout rows are $(0,0)$ and $(1,1)$, with zero biases. The second input coordinate has training scale 10. A change of one raw unit in that coordinate moves the logit margin by only 0.1. Try both projections and a third that mistakenly uses the learned row directly on the raw coordinates.
+
+~~~python
+import torch
+
+h = torch.tensor([[5., 4.], [3., 6.]])
+mean = torch.tensor([4., 5.])
+scale = torch.tensor([1., 10.])
+w = torch.tensor([1., 1.])
+centered = h - mean
+z = centered / scale
+
+def remove_direction(rows, normal):
+    coefficient = (rows @ normal) / (normal @ normal)
+    return rows - coefficient[:, None] * normal
+
+wrong = mean + remove_direction(centered, w)
+raw = mean + remove_direction(centered, w / scale)
+standardized = mean + scale * remove_direction(z, w)
+
+def margin(rows):
+    return ((rows - mean) / scale) @ w
+
+torch.testing.assert_close(margin(h), torch.tensor([0.9, -0.9]))
+torch.testing.assert_close(margin(wrong), margin(h))
+for result in (raw, standardized):
+    torch.testing.assert_close(margin(result), torch.zeros(2), atol=1e-6, rtol=0)
+print(raw[0].tolist(), standardized[0].tolist())
+~~~
+
+The original margins are $+0.9$ and $-0.9$. The mistaken projection leaves both unchanged. For the first input $(5,4)$, the raw-space projection gives about $(4.109,3.911)$ and the standardized-space projection gives $(4.55,-0.5)$ in raw units. Both bring the margin to zero. With unequal class biases the final margin is $b_1-b_0$.
+
+This checks one fixed probe. Fit fresh probes on projected training data and evaluate them on held-out examples. INLP repeats fitting and projection to address directions that a fresh linear probe can still use. Also measure what the intervention displaced. Studies have found changes to non-target properties even when the original signal was suppressed [[5]](#ref-5).
 
 A causal claim needs controls:
 
@@ -172,7 +213,7 @@ These are hypotheses, not production gates. Start in shadow mode. Calibrate fals
 
 <LinearProbeVisualizer client:load lang="en" />
 
-The interactive uses synthetic two-dimensional points. It demonstrates how a fixed linear boundary responds to signal and distribution shift; it does not simulate layer evolution or validate the LRH.
+Set the gap between the two class centers to 22. Their x coordinates are 39 and 61 before individual variation. Shift both centers 14 units to the right and they land at 53 and 75. The gap is still 22, but the center of class A has crossed the fixed decision boundary at $x=50$. Check what happens to accuracy on these synthetic points.
 
 ## 8. Takeaway
 

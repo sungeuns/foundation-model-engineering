@@ -99,8 +99,8 @@ export const searchDescriptions = {
     ko: '로짓 렌즈로 잔차 스트림의 예측을 관찰하고 튜닝된 렌즈와 비교하며, 어텐션 시각화를 해석할 때의 한계를 이해합니다.',
   },
   '/chapter-19/probing-classifiers': {
-    en: 'Design auditable probing experiments with linear classifiers, controls, selectivity, held-out splits, and a clear distinction between decoding and causation.',
-    ko: '선형 분류기, 대조 실험, 선택성과 독립 평가 분할을 갖춘 프로빙 실험을 설계하고, 정보 해독 가능성과 인과적 역할을 구분합니다.',
+    en: 'Fit a linear probe to hidden states and test what it can decode. A PyTorch example shows how standardization changes the direction of a projection.',
+    ko: '은닉 상태에서 선형 프로브로 읽어 낼 수 있는 정보를 측정합니다. 표준화를 적용한 프로브에서 어느 방향을 투영해야 하는지 PyTorch 예제로 확인합니다.',
   },
   '/chapter-19/sparse-autoencoders-sae': {
     en: 'Understand sparse autoencoders through superposition, polysemantic neurons, dictionary learning, dead latents, and Top-K feature activation.',
@@ -251,8 +251,8 @@ export const searchDescriptions = {
     ko: '지도·자기지도·강화 학습을 비교하고, 각 학습 패러다임이 파운데이션 모델과 자기회귀 학습 손실에 어떻게 연결되는지 살펴봅니다.',
   },
   '/chapter-1/bitter-lesson': {
-    en: 'Examine the Bitter Lesson: why general search and learning methods benefit from computation, and how scaling laws inform engineering choices.',
-    ko: '쓴 교훈을 바탕으로 범용 탐색과 학습이 연산 규모의 이점을 얻는 이유, 스케일링 법칙이 엔지니어링 선택에 주는 의미를 살펴봅니다.',
+    en: 'Read Sutton’s Bitter Lesson through Gopher and Chinchilla. Compare their training budgets and run a short Python example that trades model size for tokens.',
+    ko: '서튼의 ‘쓴 교훈’을 Gopher와 Chinchilla의 학습 실험으로 살펴봅니다. 두 모델의 파라미터와 토큰 수를 비교하고, 파이썬 예제로 같은 연산 예산을 세 가지로 배분해 봅니다.',
   },
   '/chapter-2/markov-chains-to-rnns': {
     en: 'Trace sequence modeling from Markov chains to recurrent neural networks, with hidden-state intuition and a PyTorch RNN example.',

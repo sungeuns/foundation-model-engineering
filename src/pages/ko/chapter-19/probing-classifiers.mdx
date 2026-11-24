@@ -10,38 +10,42 @@ import LinearProbeVisualizer from '../../../components/chapter-19/LinearProbeVis
 
 # 19.3 프로빙 분류기로 은닉 상태 읽기
 
-Logit lens는 hidden state가 model의 unembedding을 통과했을 때 무엇을 예측하는지 묻습니다. **Probe** 는 다른 질문을 던집니다. 제약된 보조 모델이 그 state에서 지정한 속성을 decode할 수 있는가?
+로짓 렌즈는 모델의 출력층에 중간 은닉 상태를 넣어 어떤 토큰을 예측하는지 살펴봅니다. **프로브** 는 같은 은닉 상태를 다른 용도로 읽습니다. 예를 들어 간단한 보조 분류기가 은닉 상태만 보고 그 토큰의 품사를 맞힐 수 있는지 묻습니다.
 
-이 구분이 이 절의 인식론적 경계입니다. 성공한 probe는 **명시한 실험 protocol 아래의 decodability** 를 보여줍니다. Base model이 그 정보를 사용한다거나, 유일한 한 방향에 저장한다거나, distribution shift 뒤에도 같은 feature를 드러낸다는 사실을 단독으로 입증하지는 않습니다.
+정확도가 높으면 해당 실험 조건에서 분류기가 그 속성을 읽어낼 수 있다는 근거가 됩니다. 모델 자체가 예측할 때도 그 정보를 사용하는지, 정보가 하나의 방향에만 표현되는지, 입력 분포가 바뀌어도 같은 특징을 읽을 수 있는지는 별도로 확인해야 합니다.
 
 ## 1. 무엇을 측정하는가
 
-Input $x_i$ 에서 model 위치를 정하고 activation $h_i^{(l,p)}\in\mathbb R^d$ 를 추출합니다. $l$ 은 layer, $p$ 는 token position과 stream 위치입니다. Label $y_i$ 를 예측하는 probe $f_\theta$ 를 학습합니다.
+입력 $x_i$ 를 모델에 넣고 정해진 위치에서 활성값 $h_i^{(l,p)}\in\mathbb R^d$ 를 추출합니다. $l$ 은 층 번호이고 $p$ 는 어떤 토큰의 어느 연산 지점에서 값을 읽었는지 나타냅니다. 이 벡터로 레이블 $y_i$ 를 예측하도록 프로브 $f_\theta$ 를 학습합니다. 선형 분류기라면 가중치 $W$ 와 편향 $b$ 로 각 클래스의 점수를 구해 가장 높은 클래스를 선택합니다.
 
 $$
 \hat y_i=\arg\max_c \left(Wh_i^{(l,p)}+b\right)_c.
 $$
 
-Activation artifact에는 다음 정보가 있어야 결과를 재현할 수 있습니다.
+활성값을 다시 추출할 수 있도록 다음 정보를 함께 기록합니다.
 
-- Model checkpoint/tokenizer hash, chat template, input text
-- Layer, module, normalization 전후 위치, token-position 선택 규칙
-- Dtype, pooling, truncation, padding 동작
-- Dataset example ID, split, label provenance, extraction code version
+- 모델 체크포인트와 토크나이저의 해시, 채팅 템플릿, 입력 원문
+- 층과 모듈, 정규화 전후 중 어느 쪽인지, 토큰 위치를 고른 기준
+- 수치 자료형, 여러 토큰의 값을 모으는 방법(풀링), 입력을 자르거나 패딩하는 방식
+- 데이터의 예제 ID와 분할, 레이블의 출처, 추출 코드 버전
 
-“Layer 20 activation”만으로는 부족합니다. Residual-stream input, attention output, MLP output, post-block residual은 서로 다른 tensor입니다.
+‘20번째 층의 활성값’이라고만 쓰면 어느 텐서인지 알 수 없습니다. 같은 층에서도 잔차 스트림 입력, 어텐션 출력, MLP 출력, 블록을 통과한 뒤의 잔차 스트림은 서로 다릅니다.
 
-## 2. 왜 Linear Probe를 쓰는가
+<a id="2-왜-linear-probe를-쓰는가"></a>
 
-고용량 nonlinear probe는 target이 복잡하게 표현되어도 유용한 decision surface를 만들 수 있습니다. Linear probe는 질문을 의도적으로 좁힙니다. Label이 affine boundary로 접근 가능한가? **Linear Representation Hypothesis** 는 고수준 속성이 언제 representation space의 선형 구조와 대응하는지를 연구합니다 [[1]](#ref-1).
+## 2. 왜 선형 프로브를 쓰는가
 
-낮은 capacity는 해석에 도움을 주지만 confound를 없애지는 않습니다. 고차원 공간의 linear classifier도 적은 data를 암기하거나, lexical identity 또는 label과 상관된 feature를 이용할 수 있습니다. Probe capacity, regularization, sample 수, representation dimension을 함께 보고해야 합니다.
+표현력이 큰 비선형 분류기는 속성이 복잡하게 섞여 있어도 분류 경계를 학습할 수 있습니다. 선형 프로브를 쓰면 질문이 좁아집니다. 두 클래스라면 활성값을 한 방향으로 투영해 얻은 점수에 문턱값을 적용하는 것만으로도 둘을 구별할 수 있을까요? **선형 표현 가설** 은 고수준 속성이 어떤 조건에서 표현 공간의 선형 구조에 대응하는지 다룹니다 [[1]](#ref-1).
 
-## 3. 최소한의 Audit 가능한 실험
+단순한 분류기도 엉뚱한 단서를 학습할 수 있습니다. 활성값의 차원이 높고 표본이 적으면 학습 예제를 외우거나, 단어 자체 또는 레이블과 우연히 함께 나타난 특징으로 답을 맞힐 수 있습니다. 프로브의 표현력과 규제 방식, 표본 수, 활성값의 차원을 함께 보고해야 하는 이유입니다.
 
-Transformation을 fitting하기 전에 split합니다. 관련 prompt, entity, paraphrase, synthetic sibling은 같은 split에 넣어야 합니다. 그렇지 않으면 속성의 일반화가 아니라 example을 인식할 수 있습니다. Normalization 통계는 training data에서만 계산합니다.
+<a id="3-최소한의-audit-가능한-실험"></a>
 
-> **Code 범위:** 미리 추출한 fixed-length activation과 $0,\ldots,C-1$ class ID에 대해 실행할 수 있습니다. Activation hook, sequence pooling, class imbalance, hyperparameter selection, confidence interval, grouped split은 실험별 요소이므로 helper 밖에 둡니다.
+## 3. 결과를 검증할 수 있는 작은 실험
+
+전처리 통계를 구하기 전에 데이터를 나눕니다. 같은 개체를 다루는 관련 프롬프트, 같은 뜻으로 고쳐 쓴 문장, 같은 원본에서 만든 합성 예제는 한 분할 안에 둡니다. 그래야 프로브가 이미 본 예제를 알아보는 것만으로 평가 점수를 얻는 일을 줄일 수 있습니다. 정규화에 쓰는 평균과 표준편차는 학습 데이터에서만 구합니다.
+
+> **코드의 적용 범위.** 미리 추출한 고정 길이 활성 벡터와 $0,\ldots,C-1$ 범위의 클래스 ID를 입력으로 받습니다. 활성값 추출을 위한 훅, 토큰 풀링, 클래스 불균형 보정, 하이퍼파라미터 선택, 신뢰구간 계산, 그룹별 데이터 분할은 실험에 맞게 별도로 정합니다.
 
 ~~~python
 import torch
@@ -106,107 +110,154 @@ def fit_linear_probe(
     return probe, accuracy
 ~~~
 
-실제 연구에서는 validation data로 hyperparameter를 고르고, 여러 seed와 불확실성을 보고합니다. Majority baseline, token/embedding baseline, random initialization 또는 shuffled-layer representation과도 비교해야 합니다.
+실제 연구에서는 검증 데이터로 하이퍼파라미터를 고르고, 난수 시드를 바꿔 반복한 뒤 결과의 불확실성도 보고합니다. 가장 흔한 클래스만 예측하는 분류기, 토큰이나 임베딩만 쓰는 분류기, 무작위로 초기화한 모델이나 층 순서를 섞은 모델의 표현을 쓰는 분류기와 성능을 비교하세요.
 
-## 4. Control과 Selectivity
+<a id="4-control과-selectivity"></a>
 
-Hewitt와 Liang의 control task는 word type마다 random하지만 deterministic한 label을 부여합니다 [[2]](#ref-2). Linguistic task와 이 암기하기 쉬운 control을 모두 잘 예측하는 probe는 lexical identity 또는 과한 capacity를 사용했을 수 있습니다.
+## 4. 대조 과제로 선택성 측정하기
+
+Hewitt와 Liang은 서로 다른 단어마다 레이블을 무작위로 한 번 정합니다. 이후 같은 단어가 등장할 때마다 그 레이블을 그대로 씁니다 [[2]](#ref-2). 단어별 답만 외우면 풀 수 있는 대조 과제입니다. 언어 과제와 대조 과제 모두에서 성능이 높다면, 프로브의 표현력이 커서 단어 자체를 단서로 두 과제를 모두 풀었을 수 있습니다. 두 과제의 성능 차이를 **선택성** 이라고 합니다.
 
 $$
 \text{selectivity}=
 \text{task performance}-\text{control performance}.
 $$
 
-높은 selectivity는 선택한 probe/data protocol이 해당 control보다 실제 구조를 선호한다는 유용한 근거입니다. Geometry가 인간의 concept을 “자연스럽게 표현한다”는 증명은 아닙니다. 결론은 control 구성, split, capacity measure, metric, distribution에 조건부입니다.
+선택성이 높으면 그 프로브는 주어진 데이터에서 단어별 임의 레이블보다 실제 언어적 속성을 더 잘 포착한 것입니다. 대조 과제를 만드는 방법, 데이터 분할과 분포, 분류기의 표현력을 재는 방식, 평가 지표에 따라 값은 달라집니다. 사람이 붙인 개념이 모델 안에서 본래부터 한 방향으로 표현된다고 결론 내리려면 다른 근거도 필요합니다.
 
-견고한 probe card에는 다음을 포함합니다.
+결과를 공유할 때는 다음 조건을 함께 적으세요.
 
-- Label balance와 grouped train/dev/test split
-- Test set을 보기 전에 정한 layer와 token position
-- Probe family, parameter 수, regularization, seed, preprocessing
-- In-distribution, paraphrase, entity-held-out, template-held-out 결과
-- Control-task 성능과 단순 representation baseline
-- Confidence interval과 best layer뿐 아니라 시도한 모든 hypothesis
+- 클래스별 레이블 비율과 그룹 단위로 학습·검증·시험 데이터를 나눈 방식
+- 시험 결과를 보기 전에 정한 층과 토큰 위치
+- 프로브 종류, 파라미터 수, 규제 방식, 난수 시드, 전처리
+- 학습 때와 같은 분포, 바꿔 쓴 문장, 학습에서 제외한 개체와 템플릿에 대한 각각의 결과
+- 대조 과제의 점수와 더 단순한 표현으로 얻은 기준 점수
+- 신뢰구간, 가장 좋은 층을 포함해 검토한 모든 가설
 
-## 5. Decodability에서 Intervention으로
+<a id="5-decodability에서-intervention으로"></a>
 
-Decodability는 상관관계입니다. Amnesic probing은 probe로 접근 가능한 정보를 제거한 뒤 downstream behavior가 바뀌는지 묻습니다 [[3]](#ref-3). Probe matrix $W$ 에 대한 한 번의 linear null-space projection은
+## 5. 읽을 수 있는 신호가 모델의 행동에 영향을 줄까?
+
+프로브가 어떤 속성을 읽어낼 수 있다는 관찰은 상관관계입니다. 망각 탐사(amnesic probing)에서는 프로브가 읽는 신호를 활성값에서 제거한 뒤 모델의 후속 행동이 달라지는지 검사합니다 [[3]](#ref-3). 행렬 $A$ 의 각 행이 제거할 방향을 나타낸다면, 그 영공간으로의 유클리드 정사영은 다음과 같습니다.
 
 $$
-P=I-W^\top(WW^\top)^\dagger W,\qquad h'=Ph
+P_A=I-A^\top(AA^\top)^\dagger A.
 $$
 
-로 쓸 수 있습니다. ${}^\dagger$ 는 Moore–Penrose pseudoinverse입니다. INLP는 선택한 linear probe family가 label을 더 이상 복구하지 못할 때까지 probe fitting과 projection을 반복합니다.
+위 첨자 $\dagger$ 는 무어–펜로즈 유사역행렬을 뜻합니다. $A$ 의 행과 투영할 활성값은 같은 좌표계로 표현해야 합니다.
 
-정확한 해석은 “이 probe family가 복구할 수 있는 정보를 intervention이 줄였다”입니다. Concept의 모든 nonlinear encoding을 지운 것이 아니며, 같은 subspace를 공유한 무관한 정보도 제거했을 수 있습니다. 후속 연구는 INLP가 target 이외의 변화를 만들 수 있음을 보고하고, 평가한 설정에서 Mean Projection이나 LEACE가 더 targeted한 제거를 보였다고 설명합니다 [[5]](#ref-5).
+<a id="probe-projection-coordinates"></a>
 
-Causal claim에는 control이 필요합니다.
+### 프로브가 학습한 방향은 어느 좌표계에 있을까?
 
-1. **Completeness:** 새 probe도 target을 decode하지 못하는가?
-2. **Intervention selectivity:** 대응시킨 non-target 속성은 유지되는가?
-3. 같은 rank의 random projection과 magnitude-matched noise 비교
-4. Probe accuracy가 아니라 미리 선언한 downstream behavior 측정
-5. Layer, seed, removal method, held-out distribution 반복
+앞에서 만든 프로브의 입력은 $z=D^{-1}(h-\mu)$ 입니다. $h$ 는 원래 활성값, $\mu$ 는 학습 데이터의 평균, $D$ 는 학습 때 사용한 좌표별 스케일을 대각 원소로 갖는 행렬입니다. 이진 프로브의 출력 가중치에서 클래스 1의 행과 클래스 0의 행의 차이를 $w$ 라고 하면, 두 클래스의 로짓 차이는 $wz+(b_1-b_0)$ 입니다. 이 값을 학습 데이터의 평균 위치에서 얻는 값으로 되돌리는 두 가지 방법이 있습니다.
 
-Canby et al.은 completeness–selectivity trade-off를 실증적으로 정의하고, 평가한 방법 중 모든 조건에서 완벽한 family는 없다고 보고합니다 [[6]](#ref-6). 따라서 projection 뒤 behavior 변화는 collateral damage를 배제한 범위에서만 causal contribution의 근거가 됩니다.
+- **원래 활성값** 에서 유클리드 이동 거리를 최소화하려면 그 좌표계의 법선 $A=wD^{-1}$ 를 구해 $h'=\mu+P_A(h-\mu)$ 로 옮깁니다.
+- **표준화한 활성값** 에서 유클리드 이동 거리를 최소화하려면 $w$ 로 $z$ 를 투영하고, $h'=\mu+D P_w z$ 로 원래 단위를 복원합니다.
 
-## 6. Unsupervised Probing과 CCS
+두 클래스의 가중치 행이 각각 $(0,0)$, $(1,1)$ 이고 편향은 모두 0이라고 합시다. 두 번째 좌표의 학습 스케일은 10입니다. 원래 단위로 이 좌표를 1만큼 늘려도 로짓 차이는 0.1만큼만 커집니다. 아래 코드는 두 좌표계에서 각각 투영한 결과와, 학습한 가중치를 실수로 원래 좌표에 그대로 적용한 결과를 비교합니다.
 
-Contrast-Consistent Search (CCS)는 statement와 negation 같은 pair를 사용합니다. Task label 없이도 prediction이 confident하고 서로 consistent한 low-capacity direction을 찾습니다 [[4]](#ref-4). 단순화한 consistency 조건은
+~~~python
+import torch
+
+h = torch.tensor([[5., 4.], [3., 6.]])
+mean = torch.tensor([4., 5.])
+scale = torch.tensor([1., 10.])
+w = torch.tensor([1., 1.])
+centered = h - mean
+z = centered / scale
+
+def remove_direction(rows, normal):
+    coefficient = (rows @ normal) / (normal @ normal)
+    return rows - coefficient[:, None] * normal
+
+wrong = mean + remove_direction(centered, w)
+raw = mean + remove_direction(centered, w / scale)
+standardized = mean + scale * remove_direction(z, w)
+
+def margin(rows):
+    return ((rows - mean) / scale) @ w
+
+torch.testing.assert_close(margin(h), torch.tensor([0.9, -0.9]))
+torch.testing.assert_close(margin(wrong), margin(h))
+for result in (raw, standardized):
+    torch.testing.assert_close(margin(result), torch.zeros(2), atol=1e-6, rtol=0)
+print(raw[0].tolist(), standardized[0].tolist())
+~~~
+
+두 입력의 원래 로짓 차이는 $+0.9$ 와 $-0.9$ 입니다. 좌표계를 잘못 적용하면 둘 다 그대로입니다. 첫 입력 $(5,4)$ 를 원래 좌표계에서 투영하면 약 $(4.109,3.911)$ 이고, 표준화한 좌표계에서 투영한 뒤 원래 단위로 되돌리면 $(4.55,-0.5)$ 입니다. 둘 다 로짓 차이를 0으로 만듭니다. 클래스 편향이 서로 다르면 최종 로짓 차이는 $b_1-b_0$ 입니다.
+
+여기서 확인한 것은 가중치를 고정한 프로브 하나의 반응입니다. 투영한 학습 데이터로 새 프로브를 훈련하고, 학습에서 떼어 둔 예제로 성능을 확인하세요. 반복 영공간 투영(INLP)은 새 선형 프로브로 여전히 읽을 수 있는 방향을 찾아 학습과 투영을 반복합니다. 원래 신호를 억제해도 다른 속성까지 바뀔 수 있으므로 이 변화도 측정해야 합니다 [[5]](#ref-5).
+
+개입이 특정 속성을 통해 모델의 행동을 바꿨다는 해석은 다음 대조 실험으로 점검합니다.
+
+1. **제거의 완전성** 을 확인합니다. 새로 학습한 프로브로도 목표 속성을 여전히 읽을 수 있는지 검사합니다.
+2. **개입의 선택성** 을 확인합니다. 비교 조건을 맞춘 다른 속성들이 보존되는지 검사합니다.
+3. 같은 차원 수를 제거하는 무작위 투영, 같은 크기의 잡음을 더하는 개입과 결과를 비교합니다.
+4. 프로브 정확도와 함께, 실험 전에 정한 모델의 후속 행동을 측정합니다.
+5. 층, 난수 시드, 제거 방법을 바꾸고 학습에서 제외한 분포에서도 실험을 반복합니다.
+
+Canby 등은 목표 정보를 얼마나 완전히 제거했는지와 다른 정보를 얼마나 잘 보존했는지를 따로 측정했습니다. 평가한 방법 중 모든 조건에서 두 목표를 완전히 충족한 것은 없었습니다 [[6]](#ref-6). 투영 뒤 성능이 변했다면, 다른 속성도 함께 손상돼 나타난 변화인지부터 가려내야 합니다.
+
+<a id="6-unsupervised-probing과-ccs"></a>
+
+## 6. 정답 레이블 없이 프로브 학습하기
+
+CCS(Contrast-Consistent Search)는 어떤 진술과 그 부정문을 한 쌍으로 사용합니다. 정답 레이블 없이 간단한 프로브를 학습해, 한쪽에는 높은 확률을 주고 다른 쪽에는 낮은 확률을 주는 방향을 표현 공간에서 찾습니다 [[4]](#ref-4). 진술 $x$ 와 그 부정 $\neg x$ 에 대한 일관성 조건을 단순화하면 다음과 같습니다.
 
 $$
 p_\theta(x)+p_\theta(\neg x)\approx1
 $$
 
-입니다.
+이 식은 학습에 사용하는 가정입니다. 실제 문장에서는 뜻이 모호하거나 해석에 따라 두 문장이 모두 거짓일 수 있어, 겉으로 부정문처럼 보여도 논리적으로 정확한 부정 관계가 성립하지 않을 수 있습니다. 또 축의 부호를 뒤집어도 일관성은 유지됩니다. 어느 쪽을 ‘참’으로 읽어야 하는지는 별도로 정해야 합니다. 학습에 레이블을 쓰지 않아도 어떤 모델을 고를지 평가할 때는 레이블이 필요할 수 있습니다.
 
-이는 ground truth가 아니라 가정이자 training signal입니다. 자연어 negation이 완전한 논리적 complement가 아닐 수 있고, 두 문장이 서로 다른 해석에서 모두 모호하거나 거짓일 수 있습니다. Objective에는 sign symmetry가 있으므로 축의 어느 쪽이 true인지 정해야 합니다. Label-free training이라고 model selection까지 label-free인 것도 아닙니다.
+CCS 연구진은 자신들이 평가한 데이터셋과 모델에서 평균적으로 제로샷 예측보다 높은 정확도를 보고했습니다. 은닉 상태에서 잠재 지식을 읽으려는 초기 시도입니다. 모든 모델에 통하는 참·거짓 방향이 있거나 모델이 거짓말하는지를 판별할 수 있다는 근거로 쓰기에는 이릅니다.
 
-CCS 논문은 평가한 dataset과 model에서 zero-shot accuracy 대비 평균 개선을 보고합니다. 이는 latent knowledge elicitation의 초기 방법이지, 보편적인 truth direction이나 모델이 “거짓말한다”는 사실을 확정하는 detector가 아닙니다.
+<a id="7-과장-없이-제품-debugging에-쓰기"></a>
 
-## 7. 과장 없이 제품 Debugging에 쓰기
+## 7. 서비스에서 프로브로 오류 원인 좁히기
 
-Probe는 유용한 계측기가 될 수 있습니다.
+프로브로 서비스 로그에서 다음과 같은 가설을 시험할 수 있습니다.
 
-- **Over-refusal:** 정상적인 security 교육과 위험 요청 사이의 risk signal이 layer별로 분리되는지 확인
-- **RAG grounding:** entity/template-held-out data에서 answer-time state가 document-supported answer와 parametric answer를 예측하는지 확인
-- **Tool readiness:** 성공·실패 trace의 pre-call state를 비교해 action choice가 언제 decodable해지는지 확인
+- **과도한 답변 거부.** 각 층에서 위험 관련 신호를 읽어, 정상적인 보안 교육 질문과 유해한 요청을 구분할 수 있는지 확인합니다.
+- **검색 근거 활용.** 답을 생성하는 시점의 상태로, 검색 문서가 뒷받침하는 답과 모델이 학습한 지식에 의존한 답을 구분할 수 있는지 봅니다. 학습에 없던 개체와 템플릿으로도 시험합니다.
+- **도구 선택.** 도구 호출에 성공한 기록과 실패한 기록에서 호출 전 상태를 비교합니다. 어느 시점부터 선택할 행동을 읽어낼 수 있는지 살펴봅니다.
 
-이는 hypothesis이지 곧바로 production gate가 아닙니다. Shadow mode에서 시작하고 slice별 false-positive/false-negative 비용을 calibration하며, model/template update마다 drift를 확인해야 합니다. Output 또는 behavior 수준의 fallback도 필요합니다. Base artifact가 바뀌면 activation geometry와 probe calibration도 달라질 수 있습니다.
+먼저 사용자에게 보내는 답에는 영향을 주지 않는 상태로 프로브를 돌립니다. 요청 유형별로 오탐과 미탐의 비용에 맞춰 판정 기준을 조정하고, 모델이나 템플릿을 바꿀 때마다 성능 변화를 확인하세요. 기반 모델이 달라지면 활성값의 분포와 프로브 점수의 의미도 달라질 수 있습니다. 프로브 판단이 빗나갔을 때는 실제 출력이나 행동을 확인할 별도 수단이 필요합니다.
 
 <LinearProbeVisualizer client:load lang="ko" />
 
-Interactive는 synthetic 2-D point를 사용합니다. 고정된 linear boundary가 signal과 distribution shift에 어떻게 반응하는지 보여줄 뿐 layer evolution을 모사하거나 LRH를 검증하지 않습니다.
+두 집단의 중심 간격을 22로 맞춰 보세요. 개별 점의 편차를 더하기 전 중심의 가로 좌표는 39와 61입니다. 두 중심을 함께 오른쪽으로 14만큼 옮기면 53과 75가 됩니다. 간격은 여전히 22지만 집단 A의 중심은 $x=50$ 에 고정된 분류 경계를 넘어섭니다. 이때 예제 점들의 분류 정확도가 어떻게 달라지는지 확인하세요.
 
 ## 8. 핵심 정리
 
-Probe는 control을 통해 타당성을 확보하는 측정 도구입니다. Linear accuracy는 decodability를, selectivity는 대안 설명의 범위를 좁히는 근거를, 통제된 intervention은 causal contribution을 지지할 수 있습니다. 어느 하나도 유일한 인간 가독 feature를 드러내지는 않습니다. 다음 절의 sparse autoencoder는 미리 정한 label 대신 학습된 feature dictionary를 사용하지만, identifiability와 evaluation이라는 다른 문제를 가져옵니다.
+선형 프로브의 정확도는 주어진 속성을 활성값에서 읽을 수 있는지 보여줍니다. 대조 과제로 선택성을 측정하면 단어를 외워서 맞혔을 가능성 같은 다른 설명을 점검할 수 있습니다. 통제된 개입은 그 속성이 모델의 행동에 인과적으로 기여하는지 살피는 방법입니다. 이 결과들만으로 사람이 해석한 특징이 유일한 설명이라고 단정하기는 어렵습니다. 다음 절의 희소 오토인코더는 레이블을 미리 정하는 대신 특징 사전을 학습합니다. 그 사전이 특징을 유일하게 식별하는지, 결과를 어떻게 평가할지 새로 물어야 합니다.
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: 높은 held-out linear-probe accuracy만으로 정당화되는 가장 강한 결론은 무엇인가요?</summary>
-*명시한 extraction, split, preprocessing, probe family 아래에서 그 label이 activation으로부터 선형 decode 가능합니다. Model의 사용과 인과성에는 추가 근거가 필요합니다.*
+<summary>Quiz 1: 따로 떼어 둔 시험 데이터에서 선형 프로브 정확도가 높다면 어디까지 결론 내릴 수 있나요?</summary>
+*지정한 활성값 추출 방식, 데이터 분할, 전처리, 프로브 종류에서 해당 레이블을 선형적으로 읽을 수 있다고 말할 수 있습니다. 모델이 그 정보를 실제로 사용하고 그 결과로 행동이 달라지는지는 추가 실험이 필요합니다.*
 </details>
 
 <details>
-<summary>Quiz 2: Normalization을 training split에서만 fitting해야 하는 이유는 무엇인가요?</summary>
-*Test 통계를 사용하면 evaluation distribution의 정보가 probe pipeline에 새어 들어가 추정치가 편향될 수 있기 때문입니다.*
+<summary>Quiz 2: 정규화에 필요한 통계는 왜 학습 데이터에서만 구해야 하나요?</summary>
+*시험 데이터의 평균이나 표준편차를 쓰면 평가할 분포에 관한 정보가 전처리를 통해 프로브에 들어갑니다. 그 결과 처음 보는 데이터에서의 성능 추정치가 편향될 수 있습니다.*
 </details>
 
 <details>
-<summary>Quiz 3: INLP 뒤 behavior 저하가 targeted causal dependence를 자동으로 입증하지 않는 이유는 무엇인가요?</summary>
-*Projection이 non-target 정보도 제거하거나 activation을 분포 밖으로 옮길 수 있습니다. Completeness, collateral-feature retention, matched intervention 검증이 필요합니다.*
+<summary>Quiz 3: INLP를 적용한 뒤 모델 성능이 떨어졌다면 목표 속성을 지운 탓이라고 말할 수 있나요?</summary>
+*투영 과정에서 다른 속성까지 손상됐거나 활성값이 원래 분포를 벗어났을 수 있습니다. 목표 신호가 사라졌는지와 다른 특징이 보존됐는지를 검사하고, 조건을 맞춘 대조 개입과 결과를 비교해야 합니다.*
 </details>
 
 <details>
-<summary>Quiz 4: CCS가 consistent한 statement–negation axis를 찾아도 남는 모호성은 무엇인가요?</summary>
-*Consistency만으로 어느 방향이 true인지 정해지지 않으며, 자연어 pair가 complement 가정을 어길 수 있습니다. Orientation과 외부 평가가 여전히 필요합니다.*
+<summary>Quiz 4: CCS로 진술과 부정문에 일관된 점수를 주는 축을 찾아도 무엇이 모호한가요?</summary>
+*일관성만으로는 축의 어느 쪽이 참인지 정할 수 없습니다. 두 문장이 논리적으로 정확한 부정 관계에 있다는 가정도 깨질 수 있습니다. 축의 방향을 정하고 외부 기준으로 평가해야 합니다.*
 </details>
 
 <details>
-<summary>Quiz 5: Random example split에서는 잘 되지만 entity-held-out data에서 실패하는 probe는 무엇을 시사하나요?</summary>
-*Random split이 lexical/entity shortcut을 허용했을 가능성이 큽니다. 근거는 일반 속성 표현보다 암기 또는 좁은 interpolation을 지지합니다.*
+<summary>Quiz 5: 예제를 무작위로 나눴을 때는 잘 맞히지만 새 개체를 주면 성능이 떨어지는 이유는 무엇일까요?</summary>
+*무작위 분할에서 같은 단어나 개체가 학습과 시험 양쪽에 들어갔을 수 있습니다. 이 결과는 속성을 일반화했다기보다 익숙한 개체를 외웠거나 비슷한 예제에 한해서만 예측했다는 해석과 맞습니다.*
 </details>
 
 ## References

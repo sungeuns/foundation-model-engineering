@@ -1,0 +1,44 @@
+---
+interface Props { lang: 'en' | 'ko' }
+const ko = Astro.props.lang === 'ko';
+const groups = [
+  { label: ko ? '파라미터 수 (십억 개)' : 'Parameters (billions)', values: [280, 70] },
+  { label: ko ? '학습 토큰 수 (십억 개)' : 'Training tokens (billions)', values: [300, 1400] },
+];
+const models = ['Gopher', 'Chinchilla'];
+---
+<figure class="budget-comparison">
+  <div class="measurements">
+    {groups.map(({label, values}) => (
+      <div>
+        <strong>{label}</strong>
+        <dl>
+          {values.map((value, i) => (
+            <div class="observation">
+              <dt>{models[i]}</dt>
+              <dd>
+                <span class="track" aria-hidden="true"><span class:list={['bar', {chinchilla: i === 1}]} style={{width: `${100 * value / Math.max(...values)}%`}}></span></span>
+                <span>{value.toLocaleString(ko ? 'ko-KR' : 'en-US')}</span>
+              </dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+    ))}
+  </div>
+  <figcaption>{ko
+    ? '각 항목에서 두 모델의 막대는 같은 척도를 씁니다. 수치는 Hoffmann 외(2022), 표 1에서 가져왔습니다.'
+    : 'Within each panel the two bars share a scale. Values from Table 1 of Hoffmann et al. (2022).'} <a href="#ref-3">[3]</a></figcaption>
+</figure>
+
+<style>
+  .budget-comparison { margin: 1.5rem 0; }
+  .measurements { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); gap: 1.5rem; }
+  dl { margin: .6rem 0 0; }
+  .observation { display: grid; grid-template-columns: 6em 1fr; align-items: baseline; margin: .3rem 0; }
+  dd { margin: 0; display: grid; grid-template-columns: minmax(1rem, 1fr) 5ch; align-items: center; gap: .5rem; text-align: right; font-variant-numeric: tabular-nums; }
+  .track { display: block; }
+  .bar { display: block; height: .55rem; background: #986333; }
+  .chinchilla { background: #177c81; }
+  figcaption { margin-top: .75rem; font-size: .9em; }
+</style>

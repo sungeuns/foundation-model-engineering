@@ -5,6 +5,7 @@ import { readReleaseScenario } from '../components/chapter-17/release-scenario.j
 // These IDs name the same authored exercise in both translations. Do not infer
 // counterparts from heading order, translated slugs, or reference numbers.
 const lessonFragments = {
+  '/chapter-1/bitter-lesson': ['chinchilla-budget-example'],
   '/chapter-1/symbolism-vs-connectionism': ['logic-gate-lab'],
   '/chapter-2/dawn-of-attention': ['translation-alignment-example'],
   '/chapter-2/cnns-for-nlp': ['textcnn-filter-example'],
@@ -40,6 +41,7 @@ const lessonFragments = {
   '/chapter-17/production-evaluation-and-release-gates': ['release-gate-example'],
   '/chapter-17/llm-as-a-judge': ['translation-rubric-example'],
   '/chapter-17/experimental-design-and-uncertainty': ['release-lab'],
+  '/chapter-19/probing-classifiers': ['probe-projection-coordinates'],
 };
 
 // chapterPath comes from the canonical chapter inventory, not the browser URL.
