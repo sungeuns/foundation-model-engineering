@@ -271,8 +271,8 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 1.5 | `/chapter-1/learning-path-and-mastery` | Inspected 2026-11-17 | 0f8f04bb12ad70521b3c701fae89e83133b936a5d28d74a07b17d6a0f9d55c12 | 7afd35142e5986833e81c484c1c3d7fe0b717d7d728be32693fb4ec93a0ff029 |
 | 2.1 | `/chapter-2/markov-chains-to-rnns` | Inspected 2026-11-15 | 0ce137827271786ce59fbb687ede850189b1842843a7e11d9420e8d51da672c8 | 0d4b5440f58a02205e9c981af00a3d028f6e7081b2923f0a609a0f0f9e581e2a |
 | 2.2 | `/chapter-2/vanishing-exploding-gradients` | Inspected 2026-11-15 | f883974659fb302e235151e51e0cffb5a6f9418089342fa6be149d94c207ffac | 7a4baf6b5be2bf9ff72621f15581483e6595c47296cb169d5d1c03395b882385 |
-| 2.3 | `/chapter-2/dawn-of-attention` | Inspected 2026-11-15 | e3df7fbeb285121402336d5a6a0c154e791da8c420e0e19716aa9a78ed478b16 | f8ca565f4756b8e2138133b67002a29e007ed381cbd24be6cf79b518888600c0 |
-| 2.4 | `/chapter-2/cnns-for-nlp` | Inspected 2026-11-15 | 37f7b031323ada4d1eb80b89d4ba1a7a33eb6ec127580aaed5e31500107e5ca2 | 4ffc530cb6c1a5483ef59e35462a49712c19200a70593fd408e5698050ec53c5 |
+| 2.3 | `/chapter-2/dawn-of-attention` | Inspected 2026-11-25 | 9d4d10844df85b73e86171a5d6e2fca5ba60492e9c8c588b91cda52c9035b7c3 | 0c1ee582b7fa825c0e51faf268d0b585210bd10aa7a2aa7b75700ecd2b0f9506 |
+| 2.4 | `/chapter-2/cnns-for-nlp` | Inspected 2026-11-25 | 3ea1f3cff839b4a390d8a98af7bf540f1367736bdb09d50869c6a05ba369437c | a44815cf317e2f8a2e4068d1a8584eafc24a81e5c85c4d7e5a09f8ff5c481aa6 |
 | 3.1 | `/chapter-3/self-attention-mathematics` | Inspected 2026-11-25 | ef9cc6c406b93e84902c0080009a02e8b3c9a64b29a016ab10752ce974e49229 | 999ed01fb864abf45042c9ad3ccef4122d307affa4cd1420e85dcc19c1646d82 |
 | 3.2 | `/chapter-3/multi-head-attention` | Inspected 2026-11-25 | bc5026a7ec1b9aa4d5bc4589f7f6011630bc877efcb8d179954ee0560d8a705f | 4316a26ed2c414ccdb0c4f4ad6642d98286b9350748fd362920a1d183cac8b68 |
 | 3.3 | `/chapter-3/position-encoding-strategy` | Inspected 2026-11-15 | 63c3645268727e12760f56b1748a44bbac8afd1c7f66f9d49329e76e39130fb8 | 17d34127b63e936f20ca9f2440fa2aed52e5291548cf18a9dcf8b4f3fdf7463e |
@@ -354,7 +354,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 17.3 | `/chapter-17/elo-rating-and-leaderboards` | Inspected 2026-11-15 | 14f931df5e4641c576c1763d446b2c663d1f282abf438767e5a330d49b31a9b9 | 1e78f5819e5452372109f72327dad0f7831b3b9ce66750000c9378a906744c30 |
 | 17.4 | `/chapter-17/contamination-issues` | Mechanical only | 38a0cad52c7504804a57a8cc2deed94a3ac2fe68f7648809261abad1cf6b4fa5 | ad7b87426dcdde29f69a6921696a462359e7681d7d3b5ee5c11f3d80ec0a71c7 |
 | 17.5 | `/chapter-17/production-evaluation-and-release-gates` | Inspected 2026-11-25 | d2917516ef75c2ede2cd4db285a221090b09f181104e7112bd388f427ecc5298 | cb7d670ce7898fe43516e3cc8a38e295b6e24bba8e3a65c7579c61f3e03b9fb3 |
-| 17.6 | `/chapter-17/commercial-model-benchmarks` | Inspected 2026-11-25 | 4a49828c17446fd693ac686fc8ff5511adde668d5bd79ad3a5c0d385889e7bd4 | 81b1ffabb6d28b33cd31188c769502570b14c35d6f3611eb6b421c48b4611b2f |
+| 17.6 | `/chapter-17/commercial-model-benchmarks` | Inspected 2026-11-25 | 4324c5452ff272c53a0aefbf090cc4be191837e1397dc7e6ea9151a7e027738c | c176b072443536badcd5a17bf25f6fa73877c2a39d98b8902019834de0fd54f8 |
 | 17.7 | `/chapter-17/experimental-design-and-uncertainty` | Inspected 2026-11-25 | 15572b32598a7c488cd3930fe29d3dd54f54ebd5521257817788e039253cdf1d | 00b4ea5b58d4ec986eee7b8d4ed7fbb61749c27a0c9c1c77aced73a4d86f14b1 |
 | 18.1 | `/chapter-18/red-teaming` | Mechanical only | fa815b07490b4a1039a2e91d2c98e9f1f212d6479f534afa5f09020cc8f93598 | 5aa628372d20829e842ce6b3fad0133fee7c40e63c345e76f0b823b351df6f59 |
 | 18.2 | `/chapter-18/jailbreaking-and-defense` | Mechanical only | caff93966e1d1a925120d696bf37a09fa46cc63cd9378c818ac9f1d489348afd | 165303014a71dfa4ec8e28c0ac7f38712f5d97fbcd551510aa5539cb33c33ac1 |
@@ -659,3 +659,9 @@ In 14.5, ranking the graph nodes places Mina and Vendor Z at exactly the same sc
 The two-request example in 3.1 verifies valid outputs against independent expected values. With the mask axes reversed, changing a padding value from 90 to 900 changes a valid answer from 50 to 455, even when two implementations agree with each other. The correctly expanded batch mask keeps that answer at 10. The downloadable script preserves the earlier four-token exercise.
 
 In 12.1, both notebook editions use the same pinned checkpoint, tokenizer and executable cells. Independent CPU kernels measured 1,013,760 bytes after prefill and 1,382,400 bytes after four additional positions per request. Eight padding positions account for 368,640 bytes. All four cached next-token logit comparisons passed. The experiment counts logical key/value tensor contents on CPU.
+
+### 2026-11-25 recurrent alignment, sentence filters and model benchmark revisions
+
+Recalculated the two source weights and context vector in §2.3. At the first decoder step, the additive score assigns fox 0.6363 of the weight. The dot product gives it 0.2689 with the same states. In §2.4, moving *not* changes the maximum activation from 2 to 1 and leaves two windows tied. On CPU, the length-aware classifier excludes windows that touch right padding in mixed-length batches.
+
+Checked the Ling-3.2-air checkpoint configuration and linked both homepages and READMEs directly to the 262,144-token answer in §17.6. Compared Artificial Analysis's versioned Terminal-Bench results and documented the v5.0.2 grading changes beside the archived v5.0.1 table.

@@ -5,167 +5,117 @@ lang: "ko"
 ---
 
 import { TranslationVisualizer } from '../../../components/chapter-2/TranslationVisualizer';
+import diagram from '../../../assets/images/chapter-2/encoder-decoder-attention.png';
 
-# 2.3 어텐션의 여명 (The Dawn of Attention)
+<a id="23-어텐션의-여명-the-dawn-of-attention"></a>
 
-어텐션(Attention)의 도입은 트랜스포머와 현대 파운데이션 모델 시대로 직접 이어지는 결정적인 순간이었습니다. 이는 시퀀스 투 시퀀스(Seq2Seq) 모델의 근본적인 병목 현상을 해결했습니다.
+# 2.3 어텐션의 여명
 
----
+영어 *red fox*를 프랑스어로 옮기면 *renard roux*입니다. 영어에서는 형용사가 앞서지만 프랑스어에서는 여우를 뜻하는 명사 *renard*가 먼저 나옵니다. 디코더가 첫 단계에서는 *fox*에서, 다음 단계에서는 *red*에서 정보를 더 많이 가져오려면 어떻게 해야 할까요? 순환 신경망에 어텐션을 붙이면 인코더가 각 위치에서 만든 상태를 보관해 두고 번역 단계마다 다른 비율로 섞어 읽을 수 있습니다.
 
-### **동기: 정보 병목 현상 극복**
-긴 문서를 번역하는 번역가라고 상상해 보세요.
-* **어텐션이 없을 때:** 문서를 처음부터 끝까지 다 읽고, 모든 내용을 기억한 다음, 문서를 덮고 기억에만 의존해서 다른 언어로 번역본을 작성해야 합니다. 이것이 초기 Seq2Seq 모델이 하려고 했던 방식입니다.
-* **어텐션이 있을 때:** 문서를 읽으면서 번역본의 각 단어를 작성할 때마다 원본 텍스트에서 해당 단어와 관련된 특정 부분을 다시 들여다봅니다.
+<a id="동기-정보-병목-현상-극복"></a>
+<a id="비유-형광펜"></a>
+<a id="seq2seq-병목-현상"></a>
+<a id="문제점"></a>
 
-어텐션은 디코더가 관련 있는 입력 단어에 동적으로 "주의를 기울일(pay attention)" 수 있게 함으로써 모델이 긴 문장을 처리할 수 있도록 도왔습니다.
+## 마지막 상태에 무엇을 담아야 할까?
 
----
+초기의 LSTM 인코더–디코더 모델에서는 인코더가 원문을 읽은 뒤 마지막 순환 상태를 디코더에 넘겼습니다 [[2]](#ref-2). 두 단어짜리 구절을 읽어도, 쉰 단어짜리 문장을 읽어도 상태의 차원은 같습니다. 문장 끝을 번역할 때 첫머리의 형용사가 다시 필요하다면 그 정보가 중간의 상태 갱신을 거치는 동안 남아 있어야 합니다.
 
-### **비유: 형광펜**
-두꺼운 교과서를 읽으며 시험공부를 하고 있다고 상상해 보세요.
+Sutskever, Vinyals, Le는 실험에서 번역문은 그대로 두고 원문만 역순으로 입력했습니다. 원문이 `A B C`이고 번역문이 `a b c`라면, `C B A`로 읽었을 때 디코더가 첫 단어 `a`를 예측하기 직전에 `A`를 만나게 됩니다. 저자들은 일부 원문과 번역문 단어 사이의 거리가 짧아져 학습이 쉬워졌을 가능성을 제시했습니다 [[2]](#ref-2). 입력 순서를 바꿔도 디코더에 넘기는 것은 여전히 인코더의 마지막 상태입니다.
 
-* **기존 방식 (RNN 인코더-디코더)** 은 전체 챕터를 암기하여 하나의 포스트잇에 요약하려는 것과 같습니다. 그리고 시험 문제를 풀 때는 오직 그 포스트잇만 사용합니다. 만약 챕터가 50페이지 분량이라면, 그 포스트잇은 많은 세부 사항을 놓칠 것입니다.
-* **어텐션 방식** 은 **형광펜** 을 들고 챕터를 읽는 것과 같습니다. 시험 중에 특정 질문을 받으면, 책장을 다시 넘겨 질문과 가장 관련이 있는 형광펜 칠해진 부분에 시선을 집중합니다. 모든 것을 포스트잇 하나에 욱여넣을 필요가 없습니다. 책 전체에 접근할 수 있지만, 어디를 봐야 할지 알고 있는 것입니다.
+<a id="해결책-bahdanau-어텐션---인간처럼-번역하기"></a>
+<a id="메커니즘"></a>
 
----
+## 디코더가 원문의 여러 위치를 읽는 방법
 
-## Seq2Seq 병목 현상
+Bahdanau, Cho, Bengio의 번역 모델은 원문의 위치 $j$마다 순방향·역방향 인코더 상태를 결합한 벡터 $h_j$를 보관합니다 [[1]](#ref-1). 번역 단계 $t$를 준비할 때는 직전 디코더 상태 $s_{t-1}$와 각 $h_j$를 비교합니다. 이 모델의 가산 어텐션은 다음 식으로 위치별 정렬 점수를 구합니다.
 
-어텐션 이전에는 기계 번역과 같은 작업을 위한 표준 접근 방식이 RNN(또는 LSTM)을 사용하는 **인코더-디코더 (Encoder-Decoder)** 아키텍처였습니다.
+$$
+e_{tj}=v^\top\tanh(Ws_{t-1}+Uh_j).
+$$
 
-1.  **인코더:** 입력 시퀀스를 처리하고 모든 정보를 **컨텍스트 벡터 (Context Vector)** (또는 상태)라고 불리는 단일 고정 크기 벡터로 압축합니다.
-2.  **디코더:** 이 단일 컨텍스트 벡터를 입력으로 받아 출력 시퀀스를 생성합니다.
+행렬 $W$와 $U$는 두 상태를 같은 공간으로 옮깁니다. 벡터 $v$는 두 상태에서 같은 위치끼리 더한 뒤 $\tanh$를 적용한 결과를 점수 하나로 바꿉니다. 실제 번역 모델은 이 매개변수를 학습합니다. 원문의 길이를 $S$라 할 때, 같은 번역 단계의 점수끼리 소프트맥스로 정규화하고 그 가중치로 문맥 벡터를 구합니다.
 
-### 문제점
-50단어 문장을 다른 언어로 번역한다고 상상해 보세요. 인코더는 50단어의 모든 의미, 문법, 뉘앙스를 예를 들어 512개의 숫자로 이루어진 단일 벡터에 쑤셔 넣어야 합니다. 이것이 바로 심각한 **병목 현상(Bottleneck)** 입니다. 네트워크는 문장 끝에 도달할 때쯤이면 문장 앞부분을 잊어버리게 됩니다.
+$$
+\alpha_{tj}=\frac{\exp(e_{tj})}{\sum_{k=1}^{S}\exp(e_{tk})},
+\qquad c_t=\sum_{j=1}^{S}\alpha_{tj}h_j .
+$$
 
+<figure class="translation-source-figure">
+  <a href={diagram.src}><img src={diagram.src} width={diagram.width} height={diagram.height} loading="lazy" alt="아래쪽에는 양방향 인코더의 위치별 상태가 있습니다. 그 상태들의 가중합이 문맥 벡터가 되어 위쪽 디코더의 현재 번역 단계에 들어갑니다." /></a>
+  <figcaption>아래에서 위로 따라가 보세요. 각 원문 위치가 문맥 벡터에 기여하는 비율은 그 위치의 정렬 가중치입니다. 그림을 누르면 확대할 수 있습니다. <a href="https://lilianweng.github.io/posts/2018-06-24-attention/">Lilian Weng의 원본 그림</a>.</figcaption>
+</figure>
 
+<a id="예제-번역-정렬-translation-alignment"></a>
+<a id="translation-alignment-example"></a>
 
-**💡 비하인드 스토리: "입력 문장 뒤집기" 해킹**
-어텐션(Attention)이 발명되기 전, 연구자들은 이 병목 현상을 해결하기 위해 필사적이었습니다. 2014년, Google의 Ilya Sutskever 연구팀은 놀랍도록 단순한 꼼수(Hack)를 발견했습니다. 바로 **인코더에 입력 문장을 거꾸로(역순으로) 넣는 것**이었습니다! (예: "A B C" -> "C B A").
-왜 이것이 효과가 있었을까요? 번역된 문장의 첫 부분은 보통 원문의 첫 부분과 강하게 연관되어 있습니다. 입력을 뒤집으면 원문의 첫 단어인 "A"가 인코더에서 가장 마지막에 처리되므로, 디코더가 첫 번역 단어를 생성하기 직전에 생성된 컨텍스트 벡터(Context vector)에 "A"에 대한 정보가 가장 신선하게 남아있게 됩니다. 이 우아하지만 임시방편이었던 해결책은 번역 성능을 엄청나게 향상시켰으며, 동시에 당시 AI 학계가 진정한 "기억(Memory)" 메커니즘—결국 어텐션이 해결해 준—에 얼마나 목말라 있었는지를 보여주는 유명한 일화입니다.
+## 어느 단어에 더 큰 가중치가 붙을까?
 
-## 해결책: Bahdanau 어텐션 - 인간처럼 번역하기
+원문 두 단어의 상태를 $h_{\mathrm{red}}=(1,0)$, $h_{\mathrm{fox}}=(0,1)$로 놓습니다. 첫 번역 단계인 *renard*에서 디코더의 질의는 $(1,0)$입니다. $W=U=I$, $v=(1,1)$로 정했습니다. 손으로 계산할 수 있도록 고른 값입니다. 실습에서는 번역할 단어와 단계별 질의를 미리 제공합니다.
 
-2014년, Bahdanau, Cho, Bengio는 *"Neural Machine Translation by Jointly Learning to Align and Translate"*라는 기념비적인 논문을 발표했습니다. 그들은 **어텐션(Attention)** 개념을 도입했습니다.
-
-**개발 비하인드 스토리:** 이 아이디어는 인간이 번역하는 방식에서 영감을 받았습니다. 인간 번역가는 긴 문장을 번역할 때 전체 문장을 완벽하게 외운 상태에서 번역을 시작하지 않습니다. 대신, 번역문을 작성해 나가면서 원문의 특정 부분(예: 지금 번역하려는 단어와 관련된 부분)을 계속해서 '다시 들여다봅니다'. 연구진은 모델에도 이러한 '다시 들여다보는' 능력을 부여하고자 했습니다.
-
-단일 고정 컨텍스트 벡터에 의존하는 대신, 디코더가 생성의 각 단계에서 인코더의 모든 은닉 상태를 "되돌아볼(look back)" 수 있도록 허용하는 것입니다.
-
-<div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', margin: '20px 0' }}>
-
-<div style={{ maxWidth: '600px', width: '100%' }}>
-![Encoder-Decoder Attention](../../../assets/images/chapter-2/encoder-decoder-attention.png)
-</div>
-
-<em style={{ marginTop: '10px', color: '#7f8c8d' }}>Source: [Lilian Weng's Blog](https://lilianweng.github.io/posts/2018-06-24-attention/)</em>
-
-</div>
-
-
-
-### 메커니즘
-1.  **인코더 상태:** 인코더는 은닉 상태 시퀀스 $\mathbf{h}_1, \mathbf{h}_2, \dots, \mathbf{h}_{T_x}$를 생성합니다.
-2.  **정렬 점수 (Alignment Scores):** 디코딩 단계 $t$에서 모델은 위치 $j$의 입력이 위치 $t$의 출력과 얼마나 잘 정렬되는지 점수를 계산합니다. 이는 종종 디코더의 이전 상태 $\mathbf{s}_{t-1}$과 인코더 상태 $\mathbf{h}_j$의 함수입니다:
-    $$e_{tj} = a(\mathbf{s}_{t-1}, \mathbf{h}_j)$$
-3.  **어텐션 가중치:** 이 점수들은 소프트맥스 함수를 사용하여 정규화되어 어텐션 가중치 $\alpha_{tj}$를 생성합니다:
-    $$\alpha_{tj} = \frac{\exp(e_{tj})}{\sum_{k=1}^{T_x} \exp(e_{tk})}$$
-4.  **컨텍스트 벡터:** 단계 $t$에 대한 컨텍스트 벡터 $\mathbf{c}_t$는 모든 인코더 은닉 상태의 *가중합(weighted sum)*입니다:
-    $$\mathbf{c}_t = \sum_{j=1}^{T_x} \alpha_{tj}\mathbf{h}_j$$
-
-그런 다음 디코더는 $\mathbf{c}_t$와 자체 상태 $\mathbf{s}_{t-1}$을 사용하여 다음 단어를 예측합니다.
-
-## 왜 모든 것을 바꾸었는가
-
-어텐션은 고정 길이 병목 현상을 제거했습니다. 모델은 매 순간 입력의 어느 부분이 관련이 있는지 동적으로 결정하기 때문에 임의의 긴 시퀀스도 처리할 수 있습니다. 또한 어텐션 가중치를 시각화하여 모델이 번역 중에 어떤 단어에 집중하고 있는지 확인할 수 있으므로 어느 정도의 **해석 가능성(Interpretability)** 도 제공했습니다.
-
----
-
-## PyTorch 어텐션
-
-다음은 디코더 상태와 인코더 상태로부터 컨텍스트 벡터를 계산하는 방법을 보여주는 PyTorch에서의 단순화된 점곱 어텐션(dot-product attention) 구현입니다.
-
-```python
-import torch
-import torch.nn.functional as F
-
-def simple_attention(decoder_state, encoder_states):
-    # decoder_state: (batch, 1, hidden_dim)
-    # encoder_states: (batch, seq_len, hidden_dim)
-    
-    # 1. 정렬 점수 계산 (점곱)
-    # scores shape: (batch, 1, seq_len)
-    scores = torch.bmm(decoder_state, encoder_states.transpose(1, 2))
-    
-    # 2. 소프트맥스를 통해 어텐션 가중치 획득
-    # weights shape: (batch, 1, seq_len)
-    attention_weights = F.softmax(scores, dim=-1)
-    
-    # 3. 인코더 상태들의 가중합으로 컨텍스트 벡터 획득
-    # context shape: (batch, 1, hidden_dim)
-    context = torch.bmm(attention_weights, encoder_states)
-    
-    return context, attention_weights
-
-# 사용 예시
-batch_size = 1
-seq_len = 5
-hidden_dim = 4
-
-# 시뮬레이션된 상태들
-dec_state = torch.randn(batch_size, 1, hidden_dim)
-enc_states = torch.randn(batch_size, seq_len, hidden_dim)
-
-context, weights = simple_attention(dec_state, enc_states)
-print("컨텍스트 벡터 형태:", context.shape)
-print("어텐션 가중치:\n", weights)
-```
-
----
-
-## 예제: 번역 정렬 (Translation Alignment)
-
-영어를 프랑스어로 번역할 때 모델이 영어 단어에 어떻게 집중(attend)하는지 시각화해 보세요. 프랑스어 단어를 클릭하면 모델이 해당 단어를 생성할 때 어떤 영어 단어에 집중했는지 확인할 수 있습니다.
+*red*의 가산 점수는 $\tanh(2)+\tanh(0)\approx0.9640$이고, *fox*의 점수는 $2\tanh(1)\approx1.5232$입니다. 소프트맥스를 적용하면 가중치는 차례로 **0.3637과 0.6363** 입니다. 이 예제에서는 두 원문 상태가 각 좌표축의 단위벡터이므로 문맥 벡터도 $(0.3637,0.6363)$입니다. 두 번째 단계인 *roux*에서는 질의가 $(0,1)$로 바뀝니다. 어느 단어의 가중치가 커질지 예상하고 눌러 보세요.
 
 <TranslationVisualizer client:load lang="ko" />
 
----
+첫 단계 *renard*로 돌아가 **점곱** 을 선택해 보세요. 점수는 1과 0이 되고 이번에는 *red*의 가중치가 0.7311로 더 큽니다. 상태가 같아도 점수를 계산하는 방식만 바꾸면 순위가 뒤집힙니다. Luong, Pham, Manning은 디코더 상태를 갱신하는 순서가 다른 구조에서 점곱과 학습 가능한 점수 함수를 실험했습니다 [[3]](#ref-3). 위 실습은 점수 함수만 바꾼 효과를 비교합니다.
+
+<a id="pytorch-어텐션"></a>
+
+## PyTorch로 두 계산 재현하기
+
+인코더와 디코더가 상태를 이미 만들었다고 가정한 CPU 예제입니다. 패딩이 없는 원문 두 단어에 대해 정렬 가중치와 문맥 벡터를 계산합니다. 번역기를 학습하려면 임베딩과 순환 상태 갱신, 출력 확률 분포, 정답 번역문도 필요합니다.
+
+~~~python
+import torch
+
+# Rows are the source states for "red" and "fox".
+h = torch.eye(2, dtype=torch.float64)
+query = torch.tensor([1.0, 0.0], dtype=h.dtype)
+additive = torch.tanh(h + query).sum(dim=-1)
+dot = h @ query
+
+for scores in (additive, dot):
+    weights = scores.softmax(dim=0)
+    context = weights @ h
+    print(weights.tolist(), context.tolist())
+
+expected = torch.tensor([0.36374167, 0.63625833], dtype=h.dtype)
+torch.testing.assert_close(additive.softmax(0) @ h, expected)
+torch.testing.assert_close(torch.tanh(h + query.flip(0)).sum(-1).softmax(0) @ h,
+                           expected.flip(0))
+~~~
+
+<a id="왜-모든-것을-바꾸었는가"></a>
+
+번역문이 $T$자리라면 모든 원문 위치를 비교하는 데 총 $S T$개의 점수가 필요합니다. 디코더는 원문 상태와 그 투영 결과를 재사용하고 한 번에 한 행씩 점수를 구할 수 있습니다. 디코더의 순환 상태는 여전히 순서대로 갱신해야 합니다. [3.1절의 셀프 어텐션](../../chapter-3/self-attention-mathematics/#attention-weight-example)에서도 가중합을 사용하지만 이번에는 한 시퀀스에서 질의와 키를 모두 구합니다.
+
+정렬 가중치는 해당 단계에서 상태를 어떤 비율로 섞었는지 보여줍니다. 양방향 인코더가 *fox* 위치에서 만든 상태에는 앞의 *red*에서 얻은 정보도 들어 있습니다. 디코더에는 이전 단계의 정보도 남아 있습니다. 따라서 가장 큰 가중치만으로 최종 번역 단어의 원인을 특정하기는 어렵습니다.
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: 어텐션이 없는 전통적인 인코더-디코더 모델에서 "병목 현상"은 무엇입니까?</summary>
-*병목 현상은 고정 크기의 컨텍스트 벡터입니다. 인코더는 시퀀스의 길이에 관계없이 전체 입력 시퀀스를 단일 벡터로 압축해야 합니다. 긴 문장의 경우, 특히 시퀀스 시작 부분의 단어에 대한 정보 손실이 발생합니다.*
+<summary>Quiz 1: 원문을 뒤집으면 A에서 a까지의 경로와 디코더에 넘기는 상태는 각각 어떻게 될까요?</summary>
+*A를 원문의 끝에서 읽으면 첫 번역 단어 a까지의 경로가 짧아집니다. 디코더가 받는 것은 이전과 같은 고정 크기의 마지막 인코더 상태입니다.*
 </details>
 
 <details>
-<summary>Quiz 2: 어텐션은 표준 RNN 인코더와 어떻게 다르게 컨텍스트 벡터를 계산합니까?</summary>
-*표준 RNN 인코더에서 컨텍스트 벡터는 단순히 RNN의 마지막 은닉 상태입니다. 어텐션에서 컨텍스트 벡터는 인코더가 생성한 모든 은닉 상태의 동적으로 계산된 가중합이며, 가중치는 현재 디코딩 단계에 따라 달라집니다.*
+<summary>Quiz 2: 예제에서 질의의 두 좌표를 바꾸면 가산 어텐션의 결과가 어떻게 달라질까요?</summary>
+*red와 fox의 점수가 서로 바뀌어 가중치는 약 0.6363과 0.3637이 됩니다. 원문 상태가 각 좌표축의 단위벡터이므로 문맥 벡터의 두 좌표도 뒤바뀝니다.*
 </details>
 
 <details>
-<summary>Quiz 3: Bahdanau 어텐션은 순환 연결(recurrent connections)의 필요성을 제거합니까?</summary>
-*아닙니다. Bahdanau 어텐션은 RNN(특히 LSTM 또는 GRU)을 향상시키기 위해 설계되었습니다. 인코더와 디코더는 여전히 순환 네트워크였습니다. 순환 연결이 완전히 제거된 것은 "Attention is All You Need" 논문(Transformer)에 이르러서였습니다.*
+<summary>Quiz 3: 두 원문 상태가 완전히 같다면 정렬 가중치만 바꿔 문맥 벡터를 바꿀 수 있을까요?</summary>
+*없습니다. 합이 1인 가중치로 같은 벡터를 섞으면 원래 벡터가 나옵니다. 다만 디코더 상태가 바뀌면 출력 분포는 달라질 수 있습니다.*
 </details>
 
 <details>
-<summary>Quiz 4: 어텐션 모델의 해석 가능성(interpretability) 측면에 대해 논의해 보세요.</summary>
-*어텐션 모델은 어텐션 가중치($\alpha_{tj}$)를 행렬(정렬 행렬)로 시각화할 수 있기 때문에 더 쉽게 해석할 수 있습니다. 이 행렬은 모델이 각 대상 단어를 생성할 때 어떤 원본 단어를 보고 있었는지 정확히 보여주므로 모델의 의사 결정 프로세스에 대한 통찰력을 제공합니다.*
+<summary>Quiz 4: 원문이 30자리이고 번역문이 20자리라면 전체 원문을 보는 어텐션은 점수를 몇 개 계산할까요?</summary>
+*총 600개입니다. 각 행을 계산한 즉시 사용한다면 현재 단계의 점수 30개만 들고 있어도 됩니다. 원문 상태와 그 밖의 연산에 필요한 메모리는 별도입니다.*
 </details>
-
-<details>
-<summary>Quiz 5: 디코더 상태와 인코더 상태 사이의 정렬 점수(alignment score)를 계산하는 일반적인 방법은 무엇인가요?</summary>
-*일반적인 방법으로는 다음이 있습니다: 1) **점곱(Dot-product)**: $\mathbf{s}_{t-1}^T \mathbf{h}_j$, 단순하고 효율적입니다. 2) **일반(General)**: $\mathbf{s}_{t-1}^T \mathbf{W}_a \mathbf{h}_j$, 학습 가능한 가중치 행렬을 사용합니다. 3) **결합(Concat)** (Bahdanau): $\mathbf{v}_a^T \tanh(\mathbf{W}_a [\mathbf{s}_{t-1}; \mathbf{h}_j])$, 작은 다층 퍼셉트론을 사용합니다.*
-</details>
-
-<details>
-<summary>Quiz 6: Bahdanau(가산형) 어텐션과 Luong(승산형/점곱) 어텐션의 정렬 점수(Alignment Score) 수식을 비교하고, 사용되는 디코더 은닉 상태(Hidden State) 시점의 차이를 설명하시오.</summary>
-*Bahdanau 어텐션은 가산형(Additive) 메커니즘을 사용합니다: $e_{ij} = \mathbf{v}_a^T \tanh(\mathbf{W}_a \mathbf{s}_{i-1} + \mathbf{U}_a \mathbf{h}_j)$이며, 이는 이전 디코더 상태 $\mathbf{s}_{i-1}$과 인코더 상태 $\mathbf{h}_j$를 정렬합니다. 반면 Luong 어텐션은 승산형(Multiplicative) 메커니즘을 도입하여 'general' 형태인 $e_{ij} = \mathbf{s}_i^T \mathbf{W}_a \mathbf{h}_j$ 및 'dot' 형태인 $e_{ij} = \mathbf{s}_i^T \mathbf{h}_j$를 사용합니다. 결정적으로 Luong 어텐션은 현재 디코더 상태 $\mathbf{s}_i$를 인코더 상태 $\mathbf{h}_j$와 정렬합니다. 승산형 어텐션은 고도로 병렬화된 행렬 곱셈으로 최적화할 수 있어 계산 효율성이 더 높습니다.*
-</details>
-
----
 
 ## References
 
-1. <a id="ref-1"></a>Bahdanau, D., Cho, K., & Bengio, Y. (2014). *Neural machine translation by jointly learning to align and translate*. [arXiv:1409.0473](https://arxiv.org/abs/1409.0473).
+1. <a id="ref-1"></a>Bahdanau, D., Cho, K., & Bengio, Y. *Neural Machine Translation by Jointly Learning to Align and Translate*. 2014년 프리프린트, ICLR 2015. [논문](https://arxiv.org/abs/1409.0473).
+2. <a id="ref-2"></a>Sutskever, I., Vinyals, O., & Le, Q. V. *Sequence to Sequence Learning with Neural Networks*. NeurIPS 2014. [논문](https://arxiv.org/abs/1409.3215).
+3. <a id="ref-3"></a>Luong, M.-T., Pham, H., & Manning, C. D. *Effective Approaches to Attention-based Neural Machine Translation*. EMNLP 2015. [논문](https://aclanthology.org/D15-1166/).

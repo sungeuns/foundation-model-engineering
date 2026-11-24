@@ -1,105 +1,39 @@
 import React, { useState } from 'react';
-import './visualizers.css';
+import { textCnnBias, textCnnExample, textCnnKernel } from '../../utils/textcnn.js';
+import './textcnn.css';
 
-interface CnnVisualizerProps {
-  lang?: 'en' | 'ko';
-}
-
-export default function CnnVisualizer({ lang = 'en' }: CnnVisualizerProps) {
-  const [pos, setPos] = useState(0);
-
-  const text = "This movie was not good at all".split(" ");
-  // Simulated scores for a filter looking for negative sentiment (e.g., "not good")
-  const scores = [0.1, 0.2, 0.3, 0.9, 0.4]; // 5 positions for window size 3
-
-  const maxVal = Math.max(...scores);
-
-  const labels = {
-    en: {
-      title: "Sentence: \"This movie was not good at all.\"",
-      slider: "Slide Filter Position:",
-      output: "Feature Map Output:",
-      maxPool: "Max Pooled Value:"
-    },
-    ko: {
-      title: "문장: \"This movie was not good at all.\"",
-      slider: "필터 위치 슬라이드:",
-      output: "피처 맵 출력:",
-      maxPool: "맥스 풀링된 값:"
-    }
-  };
-
-  const t = labels[lang] || labels.en;
-
-  return (
-    <div className="glass-container" style={{ padding: '20px', marginTop: '2rem', marginBottom: '2rem' }}>
-      <div style={{ textAlign: 'center', fontWeight: 'bold', marginBottom: '20px', color: '#1e293b' }}>
-        {t.title}
-        <p style={{fontSize: "0.85rem"}}>{lang === "ko" ? "패딩 없이 7개 토큰에 폭 3 필터를 적용하면 5개 위치가 됩니다. 점수는 설명용으로 작성했습니다." : "Seven tokens and a width-3 filter give five valid positions without padding. Scores are authored illustrations."}</p>
-      </div>
-
-      <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-        <label style={{ color: '#475569', marginRight: '10px' }}>{t.slider}</label>
-        <input
-          aria-label={t.slider}
-          type="range"
-          min="0"
-          max={scores.length - 1}
-          step="1"
-          value={pos}
-          onChange={(e) => setPos(parseInt(e.target.value))}
-          style={{ width: '50%', verticalAlign: 'middle' }}
-        />
-      </div>
-
-      <div style={{ display: 'flex', justifyContent: 'center', gap: '5px', flexWrap: 'wrap', marginTop: '20px' }}>
-        {text.map((word, idx) => {
-          const isActive = idx >= pos && idx < pos + 3;
-          return (
-            <span
-              key={idx}
-              style={{
-                padding: '5px 10px',
-                borderRadius: '4px',
-                border: '1px solid #ccc',
-                backgroundColor: isActive ? '#8e44ad' : 'white',
-                color: isActive ? 'white' : '#1e293b',
-                fontWeight: isActive ? 'bold' : 'normal',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              {word}
-            </span>
-          );
-        })}
-      </div>
-
-      <div style={{ marginTop: '30px', textAlign: 'center' }}>
-        <div style={{ fontSize: '0.9rem', color: '#7f8c8d', marginBottom: '10px' }}>{t.output}</div>
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '10px' }}>
-          {scores.map((score, idx) => (
-            <div
-              key={idx}
-              style={{
-                padding: '5px 10px',
-                borderRadius: '4px',
-                border: '1px solid #ccc',
-                borderColor: idx === pos ? '#8e44ad' : '#ccc',
-                borderWidth: idx === pos ? '2px' : '1px',
-                fontWeight: idx === pos ? 'bold' : 'normal',
-                backgroundColor: 'white',
-                color: '#1e293b',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              {score.toFixed(1)}
-            </div>
-          ))}
-        </div>
-        <div style={{ marginTop: '15px', fontWeight: 'bold', color: '#8e44ad' }}>
-          {t.maxPool} <span>{maxVal.toFixed(1)}</span>
-        </div>
-      </div>
+export default function CnnVisualizer({ lang = 'en' }: { lang?: 'en' | 'ko' }) {
+  const ko = lang === 'ko';
+  const [start, setStart] = useState(3);
+  const [swapped, setSwapped] = useState(false);
+  const { tokens, windows, pooled, winners } = textCnnExample(swapped);
+  const selected = windows[start];
+  return <figure className="textcnn-figure">
+    <figcaption>{ko ? '폭 3인 필터 하나로 단어 순서 읽기' : 'Reading word order with one width-3 filter'}</figcaption>
+    <label className="textcnn-swap"><input type="checkbox" checked={swapped} onChange={event => setSwapped(event.target.checked)} />
+      {ko ? 'not과 good의 위치 바꾸기' : 'Swap “not” and “good”'}</label>
+    <div className="textcnn-sentence" lang="en">{tokens.map(({ word }, i) =>
+      <span key={i} className={i >= start && i < start + textCnnKernel.length ? 'textcnn-current' : undefined}>{word}</span>
+    )}</div>
+    <label>{ko ? '윈도우 시작 위치' : 'Window start'} <strong>{start}</strong>
+      <input type="range" min="0" max={windows.length - 1} value={start} onChange={event => setStart(Number(event.target.value))} />
+    </label>
+    <table><caption>{ko ? '두 좌표는 차례로 부정 단서와 긍정 단서입니다.' : 'Coordinates are the negation and praise features, in that order.'}</caption>
+      <thead><tr>
+        <th scope="col">{ko ? '단어' : 'Word'}</th><th scope="col">{ko ? '임베딩' : 'Embedding'}</th>
+        <th scope="col">{ko ? '필터 행' : 'Filter row'}</th><th scope="col">{ko ? '내적' : 'Dot product'}</th>
+      </tr></thead>
+      <tbody>{selected.contributions.map((dot, offset) => <tr key={offset}>
+        <th scope="row" lang="en">{tokens[start + offset].word}</th><td>({tokens[start + offset].embedding.join(', ')})</td>
+        <td>({textCnnKernel[offset].join(', ')})</td><td>{dot}</td>
+      </tr>)}</tbody>
+    </table>
+    <div className="textcnn-result" aria-live="polite">
+      <p>{ko ? '세 내적의 합에 편향을 더하면' : 'Sum of dot products plus bias'}
+        {' '}<strong>{selected.contributions.map(value => value < 0 ? `(${value})` : value).join(' + ')} − {Math.abs(textCnnBias)} = {selected.raw}</strong></p>
+      <p>{ko ? '현재 윈도우의 ReLU 출력' : 'ReLU for this window'} <strong>{selected.activation}</strong></p>
+      <p>{ko ? '다섯 윈도우의 ReLU 출력' : 'ReLU at all five windows'} <strong>[{windows.map(row => row.activation).join(', ')}]</strong></p>
+      <p>{ko ? '최댓값' : 'Pooled maximum'} <strong>{pooled}</strong> · {ko ? '최댓값이 나온 시작 위치' : 'Winning starts'} <strong>{winners.join(', ')}</strong></p>
     </div>
-  );
+  </figure>;
 }

@@ -4,6 +4,8 @@ import { canonicalKvSearch } from '../components/chapter-12/kv-scenario.mjs';
 // counterparts from heading order, translated slugs, or reference numbers.
 const lessonFragments = {
   '/chapter-1/symbolism-vs-connectionism': ['logic-gate-lab'],
+  '/chapter-2/dawn-of-attention': ['translation-alignment-example'],
+  '/chapter-2/cnns-for-nlp': ['textcnn-filter-example'],
   '/chapter-3/self-attention-mathematics': ['attention-weight-example', 'batched-padding-example'],
   '/chapter-3/multi-head-attention': ['two-head-calculation'],
   '/chapter-3/layer-normalization-residuals': ['normalization-example', 'pytorch-normalization-check'],
@@ -27,7 +29,7 @@ const lessonFragments = {
   '/chapter-14/graphrag-and-ontology': ['graph-evidence-example'],
   '/chapter-14/rag-failure-modes-and-operational-design': ['trace-a-rag-answer'],
   '/chapter-16/decision-models-and-selective-prediction': ['calibration-drift-example'],
-  '/chapter-17/commercial-model-benchmarks': ['long-context-cost'],
+  '/chapter-17/commercial-model-benchmarks': ['long-context-cost', 'ling-32-air-context'],
   '/chapter-17/production-evaluation-and-release-gates': ['release-gate-example'],
   '/chapter-17/llm-as-a-judge': ['translation-rubric-example'],
   '/chapter-17/experimental-design-and-uncertainty': ['release-lab'],

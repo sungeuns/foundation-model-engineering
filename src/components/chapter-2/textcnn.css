@@ -1,0 +1,21 @@
+.textcnn-figure {
+  margin: 1rem 0;
+  padding: clamp(.65rem, 2.5vw, 1.25rem);
+  border: 1px solid #b8c6ca;
+  border-radius: .5rem;
+}
+.textcnn-figure figcaption { font-size: 1.1rem; font-weight: 700; }
+.textcnn-figure label { display: block; margin: .9rem 0; }
+.textcnn-figure .textcnn-swap { display: flex; align-items: center; gap: .5rem; }
+.textcnn-figure input[type="range"] { display: block; width: min(100%, 28rem); }
+.textcnn-figure input:focus-visible { outline: 3px solid #2563eb; outline-offset: 3px; }
+.textcnn-sentence { display: flex; flex-wrap: wrap; gap: .25rem; }
+.textcnn-sentence span { border: 1px solid #b8c6ca; border-radius: .25rem; padding: .2rem .4rem; }
+.textcnn-sentence .textcnn-current { background: #234b60; color: white; border-color: #234b60; }
+.textcnn-figure table { width: 100%; font-variant-numeric: tabular-nums; }
+.textcnn-figure caption { text-align: left; padding-bottom: .35rem; }
+.textcnn-figure :is(th, td) { padding: .35rem; text-align: center; }
+.textcnn-result p { margin: .25rem 0; }
+@media (max-width: 480px) {
+  .textcnn-figure :is(th, td) { padding: .25rem; font-size: .85rem; }
+}

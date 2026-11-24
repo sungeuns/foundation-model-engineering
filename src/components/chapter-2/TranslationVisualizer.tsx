@@ -1,98 +1,47 @@
-import React, { useState } from 'react';
-import './visualizers.css';
+import { useState } from 'react';
+import { sourceWords, sourceStates, targetSteps, translationReadout } from '../../utils/toy-translation.js';
+import './translation-alignment.css';
 
-interface TranslationVisualizerProps {
-  lang?: 'en' | 'ko';
-}
-
-export const TranslationVisualizer = ({ lang = 'en' }: TranslationVisualizerProps) => {
-  const enWords = ["The", "cat", "sat", "on", "the", "mat"];
-  const frWords = ["Le", "chat", "était", "assis", "sur", "le", "tapis"];
-
-  const alignData = [
-      [0.8, 0.05, 0.05, 0.02, 0.05, 0.03], // Le -> The
-      [0.05, 0.85, 0.02, 0.03, 0.02, 0.03], // chat -> cat
-      [0.02, 0.03, 0.70, 0.10, 0.10, 0.05], // était -> sat
-      [0.02, 0.03, 0.60, 0.20, 0.10, 0.05], // assis -> sat
-      [0.01, 0.01, 0.03, 0.90, 0.03, 0.02], // sur -> on
-      [0.02, 0.02, 0.03, 0.03, 0.80, 0.10], // le -> the
-      [0.01, 0.02, 0.02, 0.05, 0.10, 0.80]  // tapis -> mat
-  ];
-
-  const [selectedFrIdx, setSelectedFrIdx] = useState(1); // Default to "chat"
-
-  const currentAlignData = alignData[selectedFrIdx];
-
-  const labels = {
-    en: {
-      title: "Attention Alignment Visualizer",
-      subtitle: "Select a French target word to inspect authored alignment weights, not measurements from a model.",
-      source: "English (Source):",
-      target: "French (Target):",
-      weight: "Attention Weight on English Words:"
-    },
-    ko: {
-      title: "어텐션 정렬 시각화",
-      subtitle: "프랑스어 대상 단어를 선택해 설명용 정렬 가중치를 확인하세요. 모델에서 측정한 값이 아닙니다.",
-      source: "영어 (원본):",
-      target: "프랑스어 (대상):",
-      weight: "영어 단어에 대한 어텐션 가중치:"
-    }
-  };
-
-  const t = labels[lang] || labels.en;
-
+export const TranslationVisualizer = ({ lang = 'en' }: { lang?: 'en' | 'ko' }) => {
+  const ko = lang === 'ko';
+  const [step, setStep] = useState(0);
+  const [method, setMethod] = useState<'additive' | 'dot'>('additive');
+  const { query } = targetSteps[step];
+  const { scores, weights, context } = translationReadout(query, method);
   return (
-    <div className="glass-container" style={{ padding: '20px', marginTop: '2rem', marginBottom: '2rem' }}>
-      <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-        <h3 style={{ color: '#1e293b', marginBottom: '5px' }}>{t.title}</h3>
-        <p style={{ color: '#64748b', fontSize: '0.9rem' }}>{t.subtitle}</p>
-      </div>
-
-      <div style={{ marginBottom: '15px' }}>
-        <div style={{ fontWeight: 'bold', color: '#475569', marginBottom: '5px' }}>{t.source}</div>
-        <div style={{ padding: '10px', background: 'rgba(255,255,255,0.5)', borderRadius: '5px' }}>The cat sat on the mat.</div>
-      </div>
-
-      <div style={{ marginBottom: '20px' }}>
-        <div style={{ fontWeight: 'bold', color: '#475569', marginBottom: '5px' }}>{t.target}</div>
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-          {frWords.map((word, idx) => (
-            <button
-              key={idx}
-              style={{
-                padding: '5px 10px',
-                borderRadius: '4px',
-                border: 'none',
-                background: idx === selectedFrIdx ? '#8e44ad' : '#e2e8f0',
-                color: idx === selectedFrIdx ? 'white' : '#475569',
-                cursor: 'pointer',
-                fontWeight: 'bold',
-                transition: 'all 0.2s'
-              }}
-              onClick={() => setSelectedFrIdx(idx)}
-            >
-              {word}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <div style={{ fontWeight: 'bold', color: '#475569', marginBottom: '10px' }}>{t.weight}</div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', height: '120px', padding: '10px', background: 'rgba(255,255,255,0.5)', borderRadius: '5px' }}>
-          {enWords.map((word, idx) => {
-            const weight = currentAlignData[idx];
-            return (
-              <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
-                <span style={{ fontSize: '0.8rem', color: '#7f8c8d' }}>{(weight * 100).toFixed(0)}%</span>
-                <div style={{ width: '30px', height: `${weight * 100}px`, background: '#8e44ad', borderRadius: '3px 3px 0 0', transition: 'height 0.3s ease' }}></div>
-                <span style={{ fontSize: '0.9rem', marginTop: '5px', fontWeight: 'bold', color: '#475569' }}>{word}</span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </div>
+    <section className="translation-alignment" aria-label={ko ? '번역 단계별 정렬 계산' : 'Calculate a translation alignment'}>
+      <fieldset>
+        <legend>{ko ? '번역 단계' : 'Translation step'}</legend>
+        {targetSteps.map(({ word }, i) =>
+          <button key={word} type="button" aria-pressed={step === i} onClick={() => setStep(i)}>
+            {i + 1}. <span lang="fr">{word}</span>
+          </button>)}
+      </fieldset>
+      <fieldset>
+        <legend>{ko ? '정렬 점수 계산법' : 'Alignment score'}</legend>
+        <button type="button" aria-pressed={method === 'additive'} onClick={() => setMethod('additive')}>
+          {ko ? '가산 점수' : 'Additive'}
+        </button>
+        <button type="button" aria-pressed={method === 'dot'} onClick={() => setMethod('dot')}>
+          {ko ? '점곱' : 'Dot product'}
+        </button>
+      </fieldset>
+      <p>{ko ? '이 단계의 질의' : 'Query at this step'} <code>[{query.join(', ')}]</code></p>
+      <table>
+        <thead><tr>
+          <th scope="col">{ko ? '원문' : 'Source'}</th>
+          <th scope="col">{ko ? '상태' : 'State'}</th>
+          <th scope="col">{ko ? '점수' : 'Score'}</th>
+          <th scope="col">{ko ? '가중치' : 'Weight'}</th>
+        </tr></thead>
+        <tbody>{sourceWords.map((word, i) => <tr key={word}>
+          <th scope="row" lang="en">{word}</th>
+          <td>[{sourceStates[i].join(', ')}]</td>
+          <td>{scores[i].toFixed(4)}</td>
+          <td>{weights[i].toFixed(4)}<progress aria-hidden="true" value={weights[i]} max="1" /></td>
+        </tr>)}</tbody>
+      </table>
+      <p aria-live="polite">{ko ? '문맥 벡터' : 'Context vector'} <strong>[{context.map(x => x.toFixed(4)).join(', ')}]</strong></p>
+    </section>
   );
 };

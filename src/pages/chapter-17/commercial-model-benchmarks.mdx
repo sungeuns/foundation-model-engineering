@@ -15,7 +15,11 @@ Suppose a model is cheaper per token but takes twice as many tool turns to finis
 
 ## 1. Know What the Number Measures
 
-The numerical comparison uses **Artificial Analysis Intelligence Index v5.0.1**. Its nine evaluations cover knowledge work, coding, science and general tasks [[1]](#ref-1). The methodology is unchanged from this book's November 15 snapshot. Older v4.3.2 values are a different measurement: subtracting them from v5.0.1 values does not measure model improvement.
+The table and explorer preserve **Artificial Analysis Intelligence Index v5.0.1**. It combines nine evaluations across knowledge work, coding, science and general tasks. [[1]](#ref-1)
+
+On November 24, 2026, Artificial Analysis released **v5.0.2**. Terminal-Bench moved from 4.0 to 4.1. The 66 tasks, instructions and agent environments stayed the same, but the tests that determine whether a solution passes changed. For FrontierCode-AA 2.0, AA regraded existing attempts with an updated trajectory scanner and used an LLM judge to review attempts the scanner flagged for further inspection. [[1]](#ref-1) [[124]](#ref-124)
+
+Consider Gemini 4 Carbon at High reasoning effort. AA reports **65.2%** on Terminal-Bench 4.0 and **66.2%** on 4.1. In both versions, AA used the same agent harness (`mini-swe-agent`) and averaged first-attempt success over three runs per task. A team claiming a one-percentage-point model improvement from those figures would also be counting a change in how success was judged. Evaluate both candidates with the same benchmark version. [[125]](#ref-125) [[126]](#ref-126)
 
 Each point represents a model **plus** an effort setting and evaluation system. Fallback, tools, scaffold, token budgets, sampling and grader can all affect the result. These are not equal-compute experiments. An index is not an accuracy percentage, and a context limit is not retrieval accuracy. “Not reported” means that this record has no verified value for the mapped revision and methodology; it never means zero.
 
@@ -101,11 +105,17 @@ The chart's Max-effort profiles do not tell you the best effort for a latency-se
 
 **Hydrogen** adds another operating point, including a role in provider-tested multi-model systems. An orchestration result measures the coordinator, workers and execution policy together, not the isolated causal contribution of one model [[13]](#ref-13).
 
+<a id="ling-32-air-context"></a>
+
+### Will a 300,000-token prompt fit Ling-3.2-air?
+
+InclusionAI’s published SGLang recipe gives the prompt and generated output **262,144 tokens combined**. A 300,000-token prompt exceeds that budget by 37,856 tokens before generation starts. The checkpoint’s `text_config` sets `max_position_embeddings` to 262144, and the model card starts the server with `--context-length 262144`. [[112]](#ref-112) [[117]](#ref-117)
+
+InclusionAI released the MIT-licensed weights on November 23. The model card reports 124B total parameters and 5.5B active per token. Artificial Analysis links to those weights and reports 23 index points, no task cost and a one-million-token context window. The explorer leaves the context field blank because the profile and the published serving recipe give different limits. For a hosted API, check the endpoint’s own input and output limits before sizing a request. [[112]](#ref-112) [[113]](#ref-113) [[114]](#ref-114)
+
 ### Public weights do not settle serving equivalence
 
 **Qwen4-Max** is API-only in the checked sources. Its November 16 general release is distinct from its earlier preview. The protocol distinguishes readable reasoning summaries from encrypted reasoning history required by later tool turns; a summary is not a substitute for that history [[14]](#ref-14) [[15]](#ref-15).
-
-**Ling-3.2-air** illustrates what to check before replaying a benchmark locally. InclusionAI published MIT-licensed weights on November 23. The model card reports 124B total parameters and 5.5B active per token. AA links to those weights and reports 23 index points, with no task cost. Now try budgeting a 300,000-token prompt. The AA profile lists a one-million-token window, but the released configuration and the model card’s serving recipe specify 262,144. The prompt already exceeds that local limit before the first output token. The explorer leaves the context field empty so you can select a serving configuration before sizing the request. [[112]](#ref-112) [[113]](#ref-113) [[114]](#ref-114) [[117]](#ref-117)
 
 **Tencent Hy4** has two release dates that matter for deployment. On November 4, Tencent announced hosted access through TokenHub and other products. On November 20 it published the BF16 instruction-tuned checkpoint. AA links that checkpoint and reports 35 points and USD 1.03 per task for its evaluated service. A team downloading the weights must still estimate its own GPU hours. It must also check the Tencent Hy License. Section 10 describes when a model-as-a-service operator needs a separate written license and specifies an exception for solely internal use. [[118]](#ref-118) [[119]](#ref-119) [[120]](#ref-120) [[121]](#ref-121) [[122]](#ref-122)
 
@@ -147,7 +157,7 @@ Keep weights or API revision, tokenizer/template, quantization, runtime, generat
 
 <details>
 <summary>Quiz 1: Can an unchanged model have different v4.3.2 and v5.0.1 scores?</summary>
-*Yes. The tasks and aggregation define the measurement. Their difference is not a controlled estimate of improvement or regression. This November 24 snapshot uses v5.0.1 throughout.*
+*Yes. The tasks, grading rules and aggregation define the measurement. To test whether the model improved, evaluate both model versions with the same procedure. All index scores in the November 24 table use v5.0.1.*
 </details>
 
 <details>
@@ -300,3 +310,6 @@ Keep weights or API revision, tokenizer/template, quantization, runtime, generat
 121. <a id="ref-121"></a>[Artificial Analysis, Tencent Hy4 evaluation profile](https://artificialanalysis.ai/models/tencent-hy4).
 122. <a id="ref-122"></a>[Tencent Hy License, section 10](https://huggingface.co/tencent/Hy4/blob/c10c0de5b6f850703fb0a90e65d1c32b558b9167/LICENSE).
 123. <a id="ref-123"></a>[OpenAI, Chat Latest model card and API snapshot list](https://developers.openai.com/api/docs/models/chat-latest).
+124. <a id="ref-124"></a>[Artificial Analysis changelog, November 24 Intelligence Index update](https://artificialanalysis.ai/changelog).
+125. <a id="ref-125"></a>[Artificial Analysis, Terminal-Bench 4.0 evaluation and results](https://artificialanalysis.ai/evaluations/terminalbench-4-0).
+126. <a id="ref-126"></a>[Artificial Analysis, Terminal-Bench 4.1 evaluation and results](https://artificialanalysis.ai/evaluations/terminalbench-4-1).

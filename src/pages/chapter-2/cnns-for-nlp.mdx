@@ -8,176 +8,159 @@ import CnnVisualizer from '../../components/chapter-2/CnnVisualizer';
 
 # 2.4 CNNs for NLP
 
-While Recurrent Neural Networks (RNNs) were considered the natural choice for sequential data, Convolutional Neural Networks (CNNs), famous for their success in computer vision, were also adapted for Natural Language Processing (NLP).
-
----
+A reviewer writes “This movie was not good at all.” A sentence classifier could count the words *not* and *good*, but those counts would stay the same if we swapped them. A TextCNN filter gives each position in a short phrase its own weights. In the [worked example](#textcnn-filter-example), swapping those words changes the pooled feature from 2 to 1. A classifier can use that difference when it predicts a label.
 
 ### **Motivation: The Need for Speed**
-The primary motivation for using CNNs in NLP was **computational efficiency**.
-*   **The RNN Bottleneck:** RNNs are inherently sequential. You cannot calculate the state of word 100 without first calculating words 1 through 99. This prevents full parallelization on GPUs.
-*   **The CNN Advantage:** Convolutions apply the same operation to different parts of the input simultaneously. This makes them blazingly fast to train.
 
-Before Transformers showed how to achieve both global context and parallelization, CNNs were the go-to choice for fast text processing.
-
----
+A conventional RNN needs the previous hidden state to compute the next one. Within a convolutional layer, each position reads its own window from the same input. All the windows can be evaluated in parallel. Actual speed also depends on the number of layers, tensor sizes, kernels and hardware.
 
 ### **The Metaphor: The Reading Glass**
 
-Imagine you are reading a long line of text through a **narrow reading glass** that only lets you see 3 words at a time.
-
-*   You start at the beginning and slide the glass down the line.
-*   At each stop, you look at the 3 words and recognize a pattern (e.g., "not very good").
-*   You write down a score for how strongly that pattern matched what you were looking for.
-*   By the time you reach the end, you have a list of scores for the whole sentence.
-*   **Max Pooling** is like looking at that list and picking the single highest score—the most important pattern you found in the whole sentence.
-
-This is exactly how a 1D convolution works on text.
-
----
+Imagine moving a three-word reading glass one word at a time. Each stop gives the filter one local score. Max-over-time pooling keeps the strongest response for that filter, so the number reaching the classifier no longer tells it where the response occurred.
 
 ## How 1D Convolutions Work on Text
 
-In computer vision, CNNs use 2D convolutions over pixels. In NLP, we use **1D Convolutions** over sequences of word embeddings.
-
-<div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', margin: '20px 0' }}>
-
-<div style={{ maxWidth: '600px', width: '100%' }}>
-![TextCNN Architecture](../../assets/images/chapter-2/textcnn_architecture.png)
-</div>
-
-<em style={{ marginTop: '10px', color: '#7f8c8d' }}>Source: AI-generated illustration (inspired by Kim, 2014)</em>
-
-</div>
+A sentence of $n$ tokens with $d$ embedding coordinates per token forms a matrix $X\in\mathbb{R}^{n\times d}$. A width-$k$ filter has weights $W\in\mathbb{R}^{k\times d}$ and a scalar bias $b$. It reads all $d$ coordinates at each of $k$ successive token positions. It moves only along the token axis.
 
 ### The Mechanism
-Imagine a sentence represented as a matrix where each row is a word embedding (e.g., $d=300$).
-1.  **Filter:** A filter matrix of size $k \times d$ (where $k$ is the window size, e.g., 3 words) slides down the sentence.
-2.  **Convolution:** At each step, it performs an element-wise multiplication and sums the result to produce a single number (a feature).
-3.  **Feature Map:** As the filter slides down, it produces a vector of features (a feature map).
-4.  **Pooling:** Typically, **Max-over-time Pooling** is applied, taking the maximum value from the feature map to identify the most important feature in the entire sentence.
 
-This allows the network to capture local patterns (n-grams), such as "not good" or "very fast".
+For zero-based start $i$, the score before activation is $z_i=b+\sum_{j=0}^{k-1}W_j\cdot X_{i+j}$. Each dot product pairs an embedding with the filter row at the same offset. PyTorch calls this operation `Conv1d` and computes cross-correlation, keeping the filter rows in their given order [[5]](#ref-5). Mathematical convolution reverses the filter [[2]](#ref-2).
 
----
+With stride one and no padding, there are $n-k+1$ complete windows when $n\geq k$. Apply ReLU to every score to obtain the feature map $a_i=\max(0,z_i)$. The pooled feature for this filter is $\max_i a_i$.
+
+<a id="textcnn-filter-example"></a>
+
+## Example: Sliding Window Convolution
+
+Give *not* the embedding $(1,0)$, *good* the embedding $(0,1)$, and every other word $(0,0)$. These two coordinates are hand-set cues for negation and praise. Our three filter rows in order are $(2,0)$, $(0,1)$ and $(-1,2)$, with bias $-1$. At start 3, **not good at** contributes $2+1+0-1=2$. At start 2, **was not good** contributes $0+0+2-1=1$. Both windows contain the same two cues, but the cues occupy different offsets.
+
+<CnnVisualizer client:load lang="en" />
+
+Before swapping the words, the five raw scores are $[-1,-2,1,2,-1]$. ReLU gives $[0,0,1,2,0]$, so 2 survives pooling. Swap the two words and the strongest response falls to 1 at starts 1 and 4. Pooling passes one number even when two windows tie. This filter was chosen to make the arithmetic visible. A class probability would require a trained classifier and an output transformation.
 
 ## Breakthrough Architectures
 
-- **TextCNN (Kim, 2014) [[1]](#ref-1):** A simple but effective architecture that uses multiple filter sizes to capture different n-gram lengths, followed by max-pooling. It showed excellent performance on text classification tasks.
-
----
+Kim’s 2014 sentence classifier used 100 filters at each of widths 3, 4 and 5. One maximum per filter gives $3\times100=300$ features for the classifier. Kim compared randomly initialized, pretrained frozen, and fine-tuned word vectors, among other variants, on sentence classification benchmarks. The learned filters need not correspond to named linguistic rules [[1]](#ref-1).
 
 ## PyTorch TextCNN
 
-Here is a simplified version of the famous TextCNN architecture (Kim, 2014) [[1]](#ref-1) in PyTorch, using 1D convolutions for text classification.
-
-ByteNet used dilated convolutions to expand receptive fields for character-level language modeling and translation while preserving sequence resolution [[3]](#ref-3). WaveNet demonstrated related causal convolution ideas for raw audio generation [[4]](#ref-4).
+The first CPU example reproduces the figure with a single filter. The shape of its weight tensor is `[1, 2, 3]` for one output channel, two embedding coordinates and three token offsets. The input is transposed to match PyTorch’s `[batch, channels, positions]` convention [[5]](#ref-5).
 
 ```python
 import torch
-import torch.nn as nn
+import torch.nn.functional as F
+
+def feature_map(sentence):
+    embeddings = [[word == "not", word == "good"] for word in sentence.split()]
+    inputs = torch.tensor(embeddings, dtype=torch.float32).T.unsqueeze(0)
+    # Conv1d weights are [output channel, input channel, window offset].
+    kernel = torch.tensor([[[2., 0., -1.], [0., 1., 2.]]])
+    raw = F.conv1d(inputs, kernel, bias=torch.tensor([-1.])).flatten()
+    return raw, raw.relu()
+
+raw, features = feature_map("This movie was not good at all")
+assert raw.tolist() == [-1, -2, 1, 2, -1]
+assert features.tolist() == [0, 0, 1, 2, 0]
+_, swapped = feature_map("This movie was good not at all")
+assert swapped.tolist() == [0, 1, 0, 0, 1]
+```
+
+**Pooling a padded batch.** Suppose every real token has scalar embedding 1, the pad embedding is 0, and a width-3 filter has weights $[-1,-1,-1]$ and bias 2. Every full window of three real tokens scores $-1$ and becomes zero after ReLU. Append two pads to five real tokens, however, and the final window $[1,0,0]$ scores 1. A maximum over all allocated positions would reward padding.
+
+The CPU classifier below accepts sequences padded **on the right**. Pass one true length per row. Without lengths, it treats every supplied position as real. A filter of width $k$ may pool only windows whose exclusive end $i+k$ is at most the true length. We choose a zero feature for any width that has no complete window. Padding slots must contain valid vocabulary IDs because the embedding lookup runs before masking. The example keeps the three filter banks and linear classifier, and omits pretrained vectors, dropout and training.
+
+```python
+import torch
+from torch import nn
 import torch.nn.functional as F
 
 class TextCNN(nn.Module):
     def __init__(self, vocab_size, embed_dim, num_classes):
-        super(TextCNN, self).__init__()
+        super().__init__()
         self.embedding = nn.Embedding(vocab_size, embed_dim)
-
-        # 3 different filter sizes: 3, 4, and 5 words
-        self.conv1 = nn.Conv1d(in_channels=embed_dim, out_channels=100, kernel_size=3)
-        self.conv2 = nn.Conv1d(in_channels=embed_dim, out_channels=100, kernel_size=4)
-        self.conv3 = nn.Conv1d(in_channels=embed_dim, out_channels=100, kernel_size=5)
-
+        self.conv1 = nn.Conv1d(embed_dim, 100, kernel_size=3)
+        self.conv2 = nn.Conv1d(embed_dim, 100, kernel_size=4)
+        self.conv3 = nn.Conv1d(embed_dim, 100, kernel_size=5)
         self.fc = nn.Linear(300, num_classes)
 
-    def forward(self, x):
-        # x shape: (batch_size, seq_len)
-        embedded = self.embedding(x) # (batch, seq_len, embed_dim)
+    def forward(self, x, lengths=None):
+        if x.ndim != 2 or x.size(0) == 0:
+            raise ValueError("expected token IDs shaped [batch, positions]")
+        batch, slots = x.shape
+        if lengths is None:
+            lengths = torch.full((batch,), slots, device=x.device)
+        else:
+            lengths = torch.as_tensor(lengths, device=x.device)
+        if lengths.shape != (batch,) or lengths.dtype not in (torch.int32, torch.int64):
+            raise ValueError("supply one integer length per example")
+        if ((lengths < 0) | (lengths > slots)).any():
+            raise ValueError("length outside the supplied sequence")
 
-        # Conv1d expects (batch, channels, seq_len)
-        embedded = embedded.transpose(1, 2)
+        embedded = self.embedding(x).transpose(1, 2)  # [batch, channels, slots]
+        # Conv1d needs at least the filter width even when no real window fits.
+        embedded = F.pad(embedded, (0, max(0, 5 - slots)))
+        pooled = []
+        for conv in (self.conv1, self.conv2, self.conv3):
+            features = conv(embedded).relu()
+            width = conv.kernel_size[0]
+            starts = torch.arange(features.size(-1), device=x.device)
+            complete = starts + width <= lengths[:, None]
+            peak = features.masked_fill(~complete[:, None, :], -torch.inf).amax(dim=-1)
+            pooled.append(torch.where(lengths[:, None] >= width, peak, 0.0))
+        return self.fc(torch.cat(pooled, dim=1))
 
-        # Apply convolutions and ReLU
-        x1 = F.relu(self.conv1(embedded))
-        x2 = F.relu(self.conv2(embedded))
-        x3 = F.relu(self.conv3(embedded))
-
-        # Max-over-time pooling
-        x1 = F.max_pool1d(x1, x1.shape[2]).squeeze(2)
-        x2 = F.max_pool1d(x2, x2.shape[2]).squeeze(2)
-        x3 = F.max_pool1d(x3, x3.shape[2]).squeeze(2)
-
-        # Concatenate pool results
-        combined = torch.cat((x1, x2, x3), dim=1)
-
-        # Fully connected layer
-        logits = self.fc(combined)
-        return logits
-
-# Example usage
-vocab_size = 1000
-embed_dim = 50
-num_classes = 2
-model = TextCNN(vocab_size, embed_dim, num_classes)
-
-# Random input sequence of 10 words
-x = torch.randint(0, vocab_size, (1, 10))
-logits = model(x)
-print("Output Logits Shape:", logits.shape)
+torch.manual_seed(7)
+model = TextCNN(vocab_size=8, embed_dim=2, num_classes=2).eval()
+ids = torch.tensor([[1, 2, 3, 4, 5]])
+batch = torch.tensor([[1, 2, 3, 4, 5, 0, 0], [5, 4, 3, 2, 1, 6, 7]])
+with torch.no_grad():
+    torch.testing.assert_close(model(ids)[0], model(batch, lengths=[5, 7])[0])
 ```
-
----
-
-## Example: Sliding Window Convolution
-
-Visualize how a filter of size 3 slides over a sentence and produces a feature map. Max-pooling picks the highest value.
-
-<CnnVisualizer client:load lang="en" />
-
----
 
 ## From local receptive fields to global attention
 
-For depth $L$, kernel width $k$, stride one and no dilation, the receptive field spans $1+L(k-1)$ positions. Dilation expands it faster. Convolution preserves order within windows; TextCNN’s max-over-time pooling discards the location of the strongest response. Dense self-attention directly connects positions allowed by its mask according to their content, with quadratic sequence-length cost for the dense attention core. This is an architectural tradeoff, not proof that attention always wins.
+Stacking $L$ convolution layers of width $k$ and stride one, without dilation, gives each output a receptive field spanning $1+L(k-1)$ input positions. Dilation spaces filter taps farther apart. ByteNet used dilated convolutions for character-level translation [[3]](#ref-3). WaveNet used causal dilated convolutions for autoregressive audio generation [[4]](#ref-4). A one-layer TextCNN classifier instead aggregates local detections with global pooling. That lets a detection anywhere affect the label while losing its position.
 
-The next chapter examines Transformers, which use content-based connections between positions instead of recurrence and local windows.
+## Next steps
+
+The next chapter studies self-attention, where each query can form a direct, content-dependent connection to any key its mask allows. Dense attention trades that reach for a quadratic number of pairwise scores.
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: How does CNN parallelism differ from an RNN?</summary>
-*Positions within a convolution layer can be computed in parallel, whereas a conventional RNN has time-step state dependencies. Actual speed depends on depth, shapes, kernels and hardware.*
+<summary>Quiz 1: Why can one convolution layer evaluate its windows in parallel?</summary>
+*Each window reads the same input tensor independently. A conventional RNN needs the previous hidden state before processing the next token. Parallelism does not determine measured latency on its own.*
 </details>
 
 <details>
-<summary>Quiz 2: How do CNNs capture long-range dependencies in text?</summary>
-*CNNs capture long-range dependencies by stacking multiple convolutional layers on top of each other or by using dilated convolutions. As layers get deeper, the receptive field of each neuron grows, allowing it to see more of the input sequence.*
+<summary>Quiz 2: Why do the windows “was not good” and “not good at” return different scores?</summary>
+*The two cue words occupy different offsets. The first window scores 1 and the second scores 2 because each offset has its own weight row.*
 </details>
 
 <details>
-<summary>Quiz 3: How does self-attention connect distant positions?</summary>
-*It directly forms content-dependent connections between mask-permitted positions. A causal mask excludes future tokens. Its cost/expressivity tradeoff differs from widening a convolutional receptive field.*
+<summary>Quiz 3: Which positions can interact in one convolution layer and in one self-attention layer?</summary>
+*A convolution combines positions within its filter’s receptive field. A self-attention query can read every key allowed by its mask.*
 </details>
 
 <details>
-<summary>Quiz 4: What is the purpose of Max-over-time Pooling in TextCNN?</summary>
-*Max-over-time pooling takes the maximum value across the entire sequence length for each feature map. This identifies the strongest activation of a specific pattern anywhere in the sentence, making the model invariant to the exact position of the pattern.*
+<summary>Quiz 4: What information is lost when two windows tie for the maximum?</summary>
+*The classifier receives the maximum once. Without separate position information it cannot tell whether one or several windows had that value, or where they occurred.*
 </details>
 
 <details>
-<summary>Quiz 5: What is the effect of using multiple filter sizes in TextCNN?</summary>
-*Using multiple filter sizes (e.g., 3, 4, 5) allows the model to capture n-grams of different lengths simultaneously. This is analogous to looking for patterns of different sizes (e.g., trigrams, 4-grams, 5-grams) in the text, providing a richer representation of the input.*
+<summary>Quiz 5: Why can zero padding change logits after max-over-time pooling?</summary>
+*A partial window can get a higher score from the remaining real embeddings and the bias. Mask windows that extend past the true length before taking the maximum.*
 </details>
 
 <details>
-<summary>Quiz 6: Derive the formula for the effective receptive field $R_l$ of the $l$-th layer in a stacked 1D CNN, assuming kernel size $k_l$ and stride $s_l$ for each layer.</summary>
-*The receptive field $R_l$ of layer $l$ can be calculated recursively from the receptive field of the previous layer $R_{l-1}$. The base case is $R_0 = 1$ (the input token itself). For a layer with kernel size $k_l$ and stride $s_l$, the receptive field grows as: $R_l = R_{l-1} + (k_l - 1) \times \prod_{i=1}^{l-1} s_i$. This shows that while depth increases the receptive field linearly with respect to the kernel size, strides cause it to grow exponentially. If all layers have stride $s=1$ and kernel size $k$, the formula simplifies to $R_l = l \times (k - 1) + 1$.*
+<summary>Quiz 6: How does the receptive field change with depth and stride?</summary>
+*Without dilation, start with $R_0=1$. Layer $l$ adds $(k_l-1)\prod_{i=1}^{l-1}s_i$ input positions to the span, where $k_l$ is its width and $s_i$ are the earlier strides. With constant width $k$ and unit strides this gives $R_l=1+l(k-1)$.*
 </details>
-
----
 
 ## References
 
-1. <a id="ref-1"></a>Kim, Y. (2014). *Convolutional neural networks for sentence classification*. [arXiv:1408.5882](https://arxiv.org/abs/1408.5882).
-2. <a id="ref-2"></a>**Recommended Video**: [3Blue1Brown: But what is a convolution?](https://www.youtube.com/watch?v=IaSGqQa5O-M) A fantastic visual explanation of the mathematical concept of convolution.
+1. <a id="ref-1"></a>Kim, Y. (2014). *Convolutional neural networks for sentence classification*. [EMNLP paper, §2–3](https://aclanthology.org/D14-1181/).
+2. <a id="ref-2"></a>3Blue1Brown. [But what is a convolution?](https://www.3blue1brown.com/lessons/convolutions/).
 3. <a id="ref-3"></a>Kalchbrenner, N., et al. (2016). *Neural Machine Translation in Linear Time.* [Paper](https://arxiv.org/abs/1610.10099).
 4. <a id="ref-4"></a>van den Oord, A., et al. (2016). *WaveNet: A Generative Model for Raw Audio.* [Paper](https://arxiv.org/abs/1609.03499).
+5. <a id="ref-5"></a>PyTorch. [Conv1d operator and input shapes](https://docs.pytorch.org/docs/2.15/generated/torch.nn.Conv1d.html).

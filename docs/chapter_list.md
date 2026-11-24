@@ -13,8 +13,8 @@
 
 * **2.1 Markov Chains to RNNs:** 시계열 데이터 처리를 위한 초기 접근법.
 * **2.2 Vanishing & Exploding Gradients:** RNN의 고질적 문제와 LSTM/GRU의 해결책.
-* **2.3 The Dawn of Attention:** RNN의 Bottleneck을 해결하기 위한 Bahdanau Attention의 등장.
-* **2.4 CNNs for NLP:** TextCNN 등 합성곱 신경망을 이용한 자연어 처리 시도들.
+* **2.3 The Dawn of Attention:** red fox의 프랑스어 번역에서 가산 어텐션과 점곱의 원문 가중치·문맥 벡터를 계산하고 PyTorch로 검산.
+* **2.4 CNNs for NLP:** 일곱 토큰을 읽는 TextCNN 필터로 어순과 최대 풀링의 관계를 살펴보고 패딩이 섞인 배치를 PyTorch로 검증.
 * **Summary:** Transformer 이전의 시퀀스 모델들이 가졌던 한계와 'Attention'이라는 개념이 왜 필연적이었는지 다룹니다.
 
 ### **Chapter 3: The Transformer Deep Dive**

@@ -228,6 +228,23 @@ test('the book and README open the same worked KV budget in each edition', () =>
   }
 });
 
+test('the homepage and README take each edition directly to the checkpoint context limit', () => {
+  const fragment = 'ling-32-air-context';
+  for (const edition of ['', '/ko']) {
+    const route = `${edition}/chapter-17/commercial-model-benchmarks/`;
+    const target = new URL(`${base}${route}#${fragment}`);
+    const home = readFileSync(`${outputDir}${edition}/index.html`, 'utf8');
+    const readme = readFileSync(edition ? 'README.ko.md' : 'README.md', 'utf8');
+    assert.ok(home.includes(`href="${target.pathname}${target.hash}"`), `homepage: ${target}`);
+    assert.ok(readme.includes(`](${target.href})`), `README: ${target}`);
+
+    const page = readFileSync(`${outputDir}${route}index.html`, 'utf8');
+    const passage = page.split(`<a id="${fragment}"></a>`)[1]?.split(/<h[23]\b/)[1];
+    assert.ok(passage?.includes('262,144') && passage.includes('max_position_embeddings'), `missing checkpoint setting: ${target}`);
+    assert.ok(passage.includes('href="#ref-117"'), `missing configuration source: ${target}`);
+  }
+});
+
 test('sitemap preserves canonical route order and uses only available content dates', () => {
   const xml = readFileSync(`${outputDir}/sitemap.xml`, 'utf8');
   const entries = [...xml.matchAll(/<url>([\s\S]*?)<\/url>/g)].map(m => m[1]);

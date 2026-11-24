@@ -1,0 +1,58 @@
+.translation-alignment {
+  margin: 1.25rem 0;
+  padding: clamp(.65rem, 3vw, 1.25rem);
+  border: 1px solid #aebdca;
+  border-radius: .5rem;
+  font-variant-numeric: tabular-nums;
+}
+.translation-alignment fieldset {
+  margin: 0 0 .65rem;
+  padding: 0;
+  border: 0;
+}
+.translation-alignment legend {
+  padding: 0;
+  font-weight: 600;
+}
+.translation-alignment button {
+  margin: .25rem .45rem .15rem 0;
+  padding: .45rem .85rem;
+  border: 1px solid #496273;
+  border-radius: .3rem;
+  background: #fff;
+  color: #1e394c;
+  font: inherit;
+  cursor: pointer;
+}
+.translation-alignment button[aria-pressed="true"] {
+  background: #1b5360;
+  color: #fff;
+}
+.translation-alignment button:focus-visible {
+  outline: 3px solid #1565b3;
+  outline-offset: 3px;
+}
+.translation-alignment table {
+  width: 100%;
+  display: table;
+}
+.translation-alignment th,
+.translation-alignment td {
+  padding: .35rem clamp(.15rem, 1vw, .65rem);
+  text-align: left;
+}
+.translation-alignment progress {
+  display: block;
+  width: 100%;
+  height: .45rem;
+  accent-color: #1b6776;
+}
+.translation-alignment p:last-child {
+  margin-bottom: 0;
+}
+
+@media (max-width: 600px) {
+  .translation-source-figure {
+    margin-inline: 0;
+  }
+}

@@ -263,12 +263,12 @@ export const searchDescriptions = {
     ko: '시간 역전파와 반복적인 곱셈을 통해 기울기가 소실되거나 폭주하는 이유를 이해하고, 시각화로 기울기의 흐름을 확인합니다.',
   },
   '/chapter-2/dawn-of-attention': {
-    en: 'Learn how Bahdanau attention addresses the sequence-to-sequence bottleneck using alignment weights, context vectors, and a PyTorch example.',
-    ko: 'Bahdanau 어텐션이 정렬 가중치와 문맥 벡터를 사용해 Seq2Seq의 정보 병목을 해결하는 원리를 PyTorch 예제와 함께 배웁니다.',
+    en: 'Translate red fox into French in two steps. Compare additive and dot-product attention scores, then reproduce the weights and context vector in PyTorch.',
+    ko: 'red fox를 프랑스어로 옮기는 두 단계에서 가산 어텐션과 점곱의 점수를 비교하고, 가중치와 문맥 벡터를 PyTorch로 검산합니다.',
   },
   '/chapter-2/cnns-for-nlp': {
-    en: 'See how one-dimensional convolutions process text, why local receptive fields matter, and how a TextCNN is implemented in PyTorch.',
-    ko: '1차원 합성곱이 텍스트를 처리하는 방식과 국소 수용 영역의 의미를 살펴보고, PyTorch로 구현한 TextCNN을 이해합니다.',
+    en: 'Slide a TextCNN filter over seven tokens. Swap two words, find windows tied for the maximum and use PyTorch to see why pooling must skip padding.',
+    ko: '일곱 토큰에 TextCNN 필터를 적용하고 두 단어의 순서를 바꿔 최댓값이 같은 구간을 찾습니다. 패딩을 풀링에서 빼야 하는 이유도 PyTorch로 확인합니다.',
   },
   '/chapter-3/multi-head-attention': {
     en: 'Compute two attention heads from three tokens, mute one before the output projection, and reproduce the weights and output in PyTorch.',
