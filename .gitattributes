@@ -1,0 +1,2 @@
+# The decoder notebooks verify the exact UTF-8/LF bytes of their embedded source.
+public/labs/causal_lab.py text eol=lf

@@ -75,10 +75,10 @@ import importlib.util
 import json
 import math
 from pathlib import Path
-import shutil
 import sys
 import tempfile
 import time
+from zipfile import ZIP_DEFLATED, ZipFile
 
 if sys.version_info < (3, 12):
     raise RuntimeError("Use a Python 3.12+ kernel for this teaching lab.")
@@ -203,8 +203,12 @@ ZIP에는 실행한 원본 소스, 불변 합성 manifest, 체크포인트와 �
       code('save-packet', `evidence = {"predictions": predictions, "full_experiment_seconds": notebook_run_seconds,
             "unmasked_earlier_logit_max_change": leak_delta, "corruption_rejected": corruption_rejected}
 (output / "notebook-observations.json").write_text(json.dumps(evidence, indent=2))
-archive = shutil.make_archive(str(run_root / "result-packet"), "zip", root_dir=run_root, base_dir="outputs")
-print({"download_packet": archive})
+archive = run_root / "result-packet.zip"
+with ZipFile(archive, "w", compression=ZIP_DEFLATED) as packet:
+    for name in ("causal_lab.py", "manifest.json", "checkpoint.pt", "checkpoint.sha256",
+                 "trace.json", "result.json", "notebook-observations.json"):
+        packet.write(output / name, arcname=f"outputs/{name}")
+print({"download_packet": str(archive)})
 `),
       md('questions', `## Check your explanation
 

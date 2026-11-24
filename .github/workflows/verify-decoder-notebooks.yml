@@ -1,0 +1,34 @@
+name: Verify decoder notebooks on Windows
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.gitattributes'
+      - 'public/labs/causal_lab.py'
+      - 'public/labs/tiny-decoder-lab*.ipynb'
+      - 'scripts/causal-notebooks.mjs'
+      - 'scripts/verify-causal-notebooks.py'
+      - '.github/workflows/verify-decoder-notebooks.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  windows-jupyter:
+    runs-on: windows-2025
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: '3.12'
+      - name: Install CPU PyTorch
+        run: python -m pip install --index-url https://download.pytorch.org/whl/cpu torch==2.15.0+cpu
+      - name: Install the Jupyter kernel and client
+        run: python -m pip install ipykernel==7.4.0 nbclient==0.11.0 nbformat==5.11.1
+      - name: Execute both published notebooks
+        run: python scripts/verify-causal-notebooks.py
