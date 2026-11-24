@@ -279,7 +279,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 3.4 | `/chapter-3/layer-normalization-residuals` | Inspected 2026-11-15 | d9c2b8dbee0ba9d5c365d0395014e3e9d6fe06e7f58387401fd6ae625584825f | 7571b6552563c1bc6c771e9a1cb3acc1163645b179e7bb7e6a3dc2769e2cfe5e |
 | 3.5 | `/chapter-3/complexity-analysis` | Inspected 2026-11-15 | 528f765af0e658c5d7116b5d3651be5a3ec6496b5651970285143831e0344b2c | d5da6dea75982e92dc97033508aacd582e677911caa2afbfb61f1356fbf12537 |
 | 4.1 | `/chapter-4/encoder-only` | Mechanical only | 0c3d099ec9bb466a4cc1a22bd17ff1608388e3ac87ea1da233382efe081e63cd | a594d06325d22f53605f35a62a4e7031f6ef626832e2e8ea43d0352e496e7ea5 |
-| 4.2 | `/chapter-4/decoder-only` | Mechanical only | c0c4d6a6c3109423997c9d58d65f923f6e2375445577a79054e871947dd2a372 | da46705e79b232e46f7d0a0fb4e21a7c8ee6b4d49554290f5b931c21b4222bdd |
+| 4.2 | `/chapter-4/decoder-only` | Inspected 2026-11-25 | 96c38cb53a2389b38722073f13568be9df6a8004128e3ea1124358c74bd10f94 | e1111f8be84709ef5cbd2b91c0592d37d4626f536e9bb5d83f0662ca038ed4cb |
 | 4.3 | `/chapter-4/encoder-decoder` | Mechanical only | c0372544843683d2e7b80936ba33fd4c343a4b6850c40844ae59ccc34362f918 | 58320112ec9f19b8f62065ae1a140df644263abfdce47911ee04fda8ea0ff5d0 |
 | 4.4 | `/chapter-4/hybrid-prefix-lm` | Inspected 2026-11-25 | 6edb93ff3d69526c5abd2108193b487cc82eb60c9c9887033237a77e72052127 | 59715e846873b8af91b74291aa803ff3047a646a79042af60da4b04a3dccef60 |
 | 4.5 | `/chapter-4/various-llm-architectures` | Inspected 2026-11-24 | 028ebccee02c3a1b30297a6c43b9ed91806975ff737f33e8a5ccd5ea26f26a30 | 5d9fb05bb56198c702831691a20832099bac533ece95857c22101dfb884863a8 |
@@ -350,7 +350,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 16.6 | `/chapter-16/agent-reliability-recovery-and-guardrails` | Mechanical only | cd83fc417cb7950d6d24116d1492925a16694aa596d897d0cb4cc7be3f18ca7e | 16b6b0641b20d49d6fd5de7a7568d32d4889fe2fa1f88289396ea078b4874895 |
 | 16.7 | `/chapter-16/decision-models-and-selective-prediction` | Inspected 2026-11-15 | 11804b8958ee5bad618e14856a0e49b1f47fbb6c47168b58d910d0d796833ce4 | 4e60990227ed403274365841e57f7a71228610ce244d226c2d1077dd515d3c50 |
 | 17.1 | `/chapter-17/academic-benchmarks` | Mechanical only | 2949edf4e9fe1e16fda3f118fa009854dbb67b9501b7989aece12379a4df2686 | 1b13ad1b53dafd3bc3d45f8253913244a7c02ed8336963afc3b707ab4607a567 |
-| 17.2 | `/chapter-17/llm-as-a-judge` | Inspected 2026-11-18 | b3a6cd38fea260a08812c4a3a8f29bc76f30267c3d95247827eda51cb867c7e3 | 630473d35f271219ecf4ae6dc5fc37e897b051893a8f0ad3b9d6fede80c2d0d2 |
+| 17.2 | `/chapter-17/llm-as-a-judge` | Inspected 2026-11-25 | c57401335205ae3dc187e512d28443027ed79d13a6858df675662fe7dbe97ce4 | fed0a9a3459a3eb9683eb1576383f225b0943f807dfd1b3564bdb8603f8986d7 |
 | 17.3 | `/chapter-17/elo-rating-and-leaderboards` | Inspected 2026-11-15 | 14f931df5e4641c576c1763d446b2c663d1f282abf438767e5a330d49b31a9b9 | 1e78f5819e5452372109f72327dad0f7831b3b9ce66750000c9378a906744c30 |
 | 17.4 | `/chapter-17/contamination-issues` | Mechanical only | 38a0cad52c7504804a57a8cc2deed94a3ac2fe68f7648809261abad1cf6b4fa5 | ad7b87426dcdde29f69a6921696a462359e7681d7d3b5ee5c11f3d80ec0a71c7 |
 | 17.5 | `/chapter-17/production-evaluation-and-release-gates` | Mechanical only | 60ddb6057d61fb19bdcbbed9bdb165b892e506e549dbe2b985e976bab1ef60f4 | 25e04ba235e259243c4df62f67886f8ae54283189fc0e32334e31f2e2a1d582e |
@@ -621,3 +621,11 @@ The Python example was checked over 225 pairs of three-token distributions, ever
 ### 2026-11-25 mixed-length KV caching
 
 Both editions of 12.1 now count the same causal query/key pairs across two decode steps and follow nine unequal-length requests through prefill, reserved output and an over-budget case. The printed PyTorch examples ran on CPU. Each localized workbook was recalculated in LibreOffice against 15 cases including exact fit, zero output, invalid input and a changed cache geometry. The linked SmolLM2 notebook measures padding bytes and compares cached logits with recomputation. The current 12.1 hashes record this review.
+
+### 2026-11-25 translation judgment
+
+Both editions of 17.2 follow the same three candidate translations through placeholder validation and a permission check. The example ran in Python. Tencent's release and public checkpoints were verified against its model cards. The reported 3.31-point average standard deviation describes repeated judgments of 651 Chinese–English translations in the cited experiment. The Korean warning is a separate authored exercise.
+
+### 2026-11-25 next-token training and serving
+
+Both editions of 4.2 follow the three shifted targets in one four-token sequence. The PyTorch example checks causal visibility and a mean token loss of 0.520 nats. The new diagrams implement the four-position mask directly and distinguish allowed keys from learned weights. Review covered GPT-3's task-specific few-shot result, the scope of the scaling-law findings, and how both decoder-only and encoder-decoder models can reuse cached state.

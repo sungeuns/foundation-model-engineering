@@ -8,185 +8,152 @@ lang: "ko"
 
 # 4.2 GPT와 디코더 전용 트랜스포머
 
-Encoder-only 모델이 AI 세계의 탐정이라면, **Decoder-only** 모델은 즉흥적으로 이야기를 이어 가는 작가에 가깝습니다. 전체 대본을 미리 볼 수 없고, 지금까지 나온 문장만 바탕으로 바로 다음 단어를 정해야 하기 때문입니다.
+학습 파일에는 `red blue`라고 쓰여 있고, 사용자는 `red`까지만 입력했습니다. GPT 방식의 디코더가 두 경우에 풀어야 할 문제는 같습니다. `red` 다음에 어떤 토큰이 올까요? 학습할 때는 정답 `blue`에 얼마의 확률을 줬는지 확인할 수 있습니다. 사용자에게 답을 보낼 때는 다음 토큰을 하나 골라야 그 뒤를 이어 갈 수 있습니다.
 
-이 제약은 의외로 엄청난 힘이 있습니다. GPT 계열을 통해 널리 알려진 뒤 많은 LLM이 이 구조를 채택한 이유도, decoder-only가 유일한 Transformer 구조여서가 아니라 자기회귀적 설정이 스케일링과 서빙에 잘 맞고, 사용자가 실제로 모델과 상호작용하는 방식인 “프롬프트를 주고 이어서 생성하게 하기”와 잘 맞아떨어졌기 때문입니다.
+<a id="the-metaphor-the-autoregressive-storyteller-autoregressive-이야기꾼"></a>
+<a id="shifted-target-example"></a>
 
-이 장에서는 decoder-only 아키텍처의 구조, autoregressive generation의 원리, 그리고 왜 이 방식이 스케일링 경쟁에서 큰 우위를 점했는지를 설명합니다.
+## 한 줄에서 예측 세 개 만들기
 
----
+색 이름 하나가 토큰 하나라고 가정하겠습니다. 시작을 표시하는 `BOS`와 끝을 표시하는 `EOS`를 붙이면, `BOS red blue EOS` 한 줄에서 다음과 같이 학습할 수 있습니다.
 
-## The Metaphor: The Autoregressive Storyteller (Autoregressive 이야기꾼)
+| 현재 위치에서 볼 수 있는 토큰 | 다음 토큰의 정답 |
+| --- | --- |
+| `BOS` | `red` |
+| `BOS red` | `blue` |
+| `BOS red blue` | `EOS` |
 
-지금까지 쓴 내용만 볼 수 있고, 바로 다음 단어를 예측하는 것이 목표인 이야기를 쓰고 있다고 상상해 보세요. 일단 그 단어를 예측하면 그것은 역사의 일부가 되고, 여러분은 그것을 사용하여 그 다음 단어를 예측합니다.
+학습 배치에는 예문 전체가 들어 있습니다. 각 행에 넣을 정답 토큰열을 미리 알고 있으므로, 한 층 안에서 세 행을 병렬로 계산할 수 있습니다. 이렇게 정답 토큰을 다음 위치의 입력으로 쓰는 방식을 **티처 포싱(teacher forcing)** 이라고 합니다. 생성할 때는 실제로 선택한 토큰이 다음 입력을 결정합니다. `red`를 한 번 더 골랐다면, 다음 예측에 쓸 입력은 `BOS red red`입니다.
 
-이것이 바로 **Autoregressive Generation** (자기회귀 생성)입니다. Decoder-only 모델은 이 원칙에 따라 작동합니다. 그들은 미래를 내다볼 수 없으며, 오직 과거에만 접근할 수 있습니다. 이로 인해 유창하고 일관되며 창의적인 텍스트를 생성하는 데 탁월한 성능을 발휘합니다.
+<a id="causal-self-attention-masking-the-future"></a>
 
----
+## 각 위치는 어디까지 볼 수 있을까?
 
-## Causal Self-Attention: Masking the Future
+**인과적 셀프 어텐션** 에서 $i$번 위치의 쿼리는 $j \le i$인 위치의 키를 참조할 수 있습니다. 따라서 `red` 위치에서는 자기 자신까지 봅니다. 이때 맞혀야 하는 `blue`는 대각선에서 한 칸 더 오른쪽에 있습니다.
 
-이러한 동작을 가능하게 하는 핵심 메커니즘은 **Causal Self-Attention** (인과적 셀프 어텐션 또는 마스킹된 셀프 어텐션)입니다. 모든 토큰이 서로 연결되는 Encoder-only 모델의 all-to-all 연결성과 달리, Causal Attention은 어텐션 행렬에 마스크를 적용하여 토큰 $i$가 $i$ 이하의 위치에 있는 토큰에만 어텐션을 기울일 수 있도록 합니다.
+<figure>
 
-<div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', margin: '20px 0' }}>
+![가로와 세로가 네 칸인 인과적 마스크. 첫 행은 1번 키만 볼 수 있고, 다음 행부터는 자신의 위치까지 한 칸씩 더 볼 수 있다.](../../../assets/images/chapter-4/decoder_only_causal_mask_ko.svg)
 
-<div style={{ maxWidth: '600px', width: '100%' }}>
-![Decoder-only Attention Pattern](../../../assets/images/chapter-4/decoder_only_attention_pattern.png)
-</div>
+<figcaption>3번 위치에서는 1·2·3번 키를 볼 수 있습니다. 그림은 인과적 마스크의 규칙에 따라 그렸습니다. 허용된 위치에 줄 가중치는 모델이 쿼리와 키로 계산합니다.</figcaption>
+</figure>
 
-<em style={{ marginTop: '10px', color: '#7f8c8d' }}>출처: AI 생성 이미지</em>
+<a id="core-training-objective-causal-language-modeling-clm"></a>
+<a id="clm의-수학적-정의"></a>
 
-</div>
+## 정답 토큰에는 얼마의 확률을 줬을까?
 
-다이어그램에 표시된 것처럼 어텐션 연결은 오른쪽에서 왼쪽(과거에서 현재) 또는 토큰 자체로만 이어집니다. 이는 학습 중에 정보가 미래 토큰으로부터 거꾸로 흐르는 것을 방지합니다.
+시작 토큰 `BOS`를 $x_0$, `EOS`까지 예측할 토큰 $T$개를 $x_1,\ldots,x_T$라고 하겠습니다. $x_{0:t-1}$은 $t$번째 정답을 맞힐 때 볼 수 있는 토큰열입니다. 파라미터가 $\theta$인 인과적 언어 모델에서 이 토큰들이 차례로 나올 조건부 확률은 다음과 같습니다.
 
----
+$$P_\theta(x_{1:T}\mid x_0)=\prod_{t=1}^T P_\theta(x_t\mid x_{0:t-1}).$$
 
-## Core Training Objective: Causal Language Modeling (CLM)
+정답 토큰 하나당 평균 학습 손실은 $-\frac{1}{T}\sum_{t=1}^T \log P_\theta(x_t\mid x_{0:t-1})$입니다. 세 위치에서 정답에 각각 0.6, 0.5, 0.7의 확률을 줬다고 해 봅시다. 세 토큰이 그대로 이어질 확률은 $0.6\times0.5\times0.7=0.21$이고, 평균 손실은 토큰당 약 0.520나트(nat)입니다.
 
-Decoder-only 모델은 **Causal Language Modeling (CLM)**, 즉 다음 토큰 예측 과업으로 학습됩니다.
+<a id="pytorch-implementation-causal-mask"></a>
 
-토큰 시퀀스 $X = (x_1, x_2, \dots, x_T)$가 주어지면, 목표는 확률의 연쇄 법칙(chain rule)을 사용하여 분해할 수 있는 시퀀스의 가능도(likelihood)를 최대화하는 것입니다.
+### 파이토치로 마스크와 정답 위치 확인하기
 
-$$P(X) = \prod_{t=1}^{T} P(x_t | x_1, \dots, x_{t-1})$$
-
-### CLM의 수학적 정의
-
-손실 함수는 각 위치에서 올바른 다음 토큰의 음의 로그 가능도(negative log-likelihood)입니다.
-
-$$\mathcal{L}_{CLM} = - \sum_{t=1}^{T} \log P(x_t | x_{<t})$$
-
-여기서 $x_{<t}$는 $t$ 위치 이전의 모든 토큰을 나타냅니다. 이 목표는 단순하지만 방대한 양의 데이터 및 연산량과 결합하여 스케일업되었을 때 믿을 수 없을 정도로 강력해집니다.
-
----
-
-
-
-## Evolution and Key Models
-
-### 1. GPT-3 (2020)
-**Motivation**: GPT-3 이전의 지배적인 패러다임은 대규모 코퍼스에서 모델을 사전 학습한 다음, 특정 작업에 맞는 데이터로 미세 조정(fine-tuning)하는 것이었습니다. GPT-3의 제작자들은 충분히 큰 언어 모델이 프롬프트를 이해하는 것만으로도 작업별 데이터 없이도 작업을 수행할 수 있는 "In-Context Learning"을 수행할 수 있다는 가설을 테스트하고자 했습니다 [[1]](#ref-1).
-
-**핵심 혁신 (Key Innovations)**:
-- **거대한 스케일**: Decoder-only 아키텍처를 GPT-2보다 100배 증가한 1750억 개의 파라미터로 스케일링했습니다.
-- **In-Context Learning**: 대규모 모델이 그래디언트 업데이트나 미세 조정 없이도 제로샷, 원샷, 퓨샷 학습을 수행할 수 있음을 보여주었습니다.
-- **프롬프팅 패러다임**: 초점을 미세 조정에서 프롬프트 엔지니어링으로 전환하여 입력 텍스트에 의해 모델의 행동이 유도되도록 했습니다.
-
----
-
-### 2. Llama 3 (2024)
-**Motivation**: 거대 독점 모델들이 시장을 지배하는 동안, Meta는 고품질의 오픈 가중치(open-weights) 모델을 출시하여 AI 연구를 민주화하고자 했습니다. Llama 3의 목표는 더 작은 모델이라도 훨씬 더 많은 데이터로 학습시키면 훨씬 더 큰 모델의 성능과 일치하거나 능가할 수 있음을 증명하여 배포 효율성을 높이는 것이었습니다.
-
-**핵심 혁신 (Key Innovations)**:
-- **조 단위 규모의 사전 학습**: 15조 개 이상의 토큰 데이터로 학습되어(GPT-3의 약 3000억 개 대비), 대부분의 모델이 파라미터 수에 비해 과소적합되었음을 보여주었습니다 [[2]](#ref-2).
-- **그룹화된 쿼리 어텐션 (Grouped Query Attention, GQA)**: GQA를 사용하여 추론 효율성을 높이고 메모리 대역폭 요구 사항을 줄였습니다.
-- **고품질 토크나이저**: 128k 토큰의 어휘를 가진 토크나이저를 사용하여 텍스트 인코딩 효율성을 향상시켰습니다.
-
----
-
-### Decoder-only 모델 비교
-
-| 특징 | GPT-3 (175B) | Llama 3 (8B/70B) |
-| :--- | :--- | :--- |
-| **파라미터 수** | 1750억 개 | 8B / 70B |
-| **학습 토큰 수** | ~3000억 개 | 15조 개 이상 |
-| **접근성** | 폐쇄형 (API) | 오픈 가중치 (Open Weights) |
-| **어텐션** | 표준 | 그룹화된 쿼리 어텐션 (GQA) |
-| **컨텍스트 길이** | 2,048 토큰 | 8,192 토큰 |
-
----
-
-## Why Decoder-Only Won the Scaling War (왜 Decoder-Only가 승리했는가)
-
-Transformer의 초기 시절에는 Encoder-Decoder 모델(T5 등)이 더 다재다능한 것으로 여겨졌습니다. 그러나 현재 생성형 AI 시장은 Decoder-only 모델이 완전히 지배하고 있습니다. 그 이유에 대한 심층적인 분석은 다음과 같습니다.
-
-### 1. The Power of a Unified Objective (통합된 목표의 힘)
-Decoder-only 모델은 오직 **'다음 토큰 예측(Next-Token Prediction)'** 이라는 단 하나의 목표로 학습됩니다. 이 목표는 매우 단순해 보이지만, 방대한 데이터와 결합하여 모델 크기를 키웠을 때(Scaling) 놀라운 **창발적 능력(Emergent Abilities)** 을 보여주었습니다. 복잡한 추론, 코드 생성, 번역 등 모든 고등 지능이 결국 '다음에 올 가장 자연스러운 말'을 찾는 과정에서 파생될 수 있음이 증명되었습니다.
-
-### 2. Architectural Simplicity and Scaling (아키텍처의 단순성과 스케일링)
-*   **균일성(Uniformity)**: 별도의 Encoder와 Decoder를 두지 않고 동일한 Transformer 블록을 길게 쌓는 구조입니다. 이는 하드웨어(GPU) 가속 및 분산 학습(Distributed Training)을 구현할 때 엔지니어링 복잡도를 획기적으로 낮춰줍니다.
-*   **컨텍스트 윈도우의 유연한 활용**: Encoder-Decoder 구조는 입력(Encoder)과 출력(Decoder)의 길이가 분리되어 처리되는 경우가 많습니다. 반면 Decoder-only는 입력(프롬프트)과 출력(생성 결과)이 하나의 시퀀스로 취급되므로, 제한된 컨텍스트 윈도우 내에서 프롬프트와 생성 결과의 비율을 유연하게 조절할 수 있습니다.
-
-### 3. In-Context Learning and Prompting (인컨텍스트 러닝과 프롬프팅)
-Decoder-only 모델을 스케일업하면서 발견된 가장 놀라운 현상 중 하나는 **In-Context Learning** 입니다. 모델의 가중치(Weights)를 수정하지 않고도, 프롬프트에 몇 가지 예시(Few-shot)를 제공하는 것만으로도 새로운 과업을 수행할 수 있습니다. 이는 모델이 단순히 데이터를 암기하는 것을 넘어, 문맥을 '이해'하고 '추론'하는 능력을 갖추었음을 보여줍니다.
-
-### 4. Zero-overhead for Task Specificity (과업 특화 오버헤드 제로)
-Encoder-Decoder 모델은 번역, 요약 등 특정 과업에 맞춰 입출력 포맷을 설계해야 하는 경우가 많았습니다. 반면 Decoder-only 모델은 모든 문제를 '텍스트 이어 쓰기'라는 하나의 인터페이스로 통합했습니다. 질문을 던지면 답을 이어 쓰고, 코드를 짜달라고 하면 코드를 이어 씁니다. 이러한 범용성이 현대 LLM의 핵심 경쟁력이 되었습니다.
-
-### 5. KV Caching Efficiency (KV 캐싱의 효율성)
-생성(Inference) 단계에서 Decoder-only 모델은 이전 단계에서 계산된 Key와 Value를 캐싱(KV Caching)하여 재사용합니다. 이는 매 토큰 생성 시점마다 과거의 모든 토큰을 다시 계산할 필요가 없게 만들어주어, 긴 텍스트를 생성할 때 매우 효율적입니다. 인코더-디코더도 인코더의 출력을 캐싱하지만, 디코더 온리는 단일 시퀀스 내에서 모든 컨텍스트를 처리하므로 메모리 관리가 더 직관적입니다.
-
-
----
-
-## PyTorch Implementation: Causal Mask
-
-다음은 토큰이 미래에 어텐션을 기울이지 못하도록 PyTorch에서 causal mask를 생성하는 방법입니다.
+CPU에서 실행하는 예제입니다. 패딩이 없는 토큰열 하나와 미리 정한 확률을 써서 손으로도 손실을 검산할 수 있습니다. 그림에는 1번부터 4번까지 네 위치가 있지만 코드에서는 3×3 마스크로 충분합니다. `EOS`는 마지막 정답이고 그 뒤에는 맞혀야 할 토큰이 없기 때문입니다. 아래에서 어텐션 점수와 다음 토큰의 확률 분포는 서로 다른 값입니다.
 
 ```python
 import torch
+import torch.nn.functional as F
 
-def create_causal_mask(seq_len):
-    """
-    Create a 2D causal mask for self-attention.
-    Shape: (seq_len, seq_len)
-    """
-    # torch.tril creates a lower triangular matrix
-    mask = torch.tril(torch.ones(seq_len, seq_len))
-    return mask
+bos, red, blue, eos = range(4)
+sequence = torch.tensor([bos, red, blue, eos])
+inputs, targets = sequence[:-1], sequence[1:]
+positions = torch.arange(len(inputs))
+allowed = positions[:, None] >= positions[None, :]
+scores = torch.tensor([[1., 2., 3.], [0., 1., 2.], [2., 0., 1.]])
+attention = scores.masked_fill(~allowed, -torch.inf).softmax(dim=-1)
+assert attention[1, 2] == 0 and attention[1, 1] > 0
 
-# Example usage
-seq_len = 5
-mask = create_causal_mask(seq_len)
-
-print("Causal Mask:")
-print(mask)
-
-# In practice, we often use this mask to fill scores with -inf before softmax
-scores = torch.randn(seq_len, seq_len)
-masked_scores = scores.masked_fill(mask == 0, float('-inf'))
-
-print("\nMasked Scores (before softmax):")
-print(masked_scores)
+# One vocabulary distribution per prefix, in BOS/red/blue/EOS column order.
+probs = torch.tensor([[.1, .6, .2, .1], [.1, .1, .5, .3], [.1, .1, .1, .7]])
+loss = F.cross_entropy(probs.log(), targets)
+print(f"{loss.item():.3f}")  # 0.520
+assert probs[1].argmax().item() == blue
 ```
 
----
+프롬프트가 `BOS red`일 때 확률이 가장 높은 토큰만 고르는 탐욕적 디코딩을 쓰면, 마지막 줄처럼 둘째 행에서 `blue`를 선택합니다. 이제 입력이 `BOS red blue`이므로 셋째 행의 확률을 쓸 수 있습니다. 샘플링에서 다른 토큰을 뽑았다면, 그 토큰까지 포함한 새 입력의 확률 분포를 구해야 합니다.
+
+<a id="evolution-and-key-models"></a>
+<a id="1-gpt-3-2020"></a>
+<a id="2-llama-3-2024"></a>
+<a id="decoder-only-모델-비교"></a>
+
+## GPT-3와 Llama 3의 초기 구성
+
+각 모델의 최초 공개 자료에 기록된 사양입니다(2026-11-25 확인). 두 모델은 서로 다른 토크나이저로 학습 토큰 수를 셌습니다.
+
+| 모델 | 사전 학습 토큰 | 컨텍스트 길이 | 어텐션 구성 |
+| --- | ---: | ---: | --- |
+| GPT-3 175B (2020) [[1]](#ref-1) | 3,000억 | 2,048 | 밀집 어텐션 층과 가까운 위치만 참조하는 희소 어텐션 층을 번갈아 사용 |
+| Llama 3 8B·70B (2024년 4월) [[3]](#ref-3) | 15조 초과 | 8,192 | 여러 쿼리 헤드가 키와 값 헤드를 공유하는 GQA 사용 |
+
+Meta의 후속 기술 보고서는 4월의 Llama 3와 7월의 Llama 3.1을 구분합니다. 서빙 설정을 정할 때는 모델 계열의 이름뿐 아니라 어느 버전의 체크포인트를 쓸지도 확인해야 합니다 [[2]](#ref-2).
+
+<a id="why-decoder-only-won-the-scaling-war-왜-decoder-only가-승리했는가"></a>
+<a id="1-the-power-of-a-unified-objective-통합된-목표의-힘"></a>
+<a id="3-in-context-learning-and-prompting-인컨텍스트-러닝과-프롬프팅"></a>
+
+## 규모와 프롬프트 실험에서 확인한 것
+
+Kaplan 등의 연구진은 모델 크기와 학습 데이터, 연산량을 바꿔 가며 실험했습니다. 실험 범위 안에서 평가용 텍스트의 언어 모델 손실은 대략 거듭제곱 법칙을 따랐습니다. 이 손실로 알 수 있는 것은 평가 데이터에 나온 토큰에 모델이 어느 정도의 확률을 주느냐입니다. 번역 오류가 줄었는지, 추론 문제를 맞혔는지는 별도로 평가해야 합니다 [[4]](#ref-4).
+
+Brown 등의 연구진은 GPT-3의 가중치를 고정하고 지시문을 줬습니다. 퓨샷 조건에서는 프롬프트에 풀이 예시도 넣었습니다. 번역을 비롯한 일부 과제에서 모델은 예시를 활용했지만, 두 문장에서 같은 단어가 같은 뜻인지 묻는 Word-in-Context의 퓨샷 정확도는 49.4%로 우연히 고를 때와 비슷했습니다. 실험으로 관찰한 것은 주어진 프롬프트와 과제에서의 행동입니다. 모델 내부에서 그 답을 어떻게 얻었는지까지 가려내지는 못합니다 [[1]](#ref-1).
+
+인컨텍스트 학습을 직접 확인하려면 감정 분류에 `A`와 `B`라는 임의의 레이블을 써 보세요. 긍정 후기와 부정 후기의 예시를 하나씩 보여 준 뒤, 예시의 레이블을 서로 바꿔 같은 평가용 후기들을 다시 분류합니다. 새 규칙에 맞게 예측이 바뀌는 비율은 얼마인가요? `긍정`·`부정`처럼 익숙한 레이블을 쓰면 예시가 답에 얼마나 기여했는지 구별하기 어렵습니다.
+
+<a id="2-architectural-simplicity-and-scaling-아키텍처의-단순성과-스케일링"></a>
+<a id="4-zero-overhead-for-task-specificity-과업-특화-오버헤드-제로"></a>
+<a id="5-kv-caching-efficiency-kv-캐싱의-효율성"></a>
+
+## 첫 토큰을 내기 전과 후에 서버가 하는 일
+
+디코더 전용 모델은 같은 층으로 프롬프트를 읽고 출력을 이어 씁니다. 컨텍스트 한도가 2,048토큰이고 프롬프트가 1,800토큰이면, 특수 토큰까지 포함해 248토큰을 더 담을 수 있습니다. 인코더와 디코더가 따로 있어도 여러 과제를 텍스트로 표현할 수 있습니다. 예를 들어 T5는 번역과 분류 모두에서 인코더로 입력을 읽고 디코더로 정답 텍스트를 생성했습니다 [[6]](#ref-6).
+
+**프리필(prefill)** 에서는 프롬프트의 여러 위치를 각 층에서 병렬로 처리하고, 각 위치의 키와 값(K와 V)을 저장합니다. 첫 출력 토큰은 마지막 위치에서 예측합니다. 이어지는 **디코드(decode)** 에서는 방금 고른 토큰을 처리하면서 K와 V를 캐시에 추가하고, 그 위치의 쿼리로 이전 토큰들과 현재 토큰을 참조합니다. 저장해 둔 키와 값은 다시 계산할 필요가 없습니다. 하지만 전체 어텐션을 쓰면 새 쿼리가 읽을 캐시의 길이는 토큰을 생성할수록 늘어납니다.
+
+인코더-디코더 모델에서도 디코더의 셀프 어텐션 K와 V를 캐시에 저장할 수 있습니다. 원문이 고정되어 있다면 인코더는 한 번만 실행하고, 인코더 출력에서 구한 크로스 어텐션용 K와 V도 생성 단계마다 재사용할 수 있습니다 [[5]](#ref-5). 두 서빙 시스템을 비교할 때는 입력·출력 길이, 배치 크기, 하드웨어를 맞추세요. 첫 토큰까지 걸리는 시간, 그 뒤 토큰 사이의 간격, 최대 메모리 사용량을 나눠 재면 긴 프롬프트와 긴 답변이 각각 어느 단계에 부담을 주는지 볼 수 있습니다. [12.1절의 KV 메모리 계산 예제](/ko/chapter-12/kv-cache-management/#mixed-request-budget)에서는 길이가 다른 요청을 한 배치에 넣으면 필요한 메모리가 얼마나 달라지는지 확인할 수 있습니다.
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: BERT와 GPT의 어텐션 메커니즘의 가장 큰 차이점은 무엇입니까?</summary>
-*BERT는 bidirectional self-attention을 사용하여 토큰이 과거와 미래 토큰 모두에 어텐션을 기울일 수 있도록 합니다. 반면 GPT는 causal (masked) self-attention을 사용하여 토큰이 과거와 현재 토큰에만 어텐션을 기울이도록 제한합니다.*
+<summary>Quiz 1: `red` 위치에서 자기 자신을 볼 수 있어도 정답이 새지 않는 이유는 무엇인가요?</summary>
+*그 위치에서 맞혀야 하는 정답은 `blue`입니다. 인과적 마스크는 `BOS`와 `red`까지 허용하고 `blue`가 있는 위치는 가립니다.*
 </details>
 
 <details>
-<summary>Quiz 2: Decoder-only 모델이 Encoder-only 모델보다 제로샷 및 퓨샷 학습에 더 적합한 이유는 무엇입니까?</summary>
-*Decoder-only 모델은 프롬프트를 기반으로 다음 토큰을 예측하도록 학습됩니다. 이 학습 목표는 모델이 프롬프트에 제공된 컨텍스트를 기반으로 시퀀스를 이어가는 제로샷 및 퓨샷 프롬프팅과 완벽하게 일치합니다.*
+<summary>Quiz 2: 세 위치의 학습 손실을 한 번에 계산하면서도 세 토큰을 독립적으로 생성할 수 없는 이유는 무엇인가요?</summary>
+*학습할 때는 각 위치에서 참조하는 토큰열이 예문에 들어 있습니다. 생성할 때는 첫 토큰으로 무엇을 고르는지에 따라 다음 예측의 입력이 달라집니다.*
 </details>
 
 <details>
-<summary>Quiz 3: "autoregressive generation"이란 무엇이며 어떻게 작동합니까?</summary>
-*Autoregressive 생성은 시퀀스를 한 번에 하나의 토큰씩 생성하는 과정입니다. 모델은 이전 토큰들을 기반으로 다음 토큰을 예측하고, 생성된 토큰은 다음 예측 단계를 위해 입력에 추가됩니다.*
+<summary>Quiz 3: 예시를 두 개 줬더니 모델이 후기를 올바르게 분류했습니다. 예시의 레이블을 바꿔 보면 무엇을 확인할 수 있을까요?</summary>
+*레이블을 바꾼 예시로 같은 평가용 후기들을 다시 분류합니다. 모델이 바뀐 규칙을 따른다면 프롬프트 안의 대응 관계가 예측에 영향을 줬다는 근거가 됩니다. 처음에 답 하나를 맞힌 것만으로는 이를 구별하기 어렵습니다.*
 </details>
 
 <details>
-<summary>Quiz 4: Causal mask를 적용하면 왜 어텐션 스코어에서 1로 이루어진 하삼각행렬(lower triangular matrix)이 생성됩니까?</summary>
-*하삼각행렬은 주 대각선과 그 아래에는 1이 있고 그 위에는 0이 있습니다. 이는 $i$ 위치가 $j \le i$ 위치에만 어텐션을 기울일 수 있도록 보장합니다. 대각선 위의 0은 미래 토큰에 대한 어텐션을 차단합니다.*
+<summary>Quiz 4: 마스크에서 허용된 영역이 삼각형이면 그 안의 어텐션 가중치도 모두 같을까요?</summary>
+*허용된 각 키의 가중치는 쿼리와 키의 점수에 행별 소프트맥스를 적용해 구합니다. 가려진 키의 가중치는 0입니다. 코드 예제의 둘째 행처럼 참조가 허용된 키끼리도 가중치는 다를 수 있습니다.*
 </details>
 
 <details>
-<summary>Quiz 5: Encoder-only 모델과 비교하여 Decoder-only 모델의 단점 한 가지를 언급해 보세요.</summary>
-*Decoder-only 모델은 전체 컨텍스트를 한 번에 고려하기보다는 정보를 단방향으로 처리하기 때문에, 고정된 텍스트 본문을 동시에 이해해야 하는 과업(예: 분류 또는 검색)에는 일반적으로 덜 효율적입니다.*
+<summary>Quiz 5: 인코더-디코더 모델이 번역문을 길게 생성하면 어느 쪽 캐시가 늘어날까요?</summary>
+*디코더가 생성 토큰을 처리할 때마다 그 토큰의 키와 값이 셀프 어텐션 캐시에 추가됩니다. 원문은 그대로이므로 크로스 어텐션용 키와 값의 길이도 그대로입니다.*
 </details>
 
 <details>
-<summary>Quiz 6: 자기회귀(Autoregressive) 추론 과정에서 Decoder-only 모델의 KV 캐시(KV Cache)에 필요한 VRAM 용량(기가바이트 단위)을 계산하는 명시적인 공식을 유도하시오.</summary>
-*KV 캐시는 각 레이어에서 모든 과거 토큰의 Key와 Value를 저장합니다. 배치 크기를 $b$, 시퀀스 길이를 $s$, 레이어 수를 $l$, Key/Value 헤드 수를 $h_{KV}$, 각 헤드의 차원을 $d_{head}$, 정밀도 바이트 수를 $p$ (예: FP16/BF16의 경우 2)라고 합시다. 저장해야 하는 총 원소의 수는 $2 \text{ (K 및 V)} \times b \times s \times l \times h_{KV} \times d_{head}$ 입니다. 기가바이트(GB) 단위의 VRAM 용량은 다음과 같이 계산됩니다: $\text{KV Cache (GB)} = \frac{2 \times b \times s \times l \times h_{KV} \times d_{head} \times p}{10^9}$. 예를 들어, $h_{KV} \times d_{head} = d_{model}$인 표준 MHA 구조의 7B 모델 ($l=32, d_{model}=4096$)을 FP16, 배치 크기 1, 시퀀스 길이 2048로 추론할 때 필요한 용량은 $\frac{2 \times 1 \times 2048 \times 32 \times 4096 \times 2}{10^9} \approx 1.07 \text{ GB}$ 입니다.*
+<summary>Quiz 6: 전체 어텐션을 쓰는 디코더에서 2,048토큰 시퀀스 한 개의 KV 데이터는 얼마나 클까요?</summary>
+*층 수가 $L$, 저장된 토큰 수가 $S$, 층당 KV 헤드 수가 $H$, 헤드 차원이 $D$, 원소당 바이트 수가 $p$라면 크기는 $2LSHDp$바이트입니다. 키와 값을 모두 저장하므로 2를 곱합니다. $L=32$, $S=2048$, $H=32$, $D=128$이고 FP16($p=2$)을 쓰면 정확히 1 GiB인 1,073,741,824바이트입니다. 메모리 할당에 드는 부가 공간과 모델 가중치는 별도입니다.*
 </details>
-
----
 
 ## References
 
-1. <a id="ref-1"></a>Brown, T., et al. (2020). *Language Models are Few-Shot Learners*. [arXiv:2005.14165](https://arxiv.org/abs/2005.14165).
-2. <a id="ref-2"></a>Dubey, A., et al. (2024). *The Llama 3 Herd of Models*. [arXiv:2407.21783](https://arxiv.org/abs/2407.21783).
+1. <a id="ref-1"></a>Brown, T. B., et al. (2020). *Language Models are Few-Shot Learners*. [논문](https://arxiv.org/abs/2005.14165).
+2. <a id="ref-2"></a>Grattafiori, A., et al. (2024). *The Llama 3 Herd of Models*. [논문](https://arxiv.org/abs/2407.21783).
+3. <a id="ref-3"></a>Meta (2024). *Llama 3 Model Card*. [4월 공개 모델 카드](https://github.com/meta-llama/llama3/blob/main/MODEL_CARD.md).
+4. <a id="ref-4"></a>Kaplan, J., et al. (2020). *Scaling Laws for Neural Language Models*. [논문](https://arxiv.org/abs/2001.08361).
+5. <a id="ref-5"></a>Hugging Face. *Transformers 4.57.1: EncoderDecoderCache*. [캐시 문서](https://huggingface.co/docs/transformers/v4.57.1/en/internal/generation_utils#transformers.EncoderDecoderCache).
+6. <a id="ref-6"></a>Raffel, C., et al. (2020). *Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer*. [논문](https://jmlr.org/papers/v21/20-074.html).

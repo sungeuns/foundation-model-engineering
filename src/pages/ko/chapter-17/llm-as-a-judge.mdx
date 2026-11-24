@@ -71,6 +71,35 @@ EvalPlanner는 연구한 설정에서 계획·실행·최종 판정을 분리합
 
 프로덕션 심판에는 짧은 기준별 판정과 근거 위치를 요구합니다. 그 근거가 실제로 존재하고 지적을 뒷받침하는지 확인합니다. 숨겨진 정답 사례와 적대적 후보를 사용하고, 유창한 설명이 실행 검사 실패를 덮어서는 안 됩니다.
 
+<a id="translation-rubric-example"></a>
+
+### 금지 안내가 번역을 거쳐 권유가 된다면
+
+파일 공유 앱은 안내문에서 `{file}` 자리에 실제 파일 이름을 넣습니다. 영어 원문은 해당 파일을 게스트와 공유하지 말라고 경고합니다. 다음 세 문장 중 어느 것을 한국어판에 넣을 수 있을까요? 번역 후보는 이 실습을 위해 작성했습니다.
+
+```python
+import re
+from collections import Counter
+
+source = "Do not share the file {file} with guests."
+candidates = {
+    "A": "{file} 파일을 게스트와 공유하세요.",
+    "B": "{file} 파일을 게스트와 공유하지 마세요.",
+    "C": "{filename} 파일을 게스트와 공유하지 마세요.",
+}
+
+def placeholders(text):
+    return Counter(re.findall(r"\{[A-Za-z_][A-Za-z_0-9]*\}", text))
+
+for label, text in candidates.items():
+    print(label, placeholders(text) == placeholders(source))
+# A True, B True, C False
+```
+
+이 앱은 `{name}`처럼 중괄호 안에 이름 하나만 쓰는 자리표시자를 사용하고, 이스케이프 문법은 지원하지 않는다고 가정합니다. C는 이름을 바꿨으므로 코드 검사에서 탈락합니다. 남은 두 문장은 모두 자연스럽지만, A의 ‘공유하세요’는 행동을 권하고 B의 ‘공유하지 마세요’는 행동을 금지합니다. 심판에게는 “게스트와의 공유를 여전히 금지하는가?”라고 묻고, 답을 결정한 표현을 인용하게 합니다. 두 검사를 모두 통과하는 후보는 B입니다. 심판 자체를 점검할 때는 두 언어를 아는 검토자가 허용과 금지만 뒤집은 문장 쌍에 정답을 매기고, 심판이 통과시킨 번역도 일부 직접 읽습니다.
+
+**2026-11-25 기준.** Tencent는 11월 24일에 번역 모델 Hy-MT3-1.8B, Hy-MT3-7B, Hy-MT3-30B-A3B의 가중치와 평가용 TransRubric 프롬프트를 공개했습니다. TransRubric은 문항별로 기준을 제시하고 심판에게 번역 오류를 찾게 합니다 [[8]](#ref-8). 연구진은 중국어와 영어 사이의 양방향 번역 651개를 TransRubric으로 각각 열 번씩 평가했습니다. 0~100점 척도에서 번역별로 점수의 표준편차를 구하니 평균 3.31점이었습니다 [[7]](#ref-7). 이는 같은 번역을 반복 평가했을 때 점수가 얼마나 일정했는지 보여 줍니다. 위의 A에 열 번 모두 같은 합격점을 준 심판도 금지 문구가 사라졌다는 사실은 열 번 모두 놓친 셈입니다.
+
 ## 4. 10월 연구: 척도를 바꾸면 측정 도구도 바뀐다
 
 **2026-10-18 기준 연구 정리.** Jo 등은 모델 5개와 텍스트 점수화 과제 3개에서 척도의 형식·범위·부호를 바꿉니다. 정규화 뒤에도 수치·의미 민감도가 남았으며, 해당 설정에서는 루브릭 프롬프팅으로 해결되지 않았습니다 [[5]](#ref-5). 결과는 연구한 점수화 과제에 한정되며 모든 쌍대 평가나 도메인 심판에 대한 결론은 아닙니다.
@@ -128,3 +157,5 @@ EvalPlanner는 연구한 설정에서 계획·실행·최종 판정을 분리합
 4. <a id="ref-4"></a>Liu, Y., et al. (2023). *G-Eval: NLG Evaluation using GPT-4 with Better Human Alignment*. [Paper](https://arxiv.org/abs/2303.16634).
 5. <a id="ref-5"></a>Jo, W., Kim, G., & Hee, M. S. (2026). *Change the Number, Change the Answer: Assessing Rating Scale Sensitivity in LLM-Based Text Scoring*. October 15 preprint. [Paper](https://arxiv.org/abs/2610.22187).
 6. <a id="ref-6"></a>Zheng, L., et al. (2023). *Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena*. [Paper](https://arxiv.org/abs/2306.05685).
+7. <a id="ref-7"></a>Zheng, M., et al. (2026). *Hy-MT3: More Accurate, Robust and Practical Multilingual Translation Models in the Wild*. [기술 보고서 그림 2](https://arxiv.org/html/2611.27673v2).
+8. <a id="ref-8"></a>Tencent. (2026). [Hy-MT3 모델 카드와 체크포인트](https://huggingface.co/tencent/Hy-MT3-7B). [TransRubric 프롬프트와 평가 자료](https://github.com/Tencent-Hunyuan/Hy-MT3/blob/main/TransRubric/README.md).

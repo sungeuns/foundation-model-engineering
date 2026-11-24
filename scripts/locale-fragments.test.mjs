@@ -39,6 +39,7 @@ test('shared exercise IDs belong to the same authored content in both translatio
   }
   for (const [route, id] of [
     ['/chapter-3/self-attention-mathematics', 'attention-weight-example'],
+    ['/chapter-4/decoder-only', 'shifted-target-example'],
     ['/chapter-4/hybrid-prefix-lm', 'prefix-mask-test'],
     ['/chapter-7/tiny-decoder-lab', 'decoder-copy-trace'],
     ['/chapter-7/tiny-decoder-lab', 'local-decoder-setup'],
@@ -48,6 +49,7 @@ test('shared exercise IDs belong to the same authored content in both translatio
     ['/chapter-12/speculative-decoding', 'speculative-sampling-example'],
     ['/chapter-12/serving-policies-slos-and-fallbacks', 'streaming-latency-trace'],
     ['/chapter-14/advanced-retrieval', 'rrf-candidate-cutoff'],
+    ['/chapter-17/llm-as-a-judge', 'translation-rubric-example'],
     ['/chapter-17/commercial-model-benchmarks', 'long-context-cost'],
     ['/chapter-14/rag-failure-modes-and-operational-design', 'trace-a-rag-answer'],
   ]) {

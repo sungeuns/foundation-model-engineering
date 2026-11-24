@@ -71,6 +71,35 @@ EvalPlanner separates planning, execution, and final judgment in its studied set
 
 For a production judge, require a short criterion-level verdict and evidence location. Check that the evidence exists and supports the claimed issue. Use hidden gold cases and adversarial candidates; an eloquent rationale must not override a failing executable check.
 
+<a id="translation-rubric-example"></a>
+
+### When a fluent translation reverses a warning
+
+A file-sharing app inserts a filename wherever its interface string contains `{file}`. The English warning forbids sharing that file with guests. Which Korean translation could ship? The three candidates below were written for this exercise.
+
+```python
+import re
+from collections import Counter
+
+source = "Do not share the file {file} with guests."
+candidates = {
+    "A": "{file} 파일을 게스트와 공유하세요.",
+    "B": "{file} 파일을 게스트와 공유하지 마세요.",
+    "C": "{filename} 파일을 게스트와 공유하지 마세요.",
+}
+
+def placeholders(text):
+    return Counter(re.findall(r"\{[A-Za-z_][A-Za-z_0-9]*\}", text))
+
+for label, text in candidates.items():
+    print(label, placeholders(text) == placeholders(source))
+# A True, B True, C False
+```
+
+This checker assumes the app accepts only simple, unescaped `{name}` placeholders. C changes the name and fails before a judge is called. Both remaining sentences read naturally. A says <span lang="ko">공유하세요</span> (“please share”). B says <span lang="ko">공유하지 마세요</span> (“please do not share”). Ask the judge whether the warning still forbids sharing with guests and require it to quote the words that settle the question. B passes both checks. To audit this judge, have a bilingual reviewer label pairs with reversed permissions and inspect a sample of translations the judge accepted.
+
+**Release snapshot as of 2026-11-25.** On November 24, Tencent released three open-weight translation checkpoints, Hy-MT3-1.8B, Hy-MT3-7B and Hy-MT3-30B-A3B, alongside the TransRubric evaluation prompts. TransRubric supplies criteria specific to each item and asks a judge to identify translation errors [[8]](#ref-8). On 651 Chinese–English translations covering both directions, the authors report that the standard deviation of ten repeated scores for the same translation averaged 3.31 points on a 0–100 scale [[7]](#ref-7). That measures repeatability on those items. A judge could give A the same passing score ten times and miss the reversed warning every time.
+
 ## 4. October Research: Changing the Scale Changes the Instrument
 
 **Research snapshot as of 2026-10-18.** Jo et al. vary scale format, range, and sign across five models and three text-scoring tasks. They find numerical and semantic sensitivity even after normalization, and rubric prompting does not remove it in their setup [[5]](#ref-5). These results concern the tested scoring tasks, not every pairwise or domain judge.
@@ -89,7 +118,7 @@ Also test position, verbosity, superficial formatting, and instruction injection
 
 Separate evaluator development from the sealed candidate release set. Inspect both flagged and apparently passing cases. Report sensitivity/specificity by failure class, agreement with expert labels, consistency, abstention, cost, and latency. For categorical labels, Cohen's kappa is $\kappa=(P_o-P_e)/(1-P_e)$, where $P_o$ is observed agreement and $P_e$ chance agreement from label marginals. Its interpretation depends on class prevalence and the decision cost; a universal kappa threshold is inappropriate.
 
-For a second authored example, an audit contains 20 critical defects and 180 acceptable answers. A judge that labels everything acceptable achieves **90% overall agreement** and **0% critical-defect recall**. The average looks reassuring precisely because failures are rare. Report the confusion matrix and uncertainty for each critical slice; a balanced development set can expose blind spots, while prevalence-weighted estimates are needed to forecast operational workload.
+Suppose an audit contains 20 critical defects and 180 acceptable answers. A judge that labels everything acceptable achieves **90% overall agreement** and **0% critical-defect recall**. The average looks reassuring precisely because failures are rare. Report the confusion matrix and uncertainty for each critical slice; a balanced development set can expose blind spots, while prevalence-weighted estimates are needed to forecast operational workload.
 
 Promote a new judge only after critical-slice miss rates and workload meet predeclared bounds. Retain the previous judge/rubric, canary the new measurement pipeline, and rehearse rollback. The next section examines how human preferences are aggregated into ratings; those ratings answer a different question from correctness.
 
@@ -128,3 +157,5 @@ Promote a new judge only after critical-slice miss rates and workload meet prede
 4. <a id="ref-4"></a>Liu, Y., et al. (2023). *G-Eval: NLG Evaluation using GPT-4 with Better Human Alignment*. [Paper](https://arxiv.org/abs/2303.16634).
 5. <a id="ref-5"></a>Jo, W., Kim, G., & Hee, M. S. (2026). *Change the Number, Change the Answer: Assessing Rating Scale Sensitivity in LLM-Based Text Scoring*. October 15 preprint. [Paper](https://arxiv.org/abs/2610.22187).
 6. <a id="ref-6"></a>Zheng, L., et al. (2023). *Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena*. [Paper](https://arxiv.org/abs/2306.05685).
+7. <a id="ref-7"></a>Zheng, M., et al. (2026). *Hy-MT3: More Accurate, Robust and Practical Multilingual Translation Models in the Wild*. [Technical report, Figure 2](https://arxiv.org/html/2611.27673v2).
+8. <a id="ref-8"></a>Tencent. (2026). [Hy-MT3 model card and checkpoint links](https://huggingface.co/tencent/Hy-MT3-7B). [TransRubric prompts and evaluation data](https://github.com/Tencent-Hunyuan/Hy-MT3/blob/main/TransRubric/README.md).

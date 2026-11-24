@@ -59,8 +59,8 @@ export const searchDescriptions = {
     ko: '벤치마크 방법론, 호환 가능한 지표, 통계적 비교와 오염 점검을 통해 언어·멀티모달 모델의 평가 결과를 해석합니다.',
   },
   '/chapter-17/llm-as-a-judge': {
-    en: 'Design LLM-as-a-judge evaluations using pairwise comparisons, calibrated rubrics, consistency checks, bias analysis, and evaluator validation.',
-    ko: '쌍대 비교, 보정된 평가 기준, 일관성 점검과 편향 분석을 통해 LLM 판정 평가를 설계하고 평가자 자체를 검증합니다.',
+    en: 'Calibrate an LLM judge on a translation that reverses the source meaning. Compare paired verdicts and measure how many critical errors the grader misses.',
+    ko: '유창하지만 원문의 뜻을 뒤집은 번역을 LLM 평가기로 어떻게 잡을까요? 두 답의 순서를 바꿔 판정을 비교하고, 놓친 오류를 유형별로 측정합니다.',
   },
   '/chapter-17/elo-rating-and-leaderboards': {
     en: 'Understand Elo ratings for model comparisons, including crowdsourced pairwise results, rating updates, uncertainty, and leaderboard interpretation.',
@@ -291,8 +291,8 @@ export const searchDescriptions = {
     ko: 'BERT 계열 인코더 전용 모델의 양방향 어텐션, 마스킹 언어 모델링과 표현 학습을 살펴보고 MLM 헤드 예제를 이해합니다.',
   },
   '/chapter-4/decoder-only': {
-    en: 'Explore GPT-style decoder-only models through causal attention masks, next-token prediction, and the engineering implications of autoregression.',
-    ko: '인과적 어텐션 마스크와 다음 토큰 예측을 통해 GPT 계열 디코더 전용 모델을 이해하고 자기회귀 구조의 엔지니어링 의미를 살펴봅니다.',
+    en: 'Follow three next-token predictions in a GPT-style decoder. Check the shifted labels and causal mask in PyTorch, then compare prompt prefill with token-by-token decoding.',
+    ko: 'GPT 계열 디코더는 한 문장에서 다음 토큰을 어떻게 학습할까요? 세 위치의 정답과 인과 마스크를 PyTorch로 확인하고, 프롬프트 처리와 토큰 생성의 계산 차이를 살펴봅니다.',
   },
   '/chapter-4/encoder-decoder': {
     en: 'Understand T5- and BART-style encoder-decoder models, how cross-attention connects input and output, and the corresponding PyTorch mechanism.',
