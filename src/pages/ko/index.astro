@@ -13,7 +13,7 @@ const getPath = (p) => `/ko${p}`;
   <div style="text-align: right; color: var(--secondary-color); font-size: 0.9rem; margin-bottom: 1rem;">최근 업데이트: 2026-11-25</div>
   <h1>파운데이션 모델 엔지니어링</h1>
   <p><strong>파운데이션 모델의 원리부터 학습·서빙·평가 과정에서 생기는 문제까지 다룹니다.</strong> 직접 조작하는 시각화, PyTorch 예제, CPU 실습을 담은 무료 오픈소스 교재이며 한국어와 영어로 읽을 수 있습니다.</p>
-  <p>아래에서 궁금한 문제를 골라도 되고, 학습 경로나 전체 목차를 따라 읽어도 됩니다. 기본적인 Python·선형대수·확률 지식을 가정합니다. <a href={withPagePath('/ko/chapter-1/learning-path-and-mastery')}>선수 지식 점검</a>으로 보충할 내용을 찾아보세요.</p>
+  <p>궁금한 대목만 읽으려면 목차에서 GLM-5.4 같은 모델 이름이나 ‘첫 토큰 지연’ 같은 용어를 검색하세요. 처음부터 공부하려면 아래에서 질문을 고르거나 <a href={withPagePath('/ko/chapter-1/learning-path-and-mastery')}>선수 지식 점검</a>에서 Python·선형대수·확률 중 어디를 먼저 보충할지 확인할 수 있습니다.</p>
 
   <p><strong>11월 24일 모델 업데이트:</strong> <a href={withPagePath('/ko/chapter-17/commercial-model-benchmarks') + '#model-glm-54'}>GLM-5.4</a>, GPT-6.2 Astra/Sol, Gemini 4 Neon/Carbon을 포함한 <a href={withPagePath('/ko/chapter-17/commercial-model-benchmarks')}>43개 모델 프로필</a>을 살펴보세요. 공개 상태와 평가 설정을 비교하고, 긴 문맥 요청의 비용을 직접 계산할 수 있습니다. <a href={withPagePath('/ko/chapter-11/audio-and-speech-integration')}>음성</a>, <a href={withPagePath('/ko/chapter-11/image-diffusion-models')}>이미지</a>, <a href={withPagePath('/ko/chapter-11/commercial-video-models')}>비디오·월드 모델</a> 장에서는 각 분야에 맞는 평가 문제를 다룹니다.</p>
 
@@ -29,7 +29,7 @@ const getPath = (p) => `/ko${p}`;
   <p>Seongeun So가 AI의 도움을 받아 만드는 독립 프로젝트입니다. 주장에는 근거와 한계가 따라야 합니다. 설명·번역·실험에서 문제가 보이면 해당 페이지와 반례를 적어 <a href="https://github.com/sungeuns/foundation-model-engineering/issues">이슈를 남겨주세요</a>.</p>
   <p>도움이 된 장은 같은 문제를 풀고 있는 동료에게 공유해주세요. <a href="https://github.com/sungeuns/foundation-model-engineering">GitHub star로 저장</a>하거나 <a href="https://github.com/sungeuns/foundation-model-engineering/blob/main/CONTRIBUTING.md">수정에 참여</a>할 수도 있습니다.</p>
 
-  <h2>목차</h2>
+  <h2 id="book-contents">목차</h2>
   <div class="toc">
     {chapters.map(ch => (
       <div class="toc-chapter">

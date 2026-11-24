@@ -11,7 +11,7 @@ import { withBasePath, withPagePath } from '../utils/paths.js';
   <div style="text-align: right; color: var(--secondary-color); font-size: 0.9rem; margin-bottom: 1rem;">Last update: 2026-11-25</div>
   <h1>Foundation Model Engineering</h1>
   <p><strong>Learn how foundation models work—and what breaks when you train, serve, and evaluate them.</strong> A free, open-source textbook in English and Korean, with interactive explanations, PyTorch examples, and CPU labs.</p>
-  <p>Start with one engineering question below, follow a learning route, or use the full table of contents. You will need basic Python, linear algebra, and probability; the <a href={withPagePath('/chapter-1/learning-path-and-mastery')}>prerequisite check</a> helps you find gaps.</p>
+  <p>Looking for one explanation? Open Contents and search for a model such as GLM-5.4 or a metric such as TTFT. For a guided introduction, choose a question below or use the <a href={withPagePath('/chapter-1/learning-path-and-mastery')}>prerequisite check</a> to see which Python, linear algebra, and probability skills you’ll need.</p>
 
   <p><strong>November 24 model update:</strong> explore <a href={withPagePath('/chapter-17/commercial-model-benchmarks')}>43 model profiles</a>, including <a href={withPagePath('/chapter-17/commercial-model-benchmarks') + '#model-glm-54'}>GLM-5.4</a>, GPT-6.2 Astra/Sol and Gemini 4 Neon/Carbon. Check release status, compare evaluation settings, and run a long-context cost example. The <a href={withPagePath('/chapter-11/audio-and-speech-integration')}>speech</a>, <a href={withPagePath('/chapter-11/image-diffusion-models')}>image</a> and <a href={withPagePath('/chapter-11/commercial-video-models')}>video/world-model</a> chapters cover their separate evaluation questions.</p>
 
@@ -27,7 +27,7 @@ import { withBasePath, withPagePath } from '../utils/paths.js';
   <p>This is an independent project by Seongeun So, developed with AI assistance. Sources and limitations belong next to the claims they support. If an explanation, translation, or experiment does not hold up, <a href="https://github.com/sungeuns/foundation-model-engineering/issues">open an issue</a> with the page and a counterexample.</p>
   <p>If a lesson helped you, share that lesson with someone working on the same problem. <a href="https://github.com/sungeuns/foundation-model-engineering">Star the repository</a> to bookmark it, or <a href="https://github.com/sungeuns/foundation-model-engineering/blob/main/CONTRIBUTING.md">contribute a correction</a>.</p>
 
-  <h2>Table of Contents</h2>
+  <h2 id="book-contents">Table of Contents</h2>
   <div class="toc">
     {chapters.map(ch => (
       <div class="toc-chapter">

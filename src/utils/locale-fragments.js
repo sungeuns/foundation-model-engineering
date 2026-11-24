@@ -2,7 +2,9 @@
 // counterparts from heading order, translated slugs, or reference numbers.
 const lessonFragments = {
   '/chapter-5/sparse-vs-dense-models': ['moe-routing-lab'],
+  '/chapter-10/dpo': ['reference-relative-example'],
   '/chapter-11/vision-language-bridges': ['visual-token-budget'],
+  '/chapter-12/serving-policies-slos-and-fallbacks': ['streaming-latency-trace'],
   '/chapter-14/rag-failure-modes-and-operational-design': ['trace-a-rag-answer'],
   '/chapter-17/experimental-design-and-uncertainty': ['release-lab'],
 };

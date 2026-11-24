@@ -18,12 +18,44 @@ That is why serving policy matters. Kernel-level optimizations make inference po
 
 Continuous batching, PagedAttention, and chunked prefill improve efficiency, but production teams are usually judged by a small set of user-facing objectives:
 
-- **TTFT (Time To First Token):** how long the user waits before anything appears.
-- **TPOT or TBT:** how smooth generation feels once it starts. `TPOT` is the system-facing metric, while `TBT` is the user-facing experience of the same phenomenon.
+- **TTFT (Time To First Token):** the wait from request submission to the first qualifying output token at a declared observation point.
+- **TPOT (Time Per Output Token):** a request's average interval after its first output token.
+- **Inter-token latency (ITL), also called time between tokens (TBT):** individual token gaps in the convention used below. Their distribution reveals pauses that TPOT can hide. The metric name alone does not identify a client-side or server-side measurement.
 - **Success Rate:** whether the request finishes without timeout, OOM, or cancellation.
 - **Cost per Successful Request:** whether the latency target is being met economically.
 
 These goals frequently conflict. A scheduler can maximize aggregate tokens per second and still create a terrible product if large prefills monopolize the GPU and interactive users wait too long for the first token. Orca already showed that iteration-level scheduling matters for transformer serving [[1]](#ref-1), and newer systems such as DistServe make the point even more explicit: the metric that matters in production is often not raw throughput, but how many requests finish while staying inside latency objectives [[5]](#ref-5).
+
+<a id="streaming-latency-trace"></a>
+
+### TTFT (Time to First Token), TPOT, and Inter-Token Latency
+
+Choose the clock boundary before comparing numbers. In this example, a benchmark client uses one monotonic clock: $t_0$ records request submission, and $t_1,\ldots,t_N$ record receipt of $N$ individually observed output tokens. Times are in milliseconds. Only text tokens count; empty protocol messages do not. A client receipt timestamp does not measure when the UI displays that text. Server generation timestamps describe another boundary and must not be subtracted from timestamps on an unsynchronized client clock.
+
+For $N\geq2$, define the gaps $\Delta_i$ and the per-request mean as follows. This TPOT convention excludes the wait for the first token. [[7]](#ref-7)
+
+$$
+\mathrm{TTFT}=t_1-t_0,\qquad
+\Delta_i=t_i-t_{i-1}\quad(i=2,\ldots,N)
+$$
+
+$$
+\mathrm{TPOT}=\frac{t_N-t_1}{N-1}
+=\frac{1}{N-1}\sum_{i=2}^{N}\Delta_i
+$$
+
+Consider two **authored traces**, both submitted at $t_0=0$. Every arrival in this table contains exactly one token.
+
+| Trace | Token arrival times (ms) | Individual gaps (ms) | TTFT (ms) | TPOT (ms/token after the first) | Longest gap (ms) |
+| --- | --- | --- | --- | --- | --- |
+| A: steady delivery | 100, 200, 300, 400, 500 | 100, 100, 100, 100 | 100 | 100 | 100 |
+| B: a late pause | 100, 110, 120, 130, 500 | 10, 10, 10, 370 | 100 | 100 | 370 |
+
+Both have TPOT $(500-100)/(5-1)=100$ ms/token and deliver their last token at 500 ms. Yet B leaves a 370 ms silence before that last token. A rule requiring every gap to stay at or below 200 ms accepts A and rejects B; a TPOT-only rule cannot distinguish them. Across requests, a percentile of per-request TPOT and a percentile of individual gaps also describe different populations and weighting.
+
+For a one-token response arriving at 100 ms, TTFT is 100 ms, but there is no post-first-token interval: report TPOT as **not available** and retain an empty gap list, rather than inserting zero.
+
+Real streaming APIs can deliver several tokens in one chunk. Chunk arrival timestamps cannot reconstruct the tokens' individual generation times. Retain chunk timestamps and token counts, report chunk gaps separately, and state which content channels and completion event the measurement includes. **As of 2026-11-25**, NVIDIA AIPerf v0.14.0 calls a per-request average *ITL* and reports individual chunk gaps as *ICL*. This differs from the individual-gap terminology above: compare formulas and observation boundaries, not just metric labels. Its documentation also distinguishes first-chunk token counts when normalizing the remaining decode interval. [[8]](#ref-8)
 
 ### Goodput Is the Right Mental Model
 
@@ -213,6 +245,11 @@ For production evaluation, count KV transfers, cache reuse, switching delay and 
 *Because an explicit fallback ladder preserves control over user experience and cluster stability. The service can shrink context, cap outputs, pause low-priority work, or return a degraded response before the cluster enters a chaotic failure mode.*
 </details>
 
+<details>
+<summary>Quiz 5: Two requests have the same TTFT and TPOT. Does that prove equally smooth streaming, and what can you conclude if each response arrives in a single chunk?</summary>
+*No. The worked traces have equal means but longest token gaps of 100 and 370 ms. Inspect the individual gaps at the same observation boundary. A single chunk exposes no within-response arrival gaps; its timestamp cannot reveal the individual token generation cadence.*
+</details>
+
 ---
 
 ## References
@@ -223,3 +260,5 @@ For production evaluation, count KV transfers, cache reuse, switching delay and 
 4. <a id="ref-4"></a>Patel, P., Choukse, E., Zhang, C., Shah, A., Goiri, I., Maleki, S., & Bianchini, R. (2024). *Splitwise: Efficient Generative LLM Inference Using Phase Splitting.* [arXiv:2311.18677](https://arxiv.org/abs/2311.18677).
 5. <a id="ref-5"></a>Zhong, Y., Liu, S., Chen, J., Hu, J., Zhu, Y., Liu, X., Jin, X., & Zhang, H. (2024). *DistServe: Disaggregating Prefill and Decoding for Goodput-optimized Large Language Model Serving.* [arXiv:2401.09670](https://arxiv.org/abs/2401.09670).
 6. <a id="ref-6"></a>Research preprint (2026). [Evolving Infra: Agent-Adaptive LLM Serving at Scale](https://arxiv.org/html/2611.12304v1). Version pinned; accessed 2026-11-15.
+7. <a id="ref-7"></a>Kubernetes SIGs. [Inference Performance Metrics Definition — Latency](https://github.com/kubernetes-sigs/inference-perf/blob/main/docs/metrics.md#latency). Official benchmark definitions; checked 2026-11-25.
+8. <a id="ref-8"></a>NVIDIA. [AIPerf v0.14.0 Metrics Reference](https://docs.nvidia.com/aiperf/v0.14.0/reference/ai-perf-metrics-reference). TTFT, ITL, and ICL definitions; checked 2026-11-25.

@@ -6,13 +6,13 @@ lang: ko
 
 # 10.3 Direct Preference Optimization (DPO)
 
-Direct Preference Optimization (DPO)은 별도의 scalar reward model을 학습하거나 online rollout을 수행하지 않고 응답 pair로 policy를 학습합니다 [[1]](#ref-1). Loss가 간결하다고 데이터 파이프라인도 간결한 것은 아닙니다. DPO 실패의 상당수는 잘못된 pair, 불일치 template, 길이 효과, 고정되지 않은 reference model에서 생깁니다.
+직접 선호도 최적화(DPO)는 별도의 스칼라 보상 모델이나 온라인 롤아웃 없이 응답 쌍으로 정책을 학습합니다 [[1]](#ref-1). 손실은 고정된 기준 모델과 비교해 두 응답의 확률 비율이 얼마나 달라졌는지를 봅니다. 따라서 쌍 구성, 템플릿, 응답 길이, 기준 모델의 정체는 구현뿐 아니라 목적함수에도 영향을 줍니다.
 
 ---
 
 ## 목적함수
 
-**동일한 prompt** $x$에 preferred response $y_w$와 rejected response $y_l$이 있다고 합시다. Policy $\pi_\theta$, frozen reference $\pi_{\text{ref}}$, temperature와 비슷한 계수 $\beta$에 대해
+**동일한 prompt(프롬프트)** $x$에 선호 응답 $y_w$와 거절 응답 $y_l$이 있다고 합시다. 정책 $\pi_\theta$, 고정된 기준 정책 $\pi_{\text{ref}}$, 계수 $\beta>0$에 대해 쌍 하나의 손실은 다음과 같습니다.
 
 $$
 \mathcal{L}_{\text{DPO}} = -\log\sigma\left(
@@ -23,21 +23,110 @@ $$
 \right).
 $$
 
-대괄호 안은 **암묵적 reward margin (implicit reward margin)** 입니다. DPO는 rejected completion에 비해 preferred completion의 policy-reference 상대 점수를 높입니다. $\beta$는 reference에서의 이탈이 preference logit으로 바뀌는 강도를 조절하지만 실제 효과는 데이터·optimizer·log-probability 규약에 따라 달라지므로 $\beta$ sweep을 수행합니다.
+대괄호 안은 아직 스케일을 곱하지 않은 정책–기준 모델 마진 $m$입니다. **암묵적 보상 마진(implicit reward margin)** 이자 sigmoid $\sigma$에 넣는 로짓은 $\beta m$입니다. 원래 유도에서 $\beta$는 기준 정책에 대한 KL 페널티 계수이며, 이 손실에서는 선호 로짓의 크기도 조절합니다 [[1]](#ref-1). 실제 효과는 데이터·옵티마이저·로그 확률 규약에 따라 달라지므로 $\beta$ sweep으로 확인합니다. 기본 배치 목적함수는 쌍별 손실의 평균입니다.
 
 ---
 
-## Pair와 Split 계약
+<a id="reference-relative-example"></a>
 
-각 record에는 하나의 prompt, chosen response, rejected response, preference strength 또는 tie/skip 상태, annotator/rubric provenance, stable ID가 들어갑니다. Rendering 후 chosen과 rejected는 byte와 token이 같은 prompt context를 공유해야 합니다. 서로 무관한 high-score와 low-score 답을 합쳐 pair를 만들면 안 됩니다.
+## 계산 예제: 기준 모델보다 선호 비율이 얼마나 바뀌었나?
 
-학습 전에 prompt/conversation/entity **클러스터 단위로 분할(cluster split)** 합니다. 두 completion, 모든 annotation, paraphrase, synthetic sibling을 같은 split에 둡니다. Annotation 화면 위치를 무작위화하고 평가자 일치도, tie, abstention, length/verbosity 차이를 기록합니다. Public/private evaluation, rubric, semantic neighbor, teacher-generated variant를 격리합니다.
+직접 만든 선호 쌍 두 개를 사용하겠습니다. A는 “2 + 2는?”이라는 질문에 “4”를 선택하고 “5”를 거절한 쌍입니다. B는 “정수만 답하세요: 3 × 3”이라는 요청에 “9”를 선택하고 “정답은 9입니다.”를 거절한 쌍으로, 출력 형식에 대한 선호를 나타냅니다. 아래 값은 응답 종료까지 포함한 전체 응답의 로그 확률을 가정한 것이며 실제 언어 모델에서 측정한 점수가 아닙니다.
+
+정책 모델의 chosen/rejected 로그 확률을 $\ell_{\theta,w}$와 $\ell_{\theta,l}$로 쓰고, 기준 모델에는 $\mathrm{ref}$ 아래첨자를 사용하겠습니다.
+
+$$
+\begin{aligned}
+\Delta_\theta&=\ell_{\theta,w}-\ell_{\theta,l},\\
+\Delta_{\mathrm{ref}}&=\ell_{\mathrm{ref},w}-\ell_{\mathrm{ref},l},\\
+m&=\Delta_\theta-\Delta_{\mathrm{ref}}.
+\end{aligned}
+$$
+
+| 계산할 값 | 쌍 A | 쌍 B |
+| --- | --- | --- |
+| 정책 모델 로그 확률 (chosen, rejected) | (−4, −6) | (−8, −7) |
+| 기준 모델 로그 확률 (chosen, rejected) | (−5, −9) | (−10, −6) |
+| 정책의 차이 $\Delta_\theta$ | 2 | −1 |
+| 기준 모델의 차이 $\Delta_{\mathrm{ref}}$ | 4 | −4 |
+| 상대 마진 $m$ | −2 | 3 |
+
+A에서는 정책이 chosen에 더 높은 확률을 주지만, 기준 모델은 그 응답을 훨씬 더 강하게 선호합니다. 따라서 상대 마진은 음수입니다. B에서는 정책 안에서 chosen의 확률이 여전히 더 낮지만, 기준 모델과 비교한 chosen/rejected 확률 비율은 개선됐습니다. 그래서 상대 마진은 양수입니다. 양의 마진만으로 샘플링할 때 chosen이 나온다거나 답이 사실에 맞는다고 보장할 수는 없습니다.
+
+> **실행 가능한 산술 예제:** Python 3 표준 라이브러리만 사용하며, 고정된 선호 쌍 두 개, 자연로그 확률의 합, $\beta=0.5$로 계산합니다. 원래 sigmoid DPO의 쌍별 손실과 정책 로그 확률 차이에 대한 미분값을 구합니다. 토큰화, 모델 순전파, 자동 미분, 최적화, 체크포인트는 구현하지 않은 예제이며 학습기가 아닙니다.
+
+```python
+from math import exp, isclose, log1p
+
+
+def dpo_pair(policy, reference, beta=0.5):
+    # Each tuple: summed completion log p (chosen, rejected), including EOS.
+    policy_gap = policy[0] - policy[1]
+    reference_gap = reference[0] - reference[1]
+    margin = policy_gap - reference_gap
+    logit = beta * margin
+    loss = max(0.0, -logit) + log1p(exp(-abs(logit)))
+    q = exp(-abs(logit))
+    sigmoid_minus_logit = q / (1 + q) if logit >= 0 else 1 / (1 + q)
+    gap_gradient = -beta * sigmoid_minus_logit
+    return margin, loss, gap_gradient
+
+
+pairs = {
+    "A": ((-4.0, -6.0), (-5.0, -9.0)),
+    "B": ((-8.0, -7.0), (-10.0, -6.0)),
+}
+for name, (policy, reference) in pairs.items():
+    margin, loss, gradient = dpo_pair(policy, reference)
+    print(f"{name}: margin={margin:.1f}, loss={loss:.6f}, dL/dgap={gradient:.6f}")
+
+policy_a, reference_a = pairs["A"]
+a = dpo_pair(policy_a, reference_a)
+b = dpo_pair(*pairs["B"])
+changed_reference = dpo_pair(policy_a, (-7.0, -8.0))
+print(f"A, changed reference: margin={changed_reference[0]:.1f}, "
+      f"loss={changed_reference[1]:.6f}, dL/dgap={changed_reference[2]:.6f}")
+assert a[0] == -2 and b[0] == 3 and changed_reference[0] == 1
+assert isclose(a[1], 1.3132616875182228)
+assert isclose(b[1], 0.2014132779827524)
+assert isclose(changed_reference[1], 0.4740769841801067)
+assert all(result[2] < 0 for result in [a, b, changed_reference])
+
+# Both completion likelihoods can fall while this pair's loss improves.
+lower_both = dpo_pair((-6.0, -10.0), reference_a)
+assert lower_both[1] < a[1]
+print(f"A, both log p lower: margin={lower_both[0]:.1f}, loss={lower_both[1]:.6f}")
+```
+
+첫 두 손실은 `1.313262`, `0.201413`이며, 두 쌍의 가중치가 같다면 배치 손실은 그 평균입니다. A의 기준 모델 로그 확률만 `(−7, −8)`로 바꾸면 마진이 −2에서 +1로, 손실은 `0.474077`로 바뀝니다. 정책과 선호 라벨은 그대로입니다. 기준 체크포인트는 재현성 기록에 그치지 않고 목적함수 자체를 결정합니다.
+
+**그래디언트의 방향이 뒤집히는 것은 아닙니다.** Chosen 라벨과 $\beta>0$를 고정하면
+
+$$
+\frac{\partial\mathcal L}{\partial\Delta_\theta}=-\beta\,\sigma(-\beta m)<0.
+$$
+
+기준 모델은 갱신에 부여하는 가중치를 바꾸며, 이 미분값은 여전히 정책의 chosen–rejected 차이를 키우는 방향입니다. 여러 응답이 같은 모델 파라미터를 공유하므로, 최적화 한 번마다 모든 chosen의 확률이 높아진다는 뜻은 아닙니다. 마지막 검사에서는 양쪽 로그 확률이 모두 낮아지지만 rejected가 더 크게 낮아져 차이가 커지고 손실은 `0.693147`로 줄어듭니다. 손실만으로 답변 품질을 판단할 수 없는 이유입니다. 또한 $\sigma(\beta m)$는 가정한 선호 모델이 맞추는 선호 점수이지, 답이 정확할 확률로 보정된 값이 아닙니다 [[1]](#ref-1).
 
 ---
 
-## Tokenization과 Log-Probability 계약
+<a id="pair와-split-계약"></a>
 
-정확한 tokenizer artifact와 `apply_chat_template`로 양쪽을 rendering합니다. System message, role order, BOS/EOS, prompt truncation, `add_generation_prompt` 정책이 같아야 합니다. Completion에 의도한 EOS를 포함하고 completion token에만 log probability를 계산합니다.
+## 선호 쌍 구성과 데이터 분할
+
+선호 쌍 하나에는 프롬프트 하나와 그에 대한 선호 응답(chosen), 비선호 응답(rejected)이 들어갑니다. 어느 쪽을 얼마나 선호했는지, 동점이었는지, 평가를 건너뛰었는지 기록합니다. 나중에 같은 사례와 판단 근거를 찾을 수 있도록 바뀌지 않는 사례 ID와 평가자 정보, 사용한 평가 기준의 출처도 남깁니다. 두 응답에 채팅 템플릿을 적용한 뒤에는 프롬프트 부분의 바이트열과 토큰열이 각각 일치해야 합니다. 서로 다른 질문에서 받은 고득점 답변과 저득점 답변을 짝지으면 이 조건을 충족하지 못합니다.
+
+학습 전에 서로 관련된 프롬프트·대화·개체를 묶어 **클러스터 단위** 로 데이터를 분할합니다. 두 응답과 그에 달린 모든 평가, 같은 내용을 바꿔 쓴 문장, 같은 원본에서 만든 합성 예시는 같은 분할에 둡니다. 평가 화면에서는 두 답변의 위치를 무작위로 바꾸고, 평가자 간 일치도, 동점과 판단 보류, 두 답변의 길이와 장황함 차이를 기록합니다. 공개·비공개 평가 자료와 그 채점 기준, 의미상 유사한 사례, 교사 모델이 만든 변형은 학습 데이터에서 격리합니다.
+
+---
+
+<a id="tokenization과-log-probability-계약"></a>
+
+## 토큰화와 응답 로그 확률 계산
+
+사용할 토크나이저의 버전과 설정을 고정하고, 두 응답 모두에 같은 토크나이저의 `apply_chat_template`를 적용합니다. 시스템 메시지, 역할 순서, 시작·종료 토큰(BOS/EOS) 처리, 프롬프트를 자르는 방식, `add_generation_prompt` 설정이 모두 같아야 합니다. 로그 확률은 응답 토큰에 대해서만 계산하며, 응답을 끝내도록 지정한 EOS도 계산에 포함합니다.
+
+> **템플릿 적용 예시:** 아래 함수는 토크나이저에 내장된 해당 모델의 채팅 템플릿으로 전체 대화를 토큰화합니다. DPO 배치를 만들려면 응답 범위를 표시하는 마스크가 추가로 필요합니다. 학습에 사용할 토크나이저와 배치 구성기(collator)로 응답 경계가 맞는지 먼저 확인하세요 [[2]](#ref-2).
 
 ```python
 def render_pair(tokenizer, prompt_messages, chosen, rejected):
@@ -54,62 +143,69 @@ def render_pair(tokenizer, prompt_messages, chosen, rejected):
 # completion_mask, labels(completion 밖은 -100)를 만들어야 합니다.
 ```
 
-Decoded delimiter를 검색하지 말고 token-level boundary를 테스트합니다. Padding은 `attention_mask`로 제외하고 prompt와 special token은 completion mask에서 제외합니다. Variable-length batch는 의도한 token에 대해서만 normalize해야 합니다.
+응답 경계는 디코딩한 문자열에서 구분자를 찾는 대신 토큰열에서 직접 확인합니다. 프롬프트, 입력 조건으로만 쓰는 역할 표시자, 패딩은 응답 마스크에서 제외하고 **응답을 끝내는 EOS 또는 턴 종료 토큰은 남깁니다**. 특수 토큰을 일괄 제외하면 이 종료 토큰까지 빠집니다. 패딩과 EOS의 ID가 같다면 `attention_mask`에서 실제 패딩 위치를 확인합니다. 각 정답 토큰과 그 마스크를 해당 토큰을 예측한 직전 위치의 로짓에 맞춥니다. 여러 샘플을 한 시퀀스에 담을 때는 서로 다른 쌍이나 샘플 사이에 어텐션이 흐르지 않도록 합니다.
 
-Sequence log probability는 보통 completion token log probability의 **합(sum)** 이며 derivation의 sequence likelihood와 맞지만 response-length pressure를 만들 수 있습니다. **평균(mean)** 은 목적함수를 바꾸므로 중립적인 수정이 아닙니다. Chosen/rejected length를 기록하고 합과 length-normalized diagnostic을 함께 보고, 데이터의 verbosity를 통제하고, serving 목표에 맞는 정책을 명시합니다.
+응답 전체의 로그 확률은 보통 각 응답 토큰의 로그 확률을 더한 값입니다. 이 **합** 은 DPO를 유도할 때 사용한 시퀀스 우도에 대응하지만 응답 길이에 따라 값이 달라질 수 있습니다. 먼저 응답별로 유효한 정답 토큰의 로그 확률을 합산합니다. 그다음 각 쌍의 손실을 계산하고 미리 정한 가중치로 쌍별 손실의 평균을 냅니다. 같은 배치에 길이가 다른 응답이 있어도 계산 순서는 같습니다. 응답 점수를 토큰 수로 나눠 **토큰별 평균** 을 쓰면 목적함수가 바뀝니다. 선호·비선호 응답의 길이를 각각 기록하고, 진단할 때는 합산 점수와 길이로 정규화한 점수를 비교합니다. 장황한 답변이 어느 한쪽에 치우쳤는지 살펴 데이터 구성을 조정하고, 실제 서비스의 목표에 맞춰 어떤 점수를 학습에 사용할지 명시합니다.
 
-Truncation은 pair-coupled입니다. 양쪽에 같은 prompt budget을 적용하고 assistant boundary를 보존하며 결정적 span이나 EOS가 잘린 pair는 제거하거나 표시합니다. 한쪽만 더 많은 prompt context를 보게 하면 안 됩니다.
-
----
-
-## Reference와 PEFT 의미론
-
-정확한 **reference checkpoint 해시**, tokenizer hash, template hash, precision, log-probability 구현을 고정하고 기록합니다. “같은 model name”으로 다시 불러온 reference는 재현 가능한 식별자가 아닙니다.
-
-PEFT에서는 reference가 adapter를 끈 base인지, 별도로 frozen한 adapter snapshot인지, cached reference log probability인지 정의합니다. 고정 batch에서 동등성을 검사합니다. Reference-free variant는 다른 목적함수이므로 이름과 평가를 구분합니다.
+길이 제한도 응답 쌍에 함께 적용합니다. 두 응답 앞에 남기는 프롬프트의 최대 토큰 수를 같게 하고, 어시스턴트 응답이 시작되는 경계를 보존합니다. 한쪽만 더 긴 프롬프트를 받지 않았는지 확인합니다. 선호를 판정하는 데 결정적인 구간이나 EOS가 잘린 쌍은 제외하거나 별도로 표시합니다.
 
 ---
 
-## 실행 계약과 관측
+<a id="reference와-peft-의미론"></a>
 
-유효한 응답을 이미 생성하는 SFT checkpoint에서 시작합니다. Pair manifest, code/container, optimizer, completion token 기준 batch, precision, max length, gradient accumulation, $\beta$, seed를 고정합니다. Model/adapter, optimizer, scheduler, scaler, RNG, sampler, data cursor를 저장합니다.
+## PEFT에서 기준 정책을 고정하는 방법
 
-Loss 외에도 다음을 관측합니다.
+기준 정책을 재현하려면 체크포인트, 토크나이저, 채팅 템플릿 각각의 해시를 기록하고 계산 정밀도와 로그 확률을 구하는 구현도 고정합니다. 모델 이름이 같아도 같은 체크포인트와 설정을 불러왔다고 보장할 수 없습니다.
 
-- chosen/rejected policy log probability
-- chosen/rejected reference log probability
-- implicit reward margin과 preference accuracy
-- reference KL proxy, entropy, response length, EOS·truncation 비율
-- paired uncertainty가 있는 held-out win rate
-- domain, base-retention, safety, refusal, format/tool, latency, cost slice
+파라미터 효율적 미세 조정(PEFT)에서는 기준 로그 확률을 어떻게 얻었는지 명시합니다. 기본 모델에서 어댑터를 끄고 계산했는지, 별도로 고정한 어댑터를 사용했는지, 기준 정책으로 미리 계산해 저장한 값을 읽었는지 구분합니다. 정해 둔 배치에서 선택한 방식이 의도한 기준 정책과 같은 로그 확률을 내는지 확인합니다. 기준 정책을 사용하지 않는 변형은 목적함수가 다르므로 이름을 구분하고 별도로 평가합니다.
 
-Chosen과 rejected log probability가 함께 붕괴하거나, KL/length가 선언한 범위를 벗어나거나, held-out preference가 정체되면서 retention이 회귀하거나, nonfinite가 반복되거나, critical slice가 실패하면 중단합니다. Paired baseline comparison과 rollback rehearsal 후 complete artifact bundle만 배포합니다.
+---
+
+<a id="실행-계약과-관측"></a>
+
+## 학습 설정과 모니터링
+
+이미 유효한 응답을 생성하는 SFT 체크포인트에서 시작합니다. 선호 쌍 데이터 명세, 코드와 컨테이너 버전, 옵티마이저, 응답 토큰 수 기준 배치 크기, 계산 정밀도, 최대 길이, 그래디언트 누적 설정, $\beta$, 난수 시드를 고정합니다. 학습을 재개할 수 있도록 모델·어댑터와 함께 옵티마이저, 스케줄러, 손실 스케일러, 난수 생성기, 샘플러의 상태와 데이터를 어디까지 읽었는지 저장합니다.
+
+학습 손실과 함께 다음 지표를 추적합니다.
+
+- 정책 모델이 선호 응답과 비선호 응답에 각각 부여한 로그 확률
+- 기준 모델이 같은 두 응답에 각각 부여한 로그 확률
+- 암묵적 보상 마진과 선호 예측 정확도
+- 기준 정책과의 KL 발산을 근사한 값, 엔트로피, 응답 길이, EOS로 끝난 비율과 길이 제한으로 잘린 비율
+- 별도 평가 세트에서 측정한 승률과 같은 사례끼리 짝지어 추정한 승률의 불확실성
+- 도메인별 성능, 기존 능력 유지, 안전성, 응답 거부, 출력 형식과 도구 사용, 지연 시간, 비용을 구분한 평가 결과
+
+선호 응답과 비선호 응답의 정책 로그 확률이 함께 급락하거나, KL 발산 추정치 또는 응답 길이가 미리 정한 범위를 벗어나면 학습을 중단합니다. 별도 평가 세트에서 선호 성능이 정체되는 동시에 기존 능력이 떨어질 때, 유한하지 않은 값이 계속 나올 때, 핵심 평가 항목이 기준에 미달할 때도 중단합니다. 같은 사례에서 기존 모델과 후보 모델의 결과를 짝지어 비교하고 이전 버전으로 되돌리는 절차를 연습한 뒤, 검증에 사용한 산출물 전체를 한 묶음으로 배포합니다.
 
 ---
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: Chosen과 rejected가 동일하게 rendering된 prompt를 사용해야 하는 이유는 무엇인가요?</summary>
-*DPO는 likelihood 차이를 preference 때문이라고 해석합니다. System text, truncation, template token이 다르면 다른 원인이 섞여 학습 margin이 response preference를 분리하지 못합니다.*
+<summary>Quiz 1: 템플릿을 적용한 뒤 두 응답의 프롬프트가 같은지 확인하는 이유는 무엇인가요?</summary>
+*목적함수는 같은 입력을 받았을 때의 두 응답을 비교합니다. 시스템 메시지, 잘라 낸 구간, 템플릿 토큰 중 하나라도 다르면 두 응답이 받은 조건이 달라져 원래의 선호 판단과 어긋납니다. 프롬프트가 일치해도 평가자가 잘못 매긴 라벨은 그대로 남습니다.*
 </details>
 
 <details>
-<summary>Quiz 2: Completion log probability의 합을 평균으로 바꾸는 것이 단순한 길이 보정이 아닌 이유는 무엇인가요?</summary>
-*Derivation은 sequence likelihood를 사용하며 그 log는 합입니다. 평균은 목적함수를 바꿉니다. 길이 편향을 진단하고 verbosity를 큐레이션하며 length와 quality를 함께 평가해야 합니다.*
+<summary>Quiz 2: 응답 토큰의 로그 확률을 합산하는 대신 평균을 내면 학습 목표가 어떻게 달라지나요?</summary>
+*DPO의 유도식에는 응답 전체의 우도가 들어갑니다. 그 로그 값은 토큰별 로그 확률의 합이며, 평균을 쓰면 토큰 하나당 점수로 응답을 비교하게 됩니다. 길이 편향이 의심되면 선호 데이터에서 장황한 답변이 어느 쪽에 몰렸는지 살펴 구성을 조정하고, 응답 길이와 품질을 함께 평가합니다.*
 </details>
 
 <details>
-<summary>Quiz 3: DPO reference policy를 식별하려면 무엇을 고정해야 하나요?</summary>
-*정확한 checkpoint와 tokenizer/template hash, precision, adapter 활성 상태 또는 cached log-prob artifact, log-probability 구현을 고정하고 검증해야 합니다.*
+<summary>Quiz 3: 다른 사람이 같은 기준 정책으로 DPO 손실을 재현하려면 무엇이 필요한가요?</summary>
+*체크포인트·토크나이저·템플릿의 해시, 계산 정밀도, 로그 확률을 계산한 구현을 고정하고 검증해야 합니다. 어댑터의 활성 상태도 기록합니다. 기준 로그 확률을 미리 계산했다면 당시 저장한 값도 식별하고 검증할 수 있어야 합니다.*
 </details>
 
 <details>
-<summary>Quiz 4: DPO loss가 내려가는데 모델이 나빠질 수 있는 이유는 무엇인가요?</summary>
-*Length/style confound를 이용하거나, 양쪽 답 likelihood를 함께 낮추거나, reference에서 너무 멀어지거나, annotator bias를 overfit할 수 있습니다. Held-out win, margin, KL, length, retention, safety, format slice로 이를 발견합니다.*
+<summary>Quiz 4: DPO 손실이 내려가는데도 모델의 응답 품질이 나빠질 수 있는 이유는 무엇인가요?</summary>
+*정책이 답변의 길이나 문체를 품질의 단서로 잘못 학습하거나, 두 응답의 확률을 모두 낮추면서 비선호 응답의 확률만 더 크게 낮출 수 있습니다. 기준 정책에서 지나치게 멀어지거나 평가자의 편향에 과적합할 수도 있습니다. 별도 평가 세트의 승률, 보상 마진, KL 발산 추정치, 응답 길이, 기존 능력 유지 여부와 안전성·출력 형식별 결과를 함께 살펴야 이런 실패가 드러납니다.*
 </details>
 
----
+<details>
+<summary>Quiz 5: 기준 모델을 바꾸어 상대 마진이 음수에서 양수로 바뀌면 DPO가 거절 응답 쪽으로 학습하나요?</summary>
+*아니요. 선호 응답으로 표시한 쪽은 그대로입니다. $\beta>0$이면 정책의 두 로그 확률 차이(선호 응답에서 비선호 응답을 뺀 값)에 대한 손실의 미분값은 계속 음수입니다. 기준 모델을 바꾸면 이 미분값의 크기가 달라집니다. 마진의 부호나 손실만으로 실제로 생성한 응답의 품질을 판단할 수는 없습니다.*
+</details>
 
 ## References
 

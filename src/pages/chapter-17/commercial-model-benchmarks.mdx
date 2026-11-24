@@ -78,7 +78,9 @@ Several gaps are deliberate. The September DeepSeek entry and Bolt 74B lack a ve
 
 Z.ai's November 23 release makes **GLM-5.4** available through Coding Plan, ZCode and Z.ai Chat. Its standard pay-as-you-go API is still marked coming soon; downloadable weights are planned after further safety work. Coding Plan already has subscription API access, so “no API” would also be wrong. Do not inherit GLM-5.3 Flash's MIT license or translate subscription-credit multipliers into USD token prices [[5]](#ref-5) [[6]](#ref-6) [[7]](#ref-7).
 
-The disclosed design reuses a 28-layer block twice in a 750B-scale model, with gated updates and a combination of shared global KV and local attention. This is a useful example of separating stored parameters from executed computation; [Section 4.5](/chapter-4/various-llm-architectures) works through that distinction. Exact total/active counts, the full training mixture and the eventual weight license remain undisclosed. Its 30B architecture ablation is not a controlled evaluation of the full deployed model [[5]](#ref-5).
+The disclosed design reuses a 28-layer block twice in a 750B-scale model, with gated updates and a combination of shared global KV and local attention. [Section 4.5](/chapter-4/various-llm-architectures#glm-54-reusing-layers-separates-depth-from-capacity) works through what gets stored once and what runs twice. Exact total/active counts, the full training mixture and the eventual weight license remain undisclosed. Its 30B architecture ablation is not a controlled evaluation of the full deployed model [[5]](#ref-5).
+
+**Pricing follow-up, as of 2026-11-25.** Suppose one text request uses 10,000 uncached input tokens and 2,000 billed output tokens, with no tools. Z.ai lists GLM-5.3 at USD 1.40 per million input tokens and 4.40 per million output tokens. That request costs USD 0.0228. GLM-5.3 Flash lists 0.15 and 0.50 respectively, giving USD 0.0025. The same public price sheet has no token rate for GLM-5.4. Budget a 5.4 Coding Plan workload against the plan's quota until a pay-as-you-go rate is published. [[7]](#ref-7)
 
 ### GPT-6.2 Astra and Sol: measure the operating point
 

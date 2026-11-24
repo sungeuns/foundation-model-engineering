@@ -18,12 +18,44 @@ lang: ko
 
 Continuous batching, PagedAttention, chunked prefill 같은 최적화는 효율을 높여 주지만, 실제 서비스 팀이 결국 책임지는 것은 대체로 몇 가지 사용자 지표입니다.
 
-- **TTFT (Time To First Token):** 첫 토큰이 나오기까지 사용자가 기다리는 시간
-- **TPOT 또는 TBT:** 생성이 시작된 뒤 토큰이 얼마나 매끄럽게 이어지는지. `TPOT`는 시스템 관점 지표이고, `TBT`는 사용자가 체감하는 같은 현상에 가깝습니다.
+- **TTFT (Time To First Token):** 요청을 보낸 뒤, 정해 둔 관측 지점에서 첫 유효 출력 토큰을 확인할 때까지의 시간
+- **TPOT (Time Per Output Token):** 한 요청에서 첫 출력 토큰 이후의 평균 토큰 간격
+- **토큰 간 지연(ITL), 또는 TBT(Time Between Tokens):** 아래에서는 개별 토큰 사이의 간격을 뜻합니다. 이 간격의 분포를 보면 TPOT가 가리는 긴 멈춤을 찾을 수 있습니다. 지표 이름만으로 클라이언트 측정인지 서버 측정인지 구분할 수는 없습니다.
 - **Success Rate:** timeout, OOM, cancellation 없이 끝나는 비율
 - **Cost per Successful Request:** 지연 목표를 지키면서 요청 하나를 성공시키는 데 드는 비용
 
 이 지표들은 서로 충돌하기 쉽습니다. aggregate throughput은 높아졌는데 interactive 사용자 체감 성능은 더 나빠지는 경우가 대표적입니다. Orca는 트랜스포머 서빙에서 iteration-level scheduling의 중요성을 보여 주었고 [[1]](#ref-1), DistServe는 한 걸음 더 나아가 "단순 처리량보다 SLO를 만족시키는 요청률이 더 중요하다"는 점을 분명하게 보여 줍니다 [[5]](#ref-5).
+
+<a id="streaming-latency-trace"></a>
+
+### 첫 토큰 지연(TTFT, Time to First Token), TPOT, 토큰 간 지연
+
+숫자를 비교하기 전에 어느 지점에서 시간을 잴지 정해야 합니다. 이 예제는 벤치마크 클라이언트의 단일 단조 시계를 사용합니다. $t_0$ 는 요청을 보낸 시각이고, $t_1,\ldots,t_N$ 은 출력 토큰 $N$ 개를 하나씩 수신한 시각입니다. 단위는 밀리초(ms)입니다. 텍스트 토큰만 세며 빈 프로토콜 메시지는 제외합니다. 클라이언트 수신 시각과 화면에 글자가 표시되는 시각도 다릅니다. 서버의 토큰 생성 시각은 또 다른 관측 지점의 기록이므로, 동기화되지 않은 클라이언트 시계의 값과 빼서 지연을 계산하면 안 됩니다.
+
+$N\geq2$ 일 때 개별 간격 $\Delta_i$ 와 요청별 평균을 다음처럼 정의합니다. 이 TPOT 정의에는 첫 토큰을 기다린 시간이 들어가지 않습니다. [[7]](#ref-7)
+
+$$
+\mathrm{TTFT}=t_1-t_0,\qquad
+\Delta_i=t_i-t_{i-1}\quad(i=2,\ldots,N)
+$$
+
+$$
+\mathrm{TPOT}=\frac{t_N-t_1}{N-1}
+=\frac{1}{N-1}\sum_{i=2}^{N}\Delta_i
+$$
+
+아래는 설명을 위해 **직접 만든 두 기록** 입니다. 둘 다 $t_0=0$ 에 요청을 보냈으며, 표의 각 도착 시각에는 토큰이 정확히 하나씩 들어옵니다.
+
+| 기록 | 토큰 도착 시각(ms) | 개별 간격(ms) | TTFT(ms) | TPOT(첫 토큰 이후 ms/토큰) | 가장 긴 간격(ms) |
+| --- | --- | --- | --- | --- | --- |
+| A: 일정한 간격 | 100, 200, 300, 400, 500 | 100, 100, 100, 100 | 100 | 100 | 100 |
+| B: 마지막에 긴 멈춤 | 100, 110, 120, 130, 500 | 10, 10, 10, 370 | 100 | 100 | 370 |
+
+둘 다 TPOT는 $(500-100)/(5-1)=100$ ms/토큰이고 마지막 토큰은 500 ms에 도착합니다. 하지만 B는 마지막 토큰 직전에 370 ms 동안 멈춥니다. 모든 간격이 200 ms 이하여야 한다는 기준에서는 A만 통과합니다. TPOT만으로는 두 기록을 구분할 수 없습니다. 여러 요청을 집계할 때도 요청별 TPOT의 백분위수와 개별 토큰 간격의 백분위수는 표본과 가중 방식이 다릅니다.
+
+토큰 하나만 100 ms에 도착했다면 TTFT는 100 ms입니다. 첫 토큰 이후의 간격은 없으므로 TPOT는 **계산 불가** 로 표시하고 간격 목록을 비워 두세요. 0을 넣으면 관측하지 않은 간격을 측정한 것처럼 보이게 됩니다.
+
+실제 스트리밍 API에서는 여러 토큰이 한 청크에 담겨 올 수 있습니다. 청크 도착 시각만으로는 그 안의 토큰이 각각 언제 생성됐는지 복원할 수 없습니다. 청크별 시각과 토큰 수를 남기고, 청크 사이의 간격을 따로 보고하며, 어떤 출력 채널과 완료 이벤트까지 측정했는지 명시해야 합니다. **2026-11-25 기준**, NVIDIA AIPerf v0.14.0은 요청별 평균을 *ITL*, 개별 청크 간격을 *ICL* 이라고 부릅니다. 여기서 사용한 개별 간격의 명칭과 다르므로 지표 이름보다 수식과 관측 지점을 비교하세요. 이 도구의 문서는 첫 청크에 포함된 토큰 수에 따라 이후 디코드 구간을 정규화하는 방법도 구분합니다. [[8]](#ref-8)
 
 ### Goodput이라는 관점
 
@@ -207,6 +239,11 @@ KV block pool이 부족해지면, OOM을 터뜨리기 전에 context budget을 �
 *명시적인 fallback ladder는 사용자 경험과 클러스터 안정성을 통제된 방식으로 지킬 수 있게 해 주기 때문입니다. context 축소, 출력 길이 제한, 저우선순위 작업 중단, degraded 응답 반환 등을 통해 혼란스러운 실패 모드로 떨어지기 전에 질서 있게 성능을 낮출 수 있습니다.*
 </details>
 
+<details>
+<summary>Quiz 5: 두 요청의 TTFT와 TPOT가 같으면 스트리밍도 똑같이 매끄럽다고 볼 수 있나요? 응답 전체가 청크 하나로 도착했다면 무엇을 알 수 있나요?</summary>
+*그렇지 않습니다. 예제의 두 기록은 평균이 같지만 가장 긴 토큰 간격은 100 ms와 370 ms입니다. 같은 관측 지점에서 개별 간격을 확인해야 합니다. 청크 하나로 받은 응답에는 응답 내부의 도착 간격이 없으므로, 그 시각만으로 개별 토큰의 생성 속도를 알 수는 없습니다.*
+</details>
+
 ---
 
 ## References
@@ -217,3 +254,5 @@ KV block pool이 부족해지면, OOM을 터뜨리기 전에 context budget을 �
 4. <a id="ref-4"></a>Patel, P., Choukse, E., Zhang, C., Shah, A., Goiri, I., Maleki, S., & Bianchini, R. (2024). *Splitwise: Efficient Generative LLM Inference Using Phase Splitting.* [arXiv:2311.18677](https://arxiv.org/abs/2311.18677).
 5. <a id="ref-5"></a>Zhong, Y., Liu, S., Chen, J., Hu, J., Zhu, Y., Liu, X., Jin, X., & Zhang, H. (2024). *DistServe: Disaggregating Prefill and Decoding for Goodput-optimized Large Language Model Serving.* [arXiv:2401.09670](https://arxiv.org/abs/2401.09670).
 6. <a id="ref-6"></a>Research preprint (2026). [Evolving Infra: Agent-Adaptive LLM Serving at Scale](https://arxiv.org/html/2611.12304v1). Version pinned; accessed 2026-11-15.
+7. <a id="ref-7"></a>Kubernetes SIGs. [Inference Performance Metrics Definition — Latency](https://github.com/kubernetes-sigs/inference-perf/blob/main/docs/metrics.md#latency). 공식 벤치마크 지표 정의. 확인: 2026-11-25.
+8. <a id="ref-8"></a>NVIDIA. [AIPerf v0.14.0 Metrics Reference](https://docs.nvidia.com/aiperf/v0.14.0/reference/ai-perf-metrics-reference). TTFT·ITL·ICL 정의. 확인: 2026-11-25.

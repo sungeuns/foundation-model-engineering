@@ -34,9 +34,14 @@ test('shared exercise IDs belong to the same authored content in both translatio
       assert.ok(source.includes(`<${component}`), route);
     }
   }
-  const rag = '/chapter-14/rag-failure-modes-and-operational-design';
-  assert.ok(sharedLocaleFragments(rag, modelIds).includes('trace-a-rag-answer'));
-  for (const source of pages(rag)) assert.ok(source.includes('<a id="trace-a-rag-answer"></a>'));
+  for (const [route, id] of [
+    ['/chapter-10/dpo', 'reference-relative-example'],
+    ['/chapter-12/serving-policies-slos-and-fallbacks', 'streaming-latency-trace'],
+    ['/chapter-14/rag-failure-modes-and-operational-design', 'trace-a-rag-answer'],
+  ]) {
+    assert.ok(sharedLocaleFragments(route, modelIds).includes(id), route);
+    for (const source of pages(route)) assert.ok(source.includes(`<a id="${id}"></a>`), route);
+  }
 });
 
 test('model fragments share record identity, rather than guessing at every model-prefixed ID', () => {

@@ -311,7 +311,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 9.5 | `/chapter-9/synthetic-instructions-and-self-instruct` | Inspected 2026-11-15 | ffbd735a54153fd69c5c1a0717da310c2cc58903b0a34fee751f67e9db76ba0e | e396d07c260c417ec97e423b3f9d66181531b29e3b9b04bce9e1846b56ab5aea |
 | 10.1 | `/chapter-10/human-feedback-loop` | Inspected 2026-11-15 | c721f614debefbefa2a90afe0f4dbc41425deb1e332f9ca1fda7ea4349e85668 | 03b0927817d2d44ff6ca3839f69b222e6d79bc46c025870a15bdc38666c253a3 |
 | 10.2 | `/chapter-10/ppo-proximal-policy-optimization` | Inspected 2026-11-15 | 731530d0c49a2d72aceb412ad7635b834d3c04341f5fe838a11788e92127896f | 1fcb9bfc07577cdb119d6ab1b65e170688aed9607300713f36b9ac7fee04ca5d |
-| 10.3 | `/chapter-10/dpo` | Inspected 2026-11-15 | 7e4f3631827b07506801aafb6e8a06de50b0c341231b4dbd8d46e2be72f2f57e | 6996af5f5f56fc57afd5f48177621cba58cae1d5898f2007a27be44806889762 |
+| 10.3 | `/chapter-10/dpo` | Inspected 2026-11-25 | 61b39b4e59d60952d7a969476024a61f21223d09c62ae9e06e83559eaa04a855 | eeee156d856860a2f4879e65c670e5935312f70ec95aeb4dac955d022a145680 |
 | 10.4 | `/chapter-10/kto-and-ipo` | Inspected 2026-11-15 | 61ac741df320db7fb3031414fdacaf5770fa28200d3f91f8d69cec83c273c046 | a4efc7610bf213a07fe5fcabf60033b2ab28a12d8fb257270bd9900a69e5a4e3 |
 | 10.5 | `/chapter-10/alignment-tax` | Inspected 2026-11-15 | e630460ac1b1a8620d753362e400c3bea18d69cff7a6265b3820b6ce7230c6f6 | 5041f746d84764553aecee5b114599a703cc2206889aa57838d5b2719b0bec7e |
 | 11.1 | `/chapter-11/vision-language-bridges` | Inspected 2026-11-25 | 24fb4f6155431bf716e88e29bceaa78cbb3a5631641da212c9e073d7d71a10b8 | d0eba2f44cf9745be286fba5bd051849ee0471874e6c208df815f5bc3da8ff9f |
@@ -325,7 +325,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 12.3 | `/chapter-12/continuous-batching` | Inspected 2026-11-25 | 6ef1bf606cdf836c97703e2c9518a7f395f6c7242f614fb7e24f7a44ed301b28 | 4c9be3e2b663d439d85799a0f93db2a485fbca65eb945328789a188afd3b65db |
 | 12.4 | `/chapter-12/speculative-decoding` | Inspected 2026-11-15 | c211bce7483db5699601fe8743d1686ab5b645e7c574072d3cd8f2d8daaf0c70 | a3c7a599410b1ee428f27865bd9dbd1979703192f108984ae5fb522cd9ab3bb2 |
 | 12.5 | `/chapter-12/long-context-serving` | Inspected 2026-11-15 | 82f413a5a2e2731fe01603c7036b42dee434b010cc76410eba7e0807d73742e8 | 59933e962b9f0bef0f8b50e9889ec628fd92ade6d7d0fb91636981793bd83052 |
-| 12.6 | `/chapter-12/serving-policies-slos-and-fallbacks` | Inspected 2026-11-15 | 26a7e79fcdf2ad44fe1ea5fe8a94fdb5937c286e2a9e5a62be2f2c476d04fb83 | 0f2934b63b4c0d209d8b70868047a4775737e3b49db829ea0cc2eba8a1d98df5 |
+| 12.6 | `/chapter-12/serving-policies-slos-and-fallbacks` | Inspected 2026-11-25 | d678d90eaa17a91bb8aba70d6738d376a1a9847112e22a6ae0283c7c8c17275a | d7ad4825a43ff026ebf65d48f510b1b8b6cc2a6dc4237376c802b9b50e17a946 |
 | 13.1 | `/chapter-13/ptq-vs-qat` | Inspected 2026-11-18 | 6961419a7297e663a0894db1a8fd075b0153ae00ca4a904bbf5137dde68f3eda | 955b46bf42c872bd7857f3540012dfdc10b418008246ad5de0f6d42bc333c1c0 |
 | 13.2 | `/chapter-13/quantization-methods` | Inspected 2026-11-18 | 9939109a4f7a49939655429be92e41c75f5db0a9ee7fc29ce17765313d2f8778 | 5e79bd98352c5f72d6d4c28cbb11ce46ef369cc6d5a60c108df129bc0803d6cc |
 | 13.3 | `/chapter-13/weight-sparsification` | Inspected 2026-11-18 | cef7eea23f21faf8a4719bc13b2f3e28a8743ba0230c67b01438dbac642a6530 | bf555f470f962f689ad1442496cf669946e7933df2f1527b8832a0199f5f5f0c |
@@ -354,7 +354,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 17.3 | `/chapter-17/elo-rating-and-leaderboards` | Inspected 2026-11-15 | 14f931df5e4641c576c1763d446b2c663d1f282abf438767e5a330d49b31a9b9 | 1e78f5819e5452372109f72327dad0f7831b3b9ce66750000c9378a906744c30 |
 | 17.4 | `/chapter-17/contamination-issues` | Inspected 2026-11-17 | 38a0cad52c7504804a57a8cc2deed94a3ac2fe68f7648809261abad1cf6b4fa5 | c84e9e5b241d9c3cc9b97275c090011f12a10ebef18b8a7e4e0ff71e7d263cf4 |
 | 17.5 | `/chapter-17/production-evaluation-and-release-gates` | Inspected 2026-11-17 | 60ddb6057d61fb19bdcbbed9bdb165b892e506e549dbe2b985e976bab1ef60f4 | f3d34678eed1bb32eb0eb28f1c7537c781107e7beada12aa3d5ddba8092b30e0 |
-| 17.6 | `/chapter-17/commercial-model-benchmarks` | Inspected 2026-11-24 | 777c06399dd9850b2bd4b0df45c1da42c461b17cd7707cae7d618e687c981af0 | b4b88a0d2c08b27251afdbadca2d3cd84e3748373b54a034964e3a724a7ed0f4 |
+| 17.6 | `/chapter-17/commercial-model-benchmarks` | Inspected 2026-11-25 | c1d386fd6f2d988a2289bad48c420d509161e4832cb5b7a16355c6de2b44462a | f05522b450f74c8cae22b8fd7d496bd357af9c079987eda4171ffb137d26839e |
 | 17.7 | `/chapter-17/experimental-design-and-uncertainty` | Inspected 2026-11-25 | 15572b32598a7c488cd3930fe29d3dd54f54ebd5521257817788e039253cdf1d | 00b4ea5b58d4ec986eee7b8d4ed7fbb61749c27a0c9c1c77aced73a4d86f14b1 |
 | 18.1 | `/chapter-18/red-teaming` | Inspected 2026-11-15 | fa815b07490b4a1039a2e91d2c98e9f1f212d6479f534afa5f09020cc8f93598 | fb6f4167f16906d882401b58a001a0ff0e3a4912cd5142852c7c26b84d547b0b |
 | 18.2 | `/chapter-18/jailbreaking-and-defense` | Inspected 2026-11-15 | caff93966e1d1a925120d696bf37a09fa46cc63cd9378c818ac9f1d489348afd | 520c11ef550bc2ca4ca9675449ce923a1b0ef2968b59cab0ba1dbdd85597f6be |

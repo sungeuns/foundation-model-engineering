@@ -344,10 +344,12 @@ h1, h2, h3 {
 
   .sidebar {
     transform: translateX(-100%);
+    visibility: hidden;
     z-index: 999;
   }
   .sidebar.open {
     transform: translateX(0);
+    visibility: visible;
   }
   .content-wrapper {
     margin-left: 0;
@@ -355,6 +357,8 @@ h1, h2, h3 {
   }
   .menu-toggle {
     display: block;
+    box-sizing: border-box;
+    text-decoration: none;
   }
   header {
     padding-left: 3rem; /* Make space for toggle */
@@ -390,7 +394,9 @@ html { scroll-padding-top: 1.5rem; }
 .sidebar a.active { border-left: 3px solid var(--accent-color); background: #eee5f4; }
 .chapter-search-label { display: block; font-size: .85rem; font-weight: 600; margin-bottom: .3rem; }
 #chapterSearch { box-sizing: border-box; width: 100%; min-height: 44px; font: inherit; font-size: .85rem; padding: .5rem .65rem; border: 1px solid #8b929b; border-radius: 6px; background: white; color: #243447; }
-.search-empty { font-size: .9rem; }
+.contents-search-status { margin: .5rem 0; font-size: .85rem; }
+#sectionResults small { display: block; color: var(--secondary-color); font-size: .78rem; }
+#sectionResults a { overflow-wrap: anywhere; }
 .sidebar-backdrop { position: fixed; inset: 0; background: rgb(15 23 42 / 45%); border: 0; z-index: 998; }
 .menu-open { overflow: hidden; }
 .container { max-width: 1020px; padding: 2rem 3rem; }
@@ -417,7 +423,7 @@ code { font-size: .9em; overflow-wrap: anywhere; }
 pre code { overflow-wrap: normal; }
 @media (max-width: 1100px) { .container { padding: 1.5rem 2rem; } }
 @media (max-width: 900px) {
-  .sidebar { width: min(340px, calc(100vw - 48px)); padding-top: 4.5rem; }
+  .sidebar { width: min(340px, calc(100vw - 48px)); padding-top: 1rem; }
   .container { padding: 1.25rem; }
   header { min-height: 3rem; padding-left: 6rem; align-items: flex-start; gap: .5rem; }
   header .book-title { font-size: 1rem; line-height: 1.4; }

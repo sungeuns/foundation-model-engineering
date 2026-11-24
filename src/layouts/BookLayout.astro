@@ -176,15 +176,22 @@ if (currentIndex !== -1) {
   </head>
   <body>
     <a class="skip-link" href="#main-content">{isKo ? '본문으로 바로가기' : 'Skip to content'}</a>
-    <button class="menu-toggle" id="menuToggle" type="button" aria-controls="sidebar" aria-expanded="false">{isKo ? '목차' : 'Contents'}</button>
+    <a class="menu-toggle" id="contentsFallback" href={toHref(homePath) + '#book-contents'}>{isKo ? '목차' : 'Contents'}</a>
+    <button class="menu-toggle" id="menuToggle" type="button" aria-controls="sidebar" aria-expanded="false" hidden>{isKo ? '목차' : 'Contents'}</button>
     <button class="sidebar-backdrop" id="sidebarBackdrop" type="button" tabindex="-1" aria-label={isKo ? '목차 닫기' : 'Close contents'} hidden></button>
 
     <nav class="sidebar" id="sidebar" aria-label={isKo ? '책 목차' : 'Book contents'}>
       <div data-nosnippet>
       <div class="sidebar-title"><a href={toHref(homePath)} style="text-decoration: none; color: inherit;">{isKo ? '목차' : 'Table of Contents'}</a></div>
-      <label class="chapter-search-label" for="chapterSearch">{isKo ? '주제 찾기' : 'Find a topic'}</label>
-      <input id="chapterSearch" type="search" placeholder={isKo ? '예: KV cache, 평가, 12.1' : 'e.g. KV cache, evaluation, 12.1'} autocomplete="off" />
-      <p id="searchEmpty" class="search-empty" role="status" hidden>{isKo ? '일치하는 주제가 없습니다. 다른 검색어를 입력하세요.' : 'No matching topics. Try another search.'}</p>
+      <div id="contentsSearch" hidden>
+        <label class="chapter-search-label" for="chapterSearch">{isKo ? '장·절 찾기' : 'Find chapters and sections'}</label>
+        <input id="chapterSearch" data-index-url={withBasePath(`/search/${lang}.json`, basePath)} type="search" placeholder={isKo ? '예: GLM-5.4, 첫 토큰 지연' : 'e.g. GLM-5.4, first token'} autocomplete="off" />
+        <p id="searchStatus" class="contents-search-status" role="status" hidden></p>
+        <div id="sectionResults" hidden>
+          <h2>{isKo ? '찾은 절' : 'Matching sections'}</h2>
+          <ul></ul>
+        </div>
+      </div>
       {chapters.map(ch => (
         <div class="chapter-group">
           <h2>{ch.title[lang]}</h2>
@@ -278,6 +285,7 @@ if (currentIndex !== -1) {
     </div>
 
     <script>
+      import { setupContentsSearch } from '../utils/contents-search';
       import { localeHref } from '../utils/locale-fragments.js';
 
       const toggle = document.getElementById('menuToggle');
@@ -311,12 +319,17 @@ if (currentIndex !== -1) {
         sidebar.classList.toggle('open', open);
         sidebar.inert = mobile.matches && !open;
         toggle.setAttribute('aria-expanded', String(open));
+        toggle.textContent = isKo ? (open ? '목차 닫기' : '목차') : (open ? 'Close contents' : 'Contents');
         backdrop.hidden = !open || !mobile.matches;
         document.body.classList.toggle('menu-open', open && mobile.matches);
         if (open && mobile.matches) document.getElementById('chapterSearch')?.focus();
         if (restoreFocus) toggle.focus();
       };
       setMenu(false);
+      if (toggle) {
+        toggle.hidden = false;
+        document.getElementById('contentsFallback')!.hidden = true;
+      }
       toggle?.addEventListener('click', () => setMenu(!sidebar?.classList.contains('open'), sidebar?.classList.contains('open')));
       backdrop?.addEventListener('click', () => setMenu(false, true));
       mobile.addEventListener('change', () => setMenu(false));
@@ -330,23 +343,7 @@ if (currentIndex !== -1) {
         }
       });
 
-      const search = document.getElementById('chapterSearch') as HTMLInputElement | null;
-      search?.addEventListener('input', () => {
-        const terms = search.value.normalize('NFKC').toLocaleLowerCase().trim().split(/\s+/);
-        let count = 0;
-        sidebar?.querySelectorAll<HTMLElement>('.chapter-group').forEach(group => {
-          let visible = 0;
-          group.querySelectorAll<HTMLAnchorElement>('li a').forEach(link => {
-            const matches = terms.every(term => (link.dataset.search || '').normalize('NFKC').toLocaleLowerCase().includes(term));
-            (link.parentElement as HTMLElement).hidden = !matches;
-            if (matches) visible++;
-          });
-          group.hidden = visible === 0;
-          count += visible;
-        });
-        const empty = document.getElementById('searchEmpty');
-        if (empty) empty.hidden = count !== 0;
-      });
+      if (sidebar) setupContentsSearch(sidebar, () => setMenu(false));
 
       const outline = document.getElementById('pageOutline');
       const outlineList = document.getElementById('pageOutlineList');

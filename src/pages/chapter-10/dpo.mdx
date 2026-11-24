@@ -6,13 +6,13 @@ lang: en
 
 # 10.3 Direct Preference Optimization (DPO)
 
-Direct Preference Optimization (DPO) trains a policy from pairs of responses without fitting a separate scalar reward model or running online rollouts [[1]](#ref-1). Its compact loss does not make the data pipeline compact: most DPO failures come from broken pair construction, mismatched templates, length effects, or an unpinned reference model.
+Direct Preference Optimization (DPO) trains a policy from pairs of responses without fitting a separate scalar reward model or running online rollouts [[1]](#ref-1). Its loss compares how a policy changes the odds of one response against another, relative to a frozen reference. Pair construction, templates, response length, and reference identity therefore affect the objective—not just its implementation.
 
 ---
 
 ## Objective
 
-For the **same prompt** $x$, let $y_w$ be preferred and $y_l$ rejected. With policy $\pi_\theta$, frozen reference $\pi_{\text{ref}}$, and temperature-like coefficient $\beta$,
+For the **same prompt** $x$, let $y_w$ be preferred and $y_l$ rejected. For policy $\pi_\theta$, frozen reference $\pi_{\text{ref}}$, and coefficient $\beta>0$, the loss for one pair is
 
 $$
 \mathcal{L}_{\text{DPO}} = -\log\sigma\left(
@@ -23,7 +23,90 @@ $$
 \right).
 $$
 
-The bracketed quantity is an **implicit reward margin**. DPO increases the policy-reference relative score of the preferred completion compared with the rejected completion. $\beta$ controls how strongly deviations from the reference translate into preference logits; its practical effect depends on data, optimizer, and log-probability convention, so run a $\beta$ sweep.
+The bracketed quantity is the unscaled policy-reference margin $m$. The **implicit reward margin**, and the logit passed to the sigmoid $\sigma$, is $\beta m$. In the original derivation, $\beta$ is the coefficient of the KL penalty relative to the reference; in this loss it also scales the preference logit [[1]](#ref-1). Its practical effect depends on data, optimizer, and log-probability convention, so run a $\beta$ sweep. The standard batch objective averages these per-pair losses.
+
+---
+
+<a id="reference-relative-example"></a>
+
+## Worked Example: Compare the Change in Odds
+
+Use two authored preference pairs. In A, the question is “What is 2 + 2?” and the chosen/rejected answers are “4”/“5”. In B, the request is “Return only the integer: 3 × 3”, and the answers are “9”/“The answer is 9.” B expresses a format preference. These invented scores are complete response log probabilities, including termination, not outputs measured from a language model.
+
+Write $\ell_{\theta,w}$ and $\ell_{\theta,l}$ for the policy's chosen/rejected log probabilities, and use the subscript $\mathrm{ref}$ for the reference. Define
+
+$$
+\begin{aligned}
+\Delta_\theta&=\ell_{\theta,w}-\ell_{\theta,l},\\
+\Delta_{\mathrm{ref}}&=\ell_{\mathrm{ref},w}-\ell_{\mathrm{ref},l},\\
+m&=\Delta_\theta-\Delta_{\mathrm{ref}}.
+\end{aligned}
+$$
+
+| Quantity | Pair A | Pair B |
+| --- | --- | --- |
+| Policy log probabilities (chosen, rejected) | (−4, −6) | (−8, −7) |
+| Reference log probabilities (chosen, rejected) | (−5, −9) | (−10, −6) |
+| Policy gap $\Delta_\theta$ | 2 | −1 |
+| Reference gap $\Delta_{\mathrm{ref}}$ | 4 | −4 |
+| Relative margin $m$ | −2 | 3 |
+
+In A, the policy makes the chosen answer more likely than the rejected one, but the reference favors it even more. The relative margin is negative. In B, the chosen answer is still less likely in the policy, yet its odds improved relative to the reference. The relative margin is positive. A positive margin is therefore neither a guarantee that sampling produces the chosen answer nor evidence of factual correctness.
+
+> **Runnable arithmetic example:** Python 3 standard library only; two fixed preference pairs, summed natural-log probabilities, and $\beta=0.5$. It computes the original per-pair sigmoid DPO loss and its derivative with respect to the policy gap. It omits tokenization, model forwards, automatic differentiation, optimization, and checkpoints; it is not a trainer.
+
+```python
+from math import exp, isclose, log1p
+
+
+def dpo_pair(policy, reference, beta=0.5):
+    # Each tuple: summed completion log p (chosen, rejected), including EOS.
+    policy_gap = policy[0] - policy[1]
+    reference_gap = reference[0] - reference[1]
+    margin = policy_gap - reference_gap
+    logit = beta * margin
+    loss = max(0.0, -logit) + log1p(exp(-abs(logit)))
+    q = exp(-abs(logit))
+    sigmoid_minus_logit = q / (1 + q) if logit >= 0 else 1 / (1 + q)
+    gap_gradient = -beta * sigmoid_minus_logit
+    return margin, loss, gap_gradient
+
+
+pairs = {
+    "A": ((-4.0, -6.0), (-5.0, -9.0)),
+    "B": ((-8.0, -7.0), (-10.0, -6.0)),
+}
+for name, (policy, reference) in pairs.items():
+    margin, loss, gradient = dpo_pair(policy, reference)
+    print(f"{name}: margin={margin:.1f}, loss={loss:.6f}, dL/dgap={gradient:.6f}")
+
+policy_a, reference_a = pairs["A"]
+a = dpo_pair(policy_a, reference_a)
+b = dpo_pair(*pairs["B"])
+changed_reference = dpo_pair(policy_a, (-7.0, -8.0))
+print(f"A, changed reference: margin={changed_reference[0]:.1f}, "
+      f"loss={changed_reference[1]:.6f}, dL/dgap={changed_reference[2]:.6f}")
+assert a[0] == -2 and b[0] == 3 and changed_reference[0] == 1
+assert isclose(a[1], 1.3132616875182228)
+assert isclose(b[1], 0.2014132779827524)
+assert isclose(changed_reference[1], 0.4740769841801067)
+assert all(result[2] < 0 for result in [a, b, changed_reference])
+
+# Both completion likelihoods can fall while this pair's loss improves.
+lower_both = dpo_pair((-6.0, -10.0), reference_a)
+assert lower_both[1] < a[1]
+print(f"A, both log p lower: margin={lower_both[0]:.1f}, loss={lower_both[1]:.6f}")
+```
+
+The first two losses are `1.313262` and `0.201413`; a uniform two-pair batch averages them. Replacing A's reference log probabilities with `(−7, −8)` changes its margin from −2 to +1 and its loss to `0.474077`, without changing the policy or preference label. This is why a reference checkpoint is part of the objective, not just reproducibility metadata.
+
+**The gradient direction does not reverse.** For a fixed chosen label and $\beta>0$,
+
+$$
+\frac{\partial\mathcal L}{\partial\Delta_\theta}=-\beta\,\sigma(-\beta m)<0.
+$$
+
+The reference changes the weighting of the update; this derivative still favors a larger chosen-versus-rejected policy gap. Shared model parameters couple many responses, so it does not guarantee that every chosen response becomes more likely after an optimizer step. In the last test, both policy log probabilities fall, but the rejected one falls further: the gap grows and the loss drops to `0.693147`. Loss alone cannot establish response quality. Likewise, $\sigma(\beta m)$ is the fitted preference score under the assumed preference model, not a calibrated probability that an answer is correct [[1]](#ref-1).
 
 ---
 
@@ -38,6 +121,8 @@ Split by prompt/conversation/entity **cluster before training**. Keep both compl
 ## Tokenization and Log-Probability Contract
 
 Render both sides with the exact tokenizer artifact and `apply_chat_template`. Use the same system messages, role order, BOS/EOS behavior, prompt truncation, and `add_generation_prompt` policy. Include the intended EOS in each completion and compute log probabilities only on completion tokens.
+
+> **Template sketch:** Requires a tokenizer with a suitable native chat template. This function renders full conversations; it does not produce completion masks or a working DPO batch. Verify those boundaries with the pinned tokenizer and collator before training [[2]](#ref-2).
 
 ```python
 def render_pair(tokenizer, prompt_messages, chosen, rejected):
@@ -54,9 +139,9 @@ def render_pair(tokenizer, prompt_messages, chosen, rejected):
 # input_ids, attention_mask, completion_mask, and labels (-100 outside completion).
 ```
 
-Test the token-level boundary rather than searching decoded delimiters. Padding must be excluded by `attention_mask`; prompt and special tokens excluded from the completion mask; variable-length batches must normalize over the intended positions.
+Test the token-level boundary rather than searching decoded delimiters. Exclude the prompt, conditioning-only role markers, and padding from the completion mask, but **retain the intended response-ending EOS/end-of-turn token**. Do not mask every special token indiscriminately. If the pad ID equals the EOS ID, use actual padding positions from `attention_mask`, not token-ID equality, to distinguish them. Align each target and its completion mask with the preceding position’s causal logit. Packed examples must not attend across pair/sample boundaries.
 
-Sequence log probability is usually the **sum** of completion-token log probabilities, which matches the sequence likelihood in the derivation but can create response-length pressure. A **mean** changes the objective and is not a neutral fix. Log chosen/rejected lengths, compare sum and length-normalized diagnostics, control verbosity in the data, and choose the serving-relevant policy explicitly.
+Sequence log probability is usually the **sum** of completion-token log probabilities, which matches the sequence likelihood in the derivation but can create response-length pressure. Sum valid target log probabilities separately for each completion, compute one DPO loss per pair, then average pairs with the declared weighting. Do not divide each sequence score by its token count merely because the batch contains different lengths. A **mean** changes the objective and is not a neutral fix. Log chosen/rejected lengths, compare sum and length-normalized diagnostics, control verbosity in the data, and choose the serving-relevant policy explicitly.
 
 Truncation is pair-coupled: apply the same prompt budget to both sides, preserve the assistant boundary, and reject or flag pairs whose decisive span or EOS was cut. Never let one side keep more prompt context than the other.
 
@@ -91,7 +176,7 @@ Stop when both chosen and rejected log probabilities collapse, KL/length leaves 
 
 <details>
 <summary>Quiz 1: Why must chosen and rejected responses use the same rendered prompt?</summary>
-*DPO attributes their likelihood difference to preference. Different system text, truncation, or template tokens introduce another cause, so the learned margin no longer isolates response preference.*
+*The objective compares two completions conditional on the same input. Different system text, truncation, or template tokens change that conditioning, so the loss no longer represents the labeled comparison. Identical prompts are necessary; they do not make noisy preference labels correct.*
 </details>
 
 <details>
@@ -109,7 +194,10 @@ Stop when both chosen and rejected log probabilities collapse, KL/length leaves 
 *The policy can exploit length/style confounds, drive both answer likelihoods down, move too far from the reference, or overfit annotator bias. Held-out wins, margins, KL, length, retention, safety, and format slices reveal those failures.*
 </details>
 
----
+<details>
+<summary>Quiz 5: A reference change flips the relative margin from negative to positive. Does DPO now push toward the rejected answer?</summary>
+*No. The chosen label remains fixed. For positive beta, the derivative with respect to the policy’s chosen-minus-rejected log-probability gap remains negative. The reference changes its magnitude. Neither margin sign nor loss alone establishes the quality of sampled responses.*
+</details>
 
 ## References
 
