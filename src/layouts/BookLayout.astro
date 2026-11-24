@@ -2,7 +2,7 @@
 import type { MarkdownHeading } from 'astro';
 import { chapterHeadingLabel } from '../utils/chapter-heading-label.js';
 import { chapters } from '../data/chapters.js';
-import { servingGuide, site } from '../data/site.js';
+import { authorName, servingGuide, site } from '../data/site.js';
 import { searchDescriptions } from '../data/search-descriptions.js';
 import { socialCards } from '../data/social-cards.js';
 import modelSnapshot from '../data/commercial-model-snapshot.json';
@@ -174,6 +174,15 @@ if (currentIndex !== -1) {
     <title>{pageTitle}</title>
     <meta name="description" content={pageDescription} />
     <meta name="author" content={site.author} />
+    {currentSub && <>
+      <meta name="citation_title" content={citationTitle} />
+      <!-- Zotero uses inbook_title to detect a book section and book_title for its container. -->
+      <meta name="citation_inbook_title" content={siteTitle} />
+      <meta name="citation_book_title" content={siteTitle} />
+      <meta name="citation_author" content={`${authorName.family}, ${authorName.given}`} />
+      <meta name="citation_language" content={lang} />
+      <meta name="citation_public_url" content={canonicalUrl} />
+    </>}
     <meta name="robots" content="index, follow, max-image-preview:large" />
     <link rel="canonical" href={canonicalUrl} />
     <link rel="alternate" hreflang="en" href={enUrl} />
@@ -274,9 +283,8 @@ if (currentIndex !== -1) {
         {revision && (
           <p class="manuscript-revision">
             {isKo ? '원고 수정일' : 'Manuscript updated'}{' '}
-            <a href={manuscriptUrl} aria-label={isKo ? `${manuscriptDate} 원고 버전 보기 (GitHub)` : `View the ${manuscriptDate} manuscript revision on GitHub`}>
-              <time datetime={manuscriptTimestamp}>{manuscriptDate}</time>
-            </a> (UTC)
+            <time datetime={manuscriptTimestamp}>{manuscriptDate}</time> (UTC)
+            {' · '}<a href={manuscriptUrl}>{isKo ? 'GitHub 원고' : 'Chapter source on GitHub'}</a>
             {' · '}<a href={citation} download={`foundation-model-engineering-${currentSub.id}-${lang}-${revision.commit.slice(0, 12)}.ris`}>
               {isKo ? '이 절 인용하기 (RIS)' : 'Cite this chapter (RIS)'}
             </a>

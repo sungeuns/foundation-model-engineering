@@ -131,6 +131,10 @@ Alibaba는 11월 11일 Token Plan 프리뷰에 이어 11월 16일 **Qwen4-Max** 
 
 <a id="long-context-cost"></a>
 
+### ERNIE 5.5 Flash Preview의 세 가지 체크포인트
+
+2026-11-25 기준, Baidu는 기본판·FP8판·BF16판의 가중치를 공개했다. 같은 모델 이름이라도 서빙 시 필요한 커널이 다르다. 기본판은 라우팅된 전문가 가중치 두 개를 한 바이트에 담으며, Baidu는 FP4 커널을 지원하지 않는 장비에는 FP8판이나 BF16판을 안내한다. [[131]](#ref-131) [13.1절의 체크포인트 비교](/ko/chapter-13/ptq-vs-qat/#ernie-expert-weights)에서 모델 전체를 내려받지 않고 세 파일의 같은 가중치가 실제로 몇 바이트를 쓰는지 확인할 수 있다.
+
 ## 4. 비용 계산 예제: 입력 272K 토큰을 넘었을 때
 
 **요금 확인일: 2026-11-24.** Standard의 짧은 문맥 요금은 백만 토큰당 GPT-6.2 Astra 입력 \$8·출력 \$40, Sol 입력 \$2·출력 \$10이다. 입력이 **272,000 토큰을 초과하면 요청 전체에** 입력 요금 2배, 출력 요금 1.5배가 적용된다 [[9]](#ref-9) [[10]](#ref-10).
@@ -323,3 +327,4 @@ Sol 요청 두 건에 입력 544,000토큰과 과금 대상 출력 20,000토큰�
 128. <a id="ref-128"></a>[Google, Gemini 4 Neon 출시와 Gemini 앱 이용 조건](https://blog.google/innovation-and-ai/models-and-research/gemini-models/introducing-gemini-4-neon/).
 129. <a id="ref-129"></a>[Google, Gemini 4 Carbon 출시와 Gemini 앱 이용 조건](https://blog.google/innovation-and-ai/models-and-research/gemini-models/gemini-4-carbon-now-available/).
 130. <a id="ref-130"></a>[Alibaba Group, Qwen4-Max 출시와 QwenCloud·QwenWork·QwenStudio 이용 경로](https://www.alibabagroup.com/en-US/document-2060139246777270272).
+131. <a id="ref-131"></a>[Baidu, ERNIE 5.5 Flash Preview model card and checkpoint variants](https://huggingface.co/baidu/ERNIE-5.5-Flash-Preview/blob/ace1100dcde7bf4eb06add6ae11ce4f43a11ddfe/README.md).

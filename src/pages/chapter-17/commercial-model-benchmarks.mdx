@@ -131,6 +131,10 @@ Text-agent indices also cannot rank the new speech, image or interactive-world s
 
 <a id="long-context-cost"></a>
 
+### Three checkpoints for ERNIE 5.5 Flash Preview
+
+As of 2026-11-25, Baidu publishes default, FP8 and BF16 weights. A serving benchmark needs to identify the checkpoint and kernel it used. The default packs two routed-expert weights into a byte. Baidu directs users without FP4 kernel support to the FP8 or BF16 edition. [[131]](#ref-131) [Section 13.1](/chapter-13/ptq-vs-qat/#ernie-expert-weights) reads the same expert weight from all three file headers without downloading the full model.
+
 ## 4. A Worked Cost Example: Crossing 272K Input Tokens
 
 **Rates checked 2026-11-24.** At Standard short-context rates, GPT-6.2 Astra costs \$8 input/\$40 output per million tokens; Sol costs \$2/\$10. Above **272,000 input tokens**, the input rate doubles and the output rate becomes 1.5 times the base rate **for the whole request** [[9]](#ref-9) [[10]](#ref-10).
@@ -323,3 +327,4 @@ Keep weights or API revision, tokenizer/template, quantization, runtime, generat
 128. <a id="ref-128"></a>[Google, Gemini 4 Neon launch and Gemini app access](https://blog.google/innovation-and-ai/models-and-research/gemini-models/introducing-gemini-4-neon/).
 129. <a id="ref-129"></a>[Google, Gemini 4 Carbon launch and Gemini app access](https://blog.google/innovation-and-ai/models-and-research/gemini-models/gemini-4-carbon-now-available/).
 130. <a id="ref-130"></a>[Alibaba Group, Qwen4-Max launch and access through QwenCloud, QwenWork and QwenStudio](https://www.alibabagroup.com/en-US/document-2060139246777270272).
+131. <a id="ref-131"></a>[Baidu, ERNIE 5.5 Flash Preview model card and checkpoint variants](https://huggingface.co/baidu/ERNIE-5.5-Flash-Preview/blob/ace1100dcde7bf4eb06add6ae11ce4f43a11ddfe/README.md).

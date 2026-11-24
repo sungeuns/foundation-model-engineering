@@ -78,6 +78,22 @@ test('every built page has canonical, reciprocal language links, and a local soc
     assert.ok(head.includes('max-image-preview:large'), route);
     assert.doesNotMatch(head, /content="[^"]*\bnoindex\b/);
     const schemas = [...head.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/g)].map(m => JSON.parse(m[1]));
+    const metaTags = parseFragment(head).childNodes.filter(node => node.tagName === 'meta');
+    const citation = {};
+    for (const tag of metaTags) {
+      const { name, content } = Object.fromEntries(tag.attrs.map(attr => [attr.name, attr.value]));
+      if (name?.startsWith('citation_')) citation[name] = content;
+    }
+    if (en === '/') {
+      assert.deepEqual(citation, {}, `${route}: the homepage represents the whole book`);
+    } else {
+      assert.ok(citation.citation_title, route);
+      assert.equal(citation.citation_book_title, schemas[0].isPartOf.name, route);
+      assert.equal(citation.citation_inbook_title, citation.citation_book_title, route);
+      assert.equal(citation.citation_author, 'So, Seongeun', route);
+      assert.equal(citation.citation_language, lang, route);
+      assert.equal(citation.citation_public_url, absolute(route), route);
+    }
     const revision = revisions.get(`src/pages${route}.mdx`);
     const timestamp = revision?.timestamp;
     assert.equal(schemas[0].dateModified, timestamp, `${route}: manuscript revision`);
@@ -95,11 +111,15 @@ test('every built page has canonical, reciprocal language links, and a local soc
       const links = parseFragment(byline).childNodes.filter(node => node.tagName === 'a');
       const [sourceLink, citationLink] = links.map(link => Object.fromEntries(link.attrs.map(a => [a.name, a.value])));
       assert.equal(sourceLink.href, sourceUrl, route);
+      assert.equal(links[0].childNodes.map(node => node.value).join('').trim(),
+        lang === 'ko' ? 'GitHub 원고' : 'Chapter source on GitHub', route);
       assert.match(citationLink.download, new RegExp(`-${lang}-${revision.commit.slice(0, 12)}\\.ris$`));
       const prefix = 'data:application/x-research-info-systems;charset=utf-8,';
       assert.ok(citationLink.href.startsWith(prefix), route);
       const fields = decodeURIComponent(citationLink.href.slice(prefix.length)).split('\r\n');
       assert.equal(fields[0], 'TY  - CHAP', route);
+      const risTitle = fields.find(line => line.startsWith('TI  - ')).slice(6);
+      assert.equal(citation.citation_title, risTitle, `${route}: URL import and RIS must cite the same title`);
       assert.ok(fields.includes(`LA  - ${lang}`) && fields.includes(`UR  - ${absolute(route)}`), route);
       assert.ok(fields.includes(`DA  - ${timestamp.slice(0, 10).replaceAll('-', '/')}`), route);
       assert.ok(fields.some(line => line.startsWith('N1  - ') && line.endsWith(sourceUrl)), route);
@@ -180,6 +200,7 @@ test('downloaded Python modules link back to the exercise that supplies them in 
     'cross_attention.py': 'cross-attention-example',
     'prefix_mask.py': 'prefix-mask-test',
     'expert_dispatch.py': 'expert-dispatch-lab',
+    'zero_shards.py': 'zero-shard-ownership',
     'causal_lab.py': 'local-decoder-setup',
     'token_exposure.py': 'token-mixture-example',
     'paged_attention.py': 'paged-kv-addresses',

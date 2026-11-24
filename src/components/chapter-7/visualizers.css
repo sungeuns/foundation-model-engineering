@@ -439,9 +439,7 @@
   left: var(--limit-left);
   top: 0;
   bottom: 36px;
-  width: 2px;
-  background: #f38ba8;
-  border-style: dashed;
+  border-left: 2px dashed #f38ba8;
   transition: left 0.3s ease;
 }
 
@@ -461,10 +459,15 @@
 .zero-visualizer-footer {
   text-align: center;
   font-size: 0.8rem;
-  color: #6c7086;
+  color: #bac2de;
   margin-top: 1rem;
   border-top: 1px solid #313244;
   padding-top: 0.75rem;
+}
+.zero-visualizer-footer small { font-size: inherit; }
+
+@media (max-width: 600px) {
+  .zero-chart { --zero-chart-label-width: 4rem; }
 }
 
 /* PipelineMemoryVisualizer Styles */

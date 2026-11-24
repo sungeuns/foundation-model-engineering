@@ -4,91 +4,73 @@ title: 7.2 ZeRO (Zero Redundancy Optimizer)
 lang: en
 ---
 
+import { withBasePath } from '../../utils/paths.js';
 import ZeROMemoryVisualizer from '../../components/chapter-7/ZeROMemoryVisualizer.tsx';
 
 # 7.2 ZeRO (Zero Redundancy Optimizer)
 
-In the previous section, we established that Distributed Data Parallel (DDP) scales compute linearly by slicing the dataset across multiple GPUs. However, DDP harbors a fatal physical limitation: **every GPU in the cluster must hold a complete, identical replica of the model and its training states.**
-
-As Foundation Models grew from 1 billion parameters in 2019 to over 100 billion parameters by 2020, engineers slammed into a physical barrier known as the **Memory Wall**. No matter how many GPUs you added to your cluster, if the model could not fit into the VRAM of a *single* GPU, training was impossible.
-
-To break this barrier, researchers at Microsoft developed the **Zero Redundancy Optimizer (ZeRO)** [[1]](#ref-1). ZeRO fundamentally reimagines distributed training by treating the entire cluster's VRAM as a single, contiguous memory pool. It provides the memory efficiency of Model Parallelism while maintaining the simplicity and communication efficiency of Data Parallelism.
-
----
+With eight GPUs, how many copies of an Adam optimizer do you need? In ordinary Distributed Data Parallel (DDP), each worker processes different examples, receives the same reduced gradients, and applies the same update to a complete copy of the weights. Adding workers can increase throughput while leaving the model-state memory required on each worker unchanged. ZeRO assigns ownership of those states to individual ranks (worker processes). [[1]](#ref-1)
 
 ## 1. The Anatomy of GPU Memory
 
-This section uses an **illustrative accounting model**: 2-byte FP16/BF16 parameters and gradients, 4-byte FP32 master weights, and 8 bytes of Adam moments. FP32-gradient implementations or those without master copies differ. Add activations, temporary buffers, collectives, checkpoint and evaluation headroom separately; specify sequence length, recomputation and sharding.
+For this example, each parameter needs two bytes for the training weight, two for its gradient, four for a master copy used by the optimizer, and eight for Adam's two FP32 moments. The second moment tracks squared gradients. These are accounting choices: a different gradient dtype or an optimizer without a master copy changes the total. [[1]](#ref-1)
 
-To understand how ZeRO optimizes memory, we must first dissect where the memory goes during training.
+A model with $\Phi$ parameters therefore has $16\Phi$ bytes of model states, including $12\Phi$ bytes for the optimizer and its master weights. At 70 billion parameters, that is 1,120 GB on **each** ordinary DDP worker before activations. All memory figures here use decimal GB. Sequence length, saved activations, recomputation, communication buffers and allocator headroom enter a separate peak-memory estimate.
 
-During mixed-precision training (which is standard for Foundation Models), GPU memory is consumed by two main categories: **Residual States** (activations, temporary buffers, fragmentation) and **Model States**.
+<a id="2-the-zero-philosophy-data-parallelism-on-steroids"></a>
 
-Model States are the primary bottleneck. Let $\Phi$ be the total number of parameters in the model. If we use mixed-precision training (FP16/BF16) with the Adam optimizer, the memory footprint per GPU under standard DDP is:
+## 2. What does one worker own?
 
-1. **Parameters (FP16):** $2\Phi$ bytes.
-2. **Gradients (FP16):** $2\Phi$ bytes.
-3. **Optimizer States (FP32):** Adam requires storing an FP32 copy of the master weights, the momentum (1st moment), and the variance (2nd moment).
-   - Master Weights: $4\Phi$ bytes
-   - Momentum: $4\Phi$ bytes
-   - Variance: $4\Phi$ bytes
-   - *Total Optimizer State:* $12\Phi$ bytes.
+<a id="zero-shard-ownership"></a>
 
-**Total Model State Memory = $16\Phi$ bytes.**
+### Follow weights 5 and 6 through four ranks
 
-Notice a striking reality: **The optimizer states consume 75% of the memory ($12\Phi$ out of $16\Phi$).**
+Number eight weights from 1 to 8. Split them into four equal shards. Rank 0 owns indices 1–2, rank 1 owns 3–4, rank 2 owns 5–6, and rank 3 owns 7–8 when a state is sharded. The cells below list the weight indices covered by each kind of persistent state **on rank 2**. P denotes training weights, G gradients, and O optimizer state including master weights. Watch the columns change one at a time. [[1]](#ref-1)
 
-If we attempt to train a 70-billion parameter model (like Llama 3 70B), the Model States alone require $16 \times 70 \text{ billion} \approx 1.12 \text{ Terabytes}$ of VRAM. An NVIDIA H100 GPU has 80GB of VRAM. Under standard DDP, this model is mathematically impossible to train, regardless of whether you have 1 GPU or 10,000 GPUs.
+| Stage | P | G | O | Bytes |
+| --- | --- | --- | --- | ---: |
+| DDP | 1–8 | 1–8 | 1–8 | 128 |
+| ZeRO-1 | 1–8 | 1–8 | 5–6 | 56 |
+| ZeRO-2 | 1–8 | 5–6 | 5–6 | 44 |
+| ZeRO-3 | 5–6 | 5–6 | 5–6 | 32 |
 
----
+For example, the ZeRO-2 row has eight two-byte weights, two two-byte gradients and two twelve-byte optimizer entries: $16+4+24=44$ bytes. During a collective, a rank can briefly hold buffers larger than the shard it owns.
 
-## 2. The ZeRO Philosophy: Data Parallelism on Steroids
+**Run the exchange on a CPU.** The <a href={withBasePath('/labs/zero_shards.py')} download="zero_shards.py">four-rank PyTorch script</a> uses eight FP32 weights initialized to 1 through 8. Rank $r$ differentiates the quadratic loss $(r+1)\sum_j w_j^2/2$. There is one equally weighted contribution per rank. Reduce-scatter sums the four gradient vectors and gives each worker its two entries. After division by four, rank 2 gets gradients 12.5 and 15. An SGD step with learning rate 0.1 changes its weights from 5 and 6 to **3.75 and 4.5**. All-gather reconstructs the full update, which every worker checks against an unsharded step.
 
-Standard DDP uses an **All-Reduce** operation to average gradients. After the backward pass, every GPU has the exact same gradients, and every GPU independently performs the exact same optimizer step to update its identical replica of the weights. This is massive redundancy.
+```bash
+torchrun --standalone --nproc-per-node=4 zero_shards.py
+```
 
-ZeRO eliminates this redundancy by **partitioning** the model states across the $N$ GPUs in the cluster, rather than replicating them. ZeRO is implemented in three progressive stages.
-
-![zero_architecture_diagram](../../assets/images/chapter-7/zero_architecture_diagram.png)
-*Source: AI-generated illustration. Inspired by Rajbhandari et al., 2020.*
+This run uses Linux, CPU PyTorch 2.15.0 and the Gloo backend. It demonstrates the two collectives with actual gradients. The memory table uses mixed precision and Adam, so its byte counts are calculated rather than measured from this script. [[4]](#ref-4)
 
 ### Stage 1: Optimizer State Partitioning ($P_{os}$)
-Instead of every GPU storing the massive $12\Phi$ optimizer states, ZeRO-1 slices the optimizer states into $N$ equal partitions.
-- GPU $i$ only stores the optimizer states for its specific partition of the parameters.
-- GPU $i$ is solely responsible for updating its assigned slice of the weights.
-- **Memory Footprint:** Drops from $16\Phi$ to $4\Phi + \frac{12\Phi}{N}$.
-- **Communication:** Idealized byte volume can match DDP All-Reduce, but runtime overhead need not be zero. Collective startup, bucket sizes, scheduling and memory copies matter.
+
+With $N$ data-parallel ranks, each owns $1/N$ of the optimizer state and updates the corresponding weights. Each still stores complete weight and gradient tensors. Persistent model-state memory per rank is $4\Phi+12\Phi/N$ bytes.
 
 ### Stage 2: Gradient Partitioning ($P_{os+g}$)
-If GPU $i$ is only responsible for updating partition $i$ of the weights, it does not need to store the entire gradient tensor. In ZeRO-2, as soon as a gradient bucket is computed during the backward pass, it is immediately reduced and scattered to the responsible GPU, and then the local replica is discarded.
-- **Memory Footprint:** Drops to $2\Phi + \frac{14\Phi}{N}$.
-- **Communication:** Idealized byte volume can match DDP All-Reduce, but runtime overhead need not be zero. Collective startup, bucket sizes, scheduling and memory copies matter.
+
+As gradients become available, the workers can reduce a bucket and send the summed entries to their owners. Each owner retains only its gradient shard and uses it for the optimizer step. The model-state estimate falls to $2\Phi+14\Phi/N$. Stages 1 and 2 can match DDP's idealized communication volume. Bucket sizes and the overlap of communication with computation still affect elapsed time. [[1]](#ref-1)
 
 ### Stage 3: Parameter Partitioning ($P_{os+g+p}$)
-This is the holy grail, often referred to as Fully Sharded Data Parallel (FSDP) in the PyTorch ecosystem. ZeRO-3 partitions the parameters themselves. The GPUs hold no complete model.
-- **Mechanism:** When a specific transformer layer needs to compute its forward or backward pass, ZeRO-3 performs a Just-In-Time (JIT) *All-Gather* to reconstruct that specific layer's weights. As soon as the computation for that layer is finished, the weights are instantly discarded from memory.
-- **Memory Footprint:** Scales linearly with the cluster size: $\frac{16\Phi}{N}$.
-- **Communication:** Simplified ZeRO-3 accounting estimates about 1.5 times DDP volume. Parameter retention, recomputation and prefetch policies change actual traffic; overlap must be measured.
 
----
+The weights also have owners. To compute a layer, each rank gathers the weights it needs. Retaining them for backward or releasing them and gathering them again trades memory for communication. The persistent state is $16\Phi/N$ bytes per rank. The paper's simplified schedule estimates about 1.5 times DDP's communication volume. Actual traffic depends on group size, prefetch and retention policy. [[1]](#ref-1)
 
-## 3. Interactive Visualization: The Memory Wall
+<a id="3-interactive-visualization-the-memory-wall"></a>
 
-Use the interactive component below to simulate the memory footprint of different Foundation Models across varying cluster sizes. Notice how standard DDP quickly exceeds the 80GB VRAM limit of an H100, while ZeRO-3 keeps the memory footprint comfortably low, allowing the remaining VRAM to be used for larger batch sizes or longer context windows.
+## 3. What fits in an 80 GB budget?
 
-<ZeROMemoryVisualizer client:load />
+The initial setting is 70 billion parameters on eight ranks. Even at stage 3, each GPU needs 140 GB for model states. Move to 16 ranks and the estimate drops to 70 GB. Under an 80 GB budget, that leaves 10 GB for everything else. A peak-memory measurement during a real step tells you whether that is enough.
 
-*(Note: The visualizer calculates pure Model State memory. In practice, you must also account for activation memory, which can be mitigated using Activation Checkpointing.)*
+<ZeROMemoryVisualizer lang="en" client:load />
 
 ---
 
 ## 4. Beyond GPU Limits: ZeRO-Offload & ZeRO-Infinity
 
-While ZeRO-3 allows memory to scale linearly with the number of GPUs, what if you are a researcher with only a single GPU or a small 4-GPU node?
+When adding GPUs is impractical, moving state to another memory tier gives you another option. ZeRO-Offload moves optimizer state and computation to the CPU. Overlapping the CPU update and PCIe transfers with GPU work can reduce stalls. Delaying an update by a step also changes the training algorithm. [[2]](#ref-2)
 
-The DeepSpeed team introduced **ZeRO-Offload** [[2]](#ref-2) and **ZeRO-Infinity** [[3]](#ref-3) to exploit the entire system's memory hierarchy.
-
-* **ZeRO-Offload (CPU RAM):** Moving optimizer state and computation to the CPU saves GPU memory. Overlapping CPU work, PCIe transfer and GPU computation must preserve update dependencies. A one-step-delayed update is a separate algorithmic choice, not automatically equivalent to synchronous Adam. The paper’s single-GPU result applies to its experimental setup.
-*   **ZeRO-Infinity (NVMe Storage):** Extending the offload concept to NVMe Solid State Drives. By treating high-speed NVMe storage as a massive virtual memory pool and using memory-centric tiling, ZeRO-Infinity allows a single machine to host and fine-tune models with **trillions** of parameters, completely shattering the GPU memory barrier.
+ZeRO-Infinity also uses host memory and NVMe storage, fetching tensors when the computation needs them. A run can have ample storage capacity and still stall if transfers cannot finish before the next layer needs its weights. [[3]](#ref-3)
 
 ---
 
@@ -152,18 +134,14 @@ The resolved global batch must equal microbatch × accumulation × data-parallel
 
 A resumable checkpoint includes sharded model and optimizer, scheduler, scaler/FP8 state, global tokens, RNG and sampler/data cursor, plus model/data/tokenizer/code/config hashes. Test restore with the deployed DeepSpeed version and launcher; a weights-only save is not an exact continuation.
 
-### The Engineering Trade-off
-While ZeRO-3 is magical, it is not a silver bullet. The Just-In-Time broadcasting of weights makes training highly sensitive to network bandwidth. If your cluster lacks high-speed InfiniBand or NVLink, the GPUs will stall waiting for weights to arrive over the network. In such cases, engineers often fall back to ZeRO-2, or combine ZeRO-1 with Tensor Parallelism (which we will explore in Chapter 7.3).
+The sketch predicts 512 next-token targets from each 513-token random sample and stops after one microbatch. If the accumulation factor exceeds one, that call to `engine.step()` may precede the first weight update. To compare two stages on real data, hold example IDs, sequence length, learning rate, precision and accumulation fixed. Record validation loss per target, gradient norm, throughput, peak memory and time waiting on collectives. Stop before scaling if loss becomes nonfinite or a checkpoint resumed at the same data position cannot reproduce the next update.
 
----
+### The Engineering Trade-off
+Compare stage 2 and stage 3 at the same sequence length and batch size. Record peak device memory and step time. If stage 3 frees memory but spends longer waiting for parameter gathers, you have measured the cost of that memory saving.
 
 ## Summary
 
-ZeRO transformed distributed training from a hardware-bound limitation into a software-defined scaling problem. By recognizing that standard Data Parallelism wastes VRAM by replicating identical states, ZeRO partitions the Optimizer States (Stage 1), Gradients (Stage 2), and Parameters (Stage 3).
-
-Offloading and sharding reduce GPU memory, but there is no universal 500B threshold for communication congestion. Network topology, layer size, batch and scheduling determine the bottleneck. Section 7.3 considers combinations with tensor and pipeline parallelism.
-
----
+Choose a stage by accounting for what each rank owns between operations and what it must gather during a step. [Section 7.3](/chapter-7/model-and-pipeline-parallelism/) combines this partitioning with tensor and pipeline parallelism.
 
 ## Quizzes
 
@@ -174,7 +152,7 @@ Offloading and sharding reduce GPU memory, but there is no universal 500B thresh
 
 <details>
 <summary>Quiz 2: If ZeRO-3 partitions the parameters, how does a GPU compute the forward pass for a specific transformer layer if it only holds a fraction of that layer's weights?</summary>
-*ZeRO-3 uses a Just-In-Time (JIT) parameter reconstruction mechanism. Right before a layer is executed, the framework triggers an All-Gather operation to pull the missing weight shards from all other GPUs. Once the layer's forward (or backward) computation is complete, the reconstructed weights are immediately deleted from the GPU's memory to free up space.*
+*It gathers the required weight shards before computing the layer. Releasing them after forward saves memory. Retaining them until backward can avoid a second gather.*
 </details>
 
 <details>
@@ -194,3 +172,4 @@ Offloading and sharding reduce GPU memory, but there is no universal 500B thresh
 1. <a id="ref-1"></a>Rajbhandari, S., et al. (2020). *ZeRO: Memory Optimizations Toward Training Trillion Parameter Models*. SC20. [arXiv:1910.02054](https://arxiv.org/abs/1910.02054).
 2. <a id="ref-2"></a>Ren, J., et al. (2021). *ZeRO-Offload: Democratizing Billion-Scale Model Training*. USENIX ATC. [arXiv:2101.06840](https://arxiv.org/abs/2101.06840).
 3. <a id="ref-3"></a>Rajbhandari, S., et al. (2021). *ZeRO-Infinity: Breaking the GPU Memory Wall for Extreme Scale Deep Learning*. SC21. [arXiv:2104.07857](https://arxiv.org/abs/2104.07857).
+4. <a id="ref-4"></a>PyTorch. [Distributed communication package](https://docs.pytorch.org/docs/stable/distributed.html), `reduce_scatter_tensor` and `all_gather_into_tensor`.

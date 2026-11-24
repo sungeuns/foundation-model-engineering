@@ -40,6 +40,7 @@ test('shared exercise IDs belong to the same authored content in both translatio
   for (const [route, id] of [
     ['/chapter-1/bitter-lesson', 'chinchilla-budget-example'],
     ['/chapter-19/probing-classifiers', 'probe-projection-coordinates'],
+    ['/chapter-7/zero-redundancy-optimizer', 'zero-shard-ownership'],
     ['/chapter-6/tokenization-science', 'tokenizer-acceptance-probes'],
     ['/chapter-11/vision-language-bridges', 'receipt-grounding'],
     ['/chapter-3/self-attention-mathematics', 'attention-weight-example'],
@@ -63,6 +64,7 @@ test('shared exercise IDs belong to the same authored content in both translatio
     ['/chapter-12/speculative-decoding', 'speculative-sampling-example'],
     ['/chapter-12/serving-policies-slos-and-fallbacks', 'streaming-latency-trace'],
     ['/chapter-13/ptq-vs-qat', 'quantization-grid-example'],
+    ['/chapter-13/ptq-vs-qat', 'ernie-expert-weights'],
     ['/chapter-13/quantization-methods', 'weighted-rounding-example'],
     ['/chapter-14/advanced-retrieval', 'rrf-candidate-cutoff'],
     ['/chapter-14/graphrag-and-ontology', 'graph-evidence-example'],

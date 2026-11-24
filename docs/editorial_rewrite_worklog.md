@@ -295,7 +295,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 6.5 | `/chapter-6/synthetic-data-for-pre-training` | Mechanical only | 3d2bab63db26c5456f88eab0f51e2e7e70ac49d93d868427783f625e4ae166ee | dd5381b0b44cb0223b04f689d010f40ea3349d668ebf9e79c98fe3d3204af54c |
 | 6.6 | `/chapter-6/optimization-mechanics` | Inspected 2026-11-17 | 942111c9629675b61e7af38dd1e0bb94a0dbe0aeff5c9d142fd7c7d0cc167b3e | 948f68b51e05f15a67755538714f595ff03ec214fe3c5d518eb6ebbff8000c22 |
 | 7.1 | `/chapter-7/data-parallelism` | Mechanical only | 8c37d63a720ee64a8c4f37ac09c3062f12df4870500f1ee54d598637de7e8b8c | 7b3a07ce3c7c5ba3deb802af571117fcae1656b049e6b412614823b96c01b65d |
-| 7.2 | `/chapter-7/zero-redundancy-optimizer` | Mechanical only | b126180d4c8d978f8925ed51d7ace338f8cdf2e7c7ecc1309ef2301714bd4e47 | e2b4c48bc0c2d11efbc40f02c428883a3f92d462adf354587b96bc5de42d1b06 |
+| 7.2 | `/chapter-7/zero-redundancy-optimizer` | Inspected 2026-11-25 | 1d59bd55d74d312c61666b7a80158d28487d57ca3dbe4677029b7cbc03c85296 | 4992cea430e8dd37ecf27e13aa7158d27b9d43445b6cfe248a89dd9bf44558d1 |
 | 7.3 | `/chapter-7/model-and-pipeline-parallelism` | Inspected 2026-11-15 | 0832cffc306946b61c817850cb07cdbebf0d06aadfe607b6b7dfe75d14d010bf | b645ef818ecb8e33702468b9dcacf90a130b6c229ed8603d055736e2e62f5db4 |
 | 7.4 | `/chapter-7/flash-attention` | Mechanical only | f305f222c5d296652a665982d6148449b7cebebdd7073ee35ef221b39b750c4c | 7c296161f2a6d17d2c88531884e7a2ffb62021cfaf28828e9166c201a8df5184 |
 | 7.5 | `/chapter-7/tiny-decoder-lab` | Inspected 2026-11-25 | 85a0e94b1ae18b6da7b3e1aae8478239a6ce95ff03874d94ecfb7f57fd36228c | 7ab42dcffc8d955d2ce55cc01f81042732f5a4e03bb65e08793e18cde7f6f057 |
@@ -326,7 +326,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 12.4 | `/chapter-12/speculative-decoding` | Inspected 2026-11-25 | a5f93ea8411bab0fe68bf277224f8f19f111ac0f0fd73f6b4eda75739a8990b5 | 61986787b62bf6d99f59ab08a66d2ea6312e472faea94ded13c4a7d627d03cc4 |
 | 12.5 | `/chapter-12/long-context-serving` | Inspected 2026-11-15 | 82f413a5a2e2731fe01603c7036b42dee434b010cc76410eba7e0807d73742e8 | 59933e962b9f0bef0f8b50e9889ec628fd92ade6d7d0fb91636981793bd83052 |
 | 12.6 | `/chapter-12/serving-policies-slos-and-fallbacks` | Inspected 2026-11-25 | 8222c69fc753a073f358acef599ad825d1193693daa931acbd774081c82f2b46 | 35067207b0e514380e54bb373c7b545a075fc1999f3e039eb327edb1e13ba1a5 |
-| 13.1 | `/chapter-13/ptq-vs-qat` | Inspected 2026-11-25 | 156ca2ee736440fc77b09629f937bdc027bbd4e7e8ea80d3584499b0f0721e54 | ce7f6e01c0bc440ee12795fa1fdc6b6c5089c14c8fb83616449ee99b6a62d59b |
+| 13.1 | `/chapter-13/ptq-vs-qat` | Inspected 2026-11-25 | eb93d493239246214375730e26db3328bc55104f01777c0ff0ebb9fc5bf7b5ae | 024687ff4956de8d9b50358821335b863bdc65e10edfdaf7f6a6ab5db3357bba |
 | 13.2 | `/chapter-13/quantization-methods` | Inspected 2026-11-25 | f128eb1a2a438226a64a9e9f82f4eea316a0ddf62f38c32553657fbd9dad6944 | d2ef6a2e7b3349d2fa4a93ef0d79356511c79d4939a24bd5913965064c16bdaf |
 | 13.3 | `/chapter-13/weight-sparsification` | Mechanical only | cef7eea23f21faf8a4719bc13b2f3e28a8743ba0230c67b01438dbac642a6530 | 4d1291c234050b189b7f5c66be305966e3fadd57ef521d171ca9283131987aed |
 | 13.4 | `/chapter-13/knowledge-distillation` | Mechanical only | f184dcb71820a852dee1c7b2d640412cec7cad8a6f765ee912da00daf6b337f0 | 7c19030da7fe737ad78f41f6d09a1aa1107040bbb7cedcf7176b24e5db8dfccb |
@@ -354,7 +354,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 17.3 | `/chapter-17/elo-rating-and-leaderboards` | Inspected 2026-11-15 | 14f931df5e4641c576c1763d446b2c663d1f282abf438767e5a330d49b31a9b9 | 1e78f5819e5452372109f72327dad0f7831b3b9ce66750000c9378a906744c30 |
 | 17.4 | `/chapter-17/contamination-issues` | Mechanical only | 38a0cad52c7504804a57a8cc2deed94a3ac2fe68f7648809261abad1cf6b4fa5 | ad7b87426dcdde29f69a6921696a462359e7681d7d3b5ee5c11f3d80ec0a71c7 |
 | 17.5 | `/chapter-17/production-evaluation-and-release-gates` | Inspected 2026-11-25 | d2917516ef75c2ede2cd4db285a221090b09f181104e7112bd388f427ecc5298 | cb7d670ce7898fe43516e3cc8a38e295b6e24bba8e3a65c7579c61f3e03b9fb3 |
-| 17.6 | `/chapter-17/commercial-model-benchmarks` | Inspected 2026-11-25 | ffc810ab2f615f008244a4fa5323c28b14c18fdbf9e4604b7f3940a5fedfde0c | 064999e209abf87eef01fe4e25aea0b82aabe8ec2fcf56a9f340260f9d8f43a3 |
+| 17.6 | `/chapter-17/commercial-model-benchmarks` | Inspected 2026-11-25 | 5cda78e16585df3cd672f0fa353e876b99cb3328f53430bc00effaa1afeb536b | 9e3327be40887a981ad0e0ba9f264ea6889efa50eb6e435de9a62a87110746dd |
 | 17.7 | `/chapter-17/experimental-design-and-uncertainty` | Inspected 2026-11-25 | a49f4705d53ea21959540b6d9cbaade29cdd63310712a6f8e2d67eb9288746cc | 8040249564bacddeebe7eda07ece30695e580990c258f0393284df9e3d07735f |
 | 18.1 | `/chapter-18/red-teaming` | Mechanical only | fa815b07490b4a1039a2e91d2c98e9f1f212d6479f534afa5f09020cc8f93598 | 5aa628372d20829e842ce6b3fad0133fee7c40e63c345e76f0b823b351df6f59 |
 | 18.2 | `/chapter-18/jailbreaking-and-defense` | Mechanical only | caff93966e1d1a925120d696bf37a09fa46cc63cd9378c818ac9f1d489348afd | 165303014a71dfa4ec8e28c0ac7f38712f5d97fbcd551510aa5539cb33c33ac1 |
@@ -707,3 +707,9 @@ In §1.4, checked the Gopher and Chinchilla parameter and token counts against T
 In §19.3, ran both projection examples on CPU. Applied the frozen readout to the raw-space and standardized-space results and checked the resulting margins. Checked all 101 center gaps in both distributions, in English and Korean at 375px and 1280px, against the plotted points and the displayed counts. The fixed threshold classified 74/80 points at the initial gap and 64/80 after the shift. Also checked the static reading view. The tested LinearProbeVisualizer.tsx SHA-256 was `9dd0c27ea052eba45f50e610ce5ae3c63c92ea4ee23e9fab2f67c0242654f197`.
 
 A delayed-script replay on §1.4 also caught an early input that moved the allocation slider while the displayed model size stayed at 10. The static inputs are now disabled until their handlers are ready. Replayed the delay and checked that the first accepted input changes the model size to 100. The fractional budget step displays its actual approximation, ND ≈ 31.62.
+
+### 2026-11-25 shard ownership and checkpoint precision
+
+For §7.2, compared the original four-rank figure with each ZeRO stage, then ran the replacement CPU exercise with four Gloo workers. Rank 2 received mean gradients 12.5 and 15. Its updated weights were 3.75 and 4.5. Each rank checked the gathered weights against a single unsharded update. The separate 16-byte Adam example gives 128, 56, 44 and 32 persistent bytes per worker for eight weights.
+
+For §§13.1 and 17.6, checked Baidu’s pinned model cards, weight indexes and actual shard headers for the three ERNIE 5.5 Flash Preview checkpoints. The selected expert weight uses 2, 4 and 8 MiB respectively, excluding scales. The default stores 128 KiB of companion scales. The training method is attributed to the model card.

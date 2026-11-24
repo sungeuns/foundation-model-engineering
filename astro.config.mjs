@@ -4,6 +4,7 @@ import mdx from '@astrojs/mdx';
 import react from '@astrojs/react';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
+import rehypeMathSnippets from './src/utils/math-snippets.js';
 import rehypeContentLinks from './src/utils/content-links.js';
 
 const base = process.env.SITE_BASE || '/';
@@ -16,13 +17,13 @@ export default defineConfig({
   integrations: [
     mdx({
       remarkPlugins: [remarkMath],
-      rehypePlugins: [rehypeKatex, [rehypeContentLinks, { base }]],
+      rehypePlugins: [rehypeKatex, rehypeMathSnippets, [rehypeContentLinks, { base }]],
     }),
     react()
   ],
   markdown: {
     remarkPlugins: [remarkMath],
-    rehypePlugins: [rehypeKatex, [rehypeContentLinks, { base }]],
+    rehypePlugins: [rehypeKatex, rehypeMathSnippets, [rehypeContentLinks, { base }]],
   },
   i18n: {
     defaultLocale: 'en',

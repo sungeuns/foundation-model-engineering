@@ -379,8 +379,8 @@ export const searchDescriptions = {
     ko: 'MoE가 토큰을 전문가에 배정하는 방식을 살펴봅니다. Top-k, 부하 분산, Expert Choice, Soft MoE와 보조 손실 없는 라우팅을 비교합니다.',
   },
   '/chapter-7/zero-redundancy-optimizer': {
-    en: 'Compare ZeRO stages 1, 2, and 3: how sharding optimizer states, gradients, and parameters changes GPU memory use and communication costs.',
-    ko: 'ZeRO 1·2·3단계가 옵티마이저 상태, 그래디언트, 파라미터를 분할하는 방식과 GPU 메모리 절감에 따른 통신 비용을 비교합니다.',
+    en: 'Trace eight weights through four PyTorch workers. Compare ZeRO stages 1–3, calculate memory per GPU, and run reduce-scatter and all-gather on a CPU.',
+    ko: '가중치 여덟 개를 네 랭크에 나눠 ZeRO 1·2·3단계의 GPU당 메모리를 계산합니다. CPU에서 PyTorch로 그래디언트를 분할하고 갱신한 가중치를 다시 모아 보세요.',
   },
   '/chapter-7/flash-attention': {
     en: 'Learn how FlashAttention uses tiling, recomputation, and parallelism to reduce memory traffic, and how to check PyTorch SDPA kernel selection.',
