@@ -131,6 +131,7 @@ export const chapters = [
       { id: "12-4", title: { en: "12.4 Speculative Decoding", ko: "12.4 투기적 디코딩" }, path: "/chapter-12/speculative-decoding" },
       { id: "12-5", title: { en: "12.5 Long Context Serving", ko: "12.5 롱 컨텍스트 서빙" }, path: "/chapter-12/long-context-serving" },
       { id: "12-6", title: { en: "12.6 Serving Policies, SLOs, and Fallbacks", ko: "12.6 서빙 정책, SLO, 그리고 폴백" }, path: "/chapter-12/serving-policies-slos-and-fallbacks" },
+      { id: "12-7", title: { en: "12.7 Length Bucketing and Peak KV Memory", ko: "12.7 길이별 배칭과 KV 캐시 최대 사용량" }, path: "/chapter-12/length-bucketing-lab" },
     ]
   },
   {

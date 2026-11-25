@@ -222,3 +222,7 @@ The October 25 pass compares the complete ordered inventory (103 EN/KO pairs), c
 - 6.6 `optimization-mechanics` — Inspected 2026-11-17; EN/KO source, numerical semantics and rendered output checked.
 - 7.5 `tiny-decoder-lab` — Inspected 2026-11-17; EN/KO source, numerical semantics and rendered output checked.
 - 17.7 `experimental-design-and-uncertainty` — Inspected 2026-11-17; EN/KO source, numerical semantics and rendered output checked.
+
+## 2026-11-25 addition
+
+- 12.7 `length-bucketing-lab` — Added after the historical review. See the dated entry in [the current review inventory](editorial_rewrite_worklog.md).

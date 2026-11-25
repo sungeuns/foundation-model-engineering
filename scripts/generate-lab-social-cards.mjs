@@ -15,6 +15,7 @@ import { attentionTokens, calculateAttention } from '../src/components/chapter-3
 import { compareTitles, examples } from '../src/components/chapter-14/lexical-dense.mjs';
 import { denseResults, bm25Results, fuseRanks } from '../src/components/chapter-14/rank-fusion.mjs';
 import { GiB, kvCapacity } from '../src/components/chapter-12/kv-capacity.mjs';
+import bucketingRun from '../public/labs/2026-11/kv-batch-bucketing.json' with { type: 'json' };
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const escape = value => String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
@@ -200,6 +201,25 @@ const copy = {
       setup: '두 응답 모두 첫 토큰 지연(TTFT)과 이후 평균 간격(TPOT)이 100ms입니다.',
       rows: ['응답 A', '응답 B'], unit: 'ms', elapsed: '요청을 보낸 뒤 지난 시간(ms)',
       note: '설명용 클라이언트 수신 기록 · 표시 하나가 토큰 한 개',
+    },
+  },
+  'length-bucketing': {
+    path: '/chapter-12/length-bucketing-lab', number: '12.7', render: lengthBucketingSvg,
+    en: {
+      title: 'Can less padding lower peak KV memory?',
+      setup: 'SmolLM2-135M · FP32 · Six prompts, two per batch',
+      orders: ['Arrival order', 'Sorted by length'],
+      lengths: 'Tokens per prompt', cache: 'Prefill KV (KiB)',
+      padding: n => `${n} padded positions in total`,
+      peak: 'Largest prefill cache',
+    },
+    ko: {
+      title: '길이순으로 묶으면 최대 KV 캐시도 줄어들까?',
+      setup: 'SmolLM2-135M · FP32 · 프롬프트 여섯 개를 두 개씩 묶은 실험',
+      orders: ['도착 순서', '길이 순서'],
+      lengths: '프롬프트 길이 (토큰)', cache: '프리필 KV (KiB)',
+      padding: n => `세 배치의 패딩 합계 ${n}자리`,
+      peak: '가장 큰 프리필 캐시',
     },
   },
 };
@@ -461,6 +481,41 @@ ${panels}
 <path d="M60 557H1140" stroke="#bbc8c1" stroke-width="2"/>
 ${text(c.note, 60, 601, 25, `fill="${muted}"`)}
 ${text(ko ? '파운데이션 모델 엔지니어링 · ' + lesson.number : 'Foundation Model Engineering · ' + lesson.number, 1140, 601, 22, `text-anchor="end" fill="${teal}"`)}
+</g></svg>\n`;
+}
+
+function lengthBucketingSvg(lesson, lang, card) {
+  const c = lesson[lang];
+  const groups = [bucketingRun.arrival_order, bucketingRun.length_order];
+  const peakBytes = Math.max(...groups.map(group => group.largest_batch_prefill_kv_bytes));
+  const panels = groups.map((group, index) => {
+    const rows = group.batches.map((batch, i) => {
+      const y = 328 + i * 55;
+      return `${text(batch.real_lengths.join(', '), 26, y, 34)}
+<rect x="246" y="${y - 19}" width="150" height="15" rx="3" fill="#dce3de"/>
+<rect x="246" y="${y - 19}" width="${150 * batch.kv_bytes / peakBytes}" height="15" rx="3" fill="${teal}"/>
+${text(batch.kv_bytes / 1024, 493, y, 34, 'text-anchor="end" font-weight="700"')}`;
+    }).join('\n');
+    return `<g transform="translate(${60 + index * 554} 0)">
+<rect y="183" width="526" height="349" rx="14" fill="white" stroke="#c3cec8" stroke-width="2"/>
+${text(c.orders[index], 26, 234, 38, 'font-weight="700"')}
+${text(c.lengths, 26, 281, 22, `fill="${muted}"`)}
+${text(c.cache, 246, 281, 22, `fill="${muted}"`)}
+${rows}
+<path d="M26 465H500" stroke="#c3cec8" stroke-width="2"/>
+${text(c.padding(group.padding_slots), 26, 509, 29, `fill="${teal}" font-weight="700"`)}
+</g>`;
+  }).join('\n');
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" xml:lang="${lang}" role="img" aria-labelledby="card-title card-description">
+<title id="card-title">${escape(c.title)}</title><desc id="card-description">${escape(card.alt)}</desc>
+<rect width="1200" height="630" fill="#f5f2eb"/>
+<g font-family="${lang === 'ko' ? 'Noto Sans CJK KR, DejaVu Sans' : 'DejaVu Sans'}, sans-serif" fill="${ink}">
+${text(c.title, 58, 85, 45, 'font-weight="700"')}
+${text(c.setup, 60, 143, 30, `fill="${muted}"`)}
+${panels}
+<path d="M60 558H1140" stroke="#bbc8c1" stroke-width="2"/>
+${text(c.peak + ' · ' + groups.map(group => group.largest_batch_prefill_kv_bytes / 1024).join(' → ') + ' KiB', 60, 601, 32, 'font-weight="700"')}
+${text((lang === 'ko' ? '파운데이션 모델 엔지니어링' : 'Foundation Model Engineering') + ' · ' + lesson.number, 1140, 601, 21, `text-anchor="end" fill="${teal}"`)}
 </g></svg>\n`;
 }
 

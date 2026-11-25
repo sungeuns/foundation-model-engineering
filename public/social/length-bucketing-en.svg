@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" xml:lang="en" role="img" aria-labelledby="card-title card-description">
+<title id="card-title">Can less padding lower peak KV memory?</title><desc id="card-description">Measured SmolLM2-135M prefill KV cache for three pairs of prompts. In arrival order the pairs use 990, 900 and 810 KiB. Grouped by length they use 360, 810 and 990 KiB. Padding falls from 18 positions to 6. The largest pair uses 990 KiB in both orders.</desc>
+<rect width="1200" height="630" fill="#f5f2eb"/>
+<g font-family="DejaVu Sans, sans-serif" fill="#192a30">
+<text x="58" y="85" font-size="45" font-weight="700">Can less padding lower peak KV memory?</text>
+<text x="60" y="143" font-size="30" fill="#4e5d61">SmolLM2-135M · FP32 · Six prompts, two per batch</text>
+<g transform="translate(60 0)">
+<rect y="183" width="526" height="349" rx="14" fill="white" stroke="#c3cec8" stroke-width="2"/>
+<text x="26" y="234" font-size="38" font-weight="700">Arrival order</text>
+<text x="26" y="281" font-size="22" fill="#4e5d61">Tokens per prompt</text>
+<text x="246" y="281" font-size="22" fill="#4e5d61">Prefill KV (KiB)</text>
+<text x="26" y="328" font-size="34" >3, 11</text>
+<rect x="246" y="309" width="150" height="15" rx="3" fill="#dce3de"/>
+<rect x="246" y="309" width="150" height="15" rx="3" fill="#256257"/>
+<text x="493" y="328" font-size="34" text-anchor="end" font-weight="700">990</text>
+<text x="26" y="383" font-size="34" >4, 10</text>
+<rect x="246" y="364" width="150" height="15" rx="3" fill="#dce3de"/>
+<rect x="246" y="364" width="136.36363636363637" height="15" rx="3" fill="#256257"/>
+<text x="493" y="383" font-size="34" text-anchor="end" font-weight="700">900</text>
+<text x="26" y="438" font-size="34" >5, 9</text>
+<rect x="246" y="419" width="150" height="15" rx="3" fill="#dce3de"/>
+<rect x="246" y="419" width="122.72727272727273" height="15" rx="3" fill="#256257"/>
+<text x="493" y="438" font-size="34" text-anchor="end" font-weight="700">810</text>
+<path d="M26 465H500" stroke="#c3cec8" stroke-width="2"/>
+<text x="26" y="509" font-size="29" fill="#256257" font-weight="700">18 padded positions in total</text>
+</g>
+<g transform="translate(614 0)">
+<rect y="183" width="526" height="349" rx="14" fill="white" stroke="#c3cec8" stroke-width="2"/>
+<text x="26" y="234" font-size="38" font-weight="700">Sorted by length</text>
+<text x="26" y="281" font-size="22" fill="#4e5d61">Tokens per prompt</text>
+<text x="246" y="281" font-size="22" fill="#4e5d61">Prefill KV (KiB)</text>
+<text x="26" y="328" font-size="34" >3, 4</text>
+<rect x="246" y="309" width="150" height="15" rx="3" fill="#dce3de"/>
+<rect x="246" y="309" width="54.54545454545455" height="15" rx="3" fill="#256257"/>
+<text x="493" y="328" font-size="34" text-anchor="end" font-weight="700">360</text>
+<text x="26" y="383" font-size="34" >5, 9</text>
+<rect x="246" y="364" width="150" height="15" rx="3" fill="#dce3de"/>
+<rect x="246" y="364" width="122.72727272727273" height="15" rx="3" fill="#256257"/>
+<text x="493" y="383" font-size="34" text-anchor="end" font-weight="700">810</text>
+<text x="26" y="438" font-size="34" >10, 11</text>
+<rect x="246" y="419" width="150" height="15" rx="3" fill="#dce3de"/>
+<rect x="246" y="419" width="150" height="15" rx="3" fill="#256257"/>
+<text x="493" y="438" font-size="34" text-anchor="end" font-weight="700">990</text>
+<path d="M26 465H500" stroke="#c3cec8" stroke-width="2"/>
+<text x="26" y="509" font-size="29" fill="#256257" font-weight="700">6 padded positions in total</text>
+</g>
+<path d="M60 558H1140" stroke="#bbc8c1" stroke-width="2"/>
+<text x="60" y="601" font-size="32" font-weight="700">Largest prefill cache · 990 → 990 KiB</text>
+<text x="1140" y="601" font-size="21" text-anchor="end" fill="#256257">Foundation Model Engineering · 12.7</text>
+</g></svg>

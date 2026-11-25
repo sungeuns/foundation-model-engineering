@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import test from 'node:test';
+import { load } from 'js-yaml';
 import { parse, parseFragment } from 'parse5';
 import { chapters } from '../src/data/chapters.js';
 import { searchDescriptions } from '../src/data/search-descriptions.js';
 import { socialCards } from '../src/data/social-cards.js';
+import { servingGuide } from '../src/data/site.js';
 import { defaultBudget, defaultPool, nineRequestWorkload, readKvScenario } from '../src/components/chapter-12/kv-scenario.mjs';
 import { getContentDates, getContentRevisions } from '../src/utils/content-dates.js';
 
@@ -246,13 +248,34 @@ test('the two homepages and the six collected lessons link to their serving EPUB
     assert.equal(epubLinks.length, home || collected.has(lesson) ? 1 : 0, route);
     if (!epubLinks.length) continue;
     const [link] = epubLinks;
-    assert.equal(link[1], `https://github.com/sungeuns/foundation-model-engineering/releases/download/serving-guide-2026-11/llm-serving-${lang}-r2.epub`, route);
+    assert.equal(link[1], servingGuide.downloads[lang], route);
     assert.ok(link[0].includes('type="application/epub+zip"'), route);
     if (home) {
       const readme = readFileSync(lang === 'en' ? 'README.md' : 'README.ko.md', 'utf8');
       assert.ok(readme.includes(`(${link[1]})`), `${lang}: README links to the same edition`);
     }
     if (!home) assert.ok(link.index < html.indexOf('<main'), `${route}: keep self-downloads outside exported lesson text`);
+  }
+});
+
+test('the OER catalogue opens the localized guide and points to its current EPUB', () => {
+  const records = load(readFileSync('metadata.yml', 'utf8'));
+  const guides = records.filter(record => record.encoding?.some(file => file.encodingFormat === 'application/epub+zip'));
+  assert.equal(guides.length, 2, 'one catalogue record per guide language');
+  for (const [lang, download] of Object.entries(servingGuide.downloads)) {
+    const edition = lang === 'ko' ? '/ko' : '';
+    const landing = `${base}${edition}/#serving-guide`;
+    const guide = guides.find(record => record.id === landing);
+    assert.deepEqual(guide?.inLanguage, [lang], landing);
+    assert.deepEqual(guide.encoding, [{ type: 'MediaObject', encodingFormat: 'application/epub+zip', contentUrl: download }]);
+
+    const html = readFileSync(`${outputDir}${edition}/index.html`, 'utf8');
+    assert.equal(html.split(' id="serving-guide"').length, 2, landing);
+    const paragraph = html.match(/<p\b[^>]*\bid="serving-guide"[^>]*>([\s\S]*?)<\/p>/)?.[1];
+    assert.ok(paragraph?.includes(guide.name) && paragraph.includes(`href="${download}"`), landing);
+    const switcher = parseFragment(html.match(/<a\b[^>]*\bid="localeLink"[^>]*>/)[0]).childNodes[0];
+    const fragments = switcher.attrs.find(attribute => attribute.name === 'data-shared-fragments');
+    assert.ok(JSON.parse(fragments.value).includes('serving-guide'), landing);
   }
 });
 

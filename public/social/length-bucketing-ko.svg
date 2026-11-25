@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" xml:lang="ko" role="img" aria-labelledby="card-title card-description">
+<title id="card-title">길이순으로 묶으면 최대 KV 캐시도 줄어들까?</title><desc id="card-description">SmolLM2-135M으로 프롬프트를 두 개씩 처리한 뒤 측정한 프리필 KV 캐시입니다. 도착 순서에서는 배치마다 990, 900, 810 KiB를 쓰고, 길이 순서에서는 360, 810, 990 KiB를 씁니다. 패딩은 총 18자리에서 6자리로 줄고 두 경우 모두 가장 큰 배치는 990 KiB를 씁니다.</desc>
+<rect width="1200" height="630" fill="#f5f2eb"/>
+<g font-family="Noto Sans CJK KR, DejaVu Sans, sans-serif" fill="#192a30">
+<text x="58" y="85" font-size="45" font-weight="700">길이순으로 묶으면 최대 KV 캐시도 줄어들까?</text>
+<text x="60" y="143" font-size="30" fill="#4e5d61">SmolLM2-135M · FP32 · 프롬프트 여섯 개를 두 개씩 묶은 실험</text>
+<g transform="translate(60 0)">
+<rect y="183" width="526" height="349" rx="14" fill="white" stroke="#c3cec8" stroke-width="2"/>
+<text x="26" y="234" font-size="38" font-weight="700">도착 순서</text>
+<text x="26" y="281" font-size="22" fill="#4e5d61">프롬프트 길이 (토큰)</text>
+<text x="246" y="281" font-size="22" fill="#4e5d61">프리필 KV (KiB)</text>
+<text x="26" y="328" font-size="34" >3, 11</text>
+<rect x="246" y="309" width="150" height="15" rx="3" fill="#dce3de"/>
+<rect x="246" y="309" width="150" height="15" rx="3" fill="#256257"/>
+<text x="493" y="328" font-size="34" text-anchor="end" font-weight="700">990</text>
+<text x="26" y="383" font-size="34" >4, 10</text>
+<rect x="246" y="364" width="150" height="15" rx="3" fill="#dce3de"/>
+<rect x="246" y="364" width="136.36363636363637" height="15" rx="3" fill="#256257"/>
+<text x="493" y="383" font-size="34" text-anchor="end" font-weight="700">900</text>
+<text x="26" y="438" font-size="34" >5, 9</text>
+<rect x="246" y="419" width="150" height="15" rx="3" fill="#dce3de"/>
+<rect x="246" y="419" width="122.72727272727273" height="15" rx="3" fill="#256257"/>
+<text x="493" y="438" font-size="34" text-anchor="end" font-weight="700">810</text>
+<path d="M26 465H500" stroke="#c3cec8" stroke-width="2"/>
+<text x="26" y="509" font-size="29" fill="#256257" font-weight="700">세 배치의 패딩 합계 18자리</text>
+</g>
+<g transform="translate(614 0)">
+<rect y="183" width="526" height="349" rx="14" fill="white" stroke="#c3cec8" stroke-width="2"/>
+<text x="26" y="234" font-size="38" font-weight="700">길이 순서</text>
+<text x="26" y="281" font-size="22" fill="#4e5d61">프롬프트 길이 (토큰)</text>
+<text x="246" y="281" font-size="22" fill="#4e5d61">프리필 KV (KiB)</text>
+<text x="26" y="328" font-size="34" >3, 4</text>
+<rect x="246" y="309" width="150" height="15" rx="3" fill="#dce3de"/>
+<rect x="246" y="309" width="54.54545454545455" height="15" rx="3" fill="#256257"/>
+<text x="493" y="328" font-size="34" text-anchor="end" font-weight="700">360</text>
+<text x="26" y="383" font-size="34" >5, 9</text>
+<rect x="246" y="364" width="150" height="15" rx="3" fill="#dce3de"/>
+<rect x="246" y="364" width="122.72727272727273" height="15" rx="3" fill="#256257"/>
+<text x="493" y="383" font-size="34" text-anchor="end" font-weight="700">810</text>
+<text x="26" y="438" font-size="34" >10, 11</text>
+<rect x="246" y="419" width="150" height="15" rx="3" fill="#dce3de"/>
+<rect x="246" y="419" width="150" height="15" rx="3" fill="#256257"/>
+<text x="493" y="438" font-size="34" text-anchor="end" font-weight="700">990</text>
+<path d="M26 465H500" stroke="#c3cec8" stroke-width="2"/>
+<text x="26" y="509" font-size="29" fill="#256257" font-weight="700">세 배치의 패딩 합계 6자리</text>
+</g>
+<path d="M60 558H1140" stroke="#bbc8c1" stroke-width="2"/>
+<text x="60" y="601" font-size="32" font-weight="700">가장 큰 프리필 캐시 · 990 → 990 KiB</text>
+<text x="1140" y="601" font-size="21" text-anchor="end" fill="#256257">파운데이션 모델 엔지니어링 · 12.7</text>
+</g></svg>

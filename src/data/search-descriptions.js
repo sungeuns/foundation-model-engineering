@@ -198,6 +198,10 @@ export const searchDescriptions = {
     en: 'Two LLM streams average 100 ms per token, yet one pauses for 370 ms. Compare TTFT, TPOT and token gaps, then count requests that meet a serving SLO in Python.',
     ko: '두 응답 모두 평균 토큰 간격은 100ms인데 하나만 370ms 동안 멈춥니다. TTFT·TPOT와 개별 토큰 간격을 비교하고 지연 목표를 지킨 요청 수를 Python으로 계산합니다.',
   },
+  '/chapter-12/length-bucketing-lab': {
+    en: 'Pair six prompts by arrival order, then by length. Compare padding across three batches and see why the largest prefill KV cache stays the same size.',
+    ko: '프롬프트 여섯 개를 도착 순서대로 두 개씩 묶고, 길이 순으로 다시 묶습니다. 세 배치의 패딩 합계와 프리필 직후의 KV 캐시 크기를 재어 가장 큰 배치에 필요한 메모리를 비교합니다.',
+  },
   '/chapter-13/ptq-vs-qat': {
     en: 'Compare PTQ and QAT on a 3-bit grid. Round eight values by hand, check when gradients pass through, and save and reload a calibrated PyTorch layer.',
     ko: '3비트 양자화에서 값 여덟 개를 반올림하고 어느 입력에 기울기가 전달되는지 확인합니다. PyTorch로 보정한 층을 저장하고 다시 불러와 PTQ와 QAT의 차이를 살펴봅니다.',

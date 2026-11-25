@@ -1,0 +1,46 @@
+---
+import measurements from '../../../public/labs/2026-11/kv-batch-bucketing.json';
+const ko = Astro.props.lang === 'ko';
+const cases = [
+  { label: ko ? '도착순' : 'Arrival order', schedule: measurements.arrival_order },
+  { label: ko ? '길이순' : 'Length order', schedule: measurements.length_order },
+];
+---
+<figure class="padding-figure">
+  <figcaption>{ko ? '11토큰인 B와 짝을 이룬 배치' : 'The batch that contains the 11-token request B'}</figcaption>
+  <div class="cases">
+    {cases.map(({ label, schedule }) => {
+      const batch = schedule.batches.find(row => row.requests.includes('B'))!;
+      const width = Math.max(...batch.real_lengths);
+      return <section>
+        <h3>{label} · {batch.requests.join(' + ')}</h3>
+        {batch.requests.map((id, i) => <div class="matrix-row" aria-hidden="true">
+          <span>{id}</span>
+          <div class="slots" style={`--columns:${width}`}>
+            {Array.from({length: width}, (_, col) => <i class:list={['slot', {pad: col < width - batch.real_lengths[i]}]} />)}
+          </div>
+        </div>)}
+        <p class="row-label">{ko
+          ? `실제 토큰 ${batch.real_lengths.join('개 + ')}개 · 패딩 ${batch.padding_slots}칸`
+          : `${batch.real_lengths.join(' + ')} real tokens · ${batch.padding_slots} padding ${batch.padding_slots === 1 ? 'slot' : 'slots'}`}</p>
+        <p class="payload">{batch.kv_bytes / 1024} KiB</p>
+      </section>;
+    })}
+  </div>
+  <p class="figure-note">{ko ? '칠한 칸은 실제 토큰, 빗금은 왼쪽에 붙인 패딩입니다. 양쪽 모두 2 × 11칸을 저장합니다.' : 'Solid cells hold real tokens. Hatched cells are left padding. Both batches store 2 × 11 positions.'}</p>
+</figure>
+<style>
+  .padding-figure { margin: 1.5rem 0; padding: 1rem; border: 1px solid #afc3c6; border-radius: .5rem; background: #f5f9f8; color: #233f49; }
+  figcaption { font-weight: 650; font-size: 1.05rem; }
+  .cases { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); gap: .75rem 1.4rem; }
+  .cases h3 { margin: .85rem 0 .4rem; font-size: 1rem; color: #233f49; }
+  .matrix-row { display: flex; align-items: center; gap: .5rem; margin: .25rem 0; font: 600 .9rem/1.5 monospace; }
+  .slots { display: grid; flex: 1; gap: 2px; grid-template-columns: repeat(var(--columns), minmax(0, 1fr)); }
+  .slot { height: 1.1rem; background: #226b73; border: 1px solid #226b73; border-radius: 1px; }
+  .slot.pad { background: repeating-linear-gradient(135deg, transparent, transparent 3px, #aec2c1 3px, #aec2c1 4px); border-color: #899f9e; }
+  .padding-figure p { margin: .15rem 0; }
+  .row-label, .figure-note { font-size: .9rem; }
+  .payload { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .padding-figure .figure-note { margin-top: .8rem; }
+  .padding-figure:lang(ko) { word-break: keep-all; }
+</style>

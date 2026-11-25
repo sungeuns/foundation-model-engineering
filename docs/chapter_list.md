@@ -108,6 +108,7 @@
 * **12.4 Speculative Decoding:** 작은 모델로 초안을 잡고 큰 모델로 검수하여 속도를 올리는 기법.
 * **12.5 Long Context Serving:** StreamingLLM, YaRN 등 컨텍스트 윈도우 확장을 위한 시스템 최적화.
 * **12.6 Serving Policies, SLOs, and Fallbacks:** 실제 서비스에서 admission control, latency budget, fairness, 그리고 장애 시 폴백 전략을 어떻게 설계하는지 정리.
+* **12.7 Length Bucketing and Peak KV Memory:** 프롬프트 여섯 개를 도착 순서와 길이 순서로 두 개씩 묶어, 패딩이 줄어도 가장 큰 배치의 KV 캐시 크기가 같은 이유를 확인합니다.
 * **Summary:** 실제 서비스 환경에서 수만 명의 요청을 처리하기 위한 최첨단 추론 가속화 기술을 다룹니다.
 
 ### **Chapter 13: Model Compression & Quantization**

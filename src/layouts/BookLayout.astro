@@ -47,7 +47,9 @@ const homePath = getLocalePath('/', lang);
 const currentSub = chapters
   .flatMap((chapter) => chapter.subs)
   .find((sub) => currentPath === normalizePathname(getLocalePath(sub.path, lang)));
-const localeFragments = sharedLocaleFragments(currentSub?.path, modelSnapshot.models.map(model => model.id));
+const localeFragments = isHomePage
+  ? ['serving-guide', 'book-contents']
+  : sharedLocaleFragments(currentSub?.path, modelSnapshot.models.map(model => model.id));
 type Section = { label: string; href: string };
 const outline: (Section & { children: Section[] })[] = [];
 let currentSection: Section[] | undefined;

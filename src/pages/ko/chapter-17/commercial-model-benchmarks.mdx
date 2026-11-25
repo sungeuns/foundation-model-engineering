@@ -121,6 +121,8 @@ InclusionAI는 11월 23일 가중치를 MIT 라이선스로 공개했다. 모델
 
 Alibaba는 11월 11일 Token Plan 프리뷰에 이어 11월 16일 **Qwen4-Max** 를 QwenCloud의 API와 Token Plan, QwenWork, QwenStudio에서 정식 제공한다고 발표했다. 가중치 공개 계획은 Qwen4 계열의 더 작은 모델에 관한 것이다. [[14]](#ref-14) [[130]](#ref-130)
 
+**전환 일정(2026-11-25 확인).** Alibaba는 싱가포르 Token Plan에서 `qwen4-max-preview`의 제공을 11월 25일 오전 10시(UTC+8), 한국 시각 오전 11시에 끝낼 계획이라고 공지했다. 정식 모델 ID는 `qwen4-max`다. 야간 평가 작업에서 ID를 바꾸고 프롬프트를 배치로 제출한다고 해보자. Model Studio 문서에 따르면 정식 모델의 배치 추론은 베이징 리전에서 지원하고 싱가포르 리전에서는 지원하지 않는다. 평가를 다시 실행할 때는 모델 ID와 함께 리전과 요청 방식도 기록해야 한다. [[134]](#ref-134) [[135]](#ref-135)
+
 프로토콜은 읽을 수 있는 추론 요약과 이후 도구 턴에 필요한 암호화된 추론 이력을 구분한다. 요약문으로 그 이력을 대신할 수 없다 [[14]](#ref-14) [[15]](#ref-15).
 
 **Tencent Hy4** 를 배포할 때는 두 날짜를 구분해야 한다. Tencent는 11월 4일 TokenHub 등에서 호스팅 서비스를 시작했다고 발표했고, 11월 20일에는 지시 튜닝을 거친 BF16 체크포인트를 공개했다. AA는 이 체크포인트를 연결하고, 평가에 사용한 서비스에서 지수 35점과 과업당 1.03달러를 보고했다. 가중치를 내려받아 운영할 팀이라면 GPU 사용 시간을 따로 추정해야 한다. 라이선스도 살펴볼 필요가 있다. Tencent Hy 라이선스 10조는 모델 호스팅 사업자가 별도의 서면 계약을 맺어야 하는 조건과 내부 용도로만 사용하는 경우의 예외를 명시한다. [[118]](#ref-118) [[119]](#ref-119) [[120]](#ref-120) [[121]](#ref-121) [[122]](#ref-122)
@@ -338,3 +340,5 @@ Sol 요청 두 건에 입력 544,000토큰과 과금 대상 출력 20,000토큰�
 131. <a id="ref-131"></a>[Baidu, ERNIE 5.5 Flash Preview model card and checkpoint variants](https://huggingface.co/baidu/ERNIE-5.5-Flash-Preview/blob/ace1100dcde7bf4eb06add6ae11ce4f43a11ddfe/README.md).
 132. <a id="ref-132"></a>[OpenAI, 백그라운드 처리와 완료 목표 시간](https://developers.openai.com/api/docs/guides/background).
 133. <a id="ref-133"></a>[OpenAI, API 요금과 백그라운드 할인 적용 조건](https://developers.openai.com/api/docs/pricing).
+134. <a id="ref-134"></a>[Alibaba Cloud Model Studio, Qwen4-Max Token Plan 프리뷰 일정과 접속 경로](https://www.alibabacloud.com/help/en/model-studio/qwen4-max-preview).
+135. <a id="ref-135"></a>[Alibaba Cloud Model Studio, Qwen4-Max 정식 모델 ID와 리전별 지원 기능](https://www.alibabacloud.com/help/en/model-studio/qwen4-max).

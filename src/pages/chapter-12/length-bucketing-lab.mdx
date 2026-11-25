@@ -1,0 +1,81 @@
+---
+layout: ../../layouts/BookLayout.astro
+title: "12.7 Length Bucketing and Peak KV Memory"
+lang: "en"
+---
+
+import { withBasePath } from '../../utils/paths.js';
+import BatchPaddingFigure from '../../components/chapter-12/BatchPaddingFigure.astro';
+
+# 12.7 Length Bucketing and Peak KV Memory
+
+Six prompts are waiting. Your inference worker can read two at a time. An engineer suggests pairing prompts of similar length so the short ones spend less space on padding. You try it. The number of padding positions falls from 18 to 6. **The largest key/value cache still takes 990 KiB.** Where did the saving go?
+
+## Follow the request that sets the peak
+
+The six tokenized prompts arrive in the order A through F, with lengths **3, 11, 4, 10, 5 and 9**. Take the first two, pad the shorter one on the left, and a dense batch has two rows of width 11. It stores 22 positions for 14 real tokens. The attention mask hides the eight padding positions from the query. It does not shorten the rectangular key and value tensors.
+
+Now pair B, the 11-token prompt, with D, the 10-token prompt. Only one position is padding. The rectangle still has two rows of width 11. As long as the longest prompt is in a full batch of two, its partner cannot change that shape.
+
+<BatchPaddingFigure lang="en" />
+
+## Look at all three measurements
+
+We ran the same six prompts on SmolLM2-135M in CPU FP32. Each pair finished prefill and its cache was released before the next pair ran. Prefill here means the forward pass that reads the prompt, before any generated token is fed back. For each batch we counted the bytes in every layer's key and value tensors.
+
+| Pairing policy | Pairs in execution order | KV payload after each prefill | Padding positions across the three pairs |
+| --- | --- | --- | --- |
+| Arrival order | A+B, C+D, E+F | 990, 900, 810 KiB | 8 + 6 + 4 = **18** |
+| Increasing prompt length | A+C, E+F, D+B | 360, 810, 990 KiB | 1 + 4 + 1 = **6** |
+
+Add the three measurements and the sum falls from 2,700 to 2,160 KiB. The 540 KiB difference is twelve saved padding positions at 45 KiB each. That sum describes three different moments. For the largest **simultaneously live KV payload**, take the maximum of each row, which is 990 KiB either way. The experiment counts tensor contents. It does not measure process memory, allocator reservations, elapsed time or throughput.
+
+Here is the arithmetic without model dependencies. The list has an even number of prompts and every batch is full. Change the longest length or swap two arrivals to see which quantities move.
+
+```python
+lengths = [3, 11, 4, 10, 5, 9]
+kib_per_position = 45
+
+for order in (lengths, sorted(lengths)):
+    pairs = list(zip(order[::2], order[1::2], strict=True))
+    slots = [2 * max(pair) for pair in pairs]
+    padding = sum(slots) - sum(order)
+    payloads = [n * kib_per_position for n in slots]
+    print(padding, sum(payloads), max(payloads))
+# 18 2700 990
+#  6 2160 990
+```
+
+## Reproduce the CPU measurement
+
+<a href={withBasePath('/labs/kv_batch_bucketing.py')} download="kv_batch_bucketing.py">Download the Python experiment</a> or <a href={withBasePath('/labs/2026-11/kv-batch-bucketing.json')}>inspect its recorded inputs and measurements</a>. The experiment uses a pinned tokenizer, six English film-review snippets, left padding, and per-request position IDs. Run alone, A through F chose next-token IDs 5118, 30, 28, 617, 284 and 30. Both batching policies reproduced all six greedy choices. The file includes the tested environment and setup commands.
+
+The model configuration gives 30 layers, three KV heads, and 64 coordinates per head (576 hidden coordinates divided by nine query heads). Loading the weights in FP32 gives four bytes per cache element in this run. One position therefore requires $2 \times 30 \times 3 \times 64 \times 4 = 46{,}080$ bytes, or 45 KiB. The factor of two counts keys and values. [[1]](#ref-1)
+
+## When would you change the policy?
+
+For an offline job, all six lengths are known before pairing, so no request waits for a future arrival to form a bucket. For an interactive service, waiting for a similar-length partner can delay the first token. Measure that delay on real arrival traces before choosing how long a request may wait. If the limiting case is the largest rectangular batch, reducing that batch to one row would lower its KV payload, at the expense of changing the amount of work done together.
+
+A paged serving engine can allocate blocks per request. Its memory use depends on block allocation and sharing, so these dense rectangles cannot establish the savings for that engine. The [paged allocation exercise](../paged-attention-vllm/#paged-kv-addresses) follows the corresponding block addresses. [[2]](#ref-2)
+
+## Quizzes
+
+<details>
+<summary>Quiz 1: B is paired with A and then with D. Why do both pairs need 990 KiB?</summary>
+*B fixes the row width at 11. Both pairs allocate 22 positions at 45 KiB each. The number of positions that carry useful tokens changes.*
+</details>
+
+<details>
+<summary>Quiz 2: Why would reserving 2,160 KiB for the sorted run overstate its peak KV payload?</summary>
+*That number adds measurements from three batches whose caches have separate lifetimes. Only one pair is resident at a time in this experiment, so the maximum is 990 KiB.*
+</details>
+
+<details>
+<summary>Quiz 3: Suppose a production trace shows fewer padding positions after bucketing but a longer time to first token. How could both occur?</summary>
+*The scheduler can form tighter rectangles by waiting for suitable partners. Measure time spent in the queue separately from the prefill operation, and examine long-waiting requests before extending the waiting limit.*
+</details>
+
+## References
+
+1. <a id="ref-1"></a>Hugging Face. [SmolLM2-135M model configuration at revision 93efa2f](https://huggingface.co/HuggingFaceTB/SmolLM2-135M/resolve/93efa2f097d58c2a74874c7e644dbc9b0cee75a2/config.json).
+2. <a id="ref-2"></a>Kwon, W., et al. (2023). [Efficient Memory Management for Large Language Model Serving with PagedAttention](https://arxiv.org/abs/2309.06180).

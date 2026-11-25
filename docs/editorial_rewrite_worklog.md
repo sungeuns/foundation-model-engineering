@@ -326,6 +326,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 12.4 | `/chapter-12/speculative-decoding` | Inspected 2026-11-25 | a5f93ea8411bab0fe68bf277224f8f19f111ac0f0fd73f6b4eda75739a8990b5 | 61986787b62bf6d99f59ab08a66d2ea6312e472faea94ded13c4a7d627d03cc4 |
 | 12.5 | `/chapter-12/long-context-serving` | Inspected 2026-11-15 | 82f413a5a2e2731fe01603c7036b42dee434b010cc76410eba7e0807d73742e8 | 59933e962b9f0bef0f8b50e9889ec628fd92ade6d7d0fb91636981793bd83052 |
 | 12.6 | `/chapter-12/serving-policies-slos-and-fallbacks` | Inspected 2026-11-25 | 8222c69fc753a073f358acef599ad825d1193693daa931acbd774081c82f2b46 | 35067207b0e514380e54bb373c7b545a075fc1999f3e039eb327edb1e13ba1a5 |
+| 12.7 | `/chapter-12/length-bucketing-lab` | Inspected 2026-11-25 | 4e9dfc6212c4de7350b847509baa66af85ed428aa492bf524eb10d9358ff46ec | 226d30aa75baf02db770ebada6ff941c5791dac23096079073d28599a61a9af1 |
 | 13.1 | `/chapter-13/ptq-vs-qat` | Inspected 2026-11-25 | eb93d493239246214375730e26db3328bc55104f01777c0ff0ebb9fc5bf7b5ae | 024687ff4956de8d9b50358821335b863bdc65e10edfdaf7f6a6ab5db3357bba |
 | 13.2 | `/chapter-13/quantization-methods` | Inspected 2026-11-25 | f128eb1a2a438226a64a9e9f82f4eea316a0ddf62f38c32553657fbd9dad6944 | d2ef6a2e7b3349d2fa4a93ef0d79356511c79d4939a24bd5913965064c16bdaf |
 | 13.3 | `/chapter-13/weight-sparsification` | Mechanical only | cef7eea23f21faf8a4719bc13b2f3e28a8743ba0230c67b01438dbac642a6530 | 4d1291c234050b189b7f5c66be305966e3fadd57ef521d171ca9283131987aed |
@@ -354,7 +355,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 17.3 | `/chapter-17/elo-rating-and-leaderboards` | Inspected 2026-11-15 | 14f931df5e4641c576c1763d446b2c663d1f282abf438767e5a330d49b31a9b9 | 1e78f5819e5452372109f72327dad0f7831b3b9ce66750000c9378a906744c30 |
 | 17.4 | `/chapter-17/contamination-issues` | Mechanical only | 38a0cad52c7504804a57a8cc2deed94a3ac2fe68f7648809261abad1cf6b4fa5 | ad7b87426dcdde29f69a6921696a462359e7681d7d3b5ee5c11f3d80ec0a71c7 |
 | 17.5 | `/chapter-17/production-evaluation-and-release-gates` | Inspected 2026-11-25 | d2917516ef75c2ede2cd4db285a221090b09f181104e7112bd388f427ecc5298 | cb7d670ce7898fe43516e3cc8a38e295b6e24bba8e3a65c7579c61f3e03b9fb3 |
-| 17.6 | `/chapter-17/commercial-model-benchmarks` | Mechanical only | c653890a6e180e3621e2b609fde35718b7e3d2c92d122abfbcbc6b09f3ff9907 | 49dfce830372ade43ca799603dd721c6f14f29e94f82a3dc0b4241356c433e65 |
+| 17.6 | `/chapter-17/commercial-model-benchmarks` | Mechanical only | 4fb00ee63572693eb71b41525eaf0d358e2e3e9d45c8cff72dc913f867db0f98 | 3f1e3cae0d51694eabafcaefc17ad55b9098cb2da71c4ce18f18d9c16ca24793 |
 | 17.7 | `/chapter-17/experimental-design-and-uncertainty` | Inspected 2026-11-25 | a49f4705d53ea21959540b6d9cbaade29cdd63310712a6f8e2d67eb9288746cc | 8040249564bacddeebe7eda07ece30695e580990c258f0393284df9e3d07735f |
 | 18.1 | `/chapter-18/red-teaming` | Mechanical only | fa815b07490b4a1039a2e91d2c98e9f1f212d6479f534afa5f09020cc8f93598 | 5aa628372d20829e842ce6b3fad0133fee7c40e63c345e76f0b823b351df6f59 |
 | 18.2 | `/chapter-18/jailbreaking-and-defense` | Mechanical only | caff93966e1d1a925120d696bf37a09fa46cc63cd9378c818ac9f1d489348afd | 165303014a71dfa4ec8e28c0ac7f38712f5d97fbcd551510aa5539cb33c33ac1 |
@@ -733,3 +734,9 @@ Checked both §12.1 manuscripts against the pinned SmolLM2-135M configuration an
 Revised §1.3 in both languages. Eight two-token film reviews supply the training pairs. A separate observation scores 1.386 nats before adding one independent training record and 0.916 afterward. The Python example and browser exercise use the same counts. The supervised and reward examples use the same review to teach a different task.
 
 In §4.5, checked the two stored parts of the DeepSeek-V3 MLA cache against the report and compared each incremental output with explicitly constructed keys and values on CPU. In §7.4, checked the new online-softmax trace with the CPU FP64 recurrence. The example row gives 8 at both tile widths. The unweighted mean of tile outputs changes from 6 to 8.4. These were focused reviews of the attention examples.
+
+### November 25, 2026 — Model access and the serving-guide catalogue
+
+In §17.6, checked Alibaba Cloud's Singapore Token Plan notice for the Qwen4-Max preview retirement and the regular model's regional batch-inference documentation. The 45 evaluation profiles retain their November 24 snapshot. For the serving guide, matched the two catalogue download records to the revised EPUBs and their language-specific landing links.
+
+Read both §12.7 manuscripts and checked each batch against the recorded SmolLM2-135M tensor measurements. Three independent CPU runs produced the same JSON. Both editions' short Python example reproduced 18 and 6 padding slots, with the same 990 KiB largest prefill. Verified both diagrams, download bytes, quiz controls, alternate languages, and both share images at 320px and 1280px. The chapter compares three separate prefill snapshots. It does not infer a throughput or latency improvement.

@@ -8,6 +8,8 @@
 
 [![24 GiB가 남은 예제에서 프롬프트 9개는 22.5 GiB, 10개는 25 GiB, 최대 길이까지 자란 요청 9개는 28.125 GiB입니다.](public/social/kv-budget-ko.png)](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-12/kv-cache-management/?kv=1&batch=9&sequence=8192&generated=2048&layers=80&heads=8&dimension=128&precision=2&budget=24#kv-calculator)
 
+[길이순으로 묶으면 패딩이 18칸에서 6칸으로 줄어드는데, 최대 KV 캐시는 왜 그대로 990 KiB일까요?](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-12/length-bucketing-lab/) 프롬프트 여섯 개로 측정값을 재현할 수 있습니다.
+
 ## 궁금한 문제부터 읽어보세요
 
 | 궁금한 문제 | 읽을 곳 | 직접 확인할 내용 |

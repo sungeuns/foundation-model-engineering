@@ -8,6 +8,8 @@ A free textbook on training, serving, and evaluating foundation models. Work thr
 
 [![With 24 GiB available, nine prompts take 22.5 GiB, ten take 25 GiB, and nine requests at their full length take 28.125 GiB.](public/social/kv-budget-en.png)](https://sungeuns.github.io/foundation-model-engineering/chapter-12/kv-cache-management/?kv=1&batch=9&sequence=8192&generated=2048&layers=80&heads=8&dimension=128&precision=2&budget=24#kv-calculator)
 
+[Why did length bucketing cut padding from 18 positions to 6 while peak KV stayed at 990 KiB?](https://sungeuns.github.io/foundation-model-engineering/chapter-12/length-bucketing-lab/) Follow six prompts through three CPU batches and reproduce the measurements.
+
 ## Start with one question
 
 | Your question | Start here | What you can do |

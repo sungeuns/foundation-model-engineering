@@ -1,0 +1,173 @@
+{
+  "model": "HuggingFaceTB/SmolLM2-135M",
+  "revision": "93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
+  "python": "3.12.14",
+  "torch": "2.15.0+cpu",
+  "transformers": "5.24.1",
+  "machine": "x86_64",
+  "cpu_threads": 1,
+  "dtype": "torch.float32",
+  "layers": 30,
+  "kv_heads": 3,
+  "head_dim": 64,
+  "solo_requests": {
+    "A": {
+      "text": "The film was",
+      "length": 3,
+      "greedy_next_id": 5118,
+      "kv_bytes": 138240
+    },
+    "B": {
+      "text": "The film starts with two old friends meeting at a station",
+      "length": 11,
+      "greedy_next_id": 30,
+      "kv_bytes": 506880
+    },
+    "C": {
+      "text": "The plot moves slowly",
+      "length": 4,
+      "greedy_next_id": 28,
+      "kv_bytes": 184320
+    },
+    "D": {
+      "text": "The film tells a quiet story about three lost friends",
+      "length": 10,
+      "greedy_next_id": 617,
+      "kv_bytes": 460800
+    },
+    "E": {
+      "text": "The final scene felt rushed",
+      "length": 5,
+      "greedy_next_id": 284,
+      "kv_bytes": 230400
+    },
+    "F": {
+      "text": "The music brought the two main characters to life",
+      "length": 9,
+      "greedy_next_id": 30,
+      "kv_bytes": 414720
+    }
+  },
+  "arrival_order": {
+    "batches": [
+      {
+        "requests": [
+          "A",
+          "B"
+        ],
+        "real_lengths": [
+          3,
+          11
+        ],
+        "padding_slots": 8,
+        "key_bytes": 506880,
+        "value_bytes": 506880,
+        "kv_bytes": 1013760,
+        "greedy_next_ids": [
+          5118,
+          30
+        ]
+      },
+      {
+        "requests": [
+          "C",
+          "D"
+        ],
+        "real_lengths": [
+          4,
+          10
+        ],
+        "padding_slots": 6,
+        "key_bytes": 460800,
+        "value_bytes": 460800,
+        "kv_bytes": 921600,
+        "greedy_next_ids": [
+          28,
+          617
+        ]
+      },
+      {
+        "requests": [
+          "E",
+          "F"
+        ],
+        "real_lengths": [
+          5,
+          9
+        ],
+        "padding_slots": 4,
+        "key_bytes": 414720,
+        "value_bytes": 414720,
+        "kv_bytes": 829440,
+        "greedy_next_ids": [
+          284,
+          30
+        ]
+      }
+    ],
+    "padding_slots": 18,
+    "sum_prefill_kv_bytes": 2764800,
+    "largest_batch_prefill_kv_bytes": 1013760
+  },
+  "length_order": {
+    "batches": [
+      {
+        "requests": [
+          "A",
+          "C"
+        ],
+        "real_lengths": [
+          3,
+          4
+        ],
+        "padding_slots": 1,
+        "key_bytes": 184320,
+        "value_bytes": 184320,
+        "kv_bytes": 368640,
+        "greedy_next_ids": [
+          5118,
+          28
+        ]
+      },
+      {
+        "requests": [
+          "E",
+          "F"
+        ],
+        "real_lengths": [
+          5,
+          9
+        ],
+        "padding_slots": 4,
+        "key_bytes": 414720,
+        "value_bytes": 414720,
+        "kv_bytes": 829440,
+        "greedy_next_ids": [
+          284,
+          30
+        ]
+      },
+      {
+        "requests": [
+          "D",
+          "B"
+        ],
+        "real_lengths": [
+          10,
+          11
+        ],
+        "padding_slots": 1,
+        "key_bytes": 506880,
+        "value_bytes": 506880,
+        "kv_bytes": 1013760,
+        "greedy_next_ids": [
+          617,
+          30
+        ]
+      }
+    ],
+    "padding_slots": 6,
+    "sum_prefill_kv_bytes": 2211840,
+    "largest_batch_prefill_kv_bytes": 1013760
+  }
+}

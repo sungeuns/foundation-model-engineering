@@ -71,6 +71,16 @@ export const socialCards = {
       alt: '두 예시 응답에서 토큰 다섯 개가 요청 후 100~500ms 사이에 도착합니다. 둘 다 첫 토큰 지연과 이후 평균 토큰 간격이 100ms입니다. A에서는 토큰이 100ms마다 도착합니다. B에서는 토큰 네 개가 10ms 간격으로 도착한 뒤 마지막 토큰까지 370ms를 기다립니다.',
     },
   },
+  '/chapter-12/length-bucketing-lab': {
+    en: {
+      image: '/social/length-bucketing-en.png',
+      alt: 'Measured SmolLM2-135M prefill KV cache for three pairs of prompts. In arrival order the pairs use 990, 900 and 810 KiB. Grouped by length they use 360, 810 and 990 KiB. Padding falls from 18 positions to 6. The largest pair uses 990 KiB in both orders.',
+    },
+    ko: {
+      image: '/social/length-bucketing-ko.png',
+      alt: 'SmolLM2-135M으로 프롬프트를 두 개씩 처리한 뒤 측정한 프리필 KV 캐시입니다. 도착 순서에서는 배치마다 990, 900, 810 KiB를 쓰고, 길이 순서에서는 360, 810, 990 KiB를 씁니다. 패딩은 총 18자리에서 6자리로 줄고 두 경우 모두 가장 큰 배치는 990 KiB를 씁니다.',
+    },
+  },
   '/chapter-14/lexical-to-semantic-search': {
     en: {
       image: '/social/lexical-dense-en.png',

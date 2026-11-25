@@ -1,4 +1,4 @@
-# OERSI records for the textbook, CPU notebook labs and three-lesson serving guide in English and Korean.
+# OERSI records for the textbook, CPU experiments and serving guide in English and Korean.
 - "@context": https://schema.org/
   type: LearningResource
   creativeWorkStatus: Published
@@ -111,7 +111,7 @@
 - "@context": https://schema.org/
   type: LearningResource
   creativeWorkStatus: Published
-  id: https://github.com/sungeuns/foundation-model-engineering/releases/download/serving-guide-2026-11/llm-serving-en.epub
+  id: https://sungeuns.github.io/foundation-model-engineering/#serving-guide
   name: LLM Serving in Practice
   description: >-
     Three lessons from Foundation Model Engineering in a reflowable English EPUB.
@@ -136,7 +136,7 @@
   encoding:
     - type: MediaObject
       encodingFormat: application/epub+zip
-      contentUrl: https://github.com/sungeuns/foundation-model-engineering/releases/download/serving-guide-2026-11/llm-serving-en.epub
+      contentUrl: https://github.com/sungeuns/foundation-model-engineering/releases/download/serving-guide-2026-11/llm-serving-en-r2.epub
   isPartOf:
     - type: LearningResource
       id: https://sungeuns.github.io/foundation-model-engineering/
@@ -155,7 +155,7 @@
 - "@context": https://schema.org/
   type: LearningResource
   creativeWorkStatus: Published
-  id: https://github.com/sungeuns/foundation-model-engineering/releases/download/serving-guide-2026-11/llm-serving-ko.epub
+  id: https://sungeuns.github.io/foundation-model-engineering/ko/#serving-guide
   name: LLM 서빙 실전
   description: >-
     파운데이션 모델 엔지니어링에서 서빙을 다루는 세 절을 모은 한국어 EPUB입니다.
@@ -179,7 +179,7 @@
   encoding:
     - type: MediaObject
       encodingFormat: application/epub+zip
-      contentUrl: https://github.com/sungeuns/foundation-model-engineering/releases/download/serving-guide-2026-11/llm-serving-ko.epub
+      contentUrl: https://github.com/sungeuns/foundation-model-engineering/releases/download/serving-guide-2026-11/llm-serving-ko-r2.epub
   isPartOf:
     - type: LearningResource
       id: https://sungeuns.github.io/foundation-model-engineering/ko/
@@ -256,6 +256,55 @@
     - type: MediaObject
       encodingFormat: application/x-ipynb+json
       contentUrl: https://sungeuns.github.io/foundation-model-engineering/labs/kv-cache-payload-ko.ipynb
+  isPartOf:
+    - type: LearningResource
+      id: https://sungeuns.github.io/foundation-model-engineering/ko/
+      name: 파운데이션 모델 엔지니어링
+
+- "@context": https://schema.org/
+  type: LearningResource
+  creativeWorkStatus: Published
+  id: https://sungeuns.github.io/foundation-model-engineering/chapter-12/length-bucketing-lab/
+  name: Length Bucketing and Peak KV Memory
+  description: >-
+    Measure the key and value tensors of six prompts on a CPU. Pair them by
+    arrival order and by length, account for the padding in each batch, and
+    explain how the largest cache stays at 990 KiB. Includes a standard-library
+    calculation, a standalone PyTorch experiment and its recorded measurements.
+  inLanguage: [en]
+  creator:
+    - type: Person
+      givenName: Seongeun
+      familyName: So
+  license: https://opensource.org/license/mit
+  educationalLevel: [https://w3id.org/kim/educationalLevel/level_A]
+  learningResourceType: [https://w3id.org/kim/hcrt/experiment]
+  about: [https://w3id.org/kim/hochschulfaechersystematik/n079]
+  keywords: [model serving, prompt length, padding, KV cache]
+  isPartOf:
+    - type: LearningResource
+      id: https://sungeuns.github.io/foundation-model-engineering/
+      name: Foundation Model Engineering
+
+- "@context": https://schema.org/
+  type: LearningResource
+  creativeWorkStatus: Published
+  id: https://sungeuns.github.io/foundation-model-engineering/ko/chapter-12/length-bucketing-lab/
+  name: 길이별 배칭과 KV 캐시 최대 사용량
+  description: >-
+    프롬프트 여섯 건을 도착순과 길이순으로 묶어 CPU에서 키와 값 텐서를 측정합니다.
+    배치별 패딩이 줄어도 가장 큰 캐시가 990 KiB로 유지되는 이유를 계산할 수 있습니다.
+    파이썬 표준 라이브러리 예제와 PyTorch 실측 코드, 측정 결과를 제공합니다.
+  inLanguage: [ko]
+  creator:
+    - type: Person
+      givenName: Seongeun
+      familyName: So
+  license: https://opensource.org/license/mit
+  educationalLevel: [https://w3id.org/kim/educationalLevel/level_A]
+  learningResourceType: [https://w3id.org/kim/hcrt/experiment]
+  about: [https://w3id.org/kim/hochschulfaechersystematik/n079]
+  keywords: [모델 서빙, 프롬프트 길이, 패딩, KV 캐시]
   isPartOf:
     - type: LearningResource
       id: https://sungeuns.github.io/foundation-model-engineering/ko/

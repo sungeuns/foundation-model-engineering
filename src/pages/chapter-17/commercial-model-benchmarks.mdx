@@ -121,6 +121,8 @@ InclusionAI released the MIT-licensed weights on November 23. The model card rep
 
 **Qwen4-Max** launched on November 16 through QwenCloud (API and Token Plan), QwenWork and QwenStudio, following the November 11 Token Plan preview. Alibaba announced plans to release weights for smaller Qwen4 models. [[14]](#ref-14) [[130]](#ref-130)
 
+**Migration note, as of 2026-11-25.** For the Token Plan served from Singapore, Alibaba scheduled the end of `qwen4-max-preview` for November 25 at 10:00 UTC+8 (11:00 in Seoul). The production model ID is `qwen4-max`. Suppose an overnight evaluation switches to that ID and submits its prompts as a batch. Model Studio lists batch inference for the production model in Beijing and marks it unsupported in Singapore. Record the model ID, region and request mode when you rerun the evaluation. [[134]](#ref-134) [[135]](#ref-135)
+
 The protocol distinguishes readable reasoning summaries from encrypted reasoning history required by later tool turns; a summary is not a substitute for that history [[14]](#ref-14) [[15]](#ref-15).
 
 **Tencent Hy4** has two release dates that matter for deployment. On November 4, Tencent announced hosted access through TokenHub and other products. On November 20 it published the BF16 instruction-tuned checkpoint. AA links that checkpoint and reports 35 points and USD 1.03 per task for its evaluated service. A team downloading the weights must still estimate its own GPU hours. It must also check the Tencent Hy License. Section 10 describes when a model-as-a-service operator needs a separate written license and specifies an exception for solely internal use. [[118]](#ref-118) [[119]](#ref-119) [[120]](#ref-120) [[121]](#ref-121) [[122]](#ref-122)
@@ -338,3 +340,5 @@ Keep weights or API revision, tokenizer/template, quantization, runtime, generat
 131. <a id="ref-131"></a>[Baidu, ERNIE 5.5 Flash Preview model card and checkpoint variants](https://huggingface.co/baidu/ERNIE-5.5-Flash-Preview/blob/ace1100dcde7bf4eb06add6ae11ce4f43a11ddfe/README.md).
 132. <a id="ref-132"></a>[OpenAI, Background mode and completion windows](https://developers.openai.com/api/docs/guides/background).
 133. <a id="ref-133"></a>[OpenAI, API pricing and eligible background requests](https://developers.openai.com/api/docs/pricing).
+134. <a id="ref-134"></a>[Alibaba Cloud Model Studio, Qwen4-Max Token Plan preview schedule and endpoint](https://www.alibabacloud.com/help/en/model-studio/qwen4-max-preview).
+135. <a id="ref-135"></a>[Alibaba Cloud Model Studio, Qwen4-Max production model ID and capabilities by region](https://www.alibabacloud.com/help/en/model-studio/qwen4-max).
