@@ -357,7 +357,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 17.3 | `/chapter-17/elo-rating-and-leaderboards` | Inspected 2026-11-25 | 682ffbd445359a82ff596b99a004dfc2ebea6fe1a166e7a912c6b8c52be21afd | a7882a55e09b6529bd4355425f44b3f8a640dd32c01a1706e39756616a36d22b |
 | 17.4 | `/chapter-17/contamination-issues` | Mechanical only | 38a0cad52c7504804a57a8cc2deed94a3ac2fe68f7648809261abad1cf6b4fa5 | ad7b87426dcdde29f69a6921696a462359e7681d7d3b5ee5c11f3d80ec0a71c7 |
 | 17.5 | `/chapter-17/production-evaluation-and-release-gates` | Inspected 2026-11-25 | d2917516ef75c2ede2cd4db285a221090b09f181104e7112bd388f427ecc5298 | cb7d670ce7898fe43516e3cc8a38e295b6e24bba8e3a65c7579c61f3e03b9fb3 |
-| 17.6 | `/chapter-17/commercial-model-benchmarks` | Inspected 2026-11-25 | 7140ecd8aab7049d61bbbb3b77e77ed2fe983448afaf5a84cf8af4edb02e7af4 | ff3a0da4fdaeb7b9955ab69ad673190ffbdb9bfb50af570ac0269e7636f6eeb4 |
+| 17.6 | `/chapter-17/commercial-model-benchmarks` | Inspected 2026-11-25 | 15f948d7aeb3f3d5f2be34a53884509ec092a460abb6976579f15a661c5814ec | 0e6ee462d8e9fabb624a3f43cdb7ec916fa159115632cfb5386f4fa984c55069 |
 | 17.7 | `/chapter-17/experimental-design-and-uncertainty` | Inspected 2026-11-25 | a49f4705d53ea21959540b6d9cbaade29cdd63310712a6f8e2d67eb9288746cc | 8040249564bacddeebe7eda07ece30695e580990c258f0393284df9e3d07735f |
 | 18.1 | `/chapter-18/red-teaming` | Mechanical only | fa815b07490b4a1039a2e91d2c98e9f1f212d6479f534afa5f09020cc8f93598 | 5aa628372d20829e842ce6b3fad0133fee7c40e63c345e76f0b823b351df6f59 |
 | 18.2 | `/chapter-18/jailbreaking-and-defense` | Mechanical only | caff93966e1d1a925120d696bf37a09fa46cc63cd9378c818ac9f1d489348afd | 165303014a71dfa4ec8e28c0ac7f38712f5d97fbcd551510aa5539cb33c33ac1 |

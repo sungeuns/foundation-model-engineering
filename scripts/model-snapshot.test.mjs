@@ -106,3 +106,25 @@ test('GPT-6.2 launch access and benchmark profiles refer to the right products',
     assert.equal(row.evaluationProfile, `${row.model} (Max)`);
   }
 });
+
+test('the bilingual GPT-6.2 request examples send the same case with each endpoint’s effort field', () => {
+  for (const prefix of ['', 'ko/']) {
+    const source = readFileSync(`src/pages/${prefix}chapter-17/commercial-model-benchmarks.mdx`, 'utf8');
+    const example = source.split('<a id="gpt-62-api-requests"></a>')[1].split('\n### ')[0];
+    const blocks = [...example.matchAll(/^```json\n([\s\S]*?)\n```$/gm)].map(match => JSON.parse(match[1]));
+    assert.equal(blocks.length, 2);
+    const [chat, responses] = blocks;
+    assert.equal(chat.model, 'gpt-6.2-sol');
+    assert.equal(responses.model, chat.model);
+    assert.deepEqual(chat.messages, [{ role: 'user', content: responses.input }]);
+    assert.ok(responses.input.includes('XQ-17'));
+    assert.equal(chat.reasoning_effort, 'medium');
+    assert.deepEqual(responses.reasoning, { effort: chat.reasoning_effort });
+    for (const [body, unsupported] of [[chat, 'reasoning'], [responses, 'reasoning_effort']]) {
+      for (const key of [unsupported, 'temperature', 'top_p', 'top_logprobs', 'logprobs']) {
+        assert.ok(!Object.hasOwn(body, key), key);
+      }
+    }
+    assert.ok(!responses.include?.includes('message.output_text.logprobs'));
+  }
+});

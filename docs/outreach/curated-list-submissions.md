@@ -45,7 +45,7 @@ The English and Korean self-attention worksheets subsequently brought the reposi
 
 After the two PDFs were deployed at commit `bbdcde9`, the OERSI importer accepted one refresh and public search returned all twelve resource IDs. Each worksheet’s public search card and detail page opened the relevant edition, where the PDF download returned the correct file. [Korean worksheet in OERSI](https://oersi.org/resources/aHR0cHM6Ly9zdW5nZXVucy5naXRodWIuaW8vZm91bmRhdGlvbi1tb2RlbC1lbmdpbmVlcmluZy9rby9jaGFwdGVyLTMvc2VsZi1hdHRlbnRpb24tbWF0aGVtYXRpY3MvI2F0dGVudGlvbi13ZWlnaHQtZXhhbXBsZQ==)
 
-The receipt experiment adds English and Korean student activities to the repository metadata. Each points to a standalone reading page and a ZIP with original model inputs, CPU code and measured answers. Before publication, the official importer and schema accepted all fourteen records and the public index contained the previous twelve. [English experiment](https://sungeuns.github.io/foundation-model-engineering/articles/receipt-grounding/) · [Korean experiment](https://sungeuns.github.io/foundation-model-engineering/ko/articles/receipt-grounding/)
+The receipt experiment adds English and Korean student activities to the repository metadata. Each points to a standalone reading page and a ZIP with original model inputs, CPU code and measured answers. After deployment, the public OERSI index listed all fourteen resources. In a mobile browser, both new search results led to the corresponding article and the 177,216-byte ZIP. The downloaded SHA-256 was `2f9c72621654652257cc3664cc9e304e0bf6a2d8820f643a1ae7e491f2c2f644` in both editions. [English experiment](https://sungeuns.github.io/foundation-model-engineering/articles/receipt-grounding/) · [Korean experiment](https://sungeuns.github.io/foundation-model-engineering/ko/articles/receipt-grounding/)
 
 ## 学习周刊
 
@@ -76,3 +76,7 @@ On November 25, 2026, the DevLog directory listed 25 sources. The book was absen
 ## Existing Reddit introduction
 
 On November 25, 2026, the author's earlier r/learnmachinelearning post was still publicly readable. Both its link card and its in-text link opened the English edition. [Original Reddit post](https://www.reddit.com/r/learnmachinelearning/comments/1t79hjc/i_built_an_opensource_textbook_for_learning/).
+
+## Roboflow Blog
+
+On November 25, 2026, Codex submitted *What did a vision model read when the receipt had no total?* for editorial consideration through Roboflow’s public contributor form. The proposal identified Seongeun So as the maintainer, disclosed AI assistance and prior publication, and linked the full English article and its reproducible CPU experiment. The form confirmed receipt. An editorial decision is pending. [Roboflow’s contributor guidelines](https://roboflow.com/contribute) · [Submitted experiment](https://sungeuns.github.io/foundation-model-engineering/articles/receipt-grounding/)

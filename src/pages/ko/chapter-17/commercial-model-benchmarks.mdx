@@ -89,7 +89,7 @@ Z.ai가 11월 23일 공개한 **GLM-5.4** 는 Coding Plan, ZCode, Z.ai Chat에�
 
 **종량제 요금 확인일은 2026-11-25이다.** 도구를 사용하지 않는 텍스트 요청 하나에 캐시되지 않은 입력 10,000토큰과 과금 대상 출력 2,000토큰이 필요하다고 하자. Z.ai의 GLM-5.3은 백만 토큰당 입력 1.40달러, 출력 4.40달러이므로 이 요청에 0.0228달러가 든다. GLM-5.3 Flash는 각각 0.15달러와 0.50달러로 같은 요청에 0.0025달러가 든다. 같은 공식 요금표에서 GLM-5.4의 토큰 단가는 아직 확인할 수 없다. 종량제 단가가 공개될 때까지 5.4로 처리할 수 있는 작업량은 Coding Plan의 사용 한도를 기준으로 추산한다. [[7]](#ref-7)
 
-같은 코딩 과제 20개를 GLM Coding Plan에서 `reasoning_effort: medium`과 `high`로 한 번씩 실행했다고 하자. 2026-11-25 기준 GLM-5.4는 두 설정을 모두 **high** 로 처리한다. 응답은 40개지만 실제 추론 강도는 한 가지다. 성공 건수가 달라도 강도를 올린 효과로 해석할 수 없다. 같은 과제로 `low`와 `high`를 비교하고, 요청한 값과 실제로 적용되는 단계를 함께 기록하자. 강도를 별도로 지정하지 않고 사고 모드만 끄면 가벼운 추론을 수행하는 `low`가 적용된다. [[6]](#ref-6)
+같은 코딩 과제 20개를 GLM Coding Plan에서 두 번 실행한다고 하자. 첫 번째에는 추론 강도 `medium`을, 두 번째에는 `high`를 요청한다. 2026-11-25 기준 GLM-5.4는 두 값을 모두 **high** 로 처리한다. 추론 강도를 전달하는 필드는 도구에 따라 다르다. 첫 실행에서 Claude Code의 Anthropic 호환 엔드포인트로 보내는 요청 본문에는 `{"output_config":{"effort":"medium"}}`이, Codex의 요청 본문에는 `{"reasoning":{"effort":"medium"}}`이 들어간다. 응답이 40개여도 실제 추론 강도는 한 가지다. 강도의 효과를 보려면 같은 과제로 `low`와 `high`를 비교하고 도구 이름, 요청한 값, 실제로 적용되는 단계를 함께 기록하자. 강도를 별도로 지정하지 않고 사고 모드만 끄면 가벼운 추론을 수행하는 `low`가 적용된다. [[6]](#ref-6)
 
 ### GPT-6.2 Astra와 Sol: 실제 운영할 설정을 평가하기
 
@@ -108,6 +108,34 @@ OpenAI는 11월 17일 **GPT-6.2 Astra와 Sol** 을 API에 출시했다. 지원�
 AA가 공개한 GPT-6.2 Astra 지수를 반올림하면 `max`와 `xhigh`가 모두 **62점** 이다. OpenAI API에서 AA 과업 하나에 걸리는 추론 시간 추정치는 `max`에서 **14.2분**, `xhigh`에서 **8.1분** 이다. AA의 과업 구성에서 두 설정의 차이는 6.1분이다. 위 표에는 `max` 값을 실었다. [[95]](#ref-95)
 
 고객지원팀이 문의의 95%를 10분 안에 해결하겠다고 약속하려면 문의별 완료 시간이 필요하다. 실제 문의를 모아 두 추론 강도로 각각 실행하되 도구와 서비스 등급은 같게 두자. 첫 답변이 화면에 나타날 때까지의 시간, 대기와 재시도를 포함해 문의를 해결하기까지의 시간, 해결의 정확성을 각각 기록한다. 전체 해결 시간의 95백분위수와 어려운 문의의 해결률을 함께 비교할 수 있다.
+
+<a id="gpt-62-api-requests"></a>
+
+#### 고객 문의 테스트를 다른 엔드포인트로 옮기기
+
+평가 스크립트가 고객 문의에서 주문 번호를 추출하고, 모든 요청에 `temperature: 0`을 붙인다고 하자. GPT-6.2 Sol로 옮길 때도 문의 내용은 그대로 둔다. 2026-11-25 기준 아래 두 요청의 추론 강도는 모두 `medium`이다. 같은 값을 엔드포인트별로 어떤 필드에 넣는지 비교해 보자. [[138]](#ref-138)
+
+Chat Completions (`POST /v1/chat/completions`)
+
+```json
+{
+  "model": "gpt-6.2-sol",
+  "messages": [{"role": "user", "content": "Return only the order ID in: Order XQ-17 has shipped."}],
+  "reasoning_effort": "medium"
+}
+```
+
+Responses (`POST /v1/responses`)
+
+```json
+{
+  "model": "gpt-6.2-sol",
+  "input": "Return only the order ID in: Order XQ-17 has shipped.",
+  "reasoning": {"effort": "medium"}
+}
+```
+
+두 요청 모두에서 `temperature`, `top_p`, `top_logprobs`를 뺀다. 기존 스크립트가 토큰별 로그 확률을 수집했다면 Chat Completions에서는 `logprobs`를 빼고, Responses에서는 `include` 목록에서 `message.output_text.logprobs`를 지운다. 이 문의는 추출한 문자열이 `XQ-17`과 일치하는지 비교해 채점할 수 있다. [[138]](#ref-138)
 
 ### Gemini 4: 공유 문맥 예산과 기간별 요금
 
@@ -368,3 +396,4 @@ Sol 요청 두 건에 입력 544,000토큰과 과금 대상 출력 20,000토큰�
 135. <a id="ref-135"></a>[Alibaba Cloud Model Studio, Qwen4-Max 정식 모델 ID와 리전별 지원 기능](https://www.alibabacloud.com/help/en/model-studio/qwen4-max).
 136. <a id="ref-136"></a>[OpenAI, 프롬프트 캐시 경계, 사용량 필드와 쓰기 유지 시간](https://developers.openai.com/api/docs/guides/prompt-caching).
 137. <a id="ref-137"></a>[Artificial Analysis의 지수 구성과 과업당 시간 계산 방식](https://artificialanalysis.ai/evaluations/artificial-analysis-intelligence-index).
+138. <a id="ref-138"></a>[OpenAI, GPT-6.2 이관 안내의 API 요청 필드와 모델 매개변수](https://developers.openai.com/api/docs/guides/latest-model#gpt-6.2-astra-update-api-and-model-parameters).

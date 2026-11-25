@@ -89,7 +89,7 @@ The disclosed design reuses a 28-layer block twice in a 750B-scale model, with g
 
 **Pricing follow-up, as of 2026-11-25.** Suppose one text request uses 10,000 uncached input tokens and 2,000 billed output tokens, with no tools. Z.ai lists GLM-5.3 at USD 1.40 per million input tokens and 4.40 per million output tokens. That request costs USD 0.0228. GLM-5.3 Flash lists 0.15 and 0.50 respectively, giving USD 0.0025. The same public price sheet has no token rate for GLM-5.4. Budget a 5.4 Coding Plan workload against the plan's quota until a pay-as-you-go rate is published. [[7]](#ref-7)
 
-Suppose you run 20 coding tickets twice on GLM Coding Plan, once at `reasoning_effort: medium` and once at `high`. As of 2026-11-25, Z.ai maps both settings to **high** on GLM-5.4. The 40 responses sample a single effort level. A difference in pass counts cannot estimate the effect of raising effort. Compare `low` with `high` on the same tickets and record both the requested and the mapped level. With no explicit effort, turning thinking off selects `low`, which still performs lightweight reasoning. [[6]](#ref-6)
+Suppose you run the same 20 coding tickets twice on GLM Coding Plan, first at `medium` effort and then at `high`. As of 2026-11-25, Z.ai maps both values to **high** on GLM-5.4. The effort field depends on the client. For example, the request-body fragment for the first run is `{"output_config":{"effort":"medium"}}` with Claude Code’s Anthropic-compatible endpoint and `{"reasoning":{"effort":"medium"}}` with Codex. The 40 responses sample a single effort level. To measure the effect of effort, compare `low` with `high` and record the client, requested value and mapped level. With no explicit effort, turning thinking off selects `low`, which still performs lightweight reasoning. [[6]](#ref-6)
 
 ### GPT-6.2 Astra and Sol: measure the operating point
 
@@ -108,6 +108,34 @@ On November 24 the Responses API added four healthcare configurations, `gpt-6.2-
 AA’s public GPT-6.2 Astra profile gives `max` and `xhigh` the same rounded index score, **62**. On OpenAI’s API, AA estimates **14.2 minutes per index task** at `max` and **8.1 minutes** at `xhigh`. That is a 6.1-minute difference on AA’s workload. The table uses the `max` profile. [[95]](#ref-95)
 
 Suppose a support team promises to resolve 95% of tickets within ten minutes. It needs per-ticket completion times to test that promise. Replay the same private tickets at each effort with the same tools and service tier. Record time to first visible answer, time to resolution including queues and retries, and whether the resolution was correct. Compare the 95th-percentile completion time alongside success on difficult tickets.
+
+<a id="gpt-62-api-requests"></a>
+
+#### Moving a support-ticket test between endpoints
+
+Suppose your evaluation script extracts an order ID from a ticket and always adds `temperature: 0`. When porting it to GPT-6.2 Sol, keep the test case fixed. As of 2026-11-25 the following request bodies both select `medium` effort. The field names follow the endpoint. [[138]](#ref-138)
+
+Chat Completions (`POST /v1/chat/completions`)
+
+```json
+{
+  "model": "gpt-6.2-sol",
+  "messages": [{"role": "user", "content": "Return only the order ID in: Order XQ-17 has shipped."}],
+  "reasoning_effort": "medium"
+}
+```
+
+Responses (`POST /v1/responses`)
+
+```json
+{
+  "model": "gpt-6.2-sol",
+  "input": "Return only the order ID in: Order XQ-17 has shipped.",
+  "reasoning": {"effort": "medium"}
+}
+```
+
+Remove `temperature`, `top_p` and `top_logprobs` from both request bodies. For a harness that collects token log probabilities, also omit `logprobs` in Chat Completions and remove `message.output_text.logprobs` from the Responses `include` list. For this ticket, the grader can compare the extracted text with `XQ-17`. [[138]](#ref-138)
 
 ### Gemini 4: shared context and dated prices
 
@@ -368,3 +396,4 @@ Keep weights or API revision, tokenizer/template, quantization, runtime, generat
 135. <a id="ref-135"></a>[Alibaba Cloud Model Studio, Qwen4-Max production model ID and capabilities by region](https://www.alibabacloud.com/help/en/model-studio/qwen4-max).
 136. <a id="ref-136"></a>[OpenAI, prompt-cache boundaries, usage fields and write lifetimes](https://developers.openai.com/api/docs/guides/prompt-caching).
 137. <a id="ref-137"></a>[Artificial Analysis, Intelligence Index evaluations and time-per-task calculation](https://artificialanalysis.ai/evaluations/artificial-analysis-intelligence-index).
+138. <a id="ref-138"></a>[OpenAI, GPT-6.2 migration guide, API and model parameters](https://developers.openai.com/api/docs/guides/latest-model#gpt-6.2-astra-update-api-and-model-parameters).
