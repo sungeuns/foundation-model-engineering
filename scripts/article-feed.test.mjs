@@ -221,3 +221,45 @@ test('Korean subscribers receive three complete articles with local permalinks, 
     assert.ok(html.includes(item.title) && html.includes(measurement), route);
   }
 });
+
+test('each article shows its own RSS publication instant alongside its title and in search metadata', () => {
+  for (const prefix of ['', 'ko/']) {
+    const [, , items] = readSelectedFeed(prefix);
+    const expectedLabel = prefix ? '발행인 Seongeun So' : 'Published by Seongeun So';
+    for (const item of items) {
+      const file = join(dist, item.link.slice(base.length), 'index.html');
+      const html = readFileSync(file, 'utf8');
+      const article = [...html.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/gs)]
+        .map(match => JSON.parse(match[1])).find(schema => schema['@type'] === 'TechArticle');
+      assert.ok(article, file);
+      assert.equal(new Date(article.datePublished).toUTCString(), item.pubDate, file);
+      assert.equal(article.dateModified, undefined, file);
+      const head = parseFragment(html.match(/<head\b[\s\S]*?<\/head>/)[0]);
+      const metas = head.childNodes.filter(node => node.tagName === 'meta')
+        .map(node => Object.fromEntries(node.attrs.map(a => [a.name, a.value])));
+      assert.equal(metas.find(meta => meta.property === 'article:published_time')?.content, article.datePublished, file);
+      const main = parseFragment(html.match(/<main\b[\s\S]*?<\/main>/)[0]).childNodes[0];
+      const elements = main.childNodes.filter(node => node.tagName);
+      assert.deepEqual(elements.filter(node => node.tagName === 'h1'), [elements[0]], file);
+      const byline = elements[1].childNodes.find(node => node.tagName === 'small');
+      const time = byline.childNodes.find(node => node.tagName === 'time');
+      assert.ok(byline.childNodes.some(node => node.value?.includes(expectedLabel)), file);
+      assert.equal(time.attrs.find(a => a.name === 'datetime').value, article.datePublished, file);
+      const date = new Intl.DateTimeFormat(prefix ? 'ko-KR' : 'en-US', {
+        dateStyle: 'long', timeZone: prefix ? 'Asia/Seoul' : 'UTC',
+      }).format(new Date(item.pubDate));
+      assert.equal(time.childNodes[0].value, date, file);
+    }
+  }
+});
+
+test('both bucketing articles keep the final singleton when a reader removes the last prompt', () => {
+  for (const suffix of ['', '.ko']) {
+    const article = readFileSync('src/data/articles/length-bucketing' + suffix + '.md', 'utf8');
+    const [, source] = article.match(/^```python\n([\s\S]+?)\n```$/m);
+    const five = source.replace('[3, 11, 4, 10, 5, 9]', '[3, 11, 4, 10, 5]');
+    assert.notEqual(five, source);
+    const output = execFileSync('python3', ['-c', five], { encoding: 'utf8' });
+    assert.deepEqual(output.trim().split('\n'), ['14 2115 990', '6 1755 900']);
+  }
+});

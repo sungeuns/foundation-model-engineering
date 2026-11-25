@@ -679,7 +679,7 @@ a[id^="model-"]:target {
   transform-origin: 18px 194px;
 }
 
-.plot-point-group {
+.plot-point-group[role="button"] {
   cursor: pointer;
 }
 
@@ -788,7 +788,7 @@ a[id^="model-"]:target {
   cursor: pointer;
 }
 
-.commercial-ranking-strip button:hover {
+.commercial-ranking-strip button:enabled:hover {
   border-color: #60a5fa;
 }
 
@@ -866,10 +866,14 @@ a[id^="model-"]:target {
   cursor: pointer;
 }
 
-.commercial-timeline-item:hover,
+.commercial-timeline-item:enabled:hover,
 .commercial-timeline-item.is-selected {
   border-color: #2563eb;
   background: #eff6ff;
+}
+
+.commercial-benchmark-explorer button:disabled {
+  cursor: default;
 }
 
 .commercial-timeline-item span {

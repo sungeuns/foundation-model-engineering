@@ -32,13 +32,13 @@ The experiment released each pair's cache before running the next pair. These we
 
 The 540 KiB difference in the sums corresponds exactly to twelve saved padding positions. Those sums span three moments in time. To find out how much KV data was live at once, take the maximum.
 
-This Python calculation reproduces the counts without loading a model. Try changing the 11-token prompt to 12 before running it again.
+This Python calculation runs without a model. Try the original six lengths, then remove the final 9 and run it again. The last batch can contain a single request.
 
 ```python
 lengths = [3, 11, 4, 10, 5, 9]
 for order in (lengths, sorted(lengths)):
-    pairs = zip(order[::2], order[1::2], strict=True)
-    slots = [2 * max(pair) for pair in pairs]
+    batches = [order[start:start + 2] for start in range(0, len(order), 2)]
+    slots = [len(batch) * max(batch) for batch in batches]
     sizes_kib = [45 * count for count in slots]
     print(sum(slots) - sum(order), sum(sizes_kib), max(sizes_kib))
 # padding positions, summed KiB, peak KiB
@@ -46,10 +46,28 @@ for order in (lengths, sorted(lengths)):
 #  6 2160 990
 ```
 
+With five requests, the arrival-order batches hold 990, 900 and 225 KiB. Sorted batches hold 360, 900 and 495 KiB. The longest prompt now runs alone and needs only 11 × 45 = 495 KiB. The preceding pair of lengths 5 and 10 sets the peak at **900 KiB**, down from 990. Counting the actual key and value tensors on CPU for these five prompts reproduced all six batch sizes.
+
 ## What to measure on your worker
 
 The [CPU experiment](https://sungeuns.github.io/foundation-model-engineering/labs/kv_batch_bucketing.py) counts bytes in the actual tensors. The [recorded run](https://sungeuns.github.io/foundation-model-engineering/labs/2026-11/kv-batch-bucketing.json) includes every pair and each prompt's greedy next-token ID. All six prompts kept the same next-token ID when run alone and under both batching policies. For each prompt the script also checked the full vector of next-token logits against its solo run, with absolute and relative tolerances of `1e-4`. [Inspect the comparison on GitHub](https://github.com/sungeuns/foundation-model-engineering/blob/d4d45703a0941543c63afc406bcaf21e0b99a036/public/labs/kv_batch_bucketing.py#L100-L109)
 
 For a service that waits to find similar-length partners, measure the time spent in the queue as well as peak cache size. For a paged engine, count the live blocks it actually allocates. This experiment used dense batches and measured the KV tensor payload. Process memory, allocator reservations and request latency require their own measurements.
+
+## Run the measurement on your CPU
+
+These commands were tested with Python 3.12 and curl on Linux x86-64. The first model run downloads about 269 MB of public SmolLM2 weights plus the tokenizer files. To try the arithmetic without that download, run the short Python example above.
+
+```sh
+python3.12 -m venv .venv
+. .venv/bin/activate
+python -m pip install --index-url https://download.pytorch.org/whl/cpu torch==2.15.0
+python -m pip install transformers==5.24.1
+curl -fLo kv_batch_bucketing.py \
+  https://raw.githubusercontent.com/sungeuns/foundation-model-engineering/d4d45703a0941543c63afc406bcaf21e0b99a036/public/labs/kv_batch_bucketing.py
+python kv_batch_bucketing.py > bucketing-run.json
+```
+
+The JSON report contains token IDs and measurements for the six original prompts. Look for `largest_batch_prefill_kv_bytes` under both policies. Each should read 1,013,760 bytes, or 990 KiB. Once the model files are cached, `HF_HUB_OFFLINE=1 python kv_batch_bucketing.py` reruns the experiment offline in that environment.
 
 *An AI coding assistant wrote this adaptation from the book's [length-bucketing experiment](https://sungeuns.github.io/foundation-model-engineering/chapter-12/length-bucketing-lab/) and its recorded measurements.*

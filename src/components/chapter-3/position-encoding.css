@@ -90,3 +90,19 @@
   margin-top: .5rem;
 }
 .position-grid .position-grid-readout p { margin: 0; }
+.position-grid input:disabled { cursor: default; }
+.rope-replay { max-width: 35rem; }
+.rope-replay svg { border: 0; max-height: none; }
+.rope-replay svg text { fill: #263b44; font: 15px system-ui, sans-serif; }
+.rope-replay polyline { fill: none; stroke-width: 2.5; stroke-linejoin: round; }
+.rope-replay .rope-integer { stroke: #075a7a; stroke-dasharray: 6 3; }
+.rope-replay .rope-rounded { stroke: #ae410e; }
+.rope-offset-control { display: grid; gap: .15rem; }
+.rope-offset-control input { width: 100%; min-height: 2rem; margin: 0; accent-color: #175c82; }
+.rope-offset-control input:focus-visible { outline: 2px solid #1e6099; outline-offset: 1px; }
+.rope-replay table { width: 100%; margin: .4rem 0 0; }
+.rope-replay th, .rope-replay td { text-align: end; padding: .4rem .25rem; }
+.rope-replay th:first-child { text-align: start; }
+.rope-replay th i { display: inline-block; vertical-align: middle; width: 1.15rem; margin-inline-end: .3rem; }
+.rope-integer-key { border-block-start: 3px dashed #075a7a; }
+.rope-rounded-key { border-block-start: 3px solid #ae410e; }

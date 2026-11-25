@@ -1,6 +1,7 @@
 {
   "asOf": "2026-11-24",
-  "methodology": "AA Intelligence Index v5.0.1",
+  "evaluationAsOf": "2026-11-25",
+  "methodology": "AA Intelligence Index v5.0.2",
   "methodologySource": "https://artificialanalysis.ai/methodology/intelligence-benchmarking",
   "models": [
     {
@@ -23,9 +24,10 @@
       "aaIndex": 55,
       "benchmarkCost": 1.27,
       "evaluationProfile": "GPT-6.1 Sol (Max)",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1",
-      "evaluationCheckedAt": "2026-11-24",
-      "evaluationVerifiedAt": "2026-11-24"
+      "evaluationMethodology": "AA Intelligence Index v5.0.2",
+      "evaluationCheckedAt": "2026-11-25",
+      "evaluationVerifiedAt": "2026-11-25",
+      "benchmarkMinutes": 25.0
     },
     {
       "id": "gpt-6-sol",
@@ -47,9 +49,10 @@
       "aaIndex": 44,
       "benchmarkCost": 2.47,
       "evaluationProfile": "GPT-6 Sol (Max)",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1",
-      "evaluationCheckedAt": "2026-11-24",
-      "evaluationVerifiedAt": "2026-11-24"
+      "evaluationMethodology": "AA Intelligence Index v5.0.2",
+      "evaluationCheckedAt": "2026-11-25",
+      "evaluationVerifiedAt": "2026-11-25",
+      "benchmarkMinutes": 7.5
     },
     {
       "id": "gpt-6-luna",
@@ -71,9 +74,10 @@
       "aaIndex": 28,
       "benchmarkCost": 0.15,
       "evaluationProfile": "GPT-6 Luna (Max)",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1",
-      "evaluationCheckedAt": "2026-11-24",
-      "evaluationVerifiedAt": "2026-11-24"
+      "evaluationMethodology": "AA Intelligence Index v5.0.2",
+      "evaluationCheckedAt": "2026-11-25",
+      "evaluationVerifiedAt": "2026-11-25",
+      "benchmarkMinutes": 10.6
     },
     {
       "id": "gpt-6-astra",
@@ -93,11 +97,12 @@
       "aaIndex": 57,
       "benchmarkCost": 6.24,
       "evaluationProfile": "GPT-6 Astra (Max)",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1",
+      "evaluationMethodology": "AA Intelligence Index v5.0.2",
       "inputPrice": 10,
       "outputPrice": 50,
-      "evaluationCheckedAt": "2026-11-24",
-      "evaluationVerifiedAt": "2026-11-24"
+      "evaluationCheckedAt": "2026-11-25",
+      "evaluationVerifiedAt": "2026-11-25",
+      "benchmarkMinutes": 19.0
     },
     {
       "id": "claude-opus-55",
@@ -119,10 +124,11 @@
       "aaIndex": 59,
       "benchmarkCost": 10.04,
       "evaluationProfile": "Claude Opus 5.5 (Max, Default Fallback)",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1",
-      "evaluationCheckedAt": "2026-11-24",
-      "evaluationVerifiedAt": "2026-11-24",
-      "specification": "https://platform.claude.com/docs/en/models/overview"
+      "evaluationMethodology": "AA Intelligence Index v5.0.2",
+      "evaluationCheckedAt": "2026-11-25",
+      "evaluationVerifiedAt": "2026-11-25",
+      "specification": "https://platform.claude.com/docs/en/models/overview",
+      "benchmarkMinutes": 24.7
     },
     {
       "id": "claude-sonnet-55",
@@ -145,10 +151,11 @@
       "aaIndex": 55,
       "benchmarkCost": 10.02,
       "evaluationProfile": "Claude Sonnet 5.5 (Max, Default Fallback)",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1",
-      "evaluationCheckedAt": "2026-11-24",
-      "evaluationVerifiedAt": "2026-11-24",
-      "specification": "https://platform.claude.com/docs/en/models/overview"
+      "evaluationMethodology": "AA Intelligence Index v5.0.2",
+      "evaluationCheckedAt": "2026-11-25",
+      "evaluationVerifiedAt": "2026-11-25",
+      "specification": "https://platform.claude.com/docs/en/models/overview",
+      "benchmarkMinutes": 30.8
     },
     {
       "id": "claude-haiku-55",
@@ -165,13 +172,14 @@
       "releaseStatus": "released",
       "accessKo": "API 공개",
       "verifiedAt": "2026-11-24",
-      "aaIndex": 36,
+      "aaIndex": 37,
       "benchmarkCost": 0.41,
       "evaluationProfile": "Claude Haiku 5.5 (Max)",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1",
-      "evaluationCheckedAt": "2026-11-24",
-      "evaluationVerifiedAt": "2026-11-24",
-      "specification": "https://platform.claude.com/docs/en/models/overview"
+      "evaluationMethodology": "AA Intelligence Index v5.0.2",
+      "evaluationCheckedAt": "2026-11-25",
+      "evaluationVerifiedAt": "2026-11-25",
+      "specification": "https://platform.claude.com/docs/en/models/overview",
+      "benchmarkMinutes": 14.5
     },
     {
       "id": "gemini-4-argon",
@@ -192,13 +200,14 @@
       "specification": "https://aistudio.google.com/docs/models/gemini-4-argon",
       "noteSource": "https://aistudio.google.com/docs/pricing#gemini-4-argon",
       "verifiedAt": "2026-11-24",
-      "aaIndex": 50,
+      "aaIndex": 51,
       "benchmarkCost": 9.95,
       "evaluationProfile": "Gemini 4 Argon (High)",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1",
-      "evaluationCheckedAt": "2026-11-24",
-      "evaluationVerifiedAt": "2026-11-24",
-      "priceValidThrough": "2026-11-30"
+      "evaluationMethodology": "AA Intelligence Index v5.0.2",
+      "evaluationCheckedAt": "2026-11-25",
+      "evaluationVerifiedAt": "2026-11-25",
+      "priceValidThrough": "2026-11-30",
+      "benchmarkMinutes": 23.8
     },
     {
       "id": "deepseek-v41-flash",
@@ -210,12 +219,12 @@
       "releaseStatus": "released",
       "source": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash",
       "evaluation": "https://artificialanalysis.ai/models/deepseek-v4-1-flash",
-      "note": "September historical revision. No current v5.0.1 evaluation was verified for this exact profile; the 1017 row retains its own evaluation. Do not mix the previous v4.3.2 score with current scores.",
+      "note": "September historical revision. No current v5.0.2 evaluation was verified for this exact profile; the 1017 row retains its own evaluation. Do not mix the previous v4.3.2 score with current scores.",
       "access": "released/open-weight",
-      "noteKo": "9월의 과거 리비전입니다. 이 프로필의 v5.0.1 평가를 확인하지 못했으며 1017은 별도 평가를 사용합니다. 과거 v4.3.2 점수를 현재 점수와 섞으면 안 됩니다.",
+      "noteKo": "9월의 과거 리비전입니다. 이 프로필의 v5.0.2 평가를 확인하지 못했으며 1017은 별도 평가를 사용합니다. 과거 v4.3.2 점수를 현재 점수와 섞으면 안 됩니다.",
       "accessKo": "가중치 공개",
       "verifiedAt": "2026-11-24",
-      "evaluationCheckedAt": "2026-11-24"
+      "evaluationCheckedAt": "2026-11-25"
     },
     {
       "id": "glm-53",
@@ -235,9 +244,10 @@
       "aaIndex": 32,
       "benchmarkCost": 5.01,
       "evaluationProfile": "GLM-5.3 (Max)",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1",
-      "evaluationCheckedAt": "2026-11-24",
-      "evaluationVerifiedAt": "2026-11-24"
+      "evaluationMethodology": "AA Intelligence Index v5.0.2",
+      "evaluationCheckedAt": "2026-11-25",
+      "evaluationVerifiedAt": "2026-11-25",
+      "benchmarkMinutes": 28.1
     },
     {
       "id": "mistral-large-4",
@@ -256,14 +266,15 @@
       "aaIndex": 26,
       "benchmarkCost": 2.06,
       "evaluationProfile": "Mistral Large 4 (High)",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1",
+      "evaluationMethodology": "AA Intelligence Index v5.0.2",
       "specification": "https://docs.mistral.ai/models/mistral-large-4-0",
       "noteSource": "https://huggingface.co/api/models/mistralai/Mistral-Large-4-1T-A52B",
       "contextK": 1000,
       "inputPrice": 0.7,
       "outputPrice": 2.1,
-      "evaluationCheckedAt": "2026-11-24",
-      "evaluationVerifiedAt": "2026-11-24"
+      "evaluationCheckedAt": "2026-11-25",
+      "evaluationVerifiedAt": "2026-11-25",
+      "benchmarkMinutes": 15.9
     },
     {
       "id": "beam",
@@ -284,9 +295,10 @@
       "aaIndex": 18,
       "benchmarkCost": 0.28,
       "evaluationProfile": "Beam 1.0",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1",
-      "evaluationCheckedAt": "2026-11-24",
-      "evaluationVerifiedAt": "2026-11-24"
+      "evaluationMethodology": "AA Intelligence Index v5.0.2",
+      "evaluationCheckedAt": "2026-11-25",
+      "evaluationVerifiedAt": "2026-11-25",
+      "benchmarkMinutes": 1.6
     },
     {
       "id": "muse-wonder",
@@ -305,9 +317,10 @@
       "aaIndex": 44,
       "benchmarkCost": 6.95,
       "evaluationProfile": "Muse Wonder (Max)",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1",
-      "evaluationCheckedAt": "2026-11-24",
-      "evaluationVerifiedAt": "2026-11-24"
+      "evaluationMethodology": "AA Intelligence Index v5.0.2",
+      "evaluationCheckedAt": "2026-11-25",
+      "evaluationVerifiedAt": "2026-11-25",
+      "benchmarkMinutes": 16.0
     },
     {
       "id": "muse-wonder-full",
@@ -325,9 +338,9 @@
       "verifiedAt": "2026-11-24",
       "aaIndex": 50,
       "evaluationProfile": "Muse Wonder Full (Max)",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1",
-      "evaluationCheckedAt": "2026-11-24",
-      "evaluationVerifiedAt": "2026-11-24"
+      "evaluationMethodology": "AA Intelligence Index v5.0.2",
+      "evaluationCheckedAt": "2026-11-25",
+      "evaluationVerifiedAt": "2026-11-25"
     },
     {
       "id": "muse-spark-open",
@@ -348,9 +361,10 @@
       "aaIndex": 25,
       "benchmarkCost": 2.02,
       "evaluationProfile": "Muse Spark Open (Xhigh)",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1",
-      "evaluationCheckedAt": "2026-11-24",
-      "evaluationVerifiedAt": "2026-11-24"
+      "evaluationMethodology": "AA Intelligence Index v5.0.2",
+      "evaluationCheckedAt": "2026-11-25",
+      "evaluationVerifiedAt": "2026-11-25",
+      "benchmarkMinutes": 6.4
     },
     {
       "id": "nemotron-35-super-vl",
@@ -370,9 +384,10 @@
       "aaIndex": 14,
       "benchmarkCost": 0.48,
       "evaluationProfile": "Nemotron 3.5 Super VL",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1",
-      "evaluationCheckedAt": "2026-11-24",
-      "evaluationVerifiedAt": "2026-11-24"
+      "evaluationMethodology": "AA Intelligence Index v5.0.2",
+      "evaluationCheckedAt": "2026-11-25",
+      "evaluationVerifiedAt": "2026-11-25",
+      "benchmarkMinutes": 4.0
     },
     {
       "id": "nemotron-35-bolt",
@@ -389,7 +404,7 @@
       "noteKo": "OpenMDW-1.1 공개입니다. Native IQ2 QAT와 패킹 모델 메모리 목표를 명시합니다. Attention·순환 상태, 시각 처리, 런타임 버퍼의 메모리는 별도 확보해야 하며 호스팅 과업 비용은 가정하지 않았습니다.",
       "releaseStatus": "released",
       "verifiedAt": "2026-11-24",
-      "evaluationCheckedAt": "2026-11-24"
+      "evaluationCheckedAt": "2026-11-25"
     },
     {
       "id": "step-5-preview",
@@ -409,9 +424,10 @@
       "aaIndex": 29,
       "benchmarkCost": 2.35,
       "evaluationProfile": "Step 5 Preview",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1",
-      "evaluationCheckedAt": "2026-11-24",
-      "evaluationVerifiedAt": "2026-11-24"
+      "evaluationMethodology": "AA Intelligence Index v5.0.2",
+      "evaluationCheckedAt": "2026-11-25",
+      "evaluationVerifiedAt": "2026-11-25",
+      "benchmarkMinutes": 24.2
     },
     {
       "id": "deepseek-v41-flash-1017",
@@ -429,12 +445,13 @@
       "releaseStatus": "released",
       "evaluation": "https://artificialanalysis.ai/models/deepseek-v4-1-flash-1017",
       "verifiedAt": "2026-11-24",
-      "aaIndex": 33,
+      "aaIndex": 32,
       "benchmarkCost": 0.6,
       "evaluationProfile": "DeepSeek V4.1 Flash 1017 (Max)",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1",
-      "evaluationCheckedAt": "2026-11-24",
-      "evaluationVerifiedAt": "2026-11-24"
+      "evaluationMethodology": "AA Intelligence Index v5.0.2",
+      "evaluationCheckedAt": "2026-11-25",
+      "evaluationVerifiedAt": "2026-11-25",
+      "benchmarkMinutes": 13.8
     },
     {
       "id": "minimax-m31-flash",
@@ -459,9 +476,10 @@
       "aaIndex": 29,
       "benchmarkCost": 0.49,
       "evaluationProfile": "MiniMax-M3.1-Flash",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1",
-      "evaluationCheckedAt": "2026-11-24",
-      "evaluationVerifiedAt": "2026-11-24"
+      "evaluationMethodology": "AA Intelligence Index v5.0.2",
+      "evaluationCheckedAt": "2026-11-25",
+      "evaluationVerifiedAt": "2026-11-25",
+      "benchmarkMinutes": 17.8
     },
     {
       "id": "kimi-k31-pro",
@@ -478,14 +496,15 @@
       "noteKo": "11월 가중치 공개로 전체 2.8T·활성 104B, KDA와 gated sparse attention, 커스텀 라이선스를 확인할 수 있습니다. QAT 형식·런타임 지원은 활성 연산량과 별도입니다. 호스팅 평가는 로컬 양자화 배포를 인증하지 않습니다.",
       "releaseStatus": "released",
       "verifiedAt": "2026-11-24",
-      "aaIndex": 46,
+      "aaIndex": 47,
       "benchmarkCost": 3.68,
       "evaluationProfile": "Kimi K3.1 Pro",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1",
+      "evaluationMethodology": "AA Intelligence Index v5.0.2",
       "specification": "https://huggingface.co/api/models/moonshotai/Kimi-K3.1-Pro",
       "noteSource": "https://www.kimi.ai/blog/kimi-k3-1-pro",
-      "evaluationCheckedAt": "2026-11-24",
-      "evaluationVerifiedAt": "2026-11-24"
+      "evaluationCheckedAt": "2026-11-25",
+      "evaluationVerifiedAt": "2026-11-25",
+      "benchmarkMinutes": 34.0
     },
     {
       "id": "kimi-k31-pro-highspeed",
@@ -522,9 +541,10 @@
       "noteKo": "11월 20일은 지시 튜닝을 거친 BF16 가중치의 공개일입니다. Tencent는 11월 4일에 호스팅 서비스 출시를 발표했습니다. AA가 연결한 가중치는 Hy4 지시 튜닝 버전이며 과업 비용은 평가에 사용한 서비스 기준입니다. Tencent Hy 라이선스에는 일부 모델 호스팅 사업자에게 적용되는 별도 계약 조건이 있습니다.",
       "verifiedAt": "2026-11-24",
       "evaluationProfile": "Tencent Hy4",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1",
-      "evaluationCheckedAt": "2026-11-24",
-      "evaluationVerifiedAt": "2026-11-24"
+      "evaluationMethodology": "AA Intelligence Index v5.0.2",
+      "evaluationCheckedAt": "2026-11-25",
+      "evaluationVerifiedAt": "2026-11-25",
+      "benchmarkMinutes": 13.5
     },
     {
       "id": "ling-32-air",
@@ -545,9 +565,9 @@
       "noteKo": "AA가 연결한 가중치는 MIT 라이선스로 공개됐고, 평가 지수는 23점입니다. AA 프로필에는 문맥 길이가 100만 토큰으로 표시되지만 공개 체크포인트의 설정과 실행 예시는 262,144토큰입니다. 어느 실행 환경을 택하느냐에 따라 값이 달라지므로 그래프에서 문맥 길이는 비워 두었습니다.",
       "verifiedAt": "2026-11-24",
       "evaluationProfile": "Ling-3.2-air",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1",
-      "evaluationCheckedAt": "2026-11-24",
-      "evaluationVerifiedAt": "2026-11-24"
+      "evaluationMethodology": "AA Intelligence Index v5.0.2",
+      "evaluationCheckedAt": "2026-11-25",
+      "evaluationVerifiedAt": "2026-11-25"
     },
     {
       "id": "ling-31-flash",
@@ -566,7 +586,7 @@
       "artifactRevision": "93e96ab91e800998388563295340a4238ff3e962",
       "artifactEvidence": "https://huggingface.co/api/models/inclusionAI/Ling-3.1-flash",
       "verifiedAt": "2026-11-24",
-      "evaluationCheckedAt": "2026-11-24"
+      "evaluationCheckedAt": "2026-11-25"
     },
     {
       "id": "ling-30-flash-sante",
@@ -641,9 +661,10 @@
       "aaIndex": 51,
       "benchmarkCost": 0.96,
       "evaluationProfile": "GPT-6.1 Terra (Max)",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1",
-      "evaluationCheckedAt": "2026-11-24",
-      "evaluationVerifiedAt": "2026-11-24"
+      "evaluationMethodology": "AA Intelligence Index v5.0.2",
+      "evaluationCheckedAt": "2026-11-25",
+      "evaluationVerifiedAt": "2026-11-25",
+      "benchmarkMinutes": 14.0
     },
     {
       "id": "claude-fable-52",
@@ -666,9 +687,10 @@
       "aaIndex": 65,
       "benchmarkCost": 26.54,
       "evaluationProfile": "Claude Fable 5.2 (Max, Default Fallback)",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1",
-      "evaluationCheckedAt": "2026-11-24",
-      "evaluationVerifiedAt": "2026-11-24"
+      "evaluationMethodology": "AA Intelligence Index v5.0.2",
+      "evaluationCheckedAt": "2026-11-25",
+      "evaluationVerifiedAt": "2026-11-25",
+      "benchmarkMinutes": 40.6
     },
     {
       "id": "claude-mythos-52",
@@ -707,10 +729,11 @@
       "aaIndex": 31,
       "benchmarkCost": 1.18,
       "evaluationProfile": "Inkling 2 Small",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1",
+      "evaluationMethodology": "AA Intelligence Index v5.0.2",
       "noteSource": "https://vllm-project.github.io/2026/11/12/inkling2-small.html",
-      "evaluationCheckedAt": "2026-11-24",
-      "evaluationVerifiedAt": "2026-11-24"
+      "evaluationCheckedAt": "2026-11-25",
+      "evaluationVerifiedAt": "2026-11-25",
+      "benchmarkMinutes": 24.5
     },
     {
       "id": "qwen38-flash-next",
@@ -728,12 +751,13 @@
       "contextK": 262.144,
       "specification": "https://huggingface.co/api/models/Qwen/Qwen3.8-Flash-Next",
       "evaluation": "https://artificialanalysis.ai/models/qwen3-8-flash-next",
-      "aaIndex": 29,
+      "aaIndex": 28,
       "benchmarkCost": 0.57,
       "evaluationProfile": "Qwen3.8-Flash-Next",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1",
-      "evaluationCheckedAt": "2026-11-24",
-      "evaluationVerifiedAt": "2026-11-24"
+      "evaluationMethodology": "AA Intelligence Index v5.0.2",
+      "evaluationCheckedAt": "2026-11-25",
+      "evaluationVerifiedAt": "2026-11-25",
+      "benchmarkMinutes": 34.2
     },
     {
       "id": "glm-53-flash",
@@ -753,9 +777,10 @@
       "aaIndex": 28,
       "benchmarkCost": 0.58,
       "evaluationProfile": "GLM-5.3-Flash",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1",
-      "evaluationCheckedAt": "2026-11-24",
-      "evaluationVerifiedAt": "2026-11-24"
+      "evaluationMethodology": "AA Intelligence Index v5.0.2",
+      "evaluationCheckedAt": "2026-11-25",
+      "evaluationVerifiedAt": "2026-11-25",
+      "benchmarkMinutes": 37.0
     },
     {
       "id": "gpt-62-astra",
@@ -777,10 +802,11 @@
       "benchmarkCost": 4.0,
       "specification": "https://openai.com/index/introducing-gpt-6-2-astra-sol/",
       "evaluation": "https://artificialanalysis.ai/models/gpt-6-2-astra",
-      "evaluationCheckedAt": "2026-11-24",
+      "evaluationCheckedAt": "2026-11-25",
       "evaluationProfile": "GPT-6.2 Astra (Max)",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1",
-      "evaluationVerifiedAt": "2026-11-24"
+      "evaluationMethodology": "AA Intelligence Index v5.0.2",
+      "evaluationVerifiedAt": "2026-11-25",
+      "benchmarkMinutes": 14.2
     },
     {
       "id": "gpt-62-sol",
@@ -802,10 +828,11 @@
       "benchmarkCost": 1.01,
       "specification": "https://openai.com/index/introducing-gpt-6-2-astra-sol/",
       "evaluation": "https://artificialanalysis.ai/models/gpt-6-2-sol",
-      "evaluationCheckedAt": "2026-11-24",
+      "evaluationCheckedAt": "2026-11-25",
       "evaluationProfile": "GPT-6.2 Sol (Max)",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1",
-      "evaluationVerifiedAt": "2026-11-24"
+      "evaluationMethodology": "AA Intelligence Index v5.0.2",
+      "evaluationVerifiedAt": "2026-11-25",
+      "benchmarkMinutes": 10.0
     },
     {
       "id": "glm-54",
@@ -845,11 +872,12 @@
       "specification": "https://aistudio.google.com/docs/models/gemini-4-carbon",
       "noteSource": "https://aistudio.google.com/docs/pricing#gemini-4-carbon",
       "evaluation": "https://artificialanalysis.ai/models/gemini-4-carbon",
-      "evaluationCheckedAt": "2026-11-24",
+      "evaluationCheckedAt": "2026-11-25",
       "evaluationProfile": "Gemini 4 Carbon (High)",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1",
-      "evaluationVerifiedAt": "2026-11-24",
-      "priceValidThrough": "2026-11-30"
+      "evaluationMethodology": "AA Intelligence Index v5.0.2",
+      "evaluationVerifiedAt": "2026-11-25",
+      "priceValidThrough": "2026-11-30",
+      "benchmarkMinutes": 38.1
     },
     {
       "id": "gemini-4-neon",
@@ -867,15 +895,16 @@
       "contextK": 1048.576,
       "inputPrice": 3,
       "outputPrice": 15,
-      "aaIndex": 61,
+      "aaIndex": 62,
       "benchmarkCost": 6.44,
       "specification": "https://aistudio.google.com/docs/models/gemini-4-neon",
       "noteSource": "https://aistudio.google.com/docs/pricing#gemini-4-neon",
       "evaluation": "https://artificialanalysis.ai/models/gemini-4-neon",
-      "evaluationCheckedAt": "2026-11-24",
+      "evaluationCheckedAt": "2026-11-25",
       "evaluationProfile": "Gemini 4 Neon (Xhigh)",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1",
-      "evaluationVerifiedAt": "2026-11-24"
+      "evaluationMethodology": "AA Intelligence Index v5.0.2",
+      "evaluationVerifiedAt": "2026-11-25",
+      "benchmarkMinutes": 25.6
     },
     {
       "id": "gemini-4-hydrogen",
@@ -898,10 +927,11 @@
       "specification": "https://aistudio.google.com/docs/models/gemini-4-hydrogen",
       "noteSource": "https://aistudio.google.com/docs/pricing#gemini-4-hydrogen",
       "evaluation": "https://artificialanalysis.ai/models/gemini-4-hydrogen",
-      "evaluationCheckedAt": "2026-11-24",
+      "evaluationCheckedAt": "2026-11-25",
       "evaluationProfile": "Gemini 4 Hydrogen (Xhigh)",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1",
-      "evaluationVerifiedAt": "2026-11-24"
+      "evaluationMethodology": "AA Intelligence Index v5.0.2",
+      "evaluationVerifiedAt": "2026-11-25",
+      "benchmarkMinutes": 15.9
     },
     {
       "id": "qwen4-max",
@@ -922,10 +952,11 @@
       "noteSource": "https://docs.qwencloud.com/changelog/models",
       "specification": "https://docs.qwencloud.com/developer-guides/getting-started/latest-model",
       "evaluation": "https://artificialanalysis.ai/models/qwen4-max",
-      "evaluationCheckedAt": "2026-11-24",
+      "evaluationCheckedAt": "2026-11-25",
       "evaluationProfile": "Qwen4 Max",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1",
-      "evaluationVerifiedAt": "2026-11-24"
+      "evaluationMethodology": "AA Intelligence Index v5.0.2",
+      "evaluationVerifiedAt": "2026-11-25",
+      "benchmarkMinutes": 18.7
     },
     {
       "id": "longcat-25",
@@ -959,7 +990,7 @@
       "artifactRevision": "6c06a374dd7f0b0ce254544aebadcf0a4f992b7c",
       "artifactEvidence": "https://huggingface.co/api/models/Agnes-AI/Agnes-2.5-Pro-Theta",
       "evaluation": "https://artificialanalysis.ai/models/agnes-2-5-pro-theta",
-      "evaluationCheckedAt": "2026-11-24"
+      "evaluationCheckedAt": "2026-11-25"
     },
     {
       "id": "inkling-2-mini",
@@ -967,8 +998,8 @@
       "model": "Inkling 2 Mini",
       "release": "2026-11-20",
       "source": "https://huggingface.co/thinkingmachines/Inkling-2-Mini",
-      "note": "Apache 2.0 text/image model. The card separates 26.4B stored parameters, 3.4B physical active parameters and 5.4B effective active compute with three shared-layer passes. A roughly 20GB packed checkpoint is not total runtime memory. The independently checked AA v5.0.1 profile is distinct from the card’s older v5.0 table.",
-      "noteKo": "Apache 2.0 텍스트·이미지 모델입니다. 카드는 저장 파라미터 26.4B, 물리적 활성 3.4B, 공유 계층 3회 실행의 유효 활성 연산량 5.4B를 구분합니다. 약 20GB 패킹 체크포인트가 전체 실행 메모리는 아닙니다. 독립적으로 확인한 AA v5.0.1 프로필은 카드의 과거 v5.0 표와 구분합니다.",
+      "note": "Apache 2.0 text/image model. The card separates 26.4B stored parameters, 3.4B physical active parameters and 5.4B effective active compute with three shared-layer passes. A roughly 20GB packed checkpoint is not total runtime memory. The independently checked AA v5.0.2 profile is distinct from the card’s older v5.0 table.",
+      "noteKo": "Apache 2.0 텍스트·이미지 모델입니다. 카드는 저장 파라미터 26.4B, 물리적 활성 3.4B, 공유 계층 3회 실행의 유효 활성 연산량 5.4B를 구분합니다. 약 20GB 패킹 체크포인트가 전체 실행 메모리는 아닙니다. 독립적으로 확인한 AA v5.0.2 프로필은 카드의 과거 v5.0 표와 구분합니다.",
       "setting": "reasoning; effort not reported",
       "access": "released/open-weight",
       "accessKo": "가중치 공개",
@@ -978,10 +1009,11 @@
       "aaIndex": 20,
       "benchmarkCost": 0.59,
       "evaluation": "https://artificialanalysis.ai/models/inkling-2-mini",
-      "evaluationCheckedAt": "2026-11-24",
+      "evaluationCheckedAt": "2026-11-25",
       "evaluationProfile": "Inkling 2 Mini",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1",
-      "evaluationVerifiedAt": "2026-11-24"
+      "evaluationMethodology": "AA Intelligence Index v5.0.2",
+      "evaluationVerifiedAt": "2026-11-25",
+      "benchmarkMinutes": 13.6
     },
     {
       "id": "muse-ember",
@@ -1002,12 +1034,14 @@
       "aaIndex": 36,
       "benchmarkCost": 0.14,
       "evaluation": "https://artificialanalysis.ai/models/muse-ember",
-      "evaluationCheckedAt": "2026-11-24",
+      "evaluationCheckedAt": "2026-11-25",
       "evaluationProfile": "Muse Ember (Max)",
-      "evaluationMethodology": "AA Intelligence Index v5.0.1",
-      "evaluationVerifiedAt": "2026-11-24"
+      "evaluationMethodology": "AA Intelligence Index v5.0.2",
+      "evaluationVerifiedAt": "2026-11-25",
+      "benchmarkMinutes": 3.4
     }
   ],
   "costUnit": "USD per Intelligence Index task, weighted by evaluation",
-  "contextUnit": "1000 tokens"
+  "contextUnit": "1000 tokens",
+  "timeUnit": "inference minutes per Intelligence Index task"
 }

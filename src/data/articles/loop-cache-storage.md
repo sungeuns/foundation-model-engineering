@@ -34,4 +34,20 @@ Several tensor views can share one allocation. Counting the bytes behind each vi
 
 Run the [complete CPU experiment](https://sungeuns.github.io/foundation-model-engineering/labs/loop_cache.py) or inspect [the measured bytes at one, three and five passes](https://sungeuns.github.io/foundation-model-engineering/labs/2026-11/loop-cache.json). The script compares the last hidden state from cached decoding with a fresh run on all seven tokens. The [book section](https://sungeuns.github.io/foundation-model-engineering/chapter-4/various-llm-architectures/#loop-cache-storage) connects the result to two different approaches to layer reuse, including [Z.ai's description of GLM-5.4](https://docs.z.ai/guides/llm/glm-5.4) and the [Thinking Machines Lab research checkpoint](https://thinkingmachines.ai/model-card/tml-d24-varloop-research/).
 
+## Run the measurement on your CPU
+
+These commands use Python 3.12 and curl on Linux x86-64. The initial setup downloads packages and the script. The experiment creates a small model with random weights, so the model run works offline even with an empty model cache. The install selects the CPU build of PyTorch.
+
+```sh
+python3.12 -m venv .venv
+. .venv/bin/activate
+python -m pip install --index-url https://download.pytorch.org/whl/cpu torch==2.15.0
+python -m pip install transformers==5.24.1
+curl -fLo loop_cache.py \
+  https://raw.githubusercontent.com/sungeuns/foundation-model-engineering/9c2cdca7b6eb33707aed43535afa0d132eff74db/public/labs/loop_cache.py
+HF_HUB_OFFLINE=1 python loop_cache.py > loop-run.json
+```
+
+Find the row with `passes` equal to 1 in `loop-run.json`. Its `backing_bytes` should fall from 18,432 to 13,824 while `logical_bytes` rises from 10,752 to 11,264. A message about `causal_conv1d` means the CPU run is using the reference PyTorch implementation.
+
 *An AI coding assistant wrote this article and ran the CPU experiment with PyTorch 2.15.0 and Transformers 5.24.1.*

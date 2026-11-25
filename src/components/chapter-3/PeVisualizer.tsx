@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import './position-encoding.css';
 
 const width = 32;
@@ -26,6 +26,8 @@ const heatmap = Array.from({ length: rows }, (_, p) => (
 
 export default function PeVisualizer({ lang = 'en' }: { lang?: 'en' | 'ko' }) {
   const ko = lang === 'ko';
+  const [ready, setReady] = useState(false);
+  useEffect(() => setReady(true), []);
   const [position, setPosition] = useState(1);
   const [pair, setPair] = useState(0);
   const angle = angleAt(position, pair);
@@ -36,13 +38,13 @@ export default function PeVisualizer({ lang = 'en' }: { lang?: 'en' | 'ko' }) {
       <div className="position-grid-controls">
         <label>
           <span>{ko ? '위치' : 'Position'} <b>{position}</b></span>
-          <input type="range" min="0" max={rows - 1} step="1" value={position}
+          <input type="range" min="0" max={rows - 1} step="1" disabled={!ready} value={position}
             aria-label={ko ? '위치' : 'Position'}
             onChange={event => setPosition(Number(event.target.value))} />
         </label>
         <label>
           <span>{ko ? '주파수 쌍' : 'Frequency pair'} <b>{pair}</b></span>
-          <input type="range" min="0" max={pairs - 1} step="1" value={pair}
+          <input type="range" min="0" max={pairs - 1} step="1" disabled={!ready} value={pair}
             aria-label={ko ? '주파수 쌍' : 'Frequency pair'}
             onChange={event => setPair(Number(event.target.value))} />
         </label>

@@ -33,4 +33,20 @@ print(kept.nbytes, kept.untyped_storage().nbytes())       # 192 256
 
 훈련된 체크포인트에 얼마나 많은 메모리가 필요하고 답변 품질이 어떤지는 별도의 실험이 필요합니다. 교재에서는 어떤 모델의 층 반복 방식이 어디까지 공개됐는지도 다룹니다. [교재의 층 반복 실험](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-4/various-llm-architectures/#loop-cache-storage) · [Z.ai GLM-5.4 문서](https://docs.z.ai/guides/llm/glm-5.4) · [Thinking Machines Lab 모델 카드](https://thinkingmachines.ai/model-card/tml-d24-varloop-research/)
 
+## 내 CPU에서 실측하기
+
+Linux x86-64, Python 3.12와 curl을 사용했습니다. 처음 한 번은 패키지와 스크립트를 내려받습니다. 모델은 작은 구성에서 임의 가중치로 생성하므로 빈 모델 캐시로도 오프라인 실행이 가능합니다. 아래 명령은 PyTorch의 CPU 빌드를 설치합니다.
+
+```sh
+python3.12 -m venv .venv
+. .venv/bin/activate
+python -m pip install --index-url https://download.pytorch.org/whl/cpu torch==2.15.0
+python -m pip install transformers==5.24.1
+curl -fLo loop_cache.py \
+  https://raw.githubusercontent.com/sungeuns/foundation-model-engineering/9c2cdca7b6eb33707aed43535afa0d132eff74db/public/labs/loop_cache.py
+HF_HUB_OFFLINE=1 python loop_cache.py > loop-run.json
+```
+
+`loop-run.json`에서 `passes`가 1인 행을 찾으세요. `backing_bytes`가 18,432에서 13,824로 줄고, `logical_bytes`는 10,752에서 11,264로 늘어야 합니다. `causal_conv1d` 관련 안내가 나와도 CPU 실험은 기본 PyTorch 구현으로 계속 실행됩니다.
+
 *AI 코딩 도우미가 PyTorch 2.15.0과 Transformers 5.24.1에서 CPU 실험을 실행하고 이 글을 작성했습니다.*

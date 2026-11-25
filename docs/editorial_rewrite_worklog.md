@@ -277,7 +277,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 2.4 | `/chapter-2/cnns-for-nlp` | Inspected 2026-11-25 | 3ea1f3cff839b4a390d8a98af7bf540f1367736bdb09d50869c6a05ba369437c | a44815cf317e2f8a2e4068d1a8584eafc24a81e5c85c4d7e5a09f8ff5c481aa6 |
 | 3.1 | `/chapter-3/self-attention-mathematics` | Inspected 2026-11-25 | 66d78404bf11b7765a62237eb7a1e685ae13c39b5bb2a4cc5e81653ecc0fe783 | 675e58f127fc9e2618f2dbd556d554e72576fbcb8c0a3032398d6839eaf2b6df |
 | 3.2 | `/chapter-3/multi-head-attention` | Inspected 2026-11-25 | bc5026a7ec1b9aa4d5bc4589f7f6011630bc877efcb8d179954ee0560d8a705f | 4316a26ed2c414ccdb0c4f4ad6642d98286b9350748fd362920a1d183cac8b68 |
-| 3.3 | `/chapter-3/position-encoding-strategy` | Inspected 2026-11-25 | fde9e5daa7404ba9c213feaeac0bb80b8e6342ba2164885a911cb7e98ee4a1ef | 37d4d640ad0c9f5edbda4657a564c77931db24b6a455b646ab77eec260bfc51e |
+| 3.3 | `/chapter-3/position-encoding-strategy` | Inspected 2026-11-25 | 3bf657d00573be4a6ad6b8384b52e2451d7535a8087d12ae4b90478de7f520b7 | b41b53f6f42b514e50bde14247d432181b57acf5f4eb1c6cefd17a57fb819884 |
 | 3.4 | `/chapter-3/layer-normalization-residuals` | Inspected 2026-11-25 | a3587f46c53f4796ac71f768e9561130af2c053e394f20d83a1d8f12a6841487 | a69ef3c4fc27e17f5313847ce8003f1b3acb57db1b99557a5354f904818065ba |
 | 3.5 | `/chapter-3/complexity-analysis` | Inspected 2026-11-25 | 4fa50d4c3dc2ab7d3d3342dd207680fcbd5f5bc0ec089b4725f1a863335a9212 | 9480dd96b0734e9ab0d45990ea72fea9c76e501d5673bd58b5b32babcf39f030 |
 | 4.1 | `/chapter-4/encoder-only` | Inspected 2026-11-25 | d1ead46157733149700b6dbe04d9b4b762b926993bb8fbd5656077c6183979a9 | 20c6167fe0147b402577fea44ad27b8267f000770e267848e558f60acc6969cf |
@@ -357,7 +357,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 17.3 | `/chapter-17/elo-rating-and-leaderboards` | Inspected 2026-11-25 | 682ffbd445359a82ff596b99a004dfc2ebea6fe1a166e7a912c6b8c52be21afd | a7882a55e09b6529bd4355425f44b3f8a640dd32c01a1706e39756616a36d22b |
 | 17.4 | `/chapter-17/contamination-issues` | Mechanical only | 38a0cad52c7504804a57a8cc2deed94a3ac2fe68f7648809261abad1cf6b4fa5 | ad7b87426dcdde29f69a6921696a462359e7681d7d3b5ee5c11f3d80ec0a71c7 |
 | 17.5 | `/chapter-17/production-evaluation-and-release-gates` | Inspected 2026-11-25 | d2917516ef75c2ede2cd4db285a221090b09f181104e7112bd388f427ecc5298 | cb7d670ce7898fe43516e3cc8a38e295b6e24bba8e3a65c7579c61f3e03b9fb3 |
-| 17.6 | `/chapter-17/commercial-model-benchmarks` | Mechanical only | c2301c40921a3a905ddc7499fe4fc5653e77f8602459f05a59f9e3f291cb6f03 | a295601d0d679575cd75e7770e59f2715c7687220ccb8db4ad5f44475dac698b |
+| 17.6 | `/chapter-17/commercial-model-benchmarks` | Inspected 2026-11-25 | 7140ecd8aab7049d61bbbb3b77e77ed2fe983448afaf5a84cf8af4edb02e7af4 | ff3a0da4fdaeb7b9955ab69ad673190ffbdb9bfb50af570ac0269e7636f6eeb4 |
 | 17.7 | `/chapter-17/experimental-design-and-uncertainty` | Inspected 2026-11-25 | a49f4705d53ea21959540b6d9cbaade29cdd63310712a6f8e2d67eb9288746cc | 8040249564bacddeebe7eda07ece30695e580990c258f0393284df9e3d07735f |
 | 18.1 | `/chapter-18/red-teaming` | Mechanical only | fa815b07490b4a1039a2e91d2c98e9f1f212d6479f534afa5f09020cc8f93598 | 5aa628372d20829e842ce6b3fad0133fee7c40e63c345e76f0b823b351df6f59 |
 | 18.2 | `/chapter-18/jailbreaking-and-defense` | Mechanical only | caff93966e1d1a925120d696bf37a09fa46cc63cd9378c818ac9f1d489348afd | 165303014a71dfa4ec8e28c0ac7f38712f5d97fbcd551510aa5539cb33c33ac1 |

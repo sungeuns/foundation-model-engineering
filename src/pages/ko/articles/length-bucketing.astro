@@ -2,7 +2,6 @@
 import BookLayout from '../../../layouts/BookLayout.astro';
 import { Content, frontmatter } from '../../../data/articles/length-bucketing.ko.md';
 ---
-<BookLayout lang="ko" title={frontmatter.title} description={frontmatter.description}>
-  <h1>{frontmatter.title}</h1>
+<BookLayout lang="ko" title={frontmatter.title} description={frontmatter.description} firstPublished={frontmatter.firstPublished}>
   <Content />
 </BookLayout>

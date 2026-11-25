@@ -11,69 +11,69 @@ import RequestCostExample from '../../components/chapter-17/RequestCostExample.a
 
 Suppose a model is cheaper per token but takes twice as many tool turns to finish your task. Has your system become cheaper? A leaderboard cannot answer that by itself. You need the evaluated configuration, the billing rules and a definition of a successful task.
 
-**As of 2026-11-24.** This static snapshot covers 45 selected profiles, including GLM-5.4, Ling-3.2-air, GPT-6.2 Astra/Sol and Gemini 4 Neon/Carbon. A row dates the event its source establishes, such as an API launch, publication of weights or a checkpoint revision. The last two numerical columns give the Artificial Analysis index and estimated cost per task where available. Reverify access and pricing before using a row to budget a deployment.
+This static snapshot covers 45 profiles, including GLM-5.4, Ling-3.2-air, GPT-6.2 Astra/Sol and Gemini 4 Neon/Carbon. **Provider access as of 2026-11-24.** Each release date identifies an API launch, publication of weights or checkpoint revision. **Artificial Analysis (AA) evaluations as of 2026-11-25.** We matched 34 profiles to an index score. For 32 of those, AA also published a cost and a time per task. Before budgeting a deployment, use the linked sources in each row to reverify access and pricing.
 
 ## 1. Know What the Number Measures
 
-The table and explorer preserve **Artificial Analysis Intelligence Index v5.0.1**. It combines nine evaluations across knowledge work, coding, science and general tasks. [[1]](#ref-1)
+The table and explorer use the public profiles for **Artificial Analysis Intelligence Index v5.0.2**. The index combines nine evaluations across knowledge work, coding, science and general tasks. [[1]](#ref-1) [[137]](#ref-137)
 
 On November 24, 2026, Artificial Analysis released **v5.0.2**. Terminal-Bench moved from 4.0 to 4.1. The 66 tasks, instructions and agent environments stayed the same, but the tests that determine whether a solution passes changed. For FrontierCode-AA 2.0, AA regraded existing attempts with an updated trajectory scanner and used an LLM judge to review attempts the scanner flagged for further inspection. [[1]](#ref-1) [[124]](#ref-124)
 
-Consider Gemini 4 Carbon at High reasoning effort. AA reports **65.2%** on Terminal-Bench 4.0 and **66.2%** on 4.1. In both versions, AA used the same agent harness (`mini-swe-agent`) and averaged first-attempt success over three runs per task. A team claiming a one-percentage-point model improvement from those figures would also be counting a change in how success was judged. Evaluate both candidates with the same benchmark version. [[125]](#ref-125) [[126]](#ref-126)
+For Gemini 4 Carbon at High reasoning effort, AA reports **65.2%** on Terminal-Bench 4.0 and **66.2%** on 4.1. It ran each of the 66 tasks three times with `mini-swe-agent` and averaged first-attempt success. For 4.1, it scored the saved 4.0 outputs with the new tests. The same model answers gained one percentage point. To measure the effect of a model change, grade both candidates with the same tests. [[1]](#ref-1) [[125]](#ref-125) [[126]](#ref-126)
 
 Each point represents a model **plus** an effort setting and evaluation system. Fallback, tools, scaffold, token budgets, sampling and grader can all affect the result. These are not equal-compute experiments. An index is not an accuracy percentage, and a context limit is not retrieval accuracy. “Not reported” means that this record has no verified value for the mapped revision and methodology; it never means zero.
 
 ## 2. Release and Evaluation Record
 
-Copy a model name’s link to share its row, including access, evaluation settings and sources.
+Each model name links directly to its row. **Minutes per AA task** estimates inference time on the index workload. AA divides each evaluation’s output tokens per task by output speed, then weights the estimates using the index weights. [[137]](#ref-137)
 
-| Model | Release / revision milestone | Access as of 2026-11-24 | AA reasoning configuration | Index | $/AA task | Sources |
-|---|---|---|---|---:|---:|---|
-| <a id="model-glm-54" href="#model-glm-54">GLM-5.4</a> | 2026-11-23 | released/hosted plans; pay-as-you-go API and weights planned | not reported | not reported | not reported | [[5]](#ref-5) [[6]](#ref-6) [[7]](#ref-7) |
-| <a id="model-ling-32-air" href="#model-ling-32-air">Ling-3.2-air</a> | 2026-11-23 | released/open-weight | reasoning; effort not reported | 23 | not reported | [[112]](#ref-112) [[113]](#ref-113) [[114]](#ref-114) |
-| <a id="model-inkling-2-mini" href="#model-inkling-2-mini">Inkling 2 Mini</a> | 2026-11-20 | released/open-weight | reasoning; effort not reported | 20 | 0.59 | [[108]](#ref-108) [[109]](#ref-109) |
-| <a id="model-tencent-hy4" href="#model-tencent-hy4">Tencent Hy4</a> | 2026-11-20 | released/open-weight + API | reasoning; effort not reported | 35 | 1.03 | [[118]](#ref-118) [[119]](#ref-119) [[120]](#ref-120) [[121]](#ref-121) [[122]](#ref-122) |
-| <a id="model-gemini-4-neon" href="#model-gemini-4-neon">Gemini 4 Neon</a> | 2026-11-18 | Gemini API and Gemini app (Pro or Ultra) | xhigh | 61 | 6.44 | [[11]](#ref-11) [[12]](#ref-12) [[99]](#ref-99) [[100]](#ref-100) [[128]](#ref-128) |
-| <a id="model-gpt-62-astra" href="#model-gpt-62-astra">GPT-6.2 Astra</a> | 2026-11-17 | hosted through the API, ChatGPT Work and Codex | max | 62 | 4.00 | [[9]](#ref-9) [[94]](#ref-94) [[95]](#ref-95) |
-| <a id="model-gpt-62-sol" href="#model-gpt-62-sol">GPT-6.2 Sol</a> | 2026-11-17 | hosted through the API, ChatGPT Work and Codex | max | 57 | 1.01 | [[10]](#ref-10) [[94]](#ref-94) [[96]](#ref-96) |
-| <a id="model-qwen4-max" href="#model-qwen4-max">Qwen4-Max</a> | 2026-11-16 | QwenCloud API, QwenWork and QwenStudio | reasoning; effort not reported | 43 | 3.27 | [[14]](#ref-14) [[15]](#ref-15) [[104]](#ref-104) [[130]](#ref-130) |
-| <a id="model-agnes-25-pro-theta" href="#model-agnes-25-pro-theta">Agnes 2.5 Pro Theta</a> | 2026-11-15 | released/open-weight | reasoning; effort not reported | not reported | not reported | [[17]](#ref-17) [[106]](#ref-106) [[107]](#ref-107) |
-| <a id="model-inkling-2-small" href="#model-inkling-2-small">Inkling 2 Small</a> | 2026-11-12 | released/open-weight | reasoning; effort not reported | 31 | 1.18 | [[84]](#ref-84) [[85]](#ref-85) [[86]](#ref-86) [[87]](#ref-87) |
-| <a id="model-gemini-4-hydrogen" href="#model-gemini-4-hydrogen">Gemini 4 Hydrogen</a> | 2026-11-12 | Gemini API, Gemini app and Google Search | xhigh | 54 | 3.16 | [[101]](#ref-101) [[12]](#ref-12) [[102]](#ref-102) [[103]](#ref-103) [[13]](#ref-13) |
-| <a id="model-gemini-4-carbon" href="#model-gemini-4-carbon">Gemini 4 Carbon</a> | 2026-11-10 | Gemini API and Gemini app (Ultra) | high | 60 | 7.76 | [[97]](#ref-97) [[12]](#ref-12) [[98]](#ref-98) [[4]](#ref-4) [[129]](#ref-129) |
-| <a id="model-longcat-25" href="#model-longcat-25">LongCat-2.5</a> | 2026-11-10 | released/open-weight | reasoning; effort not reported | not reported | not reported | [[105]](#ref-105) [[16]](#ref-16) |
-| <a id="model-claude-fable-52" href="#model-claude-fable-52">Claude Fable 5.2</a> | 2026-11-09 | API access | max with fallback | 65 | 26.54 | [[82]](#ref-82) [[29]](#ref-29) [[83]](#ref-83) |
-| <a id="model-claude-mythos-52" href="#model-claude-mythos-52">Claude Mythos 5.2</a> | 2026-11-09 | restricted to verified programs | not reported | not reported | not reported | [[82]](#ref-82) [[29]](#ref-29) |
-| <a id="model-muse-ember" href="#model-muse-ember">Muse Ember</a> | 2026-11-09 | API access | max | 36 | 0.14 | [[110]](#ref-110) [[111]](#ref-111) |
-| <a id="model-qwen38-flash-next" href="#model-qwen38-flash-next">Qwen3.8 Flash Next</a> | 2026-11-07 | released/open-weight | reasoning; effort not reported | 29 | 0.57 | [[88]](#ref-88) [[89]](#ref-89) [[90]](#ref-90) |
-| <a id="model-kimi-k31-pro" href="#model-kimi-k31-pro">Kimi K3.1 Pro</a> | 2026-11-05 | released/open-weight + API | max | 46 | 3.68 | [[65]](#ref-65) [[66]](#ref-66) [[67]](#ref-67) [[68]](#ref-68) |
-| <a id="model-mistral-large-4" href="#model-mistral-large-4">Mistral Large 4</a> | 2026-10-29 | released/open-weight + API | high | 26 | 2.06 | [[18]](#ref-18) [[40]](#ref-40) [[41]](#ref-41) [[42]](#ref-42) |
-| <a id="model-gpt-61-terra" href="#model-gpt-61-terra">GPT-6.1 Terra</a> | 2026-10-26 | API access | max | 51 | 0.96 | [[80]](#ref-80) [[81]](#ref-81) |
-| <a id="model-kimi-k31-pro-highspeed" href="#model-kimi-k31-pro-highspeed">Kimi K3.1 Pro Highspeed</a> | 2026-10-24 | Kimi API, Kimi.ai, Kimi Work and Kimi Code | not reported | not reported | not reported | [[68]](#ref-68) |
-| <a id="model-minimax-m31-flash" href="#model-minimax-m31-flash">MiniMax M3.1 Flash</a> | 2026-10-23 | released/open-weight + API | max | 29 | 0.49 | [[61]](#ref-61) [[62]](#ref-62) [[63]](#ref-63) [[64]](#ref-64) |
-| <a id="model-nemotron-35-bolt-e4b" href="#model-nemotron-35-bolt-e4b">Nemotron 3.5 Bolt E4B 4GB</a> | 2026-10-23 | released/open-weight | not reported | not reported | not reported | [[77]](#ref-77) [[78]](#ref-78) [[79]](#ref-79) |
-| <a id="model-ling-30-flash-sante" href="#model-ling-30-flash-sante">Ling 3.0 Flash Sante</a> | 2026-10-22 | released/open-weight | reasoning; effort not reported | not reported | not reported | [[72]](#ref-72) [[73]](#ref-73) |
-| <a id="model-smaug-nemotron-35-nvfp4" href="#model-smaug-nemotron-35-nvfp4">Smaug Nemotron 3.5 NVFP4</a> | 2026-10-22 | released/open-weight | not reported | not reported | not reported | [[74]](#ref-74) [[75]](#ref-75) [[76]](#ref-76) |
-| <a id="model-ling-31-flash" href="#model-ling-31-flash">Ling 3.1 Flash</a> | 2026-10-20 | released/open-weight | reasoning; effort not reported | not reported | not reported | [[69]](#ref-69) [[70]](#ref-70) [[71]](#ref-71) |
-| <a id="model-deepseek-v41-flash-1017" href="#model-deepseek-v41-flash-1017">DeepSeek V4.1 Flash 1017</a> | 2026-10-17 | released/open-weight + API update | max | 33 | 0.60 | [[58]](#ref-58) [[59]](#ref-59) [[60]](#ref-60) |
-| <a id="model-beam" href="#model-beam">Beam 1.0</a> | 2026-10-16 | released/open-weight | reasoning; effort not reported | 18 | 0.28 | [[43]](#ref-43) [[44]](#ref-44) [[45]](#ref-45) |
-| <a id="model-muse-spark-open" href="#model-muse-spark-open">Muse Spark Open</a> | 2026-10-15 | released/open-weight; gated download | xhigh | 25 | 2.02 | [[49]](#ref-49) [[50]](#ref-50) [[51]](#ref-51) |
-| <a id="model-nemotron-35-super-vl" href="#model-nemotron-35-super-vl">Nemotron 3.5 Super VL</a> | 2026-10-15 | released/open-weight | high | 14 | 0.48 | [[52]](#ref-52) [[53]](#ref-53) |
-| <a id="model-nemotron-35-bolt" href="#model-nemotron-35-bolt">Nemotron 3.5 Bolt 74B-A9B 24GB</a> | 2026-10-15 | released/open-weight | reasoning; effort not reported | not reported | not reported | [[54]](#ref-54) [[55]](#ref-55) |
-| <a id="model-step-5-preview" href="#model-step-5-preview">Step 5 Preview</a> | 2026-10-15 | released/open-weight | reasoning; effort not reported | 29 | 2.35 | [[56]](#ref-56) [[57]](#ref-57) |
-| <a id="model-glm-53-flash" href="#model-glm-53-flash">GLM-5.3 Flash</a> | 2026-10-15 | released/open-weight | max | 28 | 0.58 | [[91]](#ref-91) [[92]](#ref-92) [[93]](#ref-93) |
-| <a id="model-gemini-4-argon" href="#model-gemini-4-argon">Gemini 4 Argon</a> | 2026-10-13 | Gemini API, Gemini app and AI Mode in Search (Pro and Ultra for app and Search) | high | 50 | 9.95 | [[34]](#ref-34) [[3]](#ref-3) [[35]](#ref-35) [[2]](#ref-2) |
-| <a id="model-muse-wonder" href="#model-muse-wonder">Muse Wonder</a> | 2026-10-12 | Meta Model API and Muse Code | max | 44 | 6.95 | [[46]](#ref-46) [[47]](#ref-47) |
-| <a id="model-muse-wonder-full" href="#model-muse-wonder-full">Muse Wonder Full</a> | 2026-10-12 | released/subscription-only | max | 50 | not reported | [[46]](#ref-46) [[48]](#ref-48) |
-| <a id="model-claude-haiku-55" href="#model-claude-haiku-55">Claude Haiku 5.5</a> | 2026-10-07 | API access | max | 36 | 0.41 | [[32]](#ref-32) [[33]](#ref-33) [[29]](#ref-29) |
-| <a id="model-gpt-61-sol" href="#model-gpt-61-sol">GPT-6.1 Sol</a> | 2026-09-29 | API access | max | 55 | 1.27 | [[19]](#ref-19) [[20]](#ref-20) |
-| <a id="model-claude-sonnet-55" href="#model-claude-sonnet-55">Claude Sonnet 5.5</a> | 2026-09-28 | API access | max with fallback | 55 | 10.02 | [[30]](#ref-30) [[31]](#ref-31) [[32]](#ref-32) [[29]](#ref-29) |
-| <a id="model-gpt-6-sol" href="#model-gpt-6-sol">GPT-6 Sol</a> | 2026-09-22 | API access | max | 44 | 2.47 | [[21]](#ref-21) [[22]](#ref-22) |
-| <a id="model-gpt-6-luna" href="#model-gpt-6-luna">GPT-6 Luna</a> | 2026-09-22 | API access | max | 28 | 0.15 | [[23]](#ref-23) [[24]](#ref-24) |
-| <a id="model-claude-opus-55" href="#model-claude-opus-55">Claude Opus 5.5</a> | 2026-09-22 | API access | max with fallback | 59 | 10.04 | [[27]](#ref-27) [[28]](#ref-28) [[29]](#ref-29) |
-| <a id="model-deepseek-v41-flash" href="#model-deepseek-v41-flash">DeepSeek V4.1 Flash (September profile)</a> | 2026-09-10 | released/open-weight | max | not reported | not reported | [[36]](#ref-36) [[37]](#ref-37) |
-| <a id="model-gpt-6-astra" href="#model-gpt-6-astra">GPT-6 Astra</a> | 2026-09-03 | API access | max | 57 | 6.24 | [[25]](#ref-25) [[26]](#ref-26) |
-| <a id="model-glm-53" href="#model-glm-53">GLM-5.3</a> | 2026-08-14 | released/open-weight | max | 32 | 5.01 | [[38]](#ref-38) [[39]](#ref-39) |
+| Model | Release / revision milestone | Access as of 2026-11-24 | AA reasoning configuration | Index | $/AA task | Minutes/AA task | Sources |
+|---|---|---|---|---:|---:|---:|---|
+| <a id="model-glm-54" href="#model-glm-54">GLM-5.4</a> | 2026-11-23 | released/hosted plans; pay-as-you-go API and weights planned | not reported | not reported | not reported | not reported | [[5]](#ref-5) [[6]](#ref-6) [[7]](#ref-7) |
+| <a id="model-ling-32-air" href="#model-ling-32-air">Ling-3.2-air</a> | 2026-11-23 | released/open-weight | reasoning; effort not reported | 23 | not reported | not reported | [[112]](#ref-112) [[113]](#ref-113) [[114]](#ref-114) |
+| <a id="model-inkling-2-mini" href="#model-inkling-2-mini">Inkling 2 Mini</a> | 2026-11-20 | released/open-weight | reasoning; effort not reported | 20 | 0.59 | 13.6 | [[108]](#ref-108) [[109]](#ref-109) |
+| <a id="model-tencent-hy4" href="#model-tencent-hy4">Tencent Hy4</a> | 2026-11-20 | released/open-weight + API | reasoning; effort not reported | 35 | 1.03 | 13.5 | [[118]](#ref-118) [[119]](#ref-119) [[120]](#ref-120) [[121]](#ref-121) [[122]](#ref-122) |
+| <a id="model-gemini-4-neon" href="#model-gemini-4-neon">Gemini 4 Neon</a> | 2026-11-18 | Gemini API and Gemini app (Pro or Ultra) | xhigh | 62 | 6.44 | 25.6 | [[11]](#ref-11) [[12]](#ref-12) [[99]](#ref-99) [[100]](#ref-100) [[128]](#ref-128) |
+| <a id="model-gpt-62-astra" href="#model-gpt-62-astra">GPT-6.2 Astra</a> | 2026-11-17 | hosted through the API, ChatGPT Work and Codex | max | 62 | 4.00 | 14.2 | [[9]](#ref-9) [[94]](#ref-94) [[95]](#ref-95) |
+| <a id="model-gpt-62-sol" href="#model-gpt-62-sol">GPT-6.2 Sol</a> | 2026-11-17 | hosted through the API, ChatGPT Work and Codex | max | 57 | 1.01 | 10.0 | [[10]](#ref-10) [[94]](#ref-94) [[96]](#ref-96) |
+| <a id="model-qwen4-max" href="#model-qwen4-max">Qwen4-Max</a> | 2026-11-16 | QwenCloud API, QwenWork and QwenStudio | reasoning; effort not reported | 43 | 3.27 | 18.7 | [[14]](#ref-14) [[15]](#ref-15) [[104]](#ref-104) [[130]](#ref-130) |
+| <a id="model-agnes-25-pro-theta" href="#model-agnes-25-pro-theta">Agnes 2.5 Pro Theta</a> | 2026-11-15 | released/open-weight | reasoning; effort not reported | not reported | not reported | not reported | [[17]](#ref-17) [[106]](#ref-106) [[107]](#ref-107) |
+| <a id="model-inkling-2-small" href="#model-inkling-2-small">Inkling 2 Small</a> | 2026-11-12 | released/open-weight | reasoning; effort not reported | 31 | 1.18 | 24.5 | [[84]](#ref-84) [[85]](#ref-85) [[86]](#ref-86) [[87]](#ref-87) |
+| <a id="model-gemini-4-hydrogen" href="#model-gemini-4-hydrogen">Gemini 4 Hydrogen</a> | 2026-11-12 | Gemini API, Gemini app and Google Search | xhigh | 54 | 3.16 | 15.9 | [[101]](#ref-101) [[12]](#ref-12) [[102]](#ref-102) [[103]](#ref-103) [[13]](#ref-13) |
+| <a id="model-gemini-4-carbon" href="#model-gemini-4-carbon">Gemini 4 Carbon</a> | 2026-11-10 | Gemini API and Gemini app (Ultra) | high | 60 | 7.76 | 38.1 | [[97]](#ref-97) [[12]](#ref-12) [[98]](#ref-98) [[4]](#ref-4) [[129]](#ref-129) |
+| <a id="model-longcat-25" href="#model-longcat-25">LongCat-2.5</a> | 2026-11-10 | released/open-weight | reasoning; effort not reported | not reported | not reported | not reported | [[105]](#ref-105) [[16]](#ref-16) |
+| <a id="model-claude-fable-52" href="#model-claude-fable-52">Claude Fable 5.2</a> | 2026-11-09 | API access | max with fallback | 65 | 26.54 | 40.6 | [[82]](#ref-82) [[29]](#ref-29) [[83]](#ref-83) |
+| <a id="model-claude-mythos-52" href="#model-claude-mythos-52">Claude Mythos 5.2</a> | 2026-11-09 | restricted to verified programs | not reported | not reported | not reported | not reported | [[82]](#ref-82) [[29]](#ref-29) |
+| <a id="model-muse-ember" href="#model-muse-ember">Muse Ember</a> | 2026-11-09 | API access | max | 36 | 0.14 | 3.4 | [[110]](#ref-110) [[111]](#ref-111) |
+| <a id="model-qwen38-flash-next" href="#model-qwen38-flash-next">Qwen3.8 Flash Next</a> | 2026-11-07 | released/open-weight | reasoning; effort not reported | 28 | 0.57 | 34.2 | [[88]](#ref-88) [[89]](#ref-89) [[90]](#ref-90) |
+| <a id="model-kimi-k31-pro" href="#model-kimi-k31-pro">Kimi K3.1 Pro</a> | 2026-11-05 | released/open-weight + API | max | 47 | 3.68 | 34.0 | [[65]](#ref-65) [[66]](#ref-66) [[67]](#ref-67) [[68]](#ref-68) |
+| <a id="model-mistral-large-4" href="#model-mistral-large-4">Mistral Large 4</a> | 2026-10-29 | released/open-weight + API | high | 26 | 2.06 | 15.9 | [[18]](#ref-18) [[40]](#ref-40) [[41]](#ref-41) [[42]](#ref-42) |
+| <a id="model-gpt-61-terra" href="#model-gpt-61-terra">GPT-6.1 Terra</a> | 2026-10-26 | API access | max | 51 | 0.96 | 14.0 | [[80]](#ref-80) [[81]](#ref-81) |
+| <a id="model-kimi-k31-pro-highspeed" href="#model-kimi-k31-pro-highspeed">Kimi K3.1 Pro Highspeed</a> | 2026-10-24 | Kimi API, Kimi.ai, Kimi Work and Kimi Code | not reported | not reported | not reported | not reported | [[68]](#ref-68) |
+| <a id="model-minimax-m31-flash" href="#model-minimax-m31-flash">MiniMax M3.1 Flash</a> | 2026-10-23 | released/open-weight + API | max | 29 | 0.49 | 17.8 | [[61]](#ref-61) [[62]](#ref-62) [[63]](#ref-63) [[64]](#ref-64) |
+| <a id="model-nemotron-35-bolt-e4b" href="#model-nemotron-35-bolt-e4b">Nemotron 3.5 Bolt E4B 4GB</a> | 2026-10-23 | released/open-weight | not reported | not reported | not reported | not reported | [[77]](#ref-77) [[78]](#ref-78) [[79]](#ref-79) |
+| <a id="model-ling-30-flash-sante" href="#model-ling-30-flash-sante">Ling 3.0 Flash Sante</a> | 2026-10-22 | released/open-weight | reasoning; effort not reported | not reported | not reported | not reported | [[72]](#ref-72) [[73]](#ref-73) |
+| <a id="model-smaug-nemotron-35-nvfp4" href="#model-smaug-nemotron-35-nvfp4">Smaug Nemotron 3.5 NVFP4</a> | 2026-10-22 | released/open-weight | not reported | not reported | not reported | not reported | [[74]](#ref-74) [[75]](#ref-75) [[76]](#ref-76) |
+| <a id="model-ling-31-flash" href="#model-ling-31-flash">Ling 3.1 Flash</a> | 2026-10-20 | released/open-weight | reasoning; effort not reported | not reported | not reported | not reported | [[69]](#ref-69) [[70]](#ref-70) [[71]](#ref-71) |
+| <a id="model-deepseek-v41-flash-1017" href="#model-deepseek-v41-flash-1017">DeepSeek V4.1 Flash 1017</a> | 2026-10-17 | released/open-weight + API update | max | 32 | 0.60 | 13.8 | [[58]](#ref-58) [[59]](#ref-59) [[60]](#ref-60) |
+| <a id="model-beam" href="#model-beam">Beam 1.0</a> | 2026-10-16 | released/open-weight | reasoning; effort not reported | 18 | 0.28 | 1.6 | [[43]](#ref-43) [[44]](#ref-44) [[45]](#ref-45) |
+| <a id="model-muse-spark-open" href="#model-muse-spark-open">Muse Spark Open</a> | 2026-10-15 | released/open-weight; gated download | xhigh | 25 | 2.02 | 6.4 | [[49]](#ref-49) [[50]](#ref-50) [[51]](#ref-51) |
+| <a id="model-nemotron-35-super-vl" href="#model-nemotron-35-super-vl">Nemotron 3.5 Super VL</a> | 2026-10-15 | released/open-weight | high | 14 | 0.48 | 4.0 | [[52]](#ref-52) [[53]](#ref-53) |
+| <a id="model-nemotron-35-bolt" href="#model-nemotron-35-bolt">Nemotron 3.5 Bolt 74B-A9B 24GB</a> | 2026-10-15 | released/open-weight | reasoning; effort not reported | not reported | not reported | not reported | [[54]](#ref-54) [[55]](#ref-55) |
+| <a id="model-step-5-preview" href="#model-step-5-preview">Step 5 Preview</a> | 2026-10-15 | released/open-weight | reasoning; effort not reported | 29 | 2.35 | 24.2 | [[56]](#ref-56) [[57]](#ref-57) |
+| <a id="model-glm-53-flash" href="#model-glm-53-flash">GLM-5.3 Flash</a> | 2026-10-15 | released/open-weight | max | 28 | 0.58 | 37.0 | [[91]](#ref-91) [[92]](#ref-92) [[93]](#ref-93) |
+| <a id="model-gemini-4-argon" href="#model-gemini-4-argon">Gemini 4 Argon</a> | 2026-10-13 | Gemini API, Gemini app and AI Mode in Search (Pro and Ultra for app and Search) | high | 51 | 9.95 | 23.8 | [[34]](#ref-34) [[3]](#ref-3) [[35]](#ref-35) [[2]](#ref-2) |
+| <a id="model-muse-wonder" href="#model-muse-wonder">Muse Wonder</a> | 2026-10-12 | Meta Model API and Muse Code | max | 44 | 6.95 | 16.0 | [[46]](#ref-46) [[47]](#ref-47) |
+| <a id="model-muse-wonder-full" href="#model-muse-wonder-full">Muse Wonder Full</a> | 2026-10-12 | released/subscription-only | max | 50 | not reported | not reported | [[46]](#ref-46) [[48]](#ref-48) |
+| <a id="model-claude-haiku-55" href="#model-claude-haiku-55">Claude Haiku 5.5</a> | 2026-10-07 | API access | max | 37 | 0.41 | 14.5 | [[32]](#ref-32) [[33]](#ref-33) [[29]](#ref-29) |
+| <a id="model-gpt-61-sol" href="#model-gpt-61-sol">GPT-6.1 Sol</a> | 2026-09-29 | API access | max | 55 | 1.27 | 25.0 | [[19]](#ref-19) [[20]](#ref-20) |
+| <a id="model-claude-sonnet-55" href="#model-claude-sonnet-55">Claude Sonnet 5.5</a> | 2026-09-28 | API access | max with fallback | 55 | 10.02 | 30.8 | [[30]](#ref-30) [[31]](#ref-31) [[32]](#ref-32) [[29]](#ref-29) |
+| <a id="model-gpt-6-sol" href="#model-gpt-6-sol">GPT-6 Sol</a> | 2026-09-22 | API access | max | 44 | 2.47 | 7.5 | [[21]](#ref-21) [[22]](#ref-22) |
+| <a id="model-gpt-6-luna" href="#model-gpt-6-luna">GPT-6 Luna</a> | 2026-09-22 | API access | max | 28 | 0.15 | 10.6 | [[23]](#ref-23) [[24]](#ref-24) |
+| <a id="model-claude-opus-55" href="#model-claude-opus-55">Claude Opus 5.5</a> | 2026-09-22 | API access | max with fallback | 59 | 10.04 | 24.7 | [[27]](#ref-27) [[28]](#ref-28) [[29]](#ref-29) |
+| <a id="model-deepseek-v41-flash" href="#model-deepseek-v41-flash">DeepSeek V4.1 Flash (September profile)</a> | 2026-09-10 | released/open-weight | max | not reported | not reported | not reported | [[36]](#ref-36) [[37]](#ref-37) |
+| <a id="model-gpt-6-astra" href="#model-gpt-6-astra">GPT-6 Astra</a> | 2026-09-03 | API access | max | 57 | 6.24 | 19.0 | [[25]](#ref-25) [[26]](#ref-26) |
+| <a id="model-glm-53" href="#model-glm-53">GLM-5.3</a> | 2026-08-14 | released/open-weight | max | 32 | 5.01 | 28.1 | [[38]](#ref-38) [[39]](#ref-39) |
 
 **Read the cost column carefully.** AA computes a weighted cost per task using its workload, provider prices and typical cache-hit assumptions. It is not a captured invoice for your deployment. Prices can change without changing the model's score. On this snapshot, AA's Argon and Carbon profiles use \$4/\$20 per million input/output tokens, while Google's official introductory rates are \$2/\$10 through November 30, with \$4/\$20 scheduled from December 1. The table preserves AA's published calculation; the token-price explorer uses the dated provider rates. Do not silently mix them [[2]](#ref-2) [[3]](#ref-3) [[4]](#ref-4).
 
@@ -101,7 +101,13 @@ On November 24, OpenAI updated the API alias `chat-latest` to follow the latest 
 
 On November 24 the Responses API added four healthcare configurations, `gpt-6.2-astra-healthcare`, `gpt-6.2-sol-healthcare`, `gpt-6-astra-healthcare` and `gpt-6.1-sol-healthcare`. [[8]](#ref-8) These configurations add instructions for clinical questions and can search a dedicated medical index when web search is enabled. [[127]](#ref-127) Suppose you are evaluating a summary of two published studies. Record the configuration ID, whether search was on and which sources actually support the summary. The table’s general Astra and Sol scores do not test that retrieval-and-citation task under the clinical instructions.
 
-The chart's Max-effort profiles do not tell you the best effort for a latency-sensitive application. Compare at the effort and service tier you intend to operate. The cost example below shows why even a correctly copied base token price is insufficient.
+<a id="astra-effort-time"></a>
+
+#### How much longer does Astra take at maximum effort?
+
+AA’s public GPT-6.2 Astra profile gives `max` and `xhigh` the same rounded index score, **62**. On OpenAI’s API, AA estimates **14.2 minutes per index task** at `max` and **8.1 minutes** at `xhigh`. That is a 6.1-minute difference on AA’s workload. The table uses the `max` profile. [[95]](#ref-95)
+
+Suppose a support team promises to resolve 95% of tickets within ten minutes. It needs per-ticket completion times to test that promise. Replay the same private tickets at each effort with the same tools and service tier. Record time to first visible answer, time to resolution including queues and retries, and whether the resolution was correct. Compare the 95th-percentile completion time alongside success on difficult tickets.
 
 ### Gemini 4: shared context and dated prices
 
@@ -194,8 +200,8 @@ Keep weights or API revision, tokenizer/template, quantization, runtime, generat
 ## Quizzes
 
 <details>
-<summary>Quiz 1: Can an unchanged model have different v4.3.2 and v5.0.1 scores?</summary>
-*Yes. The tasks, grading rules and aggregation define the measurement. To test whether the model improved, evaluate both model versions with the same procedure. All index scores in the November 24 table use v5.0.1.*
+<summary>Quiz 1: How did Gemini 4 Carbon’s Terminal-Bench pass rate rise by one percentage point without a new model run?</summary>
+*AA applied the 4.1 tests to the saved 4.0 outputs. The measured pass rate moved from 65.2% to 66.2%. To test whether a newer model improves on its predecessor, score both models with the same verifier.*
 </details>
 
 <details>
@@ -219,8 +225,8 @@ Keep weights or API revision, tokenizer/template, quantization, runtime, generat
 </details>
 
 <details>
-<summary>Quiz 6: Does Neon's 1,048,576-token context permit that much input plus the same amount of output?</summary>
-*No. It is a shared budget, with additional output-mode limits. Check the remaining budget and the chosen execution mode; advertised context size is also not a guarantee of retrieval quality.*
+<summary>Quiz 6: Both Astra effort settings score 62. Can a team use the 8.1-minute figure to promise a ten-minute p95?</summary>
+*The 8.1 minutes is an estimate for an AA task at xhigh. The team needs the time by which 95% of its own tickets finish. Time each ticket through queues, tools and retries, then compare the p95 and the fraction resolved correctly at each effort.*
 </details>
 
 ## References
@@ -361,3 +367,4 @@ Keep weights or API revision, tokenizer/template, quantization, runtime, generat
 134. <a id="ref-134"></a>[Alibaba Cloud Model Studio, Qwen4-Max Token Plan preview schedule and endpoint](https://www.alibabacloud.com/help/en/model-studio/qwen4-max-preview).
 135. <a id="ref-135"></a>[Alibaba Cloud Model Studio, Qwen4-Max production model ID and capabilities by region](https://www.alibabacloud.com/help/en/model-studio/qwen4-max).
 136. <a id="ref-136"></a>[OpenAI, prompt-cache boundaries, usage fields and write lifetimes](https://developers.openai.com/api/docs/guides/prompt-caching).
+137. <a id="ref-137"></a>[Artificial Analysis, Intelligence Index evaluations and time-per-task calculation](https://artificialanalysis.ai/evaluations/artificial-analysis-intelligence-index).

@@ -4,6 +4,8 @@ title: "3.3 Position Encoding Strategy"
 lang: "en"
 ---
 
+import RopePositionReplay from '../../components/chapter-3/RopePositionReplay';
+import { withBasePath } from '../../utils/paths.js';
 import PeVisualizer from '../../components/chapter-3/PeVisualizer';
 
 # 3.3 Position Encoding Strategy
@@ -39,7 +41,7 @@ At position zero, every complete pair is $(0,1)$. Move one position to the right
 
 ## Example: The Encoding Matrix
 
-Each row is one position. Each pair of adjacent columns uses sine on the left and cosine on the right. Start at position 1 and switch the frequency pair from 0 to 8. Then set the position to 0 and predict which values will be identical across all 16 pairs. Both controls work with the arrow keys.
+Each row is one position. Each pair of adjacent columns uses sine on the left and cosine on the right. Start at position 1 and switch the frequency pair from 0 to 8. Then set the position to 0 and predict which values will be identical across all 16 pairs. With JavaScript enabled, both controls work with the arrow keys.
 
 <PeVisualizer client:load lang="en" />
 
@@ -92,6 +94,20 @@ $$
 $$
 
 Move the query and key together from positions $(2,5)$ to $(9,12)$ while holding their content vectors fixed. Both scores now use $R_3$, so they are equal. Change the key vector and the scores can differ even at the same separation. In a longer deployment, test retrieval or answer quality at the target length and at several evidence positions before extending the serving limit.
+
+<a id="rope-position-precision"></a>
+
+### When one position apart becomes zero or two
+
+Feed two tokens, `red cat`, into SmolLM2-135M. How much attention does “cat” give “red” in layer 0, head 0? Assign both tokens higher position IDs without adding any prefix tokens. The prompt, the causal mask and the two visible keys stay the same. [[5]](#ref-5)
+
+With integer IDs the measured weight stays near 33.814% as the pair moves. Now round the position IDs through BF16 *before* computing the rotations, then convert them back to integers. BF16 represents both 255 and 256 exactly. Between 256 and 512 the representable integers are spaced two apart. The halfway value 257 rounds to 256. Converting it back to an integer cannot recover the missing position.
+
+<RopePositionReplay client:load lang="en" />
+
+Move the start from 255 to 256 and then 257. The rounded pairs are `[255, 256]`, `[256, 256]` and `[256, 258]`. Their gaps are one, zero and two positions. The measured weights are 33.814%, 29.034% and 37.178%. The weights of the model and its rotary calculation stay in FP32 in both runs. The experiment deliberately introduces the early cast to isolate its effect. A real Transformers fix addressed a related failure in which autocast lowered the precision of the matrix product used to compute rotary angles. [[6]](#ref-6)
+
+When porting a serving implementation, shift the position IDs of a fixed two-token prompt with the same mask. If the result changes substantially, record the IDs just before rotation and the dtype of the angle calculation. Long-document retrieval needs a separate evaluation. The chart uses CPU measurements from 2026-11-25 with PyTorch 2.15.0 and Transformers 5.24.1. <a href={withBasePath('/labs/rope_position_ids.py')} download>CPU experiment (Python)</a> · <a href={withBasePath('/labs/2026-11/rope-position-ids.json')} download>Measurements at 17 offsets (JSON)</a>
 
 ## PyTorch Implementation
 
@@ -160,9 +176,16 @@ The checks reproduce the two pairs from the diagram and exercise an odd-width in
 *For the same frequency schedule and unchanged pre-rotation query and key vectors, the relative rotation is unchanged. New content or a change in earlier hidden states can change the score.*
 </details>
 
+<details>
+<summary>Quiz 6: Two tokens have different integer positions but receive identical rotation angles. Where would you look first?</summary>
+*Inspect the position IDs immediately before rotation and the dtype of the angle calculation. An early BF16 cast maps 256 and 257 to the same value. Compare against a run that preserves the integer IDs with the same tokens, mask and weights.*
+</details>
+
 ## References
 
 1. <a id="ref-1"></a>Vaswani, A., et al. (2017). [Attention Is All You Need, §3.5](https://arxiv.org/abs/1706.03762).
 2. <a id="ref-2"></a>Su, J., et al. (2021). [RoFormer: Enhanced Transformer with Rotary Position Embedding](https://arxiv.org/abs/2104.09864).
 3. <a id="ref-3"></a>Shaw, P., Uszkoreit, J., & Vaswani, A. (2018). [Self-Attention with Relative Position Representations](https://aclanthology.org/N18-2074/).
 4. <a id="ref-4"></a>Press, O., Smith, N. A., & Lewis, M. (2021). [Train Short, Test Long: Attention with Linear Biases Enables Input Length Extrapolation](https://arxiv.org/abs/2108.12409).
+5. <a id="ref-5"></a>Hugging Face TB. [SmolLM2-135M, pinned base checkpoint configuration](https://huggingface.co/HuggingFaceTB/SmolLM2-135M/resolve/93efa2f097d58c2a74874c7e644dbc9b0cee75a2/config.json).
+6. <a id="ref-6"></a>Hugging Face Transformers. [RoPE precision under autocast for Llama and Gemma, PR 29285](https://github.com/huggingface/transformers/pull/29285).

@@ -3,8 +3,7 @@ import BookLayout from '../../../layouts/BookLayout.astro';
 import SampleRateListening from '../../../components/chapter-11/SampleRateListening.astro';
 import { Content, frontmatter } from '../../../data/articles/whisper-sample-rate.ko.md';
 ---
-<BookLayout lang="ko" title={frontmatter.title} description={frontmatter.description}>
-  <h1>{frontmatter.title}</h1>
+<BookLayout lang="ko" title={frontmatter.title} description={frontmatter.description} firstPublished={frontmatter.firstPublished}>
   <SampleRateListening lang="ko" article />
   <Content />
 </BookLayout>

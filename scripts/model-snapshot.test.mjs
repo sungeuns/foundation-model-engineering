@@ -27,6 +27,7 @@ else:
 
 test('model profiles preserve dates, provenance, and finite optional measurements', () => {
   assert.match(snapshot.asOf, /^\d{4}-\d{2}-\d{2}$/);
+  assert.match(snapshot.evaluationAsOf, /^\d{4}-\d{2}-\d{2}$/);
   assert.equal(new Set(snapshot.models.map(row => row.id)).size, snapshot.models.length);
   for (const row of snapshot.models) {
     assert.ok(row.release <= snapshot.asOf, `${row.model}: future milestone`);
@@ -39,15 +40,16 @@ test('model profiles preserve dates, provenance, and finite optional measurement
     if (row.priceValidThrough) {
       assert.ok(row.priceValidThrough >= snapshot.asOf, `${row.model}: expired token-price assumption`);
     }
-    for (const key of ['aaIndex', 'benchmarkCost', 'contextK', 'inputPrice', 'outputPrice']) {
+    for (const key of ['aaIndex', 'benchmarkCost', 'benchmarkMinutes', 'contextK', 'inputPrice', 'outputPrice']) {
       if (row[key] !== undefined) assert.ok(Number.isFinite(row[key]) && row[key] >= 0, `${row.model}: invalid ${key}`);
     }
-    if (row.aaIndex !== undefined || row.benchmarkCost !== undefined) {
+    if (row.aaIndex !== undefined || row.benchmarkCost !== undefined || row.benchmarkMinutes !== undefined) {
       assert.ok(row.evaluation?.startsWith('https://artificialanalysis.ai/'), `${row.model}: evaluation provenance`);
       assert.equal(row.evaluationMethodology, snapshot.methodology, `${row.model}: mixed evaluation versions`);
-      assert.equal(row.evaluationVerifiedAt, snapshot.asOf, `${row.model}: stale evaluation snapshot`);
+      assert.equal(row.evaluationCheckedAt, snapshot.evaluationAsOf);
+      assert.equal(row.evaluationVerifiedAt, snapshot.evaluationAsOf, `${row.model}: stale evaluation snapshot`);
       assert.ok(row.evaluationProfile?.length > 0, `${row.model}: exact evaluated profile missing`);
-      assert.ok(Number.isFinite(row.aaIndex), `${row.model}: task cost without a matched index`);
+      assert.ok(Number.isFinite(row.aaIndex), `${row.model}: task measurement without a matched index`);
     } else {
       assert.equal(row.evaluationMethodology, undefined, `${row.model}: unverified profile claims a methodology`);
       assert.equal(row.evaluationVerifiedAt, undefined, `${row.model}: missing result marked verified`);
@@ -61,6 +63,7 @@ test('both language tables match the plotted source record without filling missi
     const prefix = lang === 'en' ? 'src/pages' : 'src/pages/ko';
     const source = readFileSync(`${prefix}/chapter-17/commercial-model-benchmarks.mdx`, 'utf8');
     assert.ok(source.includes(snapshot.asOf));
+    assert.ok(source.includes(snapshot.evaluationAsOf));
     const rows = source.split('\n').filter(line => line.startsWith('| ')).map(line => line.split('|').slice(1, -1).map(x => x.trim()));
     for (const model of snapshot.models) {
       const anchor = `model-${model.id}`;
@@ -72,6 +75,7 @@ test('both language tables match the plotted source record without filling missi
       assert.equal(row[2], lang === 'en' ? model.access : model.accessKo, model.model);
       assert.equal(row[4], model.aaIndex === undefined ? missing : String(model.aaIndex), model.model);
       assert.equal(row[5], model.benchmarkCost === undefined ? missing : model.benchmarkCost.toFixed(2), model.model);
+      assert.equal(row[6], model.benchmarkMinutes === undefined ? missing : model.benchmarkMinutes.toFixed(1), model.model);
       assert.ok(source.includes(model.source), `${model.model}: absent primary reference`);
       if (model.evaluation) assert.ok(source.includes(model.evaluation), `${model.model}: absent evaluation reference`);
     }

@@ -4,11 +4,13 @@ title: "3.3 위치 인코딩 전략"
 lang: "ko"
 ---
 
+import RopePositionReplay from '../../../components/chapter-3/RopePositionReplay';
+import { withBasePath } from '../../../utils/paths.js';
 import PeVisualizer from '../../../components/chapter-3/PeVisualizer';
 
 # 3.3 위치 인코딩 전략
 
-같은 토큰 세 개를 `dogs chase cats`와 `cats chase dogs` 두 순서로 놓아 봅시다. 하지만 쫓는 쪽이 개에서 고양이로 바뀝니다. 위치 정보나 마스크 없이 모든 토큰을 볼 수 있는 인코더에서 두 명사를 맞바꾸면 어떻게 될까요? 두 명사의 출력 벡터는 서로 자리를 바꾸지만, 가운데 동사 *chase*의 출력 벡터는 그대로입니다. 누가 누구를 쫓는지 구별하려면 어순이 계산에 들어가야 합니다.
+같은 토큰 세 개를 `dogs chase cats`와 `cats chase dogs` 두 순서로 놓아 봅시다. 첫 문장에서는 개가 고양이를 쫓고, 둘째 문장에서는 고양이가 개를 쫓습니다. 위치 정보나 마스크 없이 모든 토큰을 볼 수 있는 인코더에서 두 명사를 맞바꾸면 어떻게 될까요? 두 명사의 출력 벡터는 서로 자리를 바꾸지만, 가운데 동사 *chase*의 출력 벡터는 그대로입니다. 누가 누구를 쫓는지 구별하려면 어순이 계산에 들어가야 합니다.
 
 <a id="동기-bag-of-words-문제"></a>
 <a id="1-rnn-recurrent-neural-networks-자연스러운-순서"></a>
@@ -39,7 +41,7 @@ $$
 
 ## 예제: 인코딩 행렬
 
-한 행이 토큰 위치 하나입니다. 나란한 두 열이 한 쌍을 이루며 왼쪽은 사인, 오른쪽은 코사인입니다. 위치를 1로 두고 주파수 쌍을 0번에서 8번으로 바꿔 보세요. 이번에는 위치를 0으로 바꾸면 열여섯 쌍이 각각 어떤 값을 보일지 예상해 보세요. 두 조절 막대는 방향키로도 움직일 수 있습니다.
+한 행이 토큰 위치 하나입니다. 나란한 두 열이 한 쌍을 이루며 왼쪽은 사인, 오른쪽은 코사인입니다. 위치를 1로 두고 주파수 쌍을 0번에서 8번으로 바꿔 보세요. 이번에는 위치를 0으로 바꾸면 열여섯 쌍이 각각 어떤 값을 보일지 예상해 보세요. 자바스크립트를 켜면 방향키로도 두 막대를 조절할 수 있습니다.
 
 <PeVisualizer client:load lang="ko" />
 
@@ -92,6 +94,20 @@ $$
 $$
 
 회전 전의 쿼리와 키를 고정한 채 두 위치를 $(2,5)$에서 $(9,12)$로 함께 옮겨 보세요. 두 경우 모두 $R_3$을 곱하므로 내적은 같습니다. 키 벡터가 바뀌면 같은 간격에서도 점수가 달라질 수 있습니다. 서비스의 문맥 길이 한도를 늘릴 때는 목표 길이에서 근거 문장의 위치도 바꿔 가며 검색이나 답변 품질을 측정하세요.
+
+<a id="rope-position-precision"></a>
+
+### 한 칸 차이가 0칸이나 2칸이 되면
+
+SmolLM2-135M에 `red cat` 두 토큰을 넣고 첫째 층의 0번 헤드를 살펴봅시다. `cat`이 바로 앞의 `red`에 준 가중치는 얼마일까요? 두 토큰에는 위치 ID만 다르게 부여합니다. 토큰을 앞에 덧붙이지 않으므로 모델이 읽는 토큰과 인과 마스크는 그대로입니다. [[5]](#ref-5)
+
+정수 ID를 유지하면 두 위치를 함께 옮겨도 가중치는 이번 CPU 측정에서 33.814% 근처에 머뭅니다. 이번에는 ID를 회전에 쓰기 *전에* BF16으로 바꿨다가 정수로 되돌려 보세요. BF16으로 255와 256은 정확히 나타낼 수 있지만, 256부터 512 사이에서는 짝수만 정확히 나타낼 수 있습니다. 중간값인 257은 256으로 반올림됩니다. 나중에 정수로 바꿔도 사라진 한 칸은 복원되지 않습니다.
+
+<RopePositionReplay client:load lang="ko" />
+
+시작 위치를 255, 256, 257로 바꿔 보세요. BF16을 거친 두 ID는 차례로 `[255, 256]`, `[256, 256]`, `[256, 258]`입니다. 두 위치의 간격이 1, 0, 2칸이 되면서 가중치도 33.814%, 29.034%, 37.178%로 달라집니다. 모델 가중치와 회전 계산은 두 조건 모두 FP32입니다. ID를 일부러 일찍 반올림해 어디서 정보가 사라지는지 드러낸 실험입니다. 실제로 Transformers에서도 자동 혼합 정밀도 때문에 회전각을 구하는 행렬곱의 정밀도가 낮아지는 문제를 수정했습니다. [[6]](#ref-6)
+
+서빙 코드를 옮길 때는 먼저 같은 두 토큰과 마스크로 시작 위치만 바꿔 보세요. 차이가 커지면 회전 직전 ID와 각도 계산의 자료형을 기록하세요. 긴 문서 검색 품질은 별도로 측정해야 합니다. 위 그래프는 2026-11-25에 PyTorch 2.15.0과 Transformers 5.24.1로 실행한 CPU 결과입니다. <a href={withBasePath('/labs/rope_position_ids.py')} download>CPU 실험 코드 (Python)</a> · <a href={withBasePath('/labs/2026-11/rope-position-ids.json')} download>시작 위치 17개의 측정값 (JSON)</a>
 
 ## PyTorch 구현
 
@@ -160,9 +176,16 @@ torch.testing.assert_close(odd[0, 0], torch.tensor([0., 1., 0.]))
 *같은 주파수를 쓰고 회전 전 쿼리와 키도 그대로라면 내적에 들어가는 상대 회전이 같습니다. 내용이나 이전 층의 은닉 상태가 달라지면 점수도 달라질 수 있습니다.*
 </details>
 
+<details>
+<summary>Quiz 6: ‘red’와 ‘cat’에 서로 다른 정수 위치를 부여했는데도 회전각이 같다면 무엇을 확인해야 할까요?</summary>
+*회전 직전에 실제로 전달된 위치 ID와 각도를 만드는 연산의 자료형을 확인합니다. 256과 257을 BF16으로 먼저 변환하면 두 값이 모두 256이 됩니다. 토큰, 마스크, 가중치를 고정한 채 정수 ID를 끝까지 보존한 결과와 비교합니다.*
+</details>
+
 ## References
 
 1. <a id="ref-1"></a>Vaswani, A., et al. (2017). [Attention Is All You Need, §3.5](https://arxiv.org/abs/1706.03762).
 2. <a id="ref-2"></a>Su, J., et al. (2021). [RoFormer: Enhanced Transformer with Rotary Position Embedding](https://arxiv.org/abs/2104.09864).
 3. <a id="ref-3"></a>Shaw, P., Uszkoreit, J., & Vaswani, A. (2018). [Self-Attention with Relative Position Representations](https://aclanthology.org/N18-2074/).
 4. <a id="ref-4"></a>Press, O., Smith, N. A., & Lewis, M. (2021). [Train Short, Test Long: Attention with Linear Biases Enables Input Length Extrapolation](https://arxiv.org/abs/2108.12409).
+5. <a id="ref-5"></a>Hugging Face TB. [SmolLM2-135M, pinned base checkpoint configuration](https://huggingface.co/HuggingFaceTB/SmolLM2-135M/resolve/93efa2f097d58c2a74874c7e644dbc9b0cee75a2/config.json).
+6. <a id="ref-6"></a>Hugging Face Transformers. [RoPE precision under autocast for Llama and Gemma, PR 29285](https://github.com/huggingface/transformers/pull/29285).

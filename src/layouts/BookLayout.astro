@@ -15,7 +15,7 @@ import { getBasePath, normalizePathname, stripBasePath, withBasePath, withPagePa
 import 'katex/dist/katex.min.css';
 import '../styles/book.css';
 
-const { title, lang = 'en', description } = Astro.props.frontmatter || Astro.props;
+const { title, lang = 'en', description, firstPublished } = Astro.props.frontmatter || Astro.props;
 const basePath = getBasePath();
 // Helper to check active link
 const currentPath = stripBasePath(Astro.url.pathname, basePath);
@@ -81,6 +81,9 @@ const articlesFeedTitle = isKo ? '짧은 기술 글 전문 구독 (RSS)' : 'Sele
 const canonicalUrl = toAbsoluteUrl(currentPath);
 const revision = currentSub && getManuscriptRevision(currentPath);
 const manuscriptTimestamp = revision?.timestamp;
+const publicationDate = firstPublished && new Intl.DateTimeFormat(isKo ? 'ko-KR' : 'en-US', {
+  dateStyle: 'long', timeZone: isKo ? 'Asia/Seoul' : 'UTC',
+}).format(new Date(firstPublished));
 const manuscriptUrl = revision && `${githubUrl}/blob/${revision.commit}/src/pages${currentPath}.mdx`;
 const citationTitle = Astro.props.headings?.find((heading: MarkdownHeading) => heading.depth === 1)?.text || contentTitle;
 const citation = revision && chapterCitation({
@@ -124,6 +127,7 @@ const structuredData = {
   },
   ...(!isHomePage && {
     mainEntityOfPage: canonicalUrl,
+    datePublished: firstPublished,
     dateModified: manuscriptTimestamp,
     isPartOf: {
       '@type': 'Book',
@@ -198,6 +202,7 @@ if (currentIndex !== -1) {
     <meta property="og:title" content={pageTitle} />
     <meta property="og:description" content={pageDescription} />
     <meta property="og:url" content={canonicalUrl} />
+    {firstPublished && <meta property="article:published_time" content={firstPublished} />}
     <meta property="og:locale" content={ogLocale} />
     <meta property="og:locale:alternate" content={alternateLocale} />
     <meta property="og:image" content={socialImageUrl} />
@@ -332,6 +337,15 @@ if (currentIndex !== -1) {
           </details>
         )}
         <main id="main-content" tabindex="-1">
+          {firstPublished && (
+            <>
+              <h1>{contentTitle}</h1>
+              <p><small>
+                {isKo ? `발행인 ${site.author}` : `Published by ${site.author}`}
+                {' · '}<time datetime={firstPublished}>{publicationDate}</time>
+              </small></p>
+            </>
+          )}
           <slot />
         </main>
         <div class="navigation-links" data-nosnippet>

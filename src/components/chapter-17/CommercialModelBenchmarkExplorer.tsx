@@ -4,7 +4,7 @@ import snapshot from '../../data/commercial-model-snapshot.json';
 
 type Locale = 'en' | 'ko';
 type MetricKey = 'aaIndex' | 'contextK';
-type AxisMode = 'timeline' | 'price' | 'context' | 'taskCost';
+type AxisMode = 'timeline' | 'price' | 'context' | 'taskCost' | 'taskTime';
 type ReleaseStatus = 'released' | 'preview' | 'announced' | 'restricted';
 
 type ModelSnapshot = {
@@ -26,6 +26,7 @@ type ModelSnapshot = {
   source: string;
   evaluation?: string;
   benchmarkCost?: number;
+  benchmarkMinutes?: number;
   setting: string;
   evaluationProfile?: string;
   evaluationMethodology?: string;
@@ -55,7 +56,9 @@ const labels = {
   en: {
     title: 'Commercial Model Benchmark Map',
     subtitle:
-      'Choose a benchmark, then change the x-axis to see whether the same model still looks strong by milestone date, token cost, or context budget. These are published system profiles, not equal-effort measurements. Milestones may denote a weight revision rather than the first launch.',
+      'Compare the time and cost of an Artificial Analysis (AA) task at each model’s published reasoning setting. Select a point to see its source and conditions.',
+    dates: `Provider snapshot as of ${snapshot.asOf} · AA evaluations as of ${snapshot.evaluationAsOf}`,
+    staticHint: 'The chart shows the AA Index against cost per task. Enable JavaScript to change the chart or select another model.',
     benchmark: 'Benchmark',
     controlAria: 'Benchmark plot controls',
     noPoints: 'No verified points for this filter, axis, and metric.',
@@ -65,7 +68,8 @@ const labels = {
     all: 'All companies',
     timeline: 'Release milestone',
     price: 'Token price',
-    speed: 'Output speed',
+    taskCost: 'AA cost per task',
+    taskTime: 'AA time per task',
     context: 'Context limit',
     yAxis: 'Benchmark score',
     noScore: 'not reported',
@@ -73,17 +77,19 @@ const labels = {
     releaseTimeline: 'Release timeline',
     releaseTimelineHelp:
       `Selected releases and announcements in ${milestoneRange('en')}. Read changes in reasoning, agents, long-context handling, and cost efficiency alongside each source and its evaluation conditions.`,
-    blendedPrice: 'blended $/1M',
-    outputSpeed: 'tok/s',
+    blendedPrice: '3:1 input/output mix, $/1M tokens',
+    minutes: 'min',
     detailContext: 'context',
     priceAxis: 'Lower is cheaper',
     source:
-      `Snapshot as of ${snapshot.asOf}. Scores use ${snapshot.methodology} with the effort/fallback configuration shown, not an equal-effort ranking. AA task costs are weighted calculations using benchmark token use, current prices and typical cache-hit assumptions, not observed invoices. Provider token prices have separate conditions; Argon and Carbon introductory rates differ from AA's current assumptions. Local checkpoints require their own evaluations. Missing scores mean not reported, not zero.`,
+      'AA estimates minutes per task from output token counts and endpoint speeds, weighted by evaluation. Measure end-to-end latency on your own requests. AA estimates cost from benchmark token usage, prices and cache-hit assumptions. For Argon and Carbon, AA uses different rates from the provider’s introductory offer. Points require a reported value on both axes.',
   },
   ko: {
     title: '상용 모델 비교 지도',
     subtitle:
-      '지표와 x축을 바꿔 보세요. 공개 이정표·단가·평가 비용·문맥을 탐색합니다. 동일 추론 예산의 실험이 아니라 공개된 시스템 프로필입니다.',
+      '각 모델의 공개된 추론 설정에서 Artificial Analysis(AA) 과업 하나에 걸린 시간과 비용을 비교해 보세요. 점을 선택하면 해당 평가의 출처와 조건을 볼 수 있습니다.',
+    dates: `제공사 정보 기준일 ${snapshot.asOf} · AA 평가 기준일 ${snapshot.evaluationAsOf}`,
+    staticHint: '현재 그래프에는 과업당 비용과 AA 지능 지수가 표시됩니다. 축을 바꾸거나 다른 모델을 선택하려면 자바스크립트를 켜세요.',
     benchmark: '지표',
     controlAria: '모델 비교 그래프 설정',
     noPoints: '이 필터·축·지표에 필요한 값을 확인한 모델이 없습니다.',
@@ -93,7 +99,8 @@ const labels = {
     all: '전체 회사',
     timeline: '공개 이정표',
     price: '토큰 단가',
-    speed: '출력 속도',
+    taskCost: 'AA 과업당 비용',
+    taskTime: 'AA 과업당 시간',
     context: '문맥 한도',
     yAxis: '지표 값',
     noScore: '미공개',
@@ -101,12 +108,12 @@ const labels = {
     releaseTimeline: '공개 일정',
     releaseTimelineHelp:
       `${milestoneRange('ko')}의 주요 공개·발표 사례입니다. 추론, 에이전트, 장문 처리와 비용 효율의 변화는 각 사례의 출처와 평가 조건을 함께 읽어야 합니다.`,
-    blendedPrice: '혼합 가격 $/1M',
-    outputSpeed: 'tok/s',
+    blendedPrice: '입력·출력 3:1 혼합 단가($/100만 토큰)',
+    minutes: '분',
     detailContext: '문맥 길이',
     priceAxis: '왼쪽일수록 저렴',
     source:
-      `${snapshot.asOf} 기준입니다. 점수는 표시된 추론·fallback 조건의 ${snapshot.methodology}이며 동일 예산의 순위가 아닙니다. AA 과업 비용은 벤치마크 토큰 사용량·현재 단가·통상적 캐시 적중 가정으로 계산한 가중값이며 실제 청구서가 아닙니다. 제공사 토큰 단가는 조건이 별도이며 Argon·Carbon의 도입 단가는 AA의 현재 가정과 다릅니다. 로컬 체크포인트는 별도 평가가 필요합니다. 점수 누락은 0점이 아니라 미공개를 뜻합니다.`,
+      'AA는 하위 평가별 출력 토큰 수와 엔드포인트 출력 속도로 과업당 추론 시간을 추정하고, 평가별 비중을 반영합니다. 서비스의 요청 처리 시간은 실제 입력과 추론 설정에서 따로 재야 합니다. AA는 평가에 쓴 토큰 수와 단가, 캐시 적중률 가정으로 과업 비용을 추정합니다. Argon과 Carbon의 경우 AA가 적용한 단가와 제공사의 출시 할인가가 다릅니다. 두 축의 값을 모두 확인한 모델만 점으로 표시합니다.',
   },
 };
 
@@ -124,14 +131,16 @@ const axisLabels: Record<Locale, Record<AxisMode, string>> = {
   en: {
     timeline: 'Release milestone',
     price: 'Blended price, $/1M tokens',
-    context: 'Context window, K tokens',
+    context: 'Context window, tokens',
     taskCost: 'AA evaluation cost, $/task',
+    taskTime: 'AA inference time, minutes per task',
   },
   ko: {
     timeline: '공개 이정표',
-    price: '혼합 가격, $/1M tokens',
-    context: '문맥 길이, K tokens',
+    price: '토큰 100만 개당 혼합 단가($)',
+    context: '문맥 길이(토큰 수)',
     taskCost: 'AA 평가 비용, $/과업',
+    taskTime: 'AA 과업당 추론 시간(분)',
   },
 };
 
@@ -146,6 +155,7 @@ function xValue(row: ModelSnapshot, axisMode: AxisMode) {
   if (axisMode === 'timeline') return Date.parse(row.release) / 86_400_000;
   if (axisMode === 'price') return blendedPrice(row);
   if (axisMode === 'taskCost') return row.benchmarkCost;
+  if (axisMode === 'taskTime') return row.benchmarkMinutes;
   return row.contextK;
 }
 
@@ -167,6 +177,7 @@ function niceRange(values: number[], padRatio = 0.08, constantPad?: number) {
 function formatX(value: number, axisMode: AxisMode) {
   if (axisMode === 'timeline') return new Date(value * 86_400_000).toISOString().slice(0, 10);
   if (axisMode === 'price' || axisMode === 'taskCost') return `$${value.toFixed(2)}`;
+  if (axisMode === 'taskTime') return String(Number(value.toFixed(2)));
   return formatContext(value, 'not reported', true);
 }
 
@@ -198,6 +209,8 @@ function formatSetting(setting: string, locale: Locale) {
 }
 
 export default function CommercialModelBenchmarkExplorer({ locale = 'en' }: { locale?: Locale }) {
+  const [ready, setReady] = useState(false);
+  useEffect(() => setReady(true), []);
   const [metric, setMetric] = useState<MetricKey>('aaIndex');
   const [axisMode, setAxisMode] = useState<AxisMode>('taskCost');
   const [company, setCompany] = useState('All');
@@ -236,8 +249,9 @@ export default function CommercialModelBenchmarkExplorer({ locale = 'en' }: { lo
     setSelectedId((current) => eligible.some((row) => row.id === current) ? current : eligible[0]?.id ?? current);
   }, [axisMode, company, metric]);
 
-  const xTicks = [0, 0.25, 0.5, 0.75, 1].map((ratio) => xMin + (xMax - xMin) * ratio);
-  const yTicks = [0, 0.25, 0.5, 0.75, 1].map((ratio) => yMin + (yMax - yMin) * ratio);
+  const tickFractions = plottedRows.length ? [0, 0.25, 0.5, 0.75, 1] : [];
+  const xTicks = tickFractions.map((ratio) => xMin + (xMax - xMin) * ratio);
+  const yTicks = tickFractions.map((ratio) => yMin + (yMax - yMin) * ratio);
 
   const handleCompanyChange = (nextCompany: string) => {
     setCompany(nextCompany);
@@ -253,13 +267,14 @@ export default function CommercialModelBenchmarkExplorer({ locale = 'en' }: { lo
       <div className="commercial-benchmark-header">
         <div>
           <h3>{text.title}</h3>
-          <p>{locale === 'ko' ? `${snapshot.asOf} 기준` : `as of ${snapshot.asOf}`} · {snapshot.methodology}</p>
+          <p>{text.dates} · {snapshot.methodology}</p>
           <p>{text.subtitle}</p>
+          <noscript><p>{text.staticHint}</p></noscript>
         </div>
         <div className="commercial-benchmark-controls" aria-label={text.controlAria}>
           <label>
             <span>{text.benchmark}</span>
-            <select value={metric} onChange={(event) => setMetric(event.target.value as MetricKey)}>
+            <select disabled={!ready} value={metric} onChange={(event) => setMetric(event.target.value as MetricKey)}>
               {metricOptions.map((option) => (
                 <option key={option} value={option}>
                   {metricLabels[locale][option]}
@@ -269,16 +284,17 @@ export default function CommercialModelBenchmarkExplorer({ locale = 'en' }: { lo
           </label>
           <label>
             <span>{text.axisMode}</span>
-            <select value={axisMode} onChange={(event) => setAxisMode(event.target.value as AxisMode)}>
+            <select disabled={!ready} value={axisMode} onChange={(event) => setAxisMode(event.target.value as AxisMode)}>
               <option value="timeline">{text.timeline}</option>
               <option value="price">{text.price}</option>
               <option value="context">{text.context}</option>
-              <option value="taskCost">{locale === 'ko' ? 'AA 평가 비용' : 'AA evaluation cost'}</option>
+              <option value="taskCost">{text.taskCost}</option>
+              <option value="taskTime">{text.taskTime}</option>
             </select>
           </label>
           <label>
             <span>{text.company}</span>
-            <select value={company} onChange={(event) => handleCompanyChange(event.target.value)}>
+            <select disabled={!ready} value={company} onChange={(event) => handleCompanyChange(event.target.value)}>
               {companyOptions.map((option) => (
                 <option key={option} value={option}>
                   {option === 'All' ? text.all : option}
@@ -291,7 +307,7 @@ export default function CommercialModelBenchmarkExplorer({ locale = 'en' }: { lo
 
       <div className="commercial-plot-layout">
         <div className="commercial-plot-panel" role="region" aria-label={locale === 'ko' ? '모델 비교 그래프: 가로 스크롤 가능' : 'Model comparison chart: horizontally scrollable'} tabIndex={0}>
-          <svg viewBox={`0 0 ${chart.width} ${chart.height}`} className="commercial-scatter" role="img">
+          <svg viewBox={`0 0 ${chart.width} ${chart.height}`} className="commercial-scatter" role={ready ? 'group' : 'img'}>
             <title>{locale === 'ko' ? `${metricLabels[locale][metric]} · ${axisLabels[locale][axisMode]}` : `${metricLabels[locale][metric]} by ${axisLabels[locale][axisMode]}`}</title>
             <rect
               x={chart.left}
@@ -349,11 +365,12 @@ export default function CommercialModelBenchmarkExplorer({ locale = 'en' }: { lo
                       setSelectedId(point.row.id);
                     }
                   }}
-                  role="button"
-                  tabIndex={0}
-                  aria-label={`${text.selectModel}: ${point.row.model}`}
+                  role={ready ? 'button' : undefined}
+                  tabIndex={ready ? 0 : undefined}
+                  aria-pressed={ready ? isSelected : undefined}
+                  aria-label={ready ? `${text.selectModel}: ${point.row.model}` : undefined}
                 >
-                  <title>{`${point.row.model}: ${formatMetric(point.y, metric, text.noScore)}`}</title>
+                  <title>{`${point.row.model} · ${axisLabels[locale][axisMode]}: ${formatX(point.x, axisMode)} · ${metricLabels[locale][metric]}: ${formatMetric(point.y, metric, text.noScore)}`}</title>
                   <circle
                     cx={sx(point.x)}
                     cy={sy(point.y)}
@@ -395,6 +412,10 @@ export default function CommercialModelBenchmarkExplorer({ locale = 'en' }: { lo
               <strong>{typeof selected.benchmarkCost === 'number' ? `$${selected.benchmarkCost.toFixed(2)}` : text.noScore}</strong>
             </div>
             <div>
+              <span>{text.taskTime}</span>
+              <strong>{typeof selected.benchmarkMinutes === 'number' ? `${selected.benchmarkMinutes}${locale === 'ko' ? '' : ' '}${text.minutes}` : text.noScore}</strong>
+            </div>
+            <div>
               <span>{text.detailContext}</span>
               <strong>{formatContext(selected.contextK, text.noScore)}</strong>
             </div>
@@ -417,7 +438,7 @@ export default function CommercialModelBenchmarkExplorer({ locale = 'en' }: { lo
       <p>{locale === 'ko' ? '현재 그래프의 모델 선택 목록 (이름순)' : 'Select a profile in the current plot (alphabetical)'}</p>
       <div className="commercial-ranking-strip">
         {visibleRows.map((row) => (
-          <button key={row.id} type="button" onClick={() => setSelectedId(row.id)} aria-pressed={row.id === selected.id}>
+          <button key={row.id} type="button" disabled={!ready} onClick={() => setSelectedId(row.id)} aria-pressed={row.id === selected.id}>
             <strong>{row.model}</strong>
             <em>{formatMetric(row[metric], metric, text.noScore)}</em>
           </button>
@@ -434,6 +455,7 @@ export default function CommercialModelBenchmarkExplorer({ locale = 'en' }: { lo
             <button
               key={row.id}
               type="button"
+              disabled={!ready}
               className={`commercial-timeline-item ${row.id === selected.id ? 'is-selected' : ''}`}
               onClick={() => setSelectedId(row.id)}
               aria-pressed={row.id === selected.id}

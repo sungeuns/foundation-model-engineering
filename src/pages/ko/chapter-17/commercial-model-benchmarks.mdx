@@ -11,69 +11,69 @@ import RequestCostExample from '../../../components/chapter-17/RequestCostExampl
 
 토큰 단가가 낮은 모델로 바꿨는데, 같은 작업을 끝내기까지 도구를 두 배 더 호출한다면 비용이 줄었다고 할 수 있을까? 순위표만으로는 답할 수 없다. 평가에 쓴 설정, 과금 규칙, 과업 성공의 기준을 함께 알아야 한다.
 
-**2026-11-24 기준.** GLM-5.4, Ling-3.2-air, GPT-6.2 Astra/Sol, Gemini 4 Neon/Carbon 등을 포함해 45개 프로필을 담은 스냅샷이다. 각 행의 날짜는 출처에서 확인한 API 출시일, 가중치 공개일 또는 체크포인트 갱신일이다. 뒤쪽 두 숫자 열을 보면 Artificial Analysis(AA)가 어떤 모델을 평가했고 어느 모델의 과업 비용까지 공개했는지 알 수 있다. 배포 예산을 잡을 때는 접근 조건과 가격을 출처에서 다시 확인하자.
+아래 45개 프로필에는 GLM-5.4, Ling-3.2-air, GPT-6.2 Astra/Sol, Gemini 4 Neon/Carbon 등이 포함된다. **모델 이용 조건은 2026-11-24 기준이다.** 모델별 날짜는 API 출시일, 가중치 공개일 또는 체크포인트 갱신일을 가리킨다. **Artificial Analysis(AA) 평가는 2026-11-25 기준이다.** 34개 프로필에서 해당 설정의 지수를 확인했고, 그중 32개는 과업당 비용과 시간도 공개돼 있다. 배포 예산을 잡을 때는 각 행에 연결된 출처에서 이용 조건과 단가를 다시 확인한다.
 
 ## 1. 숫자가 무엇을 측정하는지 먼저 확인하기
 
-아래 표와 탐색기는 **Artificial Analysis Intelligence Index v5.0.1** 을 기준으로 한다. 지식 노동, 코딩, 과학, 일반 과업에 걸친 아홉 가지 평가를 종합한 지수다. [[1]](#ref-1)
+표와 탐색기에는 **Artificial Analysis Intelligence Index v5.0.2** 의 공개 프로필을 반영했다. 이 지수는 지식 노동, 코딩, 과학, 일반 과업에 걸친 아홉 가지 평가를 종합한다. [[1]](#ref-1) [[137]](#ref-137)
 
 Artificial Analysis(AA)는 2026년 11월 24일 **v5.0.2** 를 발표했다. Terminal-Bench는 4.0에서 4.1로 바뀌었다. 과제 66개와 지시문, 에이전트 실행 환경은 그대로이고, 풀이의 통과 여부를 판정하는 테스트가 달라졌다. FrontierCode-AA 2.0에서는 에이전트의 실행 기록을 검사하는 도구를 갱신해 기존 풀이를 재채점했다. 도구가 추가 검토 대상으로 표시한 풀이는 LLM 심사 모델이 검토했다. [[1]](#ref-1) [[124]](#ref-124)
 
-Gemini 4 Carbon의 추론 강도를 High로 설정했을 때 AA가 보고한 성공률은 Terminal-Bench 4.0에서 **65.2%**, 4.1에서 **66.2%** 였다. 두 버전 모두 같은 에이전트 실행 도구(`mini-swe-agent`)로 과제마다 독립적으로 세 번 실행해 첫 시도 성공률을 평균했다. 이 차이만 보고 모델 성능이 1%포인트 올랐다고 하면 성공 판정 기준이 바뀐 영향까지 모델의 성과로 돌리게 된다. 두 모델의 성능 차이를 보려면 같은 버전의 벤치마크로 평가해야 한다. [[125]](#ref-125) [[126]](#ref-126)
+같은 Gemini 4 Carbon을 High 추론 강도로 평가했는데도 성공률은 Terminal-Bench 4.0에서 **65.2%**, 4.1에서 **66.2%** 였다. AA는 과제 66개를 각각 `mini-swe-agent`로 세 번씩 실행해 첫 시도 성공률을 평균했다. 4.1에서는 4.0 실행에서 저장한 결과물을 새 테스트로 다시 채점했다. 답은 그대로인데 성공률이 1%포인트 오른 것이다. 모델 교체의 효과를 보려면 두 후보의 답에 같은 테스트를 적용해야 한다. [[1]](#ref-1) [[125]](#ref-125) [[126]](#ref-126)
 
 각 점은 모델에 **추론 강도와 평가 시스템을 결합한 결과** 다. Fallback, 도구, scaffold, 토큰 예산, 샘플링, 채점기가 결과에 영향을 준다. 동일한 연산량을 쓴 실험이 아니다. 지수는 정확도 백분율이 아니고, 문맥 한도는 검색 정확도가 아니다. “미공개”는 해당 리비전과 평가 방식에 대응하는 값을 이 자료에서 확인하지 못했다는 뜻이며, 0이라는 뜻이 아니다.
 
 ## 2. 공개 상태와 평가 기록
 
-모델 이름의 링크를 복사하면 그 모델의 공개 상태, 평가 설정, 출처가 있는 행을 공유할 수 있다.
+모델 이름을 누르면 해당 행으로 바로 연결된다. **AA 과업당 시간** 은 벤치마크 과업 하나에 드는 추론 시간 추정치다. AA는 하위 평가별로 과업당 출력 토큰 수를 출력 속도로 나누고, 지수에서 그 평가가 차지하는 비중을 반영해 가중 평균을 구한다. [[137]](#ref-137)
 
-| 모델 | 출시 / 리비전 기준일 | 2026-11-24 공개 상태 | AA 추론 설정 | 지수 | $/AA 과업 | 출처 |
-|---|---|---|---|---:|---:|---|
-| <a id="model-glm-54" href="#model-glm-54">GLM-5.4</a> | 2026-11-23 | 호스팅 플랜 공개·종량제 API와 가중치 예정 | 미공개 | 미공개 | 미공개 | [[5]](#ref-5) [[6]](#ref-6) [[7]](#ref-7) |
-| <a id="model-ling-32-air" href="#model-ling-32-air">Ling-3.2-air</a> | 2026-11-23 | 가중치 공개 | 추론형·강도 미공개 | 23 | 미공개 | [[112]](#ref-112) [[113]](#ref-113) [[114]](#ref-114) |
-| <a id="model-inkling-2-mini" href="#model-inkling-2-mini">Inkling 2 Mini</a> | 2026-11-20 | 가중치 공개 | 추론형·강도 미공개 | 20 | 0.59 | [[108]](#ref-108) [[109]](#ref-109) |
-| <a id="model-tencent-hy4" href="#model-tencent-hy4">Tencent Hy4</a> | 2026-11-20 | 가중치·API 공개 | 추론형·강도 미공개 | 35 | 1.03 | [[118]](#ref-118) [[119]](#ref-119) [[120]](#ref-120) [[121]](#ref-121) [[122]](#ref-122) |
-| <a id="model-gemini-4-neon" href="#model-gemini-4-neon">Gemini 4 Neon</a> | 2026-11-18 | Gemini API·Gemini 앱(Pro·Ultra) | xhigh | 61 | 6.44 | [[11]](#ref-11) [[12]](#ref-12) [[99]](#ref-99) [[100]](#ref-100) [[128]](#ref-128) |
-| <a id="model-gpt-62-astra" href="#model-gpt-62-astra">GPT-6.2 Astra</a> | 2026-11-17 | API·ChatGPT Work·Codex에서 제공 | max | 62 | 4.00 | [[9]](#ref-9) [[94]](#ref-94) [[95]](#ref-95) |
-| <a id="model-gpt-62-sol" href="#model-gpt-62-sol">GPT-6.2 Sol</a> | 2026-11-17 | API·ChatGPT Work·Codex에서 제공 | max | 57 | 1.01 | [[10]](#ref-10) [[94]](#ref-94) [[96]](#ref-96) |
-| <a id="model-qwen4-max" href="#model-qwen4-max">Qwen4-Max</a> | 2026-11-16 | QwenCloud API·QwenWork·QwenStudio | 추론형·강도 미공개 | 43 | 3.27 | [[14]](#ref-14) [[15]](#ref-15) [[104]](#ref-104) [[130]](#ref-130) |
-| <a id="model-agnes-25-pro-theta" href="#model-agnes-25-pro-theta">Agnes 2.5 Pro Theta</a> | 2026-11-15 | 가중치 공개 | 추론형·강도 미공개 | 미공개 | 미공개 | [[17]](#ref-17) [[106]](#ref-106) [[107]](#ref-107) |
-| <a id="model-inkling-2-small" href="#model-inkling-2-small">Inkling 2 Small</a> | 2026-11-12 | 가중치 공개 | 추론형·강도 미공개 | 31 | 1.18 | [[84]](#ref-84) [[85]](#ref-85) [[86]](#ref-86) [[87]](#ref-87) |
-| <a id="model-gemini-4-hydrogen" href="#model-gemini-4-hydrogen">Gemini 4 Hydrogen</a> | 2026-11-12 | Gemini API·Gemini 앱·Google 검색 | xhigh | 54 | 3.16 | [[101]](#ref-101) [[12]](#ref-12) [[102]](#ref-102) [[103]](#ref-103) [[13]](#ref-13) |
-| <a id="model-gemini-4-carbon" href="#model-gemini-4-carbon">Gemini 4 Carbon</a> | 2026-11-10 | Gemini API·Gemini 앱(Ultra) | high | 60 | 7.76 | [[97]](#ref-97) [[12]](#ref-12) [[98]](#ref-98) [[4]](#ref-4) [[129]](#ref-129) |
-| <a id="model-longcat-25" href="#model-longcat-25">LongCat-2.5</a> | 2026-11-10 | 가중치 공개 | 추론형·강도 미공개 | 미공개 | 미공개 | [[105]](#ref-105) [[16]](#ref-16) |
-| <a id="model-claude-fable-52" href="#model-claude-fable-52">Claude Fable 5.2</a> | 2026-11-09 | API 공개 | max·fallback 포함 | 65 | 26.54 | [[82]](#ref-82) [[29]](#ref-29) [[83]](#ref-83) |
-| <a id="model-claude-mythos-52" href="#model-claude-mythos-52">Claude Mythos 5.2</a> | 2026-11-09 | 검증 프로그램 제한 공개 | 미공개 | 미공개 | 미공개 | [[82]](#ref-82) [[29]](#ref-29) |
-| <a id="model-muse-ember" href="#model-muse-ember">Muse Ember</a> | 2026-11-09 | API 공개 | max | 36 | 0.14 | [[110]](#ref-110) [[111]](#ref-111) |
-| <a id="model-qwen38-flash-next" href="#model-qwen38-flash-next">Qwen3.8 Flash Next</a> | 2026-11-07 | 가중치 공개 | 추론형·강도 미공개 | 29 | 0.57 | [[88]](#ref-88) [[89]](#ref-89) [[90]](#ref-90) |
-| <a id="model-kimi-k31-pro" href="#model-kimi-k31-pro">Kimi K3.1 Pro</a> | 2026-11-05 | 가중치 공개·API | max | 46 | 3.68 | [[65]](#ref-65) [[66]](#ref-66) [[67]](#ref-67) [[68]](#ref-68) |
-| <a id="model-mistral-large-4" href="#model-mistral-large-4">Mistral Large 4</a> | 2026-10-29 | 가중치 공개·API | high | 26 | 2.06 | [[18]](#ref-18) [[40]](#ref-40) [[41]](#ref-41) [[42]](#ref-42) |
-| <a id="model-gpt-61-terra" href="#model-gpt-61-terra">GPT-6.1 Terra</a> | 2026-10-26 | API 공개 | max | 51 | 0.96 | [[80]](#ref-80) [[81]](#ref-81) |
-| <a id="model-kimi-k31-pro-highspeed" href="#model-kimi-k31-pro-highspeed">Kimi K3.1 Pro Highspeed</a> | 2026-10-24 | Kimi API·Kimi.ai·Kimi Work·Kimi Code | 미공개 | 미공개 | 미공개 | [[68]](#ref-68) |
-| <a id="model-minimax-m31-flash" href="#model-minimax-m31-flash">MiniMax M3.1 Flash</a> | 2026-10-23 | 가중치·API 공개 | max | 29 | 0.49 | [[61]](#ref-61) [[62]](#ref-62) [[63]](#ref-63) [[64]](#ref-64) |
-| <a id="model-nemotron-35-bolt-e4b" href="#model-nemotron-35-bolt-e4b">Nemotron 3.5 Bolt E4B 4GB</a> | 2026-10-23 | 가중치 공개 | 미공개 | 미공개 | 미공개 | [[77]](#ref-77) [[78]](#ref-78) [[79]](#ref-79) |
-| <a id="model-ling-30-flash-sante" href="#model-ling-30-flash-sante">Ling 3.0 Flash Sante</a> | 2026-10-22 | 가중치 공개 | 추론형·강도 미공개 | 미공개 | 미공개 | [[72]](#ref-72) [[73]](#ref-73) |
-| <a id="model-smaug-nemotron-35-nvfp4" href="#model-smaug-nemotron-35-nvfp4">Smaug Nemotron 3.5 NVFP4</a> | 2026-10-22 | 가중치 공개 | 미공개 | 미공개 | 미공개 | [[74]](#ref-74) [[75]](#ref-75) [[76]](#ref-76) |
-| <a id="model-ling-31-flash" href="#model-ling-31-flash">Ling 3.1 Flash</a> | 2026-10-20 | 가중치 공개 | 추론형·강도 미공개 | 미공개 | 미공개 | [[69]](#ref-69) [[70]](#ref-70) [[71]](#ref-71) |
-| <a id="model-deepseek-v41-flash-1017" href="#model-deepseek-v41-flash-1017">DeepSeek V4.1 Flash 1017</a> | 2026-10-17 | 가중치 공개·API 갱신 | max | 33 | 0.60 | [[58]](#ref-58) [[59]](#ref-59) [[60]](#ref-60) |
-| <a id="model-beam" href="#model-beam">Beam 1.0</a> | 2026-10-16 | 가중치 공개 | 추론형·강도 미공개 | 18 | 0.28 | [[43]](#ref-43) [[44]](#ref-44) [[45]](#ref-45) |
-| <a id="model-muse-spark-open" href="#model-muse-spark-open">Muse Spark Open</a> | 2026-10-15 | 가중치 공개·다운로드 승인 필요 | xhigh | 25 | 2.02 | [[49]](#ref-49) [[50]](#ref-50) [[51]](#ref-51) |
-| <a id="model-nemotron-35-super-vl" href="#model-nemotron-35-super-vl">Nemotron 3.5 Super VL</a> | 2026-10-15 | 가중치 공개 | high | 14 | 0.48 | [[52]](#ref-52) [[53]](#ref-53) |
-| <a id="model-nemotron-35-bolt" href="#model-nemotron-35-bolt">Nemotron 3.5 Bolt 74B-A9B 24GB</a> | 2026-10-15 | 가중치 공개 | 추론형·강도 미공개 | 미공개 | 미공개 | [[54]](#ref-54) [[55]](#ref-55) |
-| <a id="model-step-5-preview" href="#model-step-5-preview">Step 5 Preview</a> | 2026-10-15 | 가중치 공개 | 추론형·강도 미공개 | 29 | 2.35 | [[56]](#ref-56) [[57]](#ref-57) |
-| <a id="model-glm-53-flash" href="#model-glm-53-flash">GLM-5.3 Flash</a> | 2026-10-15 | 가중치 공개 | max | 28 | 0.58 | [[91]](#ref-91) [[92]](#ref-92) [[93]](#ref-93) |
-| <a id="model-gemini-4-argon" href="#model-gemini-4-argon">Gemini 4 Argon</a> | 2026-10-13 | Gemini API, Gemini 앱·검색 AI 모드(Pro·Ultra) | high | 50 | 9.95 | [[34]](#ref-34) [[3]](#ref-3) [[35]](#ref-35) [[2]](#ref-2) |
-| <a id="model-muse-wonder" href="#model-muse-wonder">Muse Wonder</a> | 2026-10-12 | Meta Model API·Muse Code | max | 44 | 6.95 | [[46]](#ref-46) [[47]](#ref-47) |
-| <a id="model-muse-wonder-full" href="#model-muse-wonder-full">Muse Wonder Full</a> | 2026-10-12 | 구독 제품 공개 | max | 50 | 미공개 | [[46]](#ref-46) [[48]](#ref-48) |
-| <a id="model-claude-haiku-55" href="#model-claude-haiku-55">Claude Haiku 5.5</a> | 2026-10-07 | API 공개 | max | 36 | 0.41 | [[32]](#ref-32) [[33]](#ref-33) [[29]](#ref-29) |
-| <a id="model-gpt-61-sol" href="#model-gpt-61-sol">GPT-6.1 Sol</a> | 2026-09-29 | API 공개 | max | 55 | 1.27 | [[19]](#ref-19) [[20]](#ref-20) |
-| <a id="model-claude-sonnet-55" href="#model-claude-sonnet-55">Claude Sonnet 5.5</a> | 2026-09-28 | API 공개 | max·fallback 포함 | 55 | 10.02 | [[30]](#ref-30) [[31]](#ref-31) [[32]](#ref-32) [[29]](#ref-29) |
-| <a id="model-gpt-6-sol" href="#model-gpt-6-sol">GPT-6 Sol</a> | 2026-09-22 | API 공개 | max | 44 | 2.47 | [[21]](#ref-21) [[22]](#ref-22) |
-| <a id="model-gpt-6-luna" href="#model-gpt-6-luna">GPT-6 Luna</a> | 2026-09-22 | API 공개 | max | 28 | 0.15 | [[23]](#ref-23) [[24]](#ref-24) |
-| <a id="model-claude-opus-55" href="#model-claude-opus-55">Claude Opus 5.5</a> | 2026-09-22 | API 공개 | max·fallback 포함 | 59 | 10.04 | [[27]](#ref-27) [[28]](#ref-28) [[29]](#ref-29) |
-| <a id="model-deepseek-v41-flash" href="#model-deepseek-v41-flash">DeepSeek V4.1 Flash (September profile)</a> | 2026-09-10 | 가중치 공개 | max | 미공개 | 미공개 | [[36]](#ref-36) [[37]](#ref-37) |
-| <a id="model-gpt-6-astra" href="#model-gpt-6-astra">GPT-6 Astra</a> | 2026-09-03 | API 공개 | max | 57 | 6.24 | [[25]](#ref-25) [[26]](#ref-26) |
-| <a id="model-glm-53" href="#model-glm-53">GLM-5.3</a> | 2026-08-14 | 가중치 공개 | max | 32 | 5.01 | [[38]](#ref-38) [[39]](#ref-39) |
+| 모델 | 출시 / 리비전 기준일 | 2026-11-24 공개 상태 | AA 추론 설정 | 지수 | $/AA 과업 | 분/AA 과업 | 출처 |
+|---|---|---|---|---:|---:|---:|---|
+| <a id="model-glm-54" href="#model-glm-54">GLM-5.4</a> | 2026-11-23 | 호스팅 플랜 공개·종량제 API와 가중치 예정 | 미공개 | 미공개 | 미공개 | 미공개 | [[5]](#ref-5) [[6]](#ref-6) [[7]](#ref-7) |
+| <a id="model-ling-32-air" href="#model-ling-32-air">Ling-3.2-air</a> | 2026-11-23 | 가중치 공개 | 추론형·강도 미공개 | 23 | 미공개 | 미공개 | [[112]](#ref-112) [[113]](#ref-113) [[114]](#ref-114) |
+| <a id="model-inkling-2-mini" href="#model-inkling-2-mini">Inkling 2 Mini</a> | 2026-11-20 | 가중치 공개 | 추론형·강도 미공개 | 20 | 0.59 | 13.6 | [[108]](#ref-108) [[109]](#ref-109) |
+| <a id="model-tencent-hy4" href="#model-tencent-hy4">Tencent Hy4</a> | 2026-11-20 | 가중치·API 공개 | 추론형·강도 미공개 | 35 | 1.03 | 13.5 | [[118]](#ref-118) [[119]](#ref-119) [[120]](#ref-120) [[121]](#ref-121) [[122]](#ref-122) |
+| <a id="model-gemini-4-neon" href="#model-gemini-4-neon">Gemini 4 Neon</a> | 2026-11-18 | Gemini API·Gemini 앱(Pro·Ultra) | xhigh | 62 | 6.44 | 25.6 | [[11]](#ref-11) [[12]](#ref-12) [[99]](#ref-99) [[100]](#ref-100) [[128]](#ref-128) |
+| <a id="model-gpt-62-astra" href="#model-gpt-62-astra">GPT-6.2 Astra</a> | 2026-11-17 | API·ChatGPT Work·Codex에서 제공 | max | 62 | 4.00 | 14.2 | [[9]](#ref-9) [[94]](#ref-94) [[95]](#ref-95) |
+| <a id="model-gpt-62-sol" href="#model-gpt-62-sol">GPT-6.2 Sol</a> | 2026-11-17 | API·ChatGPT Work·Codex에서 제공 | max | 57 | 1.01 | 10.0 | [[10]](#ref-10) [[94]](#ref-94) [[96]](#ref-96) |
+| <a id="model-qwen4-max" href="#model-qwen4-max">Qwen4-Max</a> | 2026-11-16 | QwenCloud API·QwenWork·QwenStudio | 추론형·강도 미공개 | 43 | 3.27 | 18.7 | [[14]](#ref-14) [[15]](#ref-15) [[104]](#ref-104) [[130]](#ref-130) |
+| <a id="model-agnes-25-pro-theta" href="#model-agnes-25-pro-theta">Agnes 2.5 Pro Theta</a> | 2026-11-15 | 가중치 공개 | 추론형·강도 미공개 | 미공개 | 미공개 | 미공개 | [[17]](#ref-17) [[106]](#ref-106) [[107]](#ref-107) |
+| <a id="model-inkling-2-small" href="#model-inkling-2-small">Inkling 2 Small</a> | 2026-11-12 | 가중치 공개 | 추론형·강도 미공개 | 31 | 1.18 | 24.5 | [[84]](#ref-84) [[85]](#ref-85) [[86]](#ref-86) [[87]](#ref-87) |
+| <a id="model-gemini-4-hydrogen" href="#model-gemini-4-hydrogen">Gemini 4 Hydrogen</a> | 2026-11-12 | Gemini API·Gemini 앱·Google 검색 | xhigh | 54 | 3.16 | 15.9 | [[101]](#ref-101) [[12]](#ref-12) [[102]](#ref-102) [[103]](#ref-103) [[13]](#ref-13) |
+| <a id="model-gemini-4-carbon" href="#model-gemini-4-carbon">Gemini 4 Carbon</a> | 2026-11-10 | Gemini API·Gemini 앱(Ultra) | high | 60 | 7.76 | 38.1 | [[97]](#ref-97) [[12]](#ref-12) [[98]](#ref-98) [[4]](#ref-4) [[129]](#ref-129) |
+| <a id="model-longcat-25" href="#model-longcat-25">LongCat-2.5</a> | 2026-11-10 | 가중치 공개 | 추론형·강도 미공개 | 미공개 | 미공개 | 미공개 | [[105]](#ref-105) [[16]](#ref-16) |
+| <a id="model-claude-fable-52" href="#model-claude-fable-52">Claude Fable 5.2</a> | 2026-11-09 | API 공개 | max·fallback 포함 | 65 | 26.54 | 40.6 | [[82]](#ref-82) [[29]](#ref-29) [[83]](#ref-83) |
+| <a id="model-claude-mythos-52" href="#model-claude-mythos-52">Claude Mythos 5.2</a> | 2026-11-09 | 검증 프로그램 제한 공개 | 미공개 | 미공개 | 미공개 | 미공개 | [[82]](#ref-82) [[29]](#ref-29) |
+| <a id="model-muse-ember" href="#model-muse-ember">Muse Ember</a> | 2026-11-09 | API 공개 | max | 36 | 0.14 | 3.4 | [[110]](#ref-110) [[111]](#ref-111) |
+| <a id="model-qwen38-flash-next" href="#model-qwen38-flash-next">Qwen3.8 Flash Next</a> | 2026-11-07 | 가중치 공개 | 추론형·강도 미공개 | 28 | 0.57 | 34.2 | [[88]](#ref-88) [[89]](#ref-89) [[90]](#ref-90) |
+| <a id="model-kimi-k31-pro" href="#model-kimi-k31-pro">Kimi K3.1 Pro</a> | 2026-11-05 | 가중치 공개·API | max | 47 | 3.68 | 34.0 | [[65]](#ref-65) [[66]](#ref-66) [[67]](#ref-67) [[68]](#ref-68) |
+| <a id="model-mistral-large-4" href="#model-mistral-large-4">Mistral Large 4</a> | 2026-10-29 | 가중치 공개·API | high | 26 | 2.06 | 15.9 | [[18]](#ref-18) [[40]](#ref-40) [[41]](#ref-41) [[42]](#ref-42) |
+| <a id="model-gpt-61-terra" href="#model-gpt-61-terra">GPT-6.1 Terra</a> | 2026-10-26 | API 공개 | max | 51 | 0.96 | 14.0 | [[80]](#ref-80) [[81]](#ref-81) |
+| <a id="model-kimi-k31-pro-highspeed" href="#model-kimi-k31-pro-highspeed">Kimi K3.1 Pro Highspeed</a> | 2026-10-24 | Kimi API·Kimi.ai·Kimi Work·Kimi Code | 미공개 | 미공개 | 미공개 | 미공개 | [[68]](#ref-68) |
+| <a id="model-minimax-m31-flash" href="#model-minimax-m31-flash">MiniMax M3.1 Flash</a> | 2026-10-23 | 가중치·API 공개 | max | 29 | 0.49 | 17.8 | [[61]](#ref-61) [[62]](#ref-62) [[63]](#ref-63) [[64]](#ref-64) |
+| <a id="model-nemotron-35-bolt-e4b" href="#model-nemotron-35-bolt-e4b">Nemotron 3.5 Bolt E4B 4GB</a> | 2026-10-23 | 가중치 공개 | 미공개 | 미공개 | 미공개 | 미공개 | [[77]](#ref-77) [[78]](#ref-78) [[79]](#ref-79) |
+| <a id="model-ling-30-flash-sante" href="#model-ling-30-flash-sante">Ling 3.0 Flash Sante</a> | 2026-10-22 | 가중치 공개 | 추론형·강도 미공개 | 미공개 | 미공개 | 미공개 | [[72]](#ref-72) [[73]](#ref-73) |
+| <a id="model-smaug-nemotron-35-nvfp4" href="#model-smaug-nemotron-35-nvfp4">Smaug Nemotron 3.5 NVFP4</a> | 2026-10-22 | 가중치 공개 | 미공개 | 미공개 | 미공개 | 미공개 | [[74]](#ref-74) [[75]](#ref-75) [[76]](#ref-76) |
+| <a id="model-ling-31-flash" href="#model-ling-31-flash">Ling 3.1 Flash</a> | 2026-10-20 | 가중치 공개 | 추론형·강도 미공개 | 미공개 | 미공개 | 미공개 | [[69]](#ref-69) [[70]](#ref-70) [[71]](#ref-71) |
+| <a id="model-deepseek-v41-flash-1017" href="#model-deepseek-v41-flash-1017">DeepSeek V4.1 Flash 1017</a> | 2026-10-17 | 가중치 공개·API 갱신 | max | 32 | 0.60 | 13.8 | [[58]](#ref-58) [[59]](#ref-59) [[60]](#ref-60) |
+| <a id="model-beam" href="#model-beam">Beam 1.0</a> | 2026-10-16 | 가중치 공개 | 추론형·강도 미공개 | 18 | 0.28 | 1.6 | [[43]](#ref-43) [[44]](#ref-44) [[45]](#ref-45) |
+| <a id="model-muse-spark-open" href="#model-muse-spark-open">Muse Spark Open</a> | 2026-10-15 | 가중치 공개·다운로드 승인 필요 | xhigh | 25 | 2.02 | 6.4 | [[49]](#ref-49) [[50]](#ref-50) [[51]](#ref-51) |
+| <a id="model-nemotron-35-super-vl" href="#model-nemotron-35-super-vl">Nemotron 3.5 Super VL</a> | 2026-10-15 | 가중치 공개 | high | 14 | 0.48 | 4.0 | [[52]](#ref-52) [[53]](#ref-53) |
+| <a id="model-nemotron-35-bolt" href="#model-nemotron-35-bolt">Nemotron 3.5 Bolt 74B-A9B 24GB</a> | 2026-10-15 | 가중치 공개 | 추론형·강도 미공개 | 미공개 | 미공개 | 미공개 | [[54]](#ref-54) [[55]](#ref-55) |
+| <a id="model-step-5-preview" href="#model-step-5-preview">Step 5 Preview</a> | 2026-10-15 | 가중치 공개 | 추론형·강도 미공개 | 29 | 2.35 | 24.2 | [[56]](#ref-56) [[57]](#ref-57) |
+| <a id="model-glm-53-flash" href="#model-glm-53-flash">GLM-5.3 Flash</a> | 2026-10-15 | 가중치 공개 | max | 28 | 0.58 | 37.0 | [[91]](#ref-91) [[92]](#ref-92) [[93]](#ref-93) |
+| <a id="model-gemini-4-argon" href="#model-gemini-4-argon">Gemini 4 Argon</a> | 2026-10-13 | Gemini API, Gemini 앱·검색 AI 모드(Pro·Ultra) | high | 51 | 9.95 | 23.8 | [[34]](#ref-34) [[3]](#ref-3) [[35]](#ref-35) [[2]](#ref-2) |
+| <a id="model-muse-wonder" href="#model-muse-wonder">Muse Wonder</a> | 2026-10-12 | Meta Model API·Muse Code | max | 44 | 6.95 | 16.0 | [[46]](#ref-46) [[47]](#ref-47) |
+| <a id="model-muse-wonder-full" href="#model-muse-wonder-full">Muse Wonder Full</a> | 2026-10-12 | 구독 제품 공개 | max | 50 | 미공개 | 미공개 | [[46]](#ref-46) [[48]](#ref-48) |
+| <a id="model-claude-haiku-55" href="#model-claude-haiku-55">Claude Haiku 5.5</a> | 2026-10-07 | API 공개 | max | 37 | 0.41 | 14.5 | [[32]](#ref-32) [[33]](#ref-33) [[29]](#ref-29) |
+| <a id="model-gpt-61-sol" href="#model-gpt-61-sol">GPT-6.1 Sol</a> | 2026-09-29 | API 공개 | max | 55 | 1.27 | 25.0 | [[19]](#ref-19) [[20]](#ref-20) |
+| <a id="model-claude-sonnet-55" href="#model-claude-sonnet-55">Claude Sonnet 5.5</a> | 2026-09-28 | API 공개 | max·fallback 포함 | 55 | 10.02 | 30.8 | [[30]](#ref-30) [[31]](#ref-31) [[32]](#ref-32) [[29]](#ref-29) |
+| <a id="model-gpt-6-sol" href="#model-gpt-6-sol">GPT-6 Sol</a> | 2026-09-22 | API 공개 | max | 44 | 2.47 | 7.5 | [[21]](#ref-21) [[22]](#ref-22) |
+| <a id="model-gpt-6-luna" href="#model-gpt-6-luna">GPT-6 Luna</a> | 2026-09-22 | API 공개 | max | 28 | 0.15 | 10.6 | [[23]](#ref-23) [[24]](#ref-24) |
+| <a id="model-claude-opus-55" href="#model-claude-opus-55">Claude Opus 5.5</a> | 2026-09-22 | API 공개 | max·fallback 포함 | 59 | 10.04 | 24.7 | [[27]](#ref-27) [[28]](#ref-28) [[29]](#ref-29) |
+| <a id="model-deepseek-v41-flash" href="#model-deepseek-v41-flash">DeepSeek V4.1 Flash (September profile)</a> | 2026-09-10 | 가중치 공개 | max | 미공개 | 미공개 | 미공개 | [[36]](#ref-36) [[37]](#ref-37) |
+| <a id="model-gpt-6-astra" href="#model-gpt-6-astra">GPT-6 Astra</a> | 2026-09-03 | API 공개 | max | 57 | 6.24 | 19.0 | [[25]](#ref-25) [[26]](#ref-26) |
+| <a id="model-glm-53" href="#model-glm-53">GLM-5.3</a> | 2026-08-14 | 가중치 공개 | max | 32 | 5.01 | 28.1 | [[38]](#ref-38) [[39]](#ref-39) |
 
 **비용 열의 계산 기준에 주의하자.** AA는 평가 작업량, 제공사 가격, 일반적인 캐시 적중 가정을 이용해 과업당 가중 비용을 계산한다. 독자의 배포 환경에서 수집한 청구서가 아니다. 모델 점수가 그대로여도 가격에 따라 값이 달라질 수 있다. 이 스냅샷의 AA Argon·Carbon 프로필은 입력·출력 백만 토큰당 \$4/\$20을 사용한다. 반면 Google 공식 요금은 11월 30일까지 \$2/\$10이며, 12월 1일부터 \$4/\$20으로 바뀔 예정이다. 표에는 AA의 계산을 보존하고, 토큰 단가 탐색기에는 기준일의 제공사 요금을 사용한다. 두 기준을 설명 없이 섞어서는 안 된다 [[2]](#ref-2) [[3]](#ref-3) [[4]](#ref-4).
 
@@ -101,7 +101,13 @@ OpenAI는 11월 17일 **GPT-6.2 Astra와 Sol** 을 API에 출시했다. 지원�
 
 11월 24일 Responses API에 추가된 의료용 구성은 `gpt-6.2-astra-healthcare`, `gpt-6.2-sol-healthcare`, `gpt-6-astra-healthcare`, `gpt-6.1-sol-healthcare` 네 가지다. [[8]](#ref-8) 이 구성에는 임상 질문에 맞춘 지침이 들어 있고, 웹 검색을 켜면 의료 자료 전용 색인을 검색할 수 있다. [[127]](#ref-127) 논문 두 편을 요약하는 기능을 평가한다고 해 보자. 어떤 구성 ID를 썼는지, 검색을 켰는지, 인용한 자료가 요약의 주장을 뒷받침하는지 확인해야 한다. 표에 있는 범용 Astra와 Sol의 점수만으로는 임상 지침이 적용된 환경에서 검색과 인용이 얼마나 정확한지 판단하기 어렵다.
 
-차트의 Max 추론 프로필만 보고 지연 시간에 민감한 서비스의 적정 추론 강도를 정할 수는 없다. 실제로 운영할 추론 강도와 서비스 등급에서 비교해야 한다. 아래 비용 예제는 기본 토큰 단가를 정확히 옮겼더라도 비용 계산이 틀릴 수 있는 이유를 보여준다.
+<a id="astra-effort-time"></a>
+
+#### Astra의 추론 강도를 최대로 높이면 시간이 얼마나 더 걸릴까?
+
+AA가 공개한 GPT-6.2 Astra 지수를 반올림하면 `max`와 `xhigh`가 모두 **62점** 이다. OpenAI API에서 AA 과업 하나에 걸리는 추론 시간 추정치는 `max`에서 **14.2분**, `xhigh`에서 **8.1분** 이다. AA의 과업 구성에서 두 설정의 차이는 6.1분이다. 위 표에는 `max` 값을 실었다. [[95]](#ref-95)
+
+고객지원팀이 문의의 95%를 10분 안에 해결하겠다고 약속하려면 문의별 완료 시간이 필요하다. 실제 문의를 모아 두 추론 강도로 각각 실행하되 도구와 서비스 등급은 같게 두자. 첫 답변이 화면에 나타날 때까지의 시간, 대기와 재시도를 포함해 문의를 해결하기까지의 시간, 해결의 정확성을 각각 기록한다. 전체 해결 시간의 95백분위수와 어려운 문의의 해결률을 함께 비교할 수 있다.
 
 ### Gemini 4: 공유 문맥 예산과 기간별 요금
 
@@ -194,8 +200,8 @@ Sol 요청 두 건에 입력 544,000토큰과 과금 대상 출력 20,000토큰�
 ## Quizzes
 
 <details>
-<summary>Quiz 1: 같은 모델의 v4.3.2와 v5.0.1 점수가 달라도 되는가?</summary>
-*그렇다. 과제, 채점 기준, 점수 집계 방식이 달라지면 측정값도 달라진다. 모델이 개선됐는지 확인하려면 두 모델 버전을 같은 절차로 평가해야 한다. 11월 24일 표에 실린 지수는 모두 v5.0.1 기준이다.*
+<summary>Quiz 1: Gemini 4 Carbon을 새로 실행하지 않았는데도 Terminal-Bench 성공률이 1%포인트 오른 이유는?</summary>
+*AA가 저장해 둔 4.0의 결과물을 4.1 테스트로 다시 채점하면서 성공률이 65.2%에서 66.2%로 달라졌다. 모델 자체의 차이를 알고 싶다면 두 모델 버전의 결과에 같은 채점 기준을 적용해야 한다.*
 </details>
 
 <details>
@@ -219,8 +225,8 @@ Sol 요청 두 건에 입력 544,000토큰과 과금 대상 출력 20,000토큰�
 </details>
 
 <details>
-<summary>Quiz 6: Neon의 문맥 1,048,576 토큰은 그만큼의 입력에 같은 양의 출력을 더할 수 있다는 뜻인가?</summary>
-*아니다. 입력·출력이 공유하는 예산이며, 출력 실행 모드별 한도도 있다. 남은 예산과 실행 모드를 확인해야 한다. 광고된 문맥 크기가 검색 품질까지 보장하지도 않는다.*
+<summary>Quiz 6: Astra의 두 추론 강도에서 지수가 모두 62점이다. 과업당 8.1분이라는 값으로 문의의 95%를 10분 안에 해결한다고 약속할 수 있을까?</summary>
+*8.1분은 xhigh에서 AA 과업 하나에 드는 추론 시간 추정치다. 95백분위수는 실제 고객 문의 중 오래 걸리는 사례에 좌우된다. 대기와 도구 호출, 재시도를 포함한 문의별 완료 시간을 재고, 두 강도의 95백분위수와 정확히 해결한 비율을 비교해야 한다.*
 </details>
 
 ## References
@@ -361,3 +367,4 @@ Sol 요청 두 건에 입력 544,000토큰과 과금 대상 출력 20,000토큰�
 134. <a id="ref-134"></a>[Alibaba Cloud Model Studio, Qwen4-Max Token Plan 프리뷰 일정과 접속 경로](https://www.alibabacloud.com/help/en/model-studio/qwen4-max-preview).
 135. <a id="ref-135"></a>[Alibaba Cloud Model Studio, Qwen4-Max 정식 모델 ID와 리전별 지원 기능](https://www.alibabacloud.com/help/en/model-studio/qwen4-max).
 136. <a id="ref-136"></a>[OpenAI, 프롬프트 캐시 경계, 사용량 필드와 쓰기 유지 시간](https://developers.openai.com/api/docs/guides/prompt-caching).
+137. <a id="ref-137"></a>[Artificial Analysis의 지수 구성과 과업당 시간 계산 방식](https://artificialanalysis.ai/evaluations/artificial-analysis-intelligence-index).

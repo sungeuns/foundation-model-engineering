@@ -1,0 +1,224 @@
+{
+  "model": "HuggingFaceTB/SmolLM2-135M",
+  "revision": "93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
+  "prompt": "red cat",
+  "token_ids": [
+    455,
+    2644
+  ],
+  "layer": 0,
+  "head": 0,
+  "query_token_index": 1,
+  "key_token_index": 0,
+  "device": "cpu",
+  "model_dtype": "float32",
+  "attention": "eager",
+  "torch": "2.15.0+cpu",
+  "transformers": "5.24.1",
+  "rows": [
+    {
+      "positions": [
+        248,
+        249
+      ],
+      "rounded_positions": [
+        248,
+        249
+      ],
+      "integer_weight": 0.33814024925231934,
+      "rounded_weight": 0.33814024925231934
+    },
+    {
+      "positions": [
+        249,
+        250
+      ],
+      "rounded_positions": [
+        249,
+        250
+      ],
+      "integer_weight": 0.3381403982639313,
+      "rounded_weight": 0.3381403982639313
+    },
+    {
+      "positions": [
+        250,
+        251
+      ],
+      "rounded_positions": [
+        250,
+        251
+      ],
+      "integer_weight": 0.3381403088569641,
+      "rounded_weight": 0.3381403088569641
+    },
+    {
+      "positions": [
+        251,
+        252
+      ],
+      "rounded_positions": [
+        251,
+        252
+      ],
+      "integer_weight": 0.33814024925231934,
+      "rounded_weight": 0.33814024925231934
+    },
+    {
+      "positions": [
+        252,
+        253
+      ],
+      "rounded_positions": [
+        252,
+        253
+      ],
+      "integer_weight": 0.33814018964767456,
+      "rounded_weight": 0.33814018964767456
+    },
+    {
+      "positions": [
+        253,
+        254
+      ],
+      "rounded_positions": [
+        253,
+        254
+      ],
+      "integer_weight": 0.338140070438385,
+      "rounded_weight": 0.338140070438385
+    },
+    {
+      "positions": [
+        254,
+        255
+      ],
+      "rounded_positions": [
+        254,
+        255
+      ],
+      "integer_weight": 0.3381403088569641,
+      "rounded_weight": 0.3381403088569641
+    },
+    {
+      "positions": [
+        255,
+        256
+      ],
+      "rounded_positions": [
+        255,
+        256
+      ],
+      "integer_weight": 0.3381403088569641,
+      "rounded_weight": 0.3381403088569641
+    },
+    {
+      "positions": [
+        256,
+        257
+      ],
+      "rounded_positions": [
+        256,
+        256
+      ],
+      "integer_weight": 0.3381403982639313,
+      "rounded_weight": 0.2903359830379486
+    },
+    {
+      "positions": [
+        257,
+        258
+      ],
+      "rounded_positions": [
+        256,
+        258
+      ],
+      "integer_weight": 0.3381403982639313,
+      "rounded_weight": 0.3717781603336334
+    },
+    {
+      "positions": [
+        258,
+        259
+      ],
+      "rounded_positions": [
+        258,
+        260
+      ],
+      "integer_weight": 0.33814024925231934,
+      "rounded_weight": 0.3717777729034424
+    },
+    {
+      "positions": [
+        259,
+        260
+      ],
+      "rounded_positions": [
+        260,
+        260
+      ],
+      "integer_weight": 0.3381401598453522,
+      "rounded_weight": 0.2903357744216919
+    },
+    {
+      "positions": [
+        260,
+        261
+      ],
+      "rounded_positions": [
+        260,
+        260
+      ],
+      "integer_weight": 0.33814021944999695,
+      "rounded_weight": 0.2903357744216919
+    },
+    {
+      "positions": [
+        261,
+        262
+      ],
+      "rounded_positions": [
+        260,
+        262
+      ],
+      "integer_weight": 0.3381403982639313,
+      "rounded_weight": 0.3717782497406006
+    },
+    {
+      "positions": [
+        262,
+        263
+      ],
+      "rounded_positions": [
+        262,
+        264
+      ],
+      "integer_weight": 0.338140070438385,
+      "rounded_weight": 0.37177804112434387
+    },
+    {
+      "positions": [
+        263,
+        264
+      ],
+      "rounded_positions": [
+        264,
+        264
+      ],
+      "integer_weight": 0.3381403088569641,
+      "rounded_weight": 0.29033586382865906
+    },
+    {
+      "positions": [
+        264,
+        265
+      ],
+      "rounded_positions": [
+        264,
+        264
+      ],
+      "integer_weight": 0.3381401300430298,
+      "rounded_weight": 0.29033586382865906
+    }
+  ]
+}

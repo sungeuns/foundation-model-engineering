@@ -106,6 +106,7 @@ test('shared exercise IDs belong to the same authored content in both translatio
     ['/chapter-6/large-scale-training-stability', 'loss-spike-replay'],
     ['/chapter-2/cnns-for-nlp', 'textcnn-filter-example'],
     ['/chapter-3/position-encoding-strategy', 'positional-encoding-grid'],
+    ['/chapter-3/position-encoding-strategy', 'rope-position-precision'],
     ['/chapter-17/academic-benchmarks', 'pass-at-k-example'],
     ['/chapter-14/lexical-to-semantic-search', 'lexical-dense-example'],
     ['/chapter-14/lexical-to-semantic-search', 'multilingual-retrieval-check'],

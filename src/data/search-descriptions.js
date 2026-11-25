@@ -71,8 +71,8 @@ export const searchDescriptions = {
     ko: '데이터 계보, 여러 표현 수준의 중복 탐지, 오염 제거 파이프라인과 비공개 평가셋으로 벤치마크 오염을 탐지하고 방지합니다.',
   },
   '/chapter-17/commercial-model-benchmarks': {
-    en: 'Compare 45 model profiles as of November 24, 2026. Check GLM-5.4 access, Ling-3.2-air weights and GPT-6.2 benchmarks, then price a long-context request in Python.',
-    ko: '2026년 11월 24일 기준 45개 모델을 비교합니다. GLM-5.4의 이용 경로, Ling-3.2-air의 공개 가중치, GPT-6.2의 평가 조건을 확인하고 Python으로 긴 문맥 요금을 계산하세요.',
+    en: 'Compare GLM-5.4 access and Ling-3.2-air weights across 45 profiles. Explore November 25 benchmark scores, costs and task times, including GPT-6.2 Astra.',
+    ko: '45개 모델의 공개 상태와 평가 조건을 비교합니다. GLM-5.4 이용 경로와 Ling-3.2-air 공개 가중치를 확인하고, 11월 25일 기준 GPT-6.2 Astra의 추론 설정별 점수와 과업 시간을 살펴보세요.',
   },
   '/chapter-18/red-teaming': {
     en: 'Explore LLM red teaming through threat taxonomies, automated testing, multi-turn attacks, and the gap between refusal behavior and robust safety.',
