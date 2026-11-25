@@ -36,3 +36,22 @@ test('receipt downloads and both answer tables reproduce the recorded run', () =
     }
   }
 });
+
+test('both editions report the same four measured responses to quantity edits', () => {
+  const load = path => JSON.parse(readFileSync(path, 'utf8'));
+  const { cases: originals, ...baseline } = load('public/labs/2026-11/receipt-grounding-cpu.json');
+  const { cases: edits, ...settings } = load('src/components/chapter-11/receipt-quantity-outputs.json');
+  assert.deepEqual(settings, baseline);
+  const missing = originals.find(item => item.file === 'receipt-missing.png');
+  const cases = [{ ...missing, paper_packs: 1, pencil_boxes: 1 }, ...edits];
+  const answers = new Map(cases.map(item => [`${item.paper_packs},${item.pencil_boxes}`, item.raw_text.trim()]));
+  assert.deepEqual([...answers.keys()].sort(), ['1,1', '1,8', '7,1', '7,8']);
+  assert.equal(new Set(cases.map(item => item.sha256)).size, 4);
+
+  for (const lang of ['', 'ko/']) {
+    const mdx = readFileSync('src/pages/' + lang + 'chapter-11/vision-language-bridges.mdx', 'utf8');
+    const rows = mdx.split('\n').filter(line => line.startsWith('| `') && line.includes(' pack`'));
+    const expected = [1, 7].map(paper => [paper + ' pack', answers.get(paper + ',1'), answers.get(paper + ',8')]);
+    assert.deepEqual(rows.map(row => [...row.matchAll(/`([^`]+)`/g)].map(match => match[1])), expected);
+  }
+});

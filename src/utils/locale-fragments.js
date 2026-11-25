@@ -24,7 +24,7 @@ const lessonFragments = {
   '/chapter-5/expert-parallelism': ['expert-dispatch-lab'],
   '/chapter-5/case-study': ['dropless-routing-example'],
   '/chapter-6/tokenization-science': ['tokenizer-acceptance-probes'],
-  '/chapter-7/data-parallelism': ['dp-ddp-gradient-trace'],
+  '/chapter-7/data-parallelism': ['dp-ddp-gradient-trace', 'ddp-valid-targets'],
   '/chapter-7/zero-redundancy-optimizer': ['zero-shard-ownership'],
   '/chapter-7/flash-attention': ['online-softmax-tiles'],
   '/chapter-7/tiny-decoder-lab': ['decoder-copy-trace', 'local-decoder-setup'],

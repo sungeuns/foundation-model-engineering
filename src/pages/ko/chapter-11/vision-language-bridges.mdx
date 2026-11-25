@@ -5,6 +5,9 @@ lang: ko
 ---
 
 import VisionLanguageBridgeVisualizer from '../../../components/chapter-11/VisionLanguageBridgeVisualizer.tsx';
+import ReceiptComparison from '../../../components/chapter-11/ReceiptComparison.astro';
+import quantityProbe from '../../../components/chapter-11/receipt_quantity_probe.py?url&no-inline';
+import quantityRecord from '../../../components/chapter-11/receipt-quantity-outputs.json?url&no-inline';
 import receiptA from '../../../assets/images/chapter-11/receipt-a.png';
 import receiptB from '../../../assets/images/chapter-11/receipt-b.png';
 import receiptMissing from '../../../assets/images/chapter-11/receipt-missing.png';
@@ -191,26 +194,38 @@ $224\times224$ 이미지 한 장이면 $P=16^2=256$ 이므로 디코더 시퀀�
 
 영수증에서 합계 줄을 지우면 모델도 금액을 알 수 없다고 답할까요? 512 × 384픽셀짜리 영수증을 세 가지로 만들어 SmolVLM-256M-Instruct에 한 장씩 보여 줬습니다. 합계 줄의 픽셀만 바꾸고 세 번 모두 같은 질문을 썼습니다.
 
-<figure style={{ margin: '1rem 0' }}>
-  <img src={receiptA.src} width="512" height="384" loading="lazy" alt="도화지 한 묶음과 연필 한 상자가 적힌 영수증. 마지막 줄에는 Total 31.50이라고 쓰여 있다." />
-  <figcaption>이 실험을 위해 Pillow로 그린 영수증 A입니다. 품목별로 수량만 적혀 있어 합계 줄을 지우면 가격을 더해 답을 구할 수도 없습니다.</figcaption>
-</figure>
-
 모델에는 ‘인쇄된 합계 줄을 그대로 옮기고, 그 줄이 없으면 MISSING이라고 답하라’고 영어로 요청했습니다.
 
 > Read the printed Total line. Copy that line exactly. If the Total line is missing, answer MISSING.
+
+<ReceiptComparison lang="ko" />
+
+A와 B의 합계를 읽고 C로 바꿔 보세요. C 한 장만 보고 위의 지시대로 답한다면, 추측 없이 무엇을 쓸 수 있을까요?
 
 | 입력 이미지(PNG) | 기대한 답 | 모델의 답 |
 | --- | --- | --- |
 | <a href={receiptA.src} download="receipt-a.png">영수증 A</a> | `Total 31.50` | `31.50` |
 | <a href={receiptB.src} download="receipt-b.png">영수증 B</a> | `Total 42.00` | `42.00` |
-| <a href={receiptMissing.src} download="receipt-missing.png">합계 줄을 지운 영수증</a> | `MISSING` | `1` |
+| <a href={receiptMissing.src} download="receipt-missing.png">영수증 C (합계 줄 삭제)</a> | `MISSING` | `1` |
 
 금액만 채점하면 합계가 보이는 두 장은 모두 정답입니다. **인쇄된 줄 전체** 를 채점하면 두 장 모두 오답입니다. 모델은 두 번 다 `Total`을 빠뜨렸고, 줄을 지운 뒤에도 숫자를 답했습니다. 표에서는 답 맨 앞의 공백 한 칸을 생략했습니다. <a href={withBasePath('/labs/2026-11/receipt-grounding-cpu.json')}>원본 출력과 토큰 ID</a>에서 공백까지 확인할 수 있습니다.
 
 2026-11-25에 CPU에서 실행한 결과, 이 체크포인트의 전처리기는 PNG 한 장을 512 × 512픽셀 이미지 13개로 변환했습니다. 이미지 하나당 시각 토큰 자리가 64개이므로, 전체 입력 893자리 중 832자리가 이미지 몫입니다. 나머지 61자리에는 질문과 전처리기가 붙인 형식 토큰이 들어갑니다. FP32에서 그리디 디코딩을 사용하고 출력은 최대 32토큰으로 제한했습니다. 앞의 계산기는 이미지를 쪼개지 않고 패치 격자 하나로 처리한다고 가정합니다. 실제 입력 길이를 알려면 전처리기가 이미지를 몇 개로 나누는지부터 확인해야 합니다. [[5]](#ref-5)
 
 <a href={withBasePath('/labs/2026-11/receipt-grounding.zip')} download="receipt-grounding.zip">PNG 세 장과 파이썬 코드, 실행 기록 내려받기(ZIP)</a>. 압축을 풀고 코드 첫머리에 적힌 패키지를 설치한 뒤 그 디렉터리에서 `python receipt_grounding.py .`을 실행하세요. 첫 실행 때 약 513 MB의 모델 가중치를 내려받습니다.
+
+### 어느 숫자를 바꾸면 답도 달라질까?
+
+C에는 도화지와 연필 수량에 각각 `1`이 남아 있습니다. 이 중 어느 쪽을 바꾸면 모델의 답도 바뀔까요? C에서 도화지만 7묶음으로 바꾼 경우, 연필만 8상자로 바꾼 경우, 둘 다 바꾼 경우를 만들었습니다. 합계는 계속 비워 두고 같은 체크포인트에 같은 질문을 했습니다. 표에는 맨 앞 공백을 제외한 실제 답을 적었습니다.
+
+| 도화지 수량 | 연필에 `1 box` 표기 | 연필에 `8 box` 표기 |
+| --- | --- | --- |
+| `1 pack` | `1` | `8 box` |
+| `7 pack` | `1` | `8 box` |
+
+열 제목을 가리고 답만 읽어도 네 경우 모두 연필이 몇 상자인지 알아낼 수 있습니다. 하지만 손님이 얼마를 냈는지는 알 수 없습니다. 두 열 모두 도화지 수량을 바꿔도 답은 같았습니다. 이 양식과 질문에서 모델의 응답이 연필 수량에 따라 바뀐다는 것까지는 확인했습니다. 어느 어텐션 헤드가 관여했는지, 다른 영수증에서도 같은 식으로 답할지는 이 표로 판별할 수 없습니다.
+
+위 ZIP의 압축을 푼 폴더에 <a href={quantityProbe} download="receipt_quantity_probe.py">수량 실험 코드(Python)</a>를 저장한 뒤 `python receipt_quantity_probe.py`를 실행하세요. 코드가 영수증 C에서 시작해 임시 폴더에 PNG 세 장을 만듭니다. <a href={quantityRecord} download="receipt-quantity-outputs.json">실측 답변과 입력 해시, 생성된 토큰 ID</a>를 내려받아 결과를 대조할 수 있습니다.
 
 이 세 장은 한 종류의 영수증에서 근거 줄을 베끼고, 줄이 없을 때 답을 보류하는지 검사합니다. 이미지 검색을 평가하려면 영수증 설명과 다른 문서 설명의 순위를 따로 비교하세요. 이미지 순서가 영향을 주는지 보려면 A와 B를 표시해 함께 보여 주고, 순서를 뒤집은 뒤 같은 영수증을 물어보세요. 시각 예산을 바꿔 지연 시간이나 최대 메모리를 비교할 때도 이미지와 디코딩 설정은 고정합니다.
 

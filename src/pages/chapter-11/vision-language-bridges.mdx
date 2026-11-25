@@ -5,6 +5,9 @@ lang: en
 ---
 
 import VisionLanguageBridgeVisualizer from '../../components/chapter-11/VisionLanguageBridgeVisualizer.tsx';
+import ReceiptComparison from '../../components/chapter-11/ReceiptComparison.astro';
+import quantityProbe from '../../components/chapter-11/receipt_quantity_probe.py?url&no-inline';
+import quantityRecord from '../../components/chapter-11/receipt-quantity-outputs.json?url&no-inline';
 import receiptA from '../../assets/images/chapter-11/receipt-a.png';
 import receiptB from '../../assets/images/chapter-11/receipt-b.png';
 import receiptMissing from '../../assets/images/chapter-11/receipt-missing.png';
@@ -191,24 +194,36 @@ For a receipt reader, test small-font totals and line items before choosing a sm
 
 Can a model tell when a receipt has no printed total? We gave SmolVLM-256M-Instruct three versions of this 512 × 384 image, one at a time. Only the pixels on the total line changed. The prompt was identical each time.
 
-<figure style={{ margin: '1rem 0' }}>
-  <img src={receiptA.src} width="512" height="384" loading="lazy" alt="Receipt for one pack of drawing paper and one box of pencils. The last line reads Total 31.50." />
-  <figcaption>Receipt A, drawn for this experiment with Pillow. The item lines give quantities but no prices from which to reconstruct a missing total.</figcaption>
-</figure>
-
 > Read the printed Total line. Copy that line exactly. If the Total line is missing, answer MISSING.
+
+<ReceiptComparison lang="en" />
+
+Read A and B, then switch to C. If you had just C and the prompt above, what could you write without guessing?
 
 | Input PNG | Expected answer | Model answer |
 | --- | --- | --- |
 | <a href={receiptA.src} download="receipt-a.png">Receipt A</a> | `Total 31.50` | `31.50` |
 | <a href={receiptB.src} download="receipt-b.png">Receipt B</a> | `Total 42.00` | `42.00` |
-| <a href={receiptMissing.src} download="receipt-missing.png">Total line removed</a> | `MISSING` | `1` |
+| <a href={receiptMissing.src} download="receipt-missing.png">Receipt C (total removed)</a> | `MISSING` | `1` |
 
 Scoring only the amounts gives the model two correct answers on the two receipts with totals. Scoring the **printed line** gives it zero on those same receipts because it omitted the word `Total` both times. With the line removed it still returned a number. The table trims one leading space from each answer. The <a href={withBasePath('/labs/2026-11/receipt-grounding-cpu.json')}>raw outputs and token IDs</a> preserve it.
 
 In the 2026-11-25 CPU run, the checkpoint's image processor turned each PNG into 13 views of 512 × 512 pixels. Each view contributed 64 image placeholders. That accounts for 832 of the 893 input positions. The other 61 came from the prompt and the processor’s formatting. We used FP32, greedy decoding and a 32-token output cap. Those 13 views illustrate why the toy calculator's one unbroken patch grid cannot predict this checkpoint's actual input length. [[5]](#ref-5)
 
 <a href={withBasePath('/labs/2026-11/receipt-grounding.zip')} download="receipt-grounding.zip">Download the three PNGs, Python script and recorded run (ZIP)</a>. After extracting the files, install the packages listed in the script and run `python receipt_grounding.py .`. The first run downloads about 513 MB of model weights.
+
+### Which printed digit changed the answer?
+
+Receipt C still shows two `1`s, one beside each item. Which one could explain the model’s answer? Starting from C, we changed the paper count to 7, the pencil count to 8, or both. We left the total blank and ran the same checkpoint and prompt. Each cell shows its decoded answer with leading whitespace trimmed.
+
+| Paper quantity | Pencils read `1 box` | Pencils read `8 box` |
+| --- | --- | --- |
+| `1 pack` | `1` | `8 box` |
+| `7 pack` | `1` | `8 box` |
+
+Cover the column headings. From the answer you can recover the pencil count in all four images, but you learn nothing about how much the customer paid. Changing the paper digit made no difference in either column. This isolates a response to the pencil line for this layout and prompt. It does not identify an attention head or show how the model would handle another receipt.
+
+Save the <a href={quantityProbe} download="receipt_quantity_probe.py">quantity experiment (Python)</a> beside the files from the ZIP above and run `python receipt_quantity_probe.py`. It starts with receipt C and generates the three edited PNGs in a temporary directory. The <a href={quantityRecord} download="receipt-quantity-outputs.json">recorded outputs, input hashes, and generated token IDs</a> let you compare your results.
 
 These three cases test copying and abstention on one layout. To test retrieval, separately rank the receipt description against descriptions of other documents. To test image order, present both labeled receipts, reverse them and ask about the same label. Hold the images and decoding settings fixed when measuring changes in visual budget, latency or peak memory.
 

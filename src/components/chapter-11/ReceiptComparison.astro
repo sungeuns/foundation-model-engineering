@@ -1,0 +1,50 @@
+---
+import receiptA from '../../assets/images/chapter-11/receipt-a.png';
+import receiptB from '../../assets/images/chapter-11/receipt-b.png';
+import receiptC from '../../assets/images/chapter-11/receipt-missing.png';
+
+interface Props { lang: 'en' | 'ko' }
+const ko = Astro.props.lang === 'ko';
+const items = [
+  { key: 'a', image: receiptA, total: 'Total 31.50' },
+  { key: 'b', image: receiptB, total: 'Total 42.00' },
+  { key: 'c', image: receiptC, total: '' },
+];
+const goods = ko ? '도화지 한 묶음, 연필 한 상자.' : 'One pack of drawing paper and one box of pencils.';
+---
+
+<figure class="receipt-comparison">
+  <fieldset>
+    <legend>{ko ? '영수증을 한 장씩 골라 합계 줄을 읽어 보세요.' : 'Choose a receipt and read its total line.'}</legend>
+    {items.map(({ key }, i) => <>
+      <input type="radio" name="receipt-evidence" id={'receipt-input-' + key} value={key} checked={i === 0} />
+      <label for={'receipt-input-' + key}>{ko ? '영수증' : 'Receipt'} {key.toUpperCase()}</label>
+    </>)}
+    <div class="receipt-images">
+      {items.map(({ key, image, total }) => <img
+        data-case={key} src={image.src} width={image.width} height={image.height} loading="lazy"
+        alt={ko
+          ? `${goods} ${total ? `마지막 줄에는 ${total}이라고 적혀 있습니다.` : '품목 아래에 합계나 가격이 적혀 있지 않습니다.'}`
+          : `${goods} ${total ? `The last line reads ${total}.` : 'There is no total or price below the items.'}`}
+      />)}
+    </div>
+  </fieldset>
+  <figcaption>{ko
+    ? 'Pillow로 그린 원본 실험 이미지입니다. 품목 옆에 적힌 1은 수량입니다. 낱개 가격은 어느 영수증에도 없습니다.'
+    : 'Original experiment inputs, drawn with Pillow. The 1 beside each item is a quantity. None of the receipts gives a unit price.'}</figcaption>
+</figure>
+
+<style>
+  .receipt-comparison { margin: 1.25rem 0; }
+  fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+  legend { font-weight: 650; margin-bottom: .45rem; padding: 0; }
+  label { margin-right: .8rem; cursor: pointer; }
+  input { margin: 0 .25rem 0 0; accent-color: var(--accent-color); }
+  input:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+  .receipt-images { margin: .6rem 0; }
+  img { display: none; border: 1px solid var(--border-color); box-sizing: border-box; }
+  input[value="a"]:checked ~ .receipt-images [data-case="a"],
+  input[value="b"]:checked ~ .receipt-images [data-case="b"],
+  input[value="c"]:checked ~ .receipt-images [data-case="c"] { display: block; }
+  figcaption { color: var(--secondary-color); font-size: .92em; }
+</style>

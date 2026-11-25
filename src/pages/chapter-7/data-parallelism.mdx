@@ -6,6 +6,7 @@ lang: en
 
 import GradientReductionTrace from '../../components/chapter-7/GradientReductionTrace.astro';
 import DDPBucketingTimeline from '../../components/chapter-7/DDPBucketingTimeline.tsx';
+import gradientCheck from '../../../scripts/verify-dp-ddp-gradients.py?url&no-inline';
 
 # 7.1 Data Parallelism (DP/DDP)
 
@@ -23,7 +24,7 @@ Take one scalar weight $w=1$ and two target values $y_0=0$ and $y_1=4$, one per 
 
 <GradientReductionTrace lang="en" />
 
-Averaging rank-local means gives the global example mean when each rank contributes the same number of examples. If one rank contributes one valid token and another contributes three, averaging their token means would give those tokens different weights. For a global token mean with default DDP, scale each local **sum** of token losses by the number of ranks divided by the total valid-token count across ranks before backward.
+Here each rank contributes one target. [What changes when padding leaves one rank with fewer targets?](#ddp-valid-targets)
 
 ### Why DDP is preferred
 PyTorch recommends DDP for multi-GPU training, including on one machine. Rebuilding replicas each forward adds work in DP. Gathering large outputs can also raise memory use on the output device. DDP keeps replicas between steps and can overlap gradient communication with backward computation. To compare the two on a workload, record peak memory per device, step time and time spent waiting for gradient synchronization. [[3]](#ref-3) [[4]](#ref-4)
@@ -34,9 +35,28 @@ PyTorch recommends DDP for multi-GPU training, including on one machine. Rebuild
 
 In the usual one-process-per-GPU configuration, each process has a rank, one model replica, and its own optimizer. The training code assigns inputs to ranks, for example with a `DistributedSampler`. DDP synchronizes initial module state by default and then synchronizes gradients in backward. Each optimizer applies the same update locally. Buffers such as BatchNorm statistics can also be broadcast depending on configuration. [[2]](#ref-2) [[4]](#ref-4)
 
-An all-reduce specifies the result that each rank receives. The backend chooses how to move the data. Ring, tree and hierarchical implementations are possible. The next section counts bytes for a ring. [[2]](#ref-2)
+<a id="ddp-valid-targets"></a>
+
+### Two ranks, four valid tokens. Which gradient reaches the optimizer?
+
+Give each rank three positions. Keep one target on rank 0 and all three on rank 1. At $w=1$, the four valid targets contribute gradients $+1,-3,-3,-3$. Averaging within each rank first gives $(1-3)/2=-1$. Giving each target one vote gives $(1-3-3-3)/4=-2$. A learning rate of 0.5 turns that choice into two different weights after a single SGD step.
+
+These are CPU measurements with PyTorch 2.15, two Gloo processes and a Boolean loss mask. Every row starts at $w=1$. The last column computes the mean over the same valid positions together on one CPU. Each entry gives **(gradient, updated weight)**.
+
+| Valid targets on ranks 0, 1 | DDP with rank means | DDP with global token mean | Unsharded reference |
+| --- | --- | --- | --- |
+| 1, 1 | (−1, 1.5) | (−1, 1.5) | (−1, 1.5) |
+| 1, 3 | (−1, 1.5) | (−2, 2) | (−2, 2) |
+| 0, 3 | (−1.5, 1.75) | (−3, 2.5) | (−3, 2.5) |
+| 0, 0 | (no gradient, 1) | (no gradient, 1) | (no gradient, 1) |
+
+The mean of an empty rank is undefined. In the third row, the rank-mean baseline gives the empty rank a zero contribution. DDP then averages zero with −3 and halves the update. For the global token mean, sum the valid counts across ranks first. On each rank, backpropagate its **sum** of valid losses times `world_size / total_valid`. Default DDP's gradient averaging then yields the four-token mean in row two and the three-token mean in row three. [[4]](#ref-4)
+
+An empty rank still runs forward and backward if its peer has data. In the script, `losses[valid].sum()` remains connected to the model even when the mask selects nothing. When both masks are empty, the shared count is zero and both ranks skip the forward pass and optimizer step. <a href={gradientCheck} download="verify-dp-ddp-gradients.py">Download the two-rank check</a> and run `python verify-dp-ddp-gradients.py` to reproduce all four rows.
 
 ### The Mathematics of Ring All-Reduce
+An all-reduce specifies the result that each rank receives. The backend chooses how to move the data. Ring, tree and hierarchical implementations are possible. [[2]](#ref-2)
+
 Consider $N$ ranks with $M$ bytes of gradients per rank. In a centralized reduction, a designated rank receives $M(N-1)$ bytes from peers. In the ring algorithm, each rank sends and receives only part of the gradient at each step. [[1]](#ref-1)
 
 In Ring All-Reduce, the GPUs are logically arranged in a circle. The algorithm operates in two phases:

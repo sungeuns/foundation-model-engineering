@@ -6,6 +6,7 @@ import ddpCheck from '../../scripts/verify-dp-ddp-gradients.py?url&no-inline';
 interface Props { lang?: 'en' | 'ko' }
 const { lang = 'en' } = Astro.props;
 const localePrefix = lang === 'ko' ? '/ko' : '';
+const notebookViewer = 'https://nbviewer.org/urls/sungeuns.github.io/foundation-model-engineering';
 ---
 <div class="teaching-labs">
   {teachingLabGroups.map(group => (
@@ -20,7 +21,10 @@ const localePrefix = lang === 'ko' ? '/ko' : '';
                 const path = typeof file.path === 'string' ? file.path : file.path[lang];
                 const url = path === '/scripts/verify-dp-ddp-gradients.py' ? ddpCheck : withBasePath(path);
                 const label = labFileLabels[file.kind][lang];
-                return <a href={url} download={path.split('/').pop()} aria-label={label + ' — ' + task.title[lang]}>{label}</a>;
+                return <>
+                  {file.preview && <a href={notebookViewer + path + '#cell-id=' + file.preview.cell}>{file.preview.title[lang]}</a>}
+                  <a href={url} download={path.split('/').pop()} aria-label={label + ' — ' + task.title[lang]}>{label}</a>
+                </>;
               })}
             </div>
           </li>

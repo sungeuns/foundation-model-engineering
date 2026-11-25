@@ -57,10 +57,13 @@ for (const lang of ['en', 'ko']) {
         assert.equal(text(links[0]), task.title[lang]);
         assert.equal(attr(links[0], 'href'), base + chapter + '#' + task.anchor);
         assert.equal(byId(page(chapter), task.anchor).length, 1, chapter + '#' + task.anchor);
-        assert.equal(links.length, task.files.length + 1);
+        const downloads = links.filter(link => attr(link, 'download') !== undefined);
+        const previews = links.slice(1).filter(link => attr(link, 'download') === undefined);
+        assert.equal(downloads.length, task.files.length);
+        assert.equal(previews.length, task.files.filter(file => file.kind === 'workedNotebook').length);
 
         for (const [index, file] of task.files.entries()) {
-          const link = links[index + 1];
+          const link = downloads[index];
           const source = typeof file.path === 'string' ? file.path : file.path[lang];
           const href = attr(link, 'href');
           assert.ok(href.startsWith(base), href);
@@ -71,6 +74,15 @@ for (const lang of ['en', 'ko']) {
 
           const bytes = readFileSync(join(dist, href.slice(base.length)));
           assert.ok(bytes.length > 0, href);
+          if (file.kind === 'workedNotebook') {
+            const target = 'https://nbviewer.org/urls/sungeuns.github.io/foundation-model-engineering' + source + '#cell-id=' + file.preview.cell;
+            const preview = previews.find(link => attr(link, 'href') === target);
+            assert.ok(preview, target);
+            assert.equal(text(preview), file.preview.title[lang]);
+            assert.ok(page(chapter).some(node => node.tagName === 'a' && attr(node, 'href') === target));
+            const resultCell = JSON.parse(bytes).cells.find(cell => cell.id === file.preview.cell);
+            assert.ok(resultCell?.outputs?.length, target + ' points to saved output');
+          }
           if (file.kind === 'csv') {
             const csv = await measurements({ params: { dataset: basename(source, '.csv') } });
             assert.equal(bytes.toString('utf8'), await csv.text());

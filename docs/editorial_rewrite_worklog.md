@@ -294,7 +294,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 6.4 | `/chapter-6/infrastructure` | Mechanical only | b6d232e0decc655e38767ca986e99f77e30350ea24241c4bbf8e74737e3779b1 | b51344d034e91b490957311ea8525b46aa9ff09ae2f602ed8481a44513546c06 |
 | 6.5 | `/chapter-6/synthetic-data-for-pre-training` | Mechanical only | 3d2bab63db26c5456f88eab0f51e2e7e70ac49d93d868427783f625e4ae166ee | dd5381b0b44cb0223b04f689d010f40ea3349d668ebf9e79c98fe3d3204af54c |
 | 6.6 | `/chapter-6/optimization-mechanics` | Inspected 2026-11-17 | 942111c9629675b61e7af38dd1e0bb94a0dbe0aeff5c9d142fd7c7d0cc167b3e | 948f68b51e05f15a67755538714f595ff03ec214fe3c5d518eb6ebbff8000c22 |
-| 7.1 | `/chapter-7/data-parallelism` | Mechanical only | 103952286e41dcecefd583adc654b910249e54a2c59f883138dba1dc59404fd1 | f361adddda5554dea7aa816dc3bf965736edf13b7fd3862bd193e6cec8597385 |
+| 7.1 | `/chapter-7/data-parallelism` | Mechanical only | 4b236461b2806b76cc0943ae2761a9e4525fd1208d4cade147152d35da4359aa | c9e88a6bd767a74623cb68c84b32a01c011316fd5e6775822fb86604097510d7 |
 | 7.2 | `/chapter-7/zero-redundancy-optimizer` | Inspected 2026-11-25 | 1d59bd55d74d312c61666b7a80158d28487d57ca3dbe4677029b7cbc03c85296 | 4992cea430e8dd37ecf27e13aa7158d27b9d43445b6cfe248a89dd9bf44558d1 |
 | 7.3 | `/chapter-7/model-and-pipeline-parallelism` | Inspected 2026-11-15 | 0832cffc306946b61c817850cb07cdbebf0d06aadfe607b6b7dfe75d14d010bf | b645ef818ecb8e33702468b9dcacf90a130b6c229ed8603d055736e2e62f5db4 |
 | 7.4 | `/chapter-7/flash-attention` | Mechanical only | 0087367d51afc79525d915f2ce52f5b6a7a61af166a1df98dc14224e1bf99bc0 | 99be786fef071e4d7cc5307302bac987c71c40ecdac3fdf506861049433e7098 |
@@ -314,7 +314,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 10.3 | `/chapter-10/dpo` | Mechanical only | 61b39b4e59d60952d7a969476024a61f21223d09c62ae9e06e83559eaa04a855 | 5ea81a90b4a14be940d19dde889c28380e3b2198dcf6d9670a6adac402f21d2c |
 | 10.4 | `/chapter-10/kto-and-ipo` | Mechanical only | 61ac741df320db7fb3031414fdacaf5770fa28200d3f91f8d69cec83c273c046 | 6a539344952c0246f5777ddf9e6a1be24babe58b085a53cc1752efa3ea2be7c5 |
 | 10.5 | `/chapter-10/alignment-tax` | Inspected 2026-11-15 | e630460ac1b1a8620d753362e400c3bea18d69cff7a6265b3820b6ce7230c6f6 | 5041f746d84764553aecee5b114599a703cc2206889aa57838d5b2719b0bec7e |
-| 11.1 | `/chapter-11/vision-language-bridges` | Inspected 2026-11-25 | a02bb8b31255a61b3ad4fac756f6c5547001063bcffb21c0f37af66636b14ab9 | 933896d72135ca1369709ff247a2a84db201193d056023234add80635ec16f29 |
+| 11.1 | `/chapter-11/vision-language-bridges` | Inspected 2026-11-25 | 04172661cfba605b5f8908fea9810fb67519d803f25adf725d7ef6ee3e4a0846 | 2a98c21e32781706a62018f5b8af22f3a6337df6caafacc611ad7f7b79fda9e7 |
 | 11.2 | `/chapter-11/audio-and-speech-integration` | Mechanical only | 8e9503cd5199038f844e9c7a29e62c6537582b42c54b622d271e681f2591ef0b | 106ebe5a0730f2e5cc08f7f93522845889509226349eef8dba5bcc47eb3a345a |
 | 11.3 | `/chapter-11/unified-multimodal-any-to-any` | Inspected 2026-11-15 | 63b49653980ac69e7662b92d1423aad27976789545651d8f21bb97c04a0993a2 | 05b4775ea2e63d295a8def6928b0a7280187755f1e95669da1a9db2ad9134158 |
 | 11.4 | `/chapter-11/image-diffusion-models` | Inspected 2026-11-24 | 5bb8bc33ff8adf86105e24018b03423e9f19e0d29739f64b843c0cbeadea05e8 | 308de426fdbc7b1c845a4d63be36b83988abe2eb36026affba1dd101194816b7 |
@@ -770,3 +770,9 @@ For §12.1, checked the two notebook entry points and the four-step decode trace
 ### November 25, 2026 — Hearing a sample-rate error
 
 In §11.2, checked both translations of the listening exercise and its Python byte comparison. The two original WAVs have identical mono PCM, including fades at the note boundaries. Changing the declared rate from 44,100 to 16,000 Hz changes the duration from 1 to 2.75625 seconds and the two pitches from 441/882 to 160/320 Hz. The Whisper measurements above the exercise still refer to the upstream speech recording.
+
+### November 25, 2026 — Masked training targets and receipt quantities
+
+For §7.1, checked the two translated tables against a one-step, two-process CPU Gloo run. With one valid target on rank 0 and three on rank 1, the rank-mean update ended at 1.5 and the global-token update at 2.0. With no valid target on rank 0, the weights were 1.75 and 2.5. The global-token calculation matched the unsharded reference in all four cases. The review covered the revised example and its downloaded script.
+
+For §11.1, compared all three original PNGs with their localized in-page controls. With the total absent, changing the pencil count from 1 to 8 changed the answer from `1` to `8 box` at both tested paper counts. Re-running the downloadable probe from the reader’s files reproduced the published image hashes, generated token IDs and answers. The figure, data and two translated explanations distinguish a result on one receipt layout from a general claim about number reading.

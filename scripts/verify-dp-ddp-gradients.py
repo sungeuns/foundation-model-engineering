@@ -1,8 +1,11 @@
-"""Verify the §7.1 reductions on CPU with PyTorch 2.15.
+"""Verify the §7.1 gathered loss and masked DDP updates on CPU with PyTorch 2.15.
 
 Run: python verify-dp-ddp-gradients.py
 The gathered-output check uses autograd on one CPU. The distributed check uses
 two real local CPU processes with Gloo. No model or dataset download is needed.
+
+English: https://sungeuns.github.io/foundation-model-engineering/chapter-7/data-parallelism/#ddp-valid-targets
+한국어: https://sungeuns.github.io/foundation-model-engineering/ko/chapter-7/data-parallelism/#ddp-valid-targets
 """
 
 import tempfile
@@ -28,29 +31,62 @@ def check_gathered_loss():
     print(f"Gathered mean: contributions={result[:2]}, gradient={result[2]}", flush=True)
 
 
+def unsharded_step(targets, valid):
+    weight = nn.Parameter(torch.tensor(1.0, dtype=targets.dtype))
+    if not valid.any():
+        return None, weight.item()
+    optimizer = torch.optim.SGD([weight], lr=0.5)
+    loss = (weight - targets[valid]).square().mean() / 2
+    loss.backward()
+    optimizer.step()
+    return weight.grad.item(), weight.item()
+
+
+def ddp_step(net, targets, valid, total, *, rank_mean):
+    # Each comparison starts at the same weight with a fresh SGD optimizer.
+    weight = net.module.weight
+    with torch.no_grad():
+        weight.fill_(1.0)
+    optimizer = torch.optim.SGD(net.parameters(), lr=0.5)
+    optimizer.zero_grad(set_to_none=True)
+    if total == 0:
+        return None, weight.item()  # All ranks skip before the DDP forward.
+
+    predictions = net(torch.ones_like(targets))
+    losses = (predictions - targets).square() / 2
+    local_sum = losses[valid].sum()  # Differentiable zero when this rank has no targets.
+    if rank_mean:
+        # Deliberately flawed baseline: give an empty rank a zero contribution.
+        loss = local_sum / max(1, valid.sum().item())
+    else:
+        loss = local_sum * dist.get_world_size() / total
+    loss.backward()
+    optimizer.step()
+    return weight.grad.item(), weight.item()
+
+
 def check_rank(rank, rendezvous_file):
     dist.init_process_group("gloo", init_method=rendezvous_file, rank=rank, world_size=2)
     try:
-        for shards, expected in [(([0.0], [4.0]), -1.0), (([0.0], [4.0] * 3), -2.0)]:
-            targets = torch.tensor(shards[rank], dtype=torch.float64).reshape(-1, 1)
-            model = nn.Linear(1, 1, bias=False, dtype=torch.float64)
-            with torch.no_grad():
-                model.weight.fill_(1.0)
-            net = DistributedDataParallel(model)
-            optimizer = torch.optim.SGD(net.parameters(), lr=0.5)
-
-            count = torch.tensor(targets.numel(), dtype=torch.int64)
+        targets = torch.tensor([[0., 0., 0.], [4., 4., 4.]], dtype=torch.float64)
+        net = DistributedDataParallel(nn.Linear(1, 1, bias=False, dtype=targets.dtype))
+        for counts, expected_local in [((1, 1), -1.), ((1, 3), -1.),
+                                       ((0, 3), -1.5), ((0, 0), None)]:
+            valid = torch.arange(3) < torch.tensor(counts).reshape(2, 1)
+            local_targets = targets[rank].reshape(3, 1)
+            local_valid = valid[rank].reshape(3, 1)
+            count = local_valid.sum()
             dist.all_reduce(count)
-            predictions = net(torch.ones_like(targets))
-            local_sum = ((predictions - targets).square() / 2).sum()
-            (local_sum * dist.get_world_size() / count.item()).backward()
-            gradient = model.weight.grad.item()
-            assert gradient == expected, (rank, gradient, expected)
-            optimizer.step()
-            weight = model.weight.item()
-            assert weight == 1.0 - 0.5 * expected
+            total = count.item()
+            local = ddp_step(net, local_targets, local_valid, total, rank_mean=True)
+            token = ddp_step(net, local_targets, local_valid, total, rank_mean=False)
+            reference = unsharded_step(targets, valid)
+            assert token == reference, (rank, counts, token, reference)
+            expected_weight = 1.0 if expected_local is None else 1.0 - 0.5 * expected_local
+            assert local == (expected_local, expected_weight), (rank, counts, local)
             if rank == 0:
-                print(f"DDP: {count.item()} examples, gradient={gradient}, weight={weight}", flush=True)
+                print(f"Valid targets {counts}, (gradient, weight): "
+                      f"rank mean={local}, token mean={token}, unsharded={reference}", flush=True)
     finally:
         dist.destroy_process_group()
 

@@ -13,6 +13,26 @@ function elements(node, tag) {
 
 const text = node => node.value ?? node.childNodes.map(text).join(' ');
 
+test('both editions reproduce a masked DDP step against an unsharded reference', () => {
+  for (const locale of ['', 'ko']) {
+    const html = readFileSync(join(dist, locale, 'chapter-7/data-parallelism/index.html'), 'utf8');
+    const table = elements(parse(html), 'table').find(node => text(node).includes('(−1.5, 1.75)'));
+    assert.ok(table);
+    const rows = elements(table, 'tr').slice(1).map(row => elements(row, 'td').map(text));
+    const cases = [[1, 1], [1, 3], [0, 3], [0, 0]];
+    assert.equal(rows.length, cases.length);
+    for (const [index, [left, right]] of cases.entries()) {
+      const total = left + right;
+      const rankMean = ((left ? 1 : 0) + (right ? -3 : 0)) / 2;
+      const tokenMean = total ? (left - 3 * right) / total : 0;
+      const step = gradient => total
+        ? '(' + String(gradient).replace('-', '−') + ', ' + (1 - 0.5 * gradient) + ')'
+        : (locale ? '(그래디언트 없음, 1)' : '(no gradient, 1)');
+      assert.deepEqual(rows[index], [[left, right].join(', '), step(rankMean), step(tokenMean), step(tokenMean)]);
+    }
+  }
+});
+
 test('both rendered gradient traces distinguish the gathered loss from the per-rank mean', () => {
   const local = [0, 4].map(target => 1 - target);
   const contributions = local.map(gradient => gradient / local.length);

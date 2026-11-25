@@ -31,7 +31,8 @@ function read(file) {
 }
 
 function resolveLocalImport(sourceFile, specifier) {
-  const base = path.resolve(path.dirname(sourceFile), specifier);
+  const [filename] = specifier.split('?');
+  const base = path.resolve(path.dirname(sourceFile), filename);
   const candidates = [
     base,
     `${base}.js`,

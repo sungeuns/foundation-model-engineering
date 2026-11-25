@@ -1,7 +1,7 @@
 import { labDatasets } from './lab-datasets.js';
 
 const localized = (en, ko) => ({ en, ko });
-const file = (kind, path) => ({ kind, path });
+const file = (kind, path, preview = undefined) => ({ kind, path, preview });
 const task = (chapter, anchor, en, ko, files) => ({
   id: anchor, chapter, anchor, title: localized(en, ko), files,
 });
@@ -11,7 +11,7 @@ export const labFileLabels = {
   worksheet: localized('Worksheet and answers (PDF)', '활동지와 풀이 (PDF)'),
   workbook: localized('Spreadsheet (XLSX)', '엑셀 계산표 (XLSX)'),
   notebook: localized('Jupyter notebook', '주피터 노트북'),
-  workedNotebook: localized('Notebook with results', '결과가 있는 노트북'),
+  workedNotebook: localized('Download notebook with results', '실행 결과가 담긴 노트북 내려받기'),
   bundle: localized('Python and images (ZIP)', 'Python 코드와 이미지 (ZIP)'),
   csv: localized('Measurements (CSV)', '측정값 (CSV)'),
   record: localized('Recorded run (JSON)', '실행 기록 (JSON)'),
@@ -62,7 +62,10 @@ export const teachingLabGroups = [
         'Train a tiny decoder, hide its earlier tokens, and resume from a checkpoint.',
         '작은 디코더를 학습하고 앞선 토큰을 가려 본 뒤 체크포인트에서 학습을 재개하세요.', [
           file('notebook', localized('/labs/tiny-decoder-lab.ipynb', '/labs/tiny-decoder-lab-ko.ipynb')),
-          file('workedNotebook', localized('/labs/2026-11/tiny-decoder-worked-en.ipynb', '/labs/2026-11/tiny-decoder-worked-ko.ipynb')),
+          file('workedNotebook', localized('/labs/2026-11/tiny-decoder-worked-en.ipynb', '/labs/2026-11/tiny-decoder-worked-ko.ipynb'), {
+            cell: 'compare-results',
+            title: localized('Compare test losses with and without earlier tokens', '앞선 토큰을 볼 때와 가릴 때의 테스트 손실 비교'),
+          }),
           file('python', '/labs/causal_lab.py'),
         ]),
       task('/chapter-8/continued-pretraining-and-domain-adaptation', 'token-mixture-example',
@@ -83,7 +86,10 @@ export const teachingLabGroups = [
         'Measure a real decoder’s KV cache by counting its key and value tensor bytes.',
         '실제 디코더의 키·값 텐서가 차지하는 바이트 수로 KV 캐시 용량을 재 보세요.', [
           file('notebook', localized('/labs/kv-cache-payload-en.ipynb', '/labs/kv-cache-payload-ko.ipynb')),
-          file('workedNotebook', localized('/labs/2026-11/kv-cache-payload-worked-en.ipynb', '/labs/2026-11/kv-cache-payload-worked-ko.ipynb')),
+          file('workedNotebook', localized('/labs/2026-11/kv-cache-payload-worked-en.ipynb', '/labs/2026-11/kv-cache-payload-worked-ko.ipynb'), {
+            cell: '83af943d',
+            title: localized('See the cache grow over four decoding steps', '디코딩 네 단계에서 늘어나는 KV 캐시 용량 보기'),
+          }),
         ]),
       task(cacheChapter, 'kv-batch-padding',
         'Measure the padding cost of batching a 3-token prompt with an 11-token prompt.',

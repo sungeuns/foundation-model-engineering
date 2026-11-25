@@ -347,8 +347,8 @@ export const searchDescriptions = {
     ko: '모델 붕괴 위험, 교재형 말뭉치, 거절 샘플링과 데이터 품질 관리를 통해 합성 데이터를 사전 학습에 활용하는 방법을 살펴봅니다.',
   },
   '/chapter-7/data-parallelism': {
-    en: 'Follow one PyTorch update across two devices. See where DataParallel sums gradients and why DistributedDataParallel needs the correct loss denominator.',
-    ko: '두 장치에서 PyTorch 가중치 하나를 갱신해 봅니다. DataParallel이 그래디언트를 더하는 위치와 DistributedDataParallel에서 손실의 분모가 중요한 이유를 확인합니다.',
+    en: 'Compare PyTorch DataParallel and DistributedDataParallel (DDP). Run two CPU processes to see how masking every target on one rank affects a training step.',
+    ko: 'PyTorch의 DataParallel과 DistributedDataParallel(DDP)이 그래디언트를 모으는 방식을 비교합니다. 한쪽 랭크의 토큰을 전부 마스킹하면 가중치가 어떻게 바뀌는지 CPU 프로세스 두 개로 확인하세요.',
   },
   '/chapter-7/model-and-pipeline-parallelism': {
     en: 'Compare pipeline, tensor, sequence, and context parallelism, and understand how their communication and scheduling costs combine in 3D parallelism.',

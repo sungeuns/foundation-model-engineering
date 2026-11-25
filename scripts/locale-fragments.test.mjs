@@ -45,6 +45,7 @@ test('shared exercise IDs belong to the same authored content in both translatio
     ['/chapter-13/knowledge-distillation', 'distillation-readout'],
     ['/chapter-12/length-bucketing-lab', 'prefill-measurements'],
     ['/chapter-7/data-parallelism', 'dp-ddp-gradient-trace'],
+    ['/chapter-7/data-parallelism', 'ddp-valid-targets'],
     ['/chapter-11/audio-and-speech-integration', 'scribe-speaker-events'],
     ['/chapter-11/audio-and-speech-integration', 'whisper-sample-rate'],
     ['/chapter-12/serving-policies-slos-and-fallbacks', 'sarvam-ttft-load'],
