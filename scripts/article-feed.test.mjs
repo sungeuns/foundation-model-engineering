@@ -3,8 +3,10 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import test from 'node:test';
+import { pathToFileURL } from 'node:url';
 import { load } from 'js-yaml';
 import { parseFragment } from 'parse5';
+import { shortArticlePaths } from '../src/data/site.js';
 import { chapterFeedHub } from '../src/utils/chapter-feed.js';
 
 const dist = process.env.SEARCH_DIST_DIR || 'dist';
@@ -102,8 +104,6 @@ test('the listening feed links to the standalone article and preserves its origi
     assert.ok(body.includes('href="' + base + path + '"'));
     assert.equal(readFileSync(join(dist, path)).readUInt32LE(24), rate);
   }
-  const [, checkPcm] = source.match(/^```python\n([\s\S]*?)\n```$/m);
-  execFileSync('python3', ['-c', checkPcm], { cwd: join(dist, 'labs/audio') });
 });
 
 test('both editions of the listening article can be read and played without JavaScript', () => {
@@ -132,7 +132,17 @@ test('both editions of the listening article can be read and played without Java
       assert.equal(attr(downloads[0], 'download'), 'sample-clock-' + rate + '.wav');
     }
     assert.ok(sourceLinks.includes(base + prefix + 'chapter-11/audio-and-speech-integration/#whisper-sample-rate'), lang);
-    assert.ok(text(main.find(node => node.tagName === 'pre')).includes('assert samples('));
+    const [, , items] = readSelectedFeed(prefix);
+    const item = items.find(post => post.link === base + prefix + 'articles/whisper-sample-rate/');
+    const feedNodes = nodes(parseFragment(item['{http://purl.org/rss/1.0/modules/content/}encoded']));
+    const snippet = text(feedNodes.find(node => node.tagName === 'pre'));
+    assert.equal(snippet, text(main.find(node => node.tagName === 'pre')));
+    const audioUrl = base + 'labs/audio/';
+    assert.ok(snippet.includes(audioUrl), 'the example needs the full URL in external readers');
+    // Exercise the published files offline in CI, without first copying WAVs into the working directory.
+    const fixtureUrl = pathToFileURL(join(dist, 'labs/audio/')).href;
+    const output = execFileSync('python3', ['-c', snippet.replace(audioUrl, fixtureUrl)], { encoding: 'utf8' });
+    assert.deepEqual(output.trim().split('\n'), ['44100 / 44100 = 1 s', '44100 / 16000 = 2.75625 s']);
     assert.ok(text(main[0]).includes('30.31875'));
     assert.ok(text(main[0]).includes('[1, 80, 3000]'));
   }
@@ -186,15 +196,16 @@ test('the loop-cache article preserves the measured bytes and points to the bili
   }
 });
 
-test('Korean subscribers receive three complete articles with local permalinks, code and measurements', () => {
+test('Korean subscribers receive each short article with local permalinks, code and measurements', () => {
   const [self, hubs, items, language, home] = readSelectedFeed('ko/');
   assert.equal(language, 'ko');
   assert.equal(home, base + 'ko/');
   assert.equal(self, base + 'ko/articles.xml');
   assert.deepEqual(hubs, [chapterFeedHub]);
-  assert.equal(items.length, 3);
+  assert.deepEqual(items.map(item => item.link).sort(),
+    Object.values(shortArticlePaths).map(route => base + 'ko' + route + '/').sort());
   const allItems = [...readSelectedFeed()[2], ...items];
-  assert.equal(new Set(allItems.map(item => item.guid)).size, 6);
+  assert.equal(new Set(allItems.map(item => item.guid)).size, 2 * items.length);
   const sources = [
     ['loop-cache-storage', 'loop_cache.py', 'loop-cache.json', '4,608'],
     ['length-bucketing', 'kv_batch_bucketing.py', 'kv-batch-bucketing.json', '990 KiB'],
@@ -219,6 +230,29 @@ test('Korean subscribers receive three complete articles with local permalinks, 
     assert.ok(body.includes('<pre'));
     const html = readFileSync(join(dist, route, 'index.html'), 'utf8');
     assert.ok(html.includes(item.title) && html.includes(measurement), route);
+  }
+});
+
+test('the receipt article reaches both editions with a runnable example and a stable item identity', () => {
+  for (const prefix of ['', 'ko/']) {
+    const [, , items] = readSelectedFeed(prefix);
+    const url = base + prefix + 'articles/receipt-grounding/';
+    const receipt = items.find(item => item.link === url);
+    assert.equal(receipt?.guid, url);
+    const content = parseFragment(receipt['{http://purl.org/rss/1.0/modules/content/}encoded']);
+    const nodes = node => [node, ...(node.childNodes ?? []).flatMap(nodes)];
+    const text = node => node.value ?? (node.childNodes ?? []).map(text).join('');
+    const body = nodes(content);
+    const source = text(body.find(node => node.tagName === 'pre'));
+    const collected = execFileSync('python3', ['-c', source], { cwd: join(dist, 'labs/2026-11'), encoding: 'utf8' });
+    assert.deepEqual(collected.trim().split('\n'), [
+      "(1, 1) ' 1' ' 1'", "(7, 1) ' 1' ' 7'", "(1, 8) ' 8 box' ' 1'", "(7, 8) ' 8 box' ' 7.'",
+    ]);
+    const image = body.find(node => node.tagName === 'img');
+    const attributes = Object.fromEntries(image.attrs.map(attr => [attr.name, attr.value]));
+    assert.ok(attributes.src.startsWith('https://') && attributes.alt.length > 20);
+    assert.ok(body.some(node => node.tagName === 'a' &&
+      node.attrs.some(attr => attr.name === 'href' && attr.value === base + 'labs/2026-11/receipt-grounding.zip')));
   }
 });
 

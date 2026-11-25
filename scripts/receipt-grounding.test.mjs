@@ -3,6 +3,22 @@ import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
+import { socialCards } from '../src/data/social-cards.js';
+
+test('the receipt preview pairs the missing-total input bytes with its recorded reply', () => {
+  const report = JSON.parse(readFileSync('public/labs/2026-11/receipt-grounding-cpu.json', 'utf8'));
+  const example = report.cases.find(row => row.file === 'receipt-missing.png');
+  for (const card of Object.values(socialCards['/articles/receipt-grounding'])) {
+    const svg = readFileSync('public' + card.image.replace(/\.png$/, '.svg'), 'utf8');
+    const image = svg.match(/<image [^>]*href="data:image\/png;base64,([^"]+)"/);
+    assert.ok(image, card.image);
+    const png = Buffer.from(image[1], 'base64');
+    assert.equal(createHash('sha256').update(png).digest('hex'), example.sha256);
+    assert.ok(svg.includes('>MISSING</text>'));
+    assert.ok(svg.includes('>' + example.raw_text.trim() + '</text>'));
+    assert.ok(card.alt.includes(report.model.split('/').pop()));
+  }
+});
 
 test('receipt downloads and both answer tables reproduce the recorded run', () => {
   const directory = 'public/labs/2026-11';
@@ -12,12 +28,19 @@ test('receipt downloads and both answer tables reproduce the recorded run', () =
   const files = {
     'receipt_grounding.py': sum('public/labs/receipt_grounding.py'),
     'receipt-grounding-cpu.json': sum(directory + '/receipt-grounding-cpu.json'),
+    'receipt_quantity_probe.py': sum('src/components/chapter-11/receipt_quantity_probe.py'),
+    'receipt-quantity-outputs.json': sum('src/components/chapter-11/receipt-quantity-outputs.json'),
+    'receipt_order_probe.py': sum('src/components/chapter-11/receipt_order_probe.py'),
+    'receipt-order-outputs.json': sum('src/components/chapter-11/receipt-order-outputs.json'),
     LICENSE: sum('LICENSE'),
   };
   for (const item of report.cases) {
     assert.equal(sum(imageDirectory + '/' + item.file), item.sha256);
     files[item.file] = item.sha256;
   }
+  const orderRun = JSON.parse(readFileSync('src/components/chapter-11/receipt-order-outputs.json', 'utf8'));
+  assert.equal(orderRun.cases.length, 8);
+  for (const row of orderRun.cases) files['order-inputs/' + row.file] = row.sha256;
   const inspectZip = [
     'import hashlib, json, sys, zipfile',
     'with zipfile.ZipFile(sys.argv[1]) as archive:',

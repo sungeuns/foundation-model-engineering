@@ -45,6 +45,8 @@ The English and Korean self-attention worksheets subsequently brought the reposi
 
 After the two PDFs were deployed at commit `bbdcde9`, the OERSI importer accepted one refresh and public search returned all twelve resource IDs. Each worksheet’s public search card and detail page opened the relevant edition, where the PDF download returned the correct file. [Korean worksheet in OERSI](https://oersi.org/resources/aHR0cHM6Ly9zdW5nZXVucy5naXRodWIuaW8vZm91bmRhdGlvbi1tb2RlbC1lbmdpbmVlcmluZy9rby9jaGFwdGVyLTMvc2VsZi1hdHRlbnRpb24tbWF0aGVtYXRpY3MvI2F0dGVudGlvbi13ZWlnaHQtZXhhbXBsZQ==)
 
+The receipt experiment adds English and Korean student activities to the repository metadata. Each points to a standalone reading page and a ZIP with original model inputs, CPU code and measured answers. Before publication, the official importer and schema accepted all fourteen records and the public index contained the previous twelve. [English experiment](https://sungeuns.github.io/foundation-model-engineering/articles/receipt-grounding/) · [Korean experiment](https://sungeuns.github.io/foundation-model-engineering/ko/articles/receipt-grounding/)
+
 ## 学习周刊
 
 On November 25, 2026, Codex recommended the length-bucketing CPU experiment to this Chinese-language operations newsletter through its article self-recommendation template. The submission identifies Seongeun So and the AI assistance, notes the English and Korean editions, and distinguishes measured KV tensor payload from process memory or latency. The submitted issue was open when checked. The newsletter's editor decides whether to include the article in an issue. [Submission #229](https://github.com/eryajf/learning-weekly/issues/229) · [Submission guide](https://github.com/eryajf/learning-weekly#readme)
@@ -70,3 +72,7 @@ The author's April Hacker News submission links to `/founation-model-engineering
 ## DevLog Korean RSS suggestion
 
 On November 25, 2026, the DevLog directory listed 25 sources. The book was absent. Once the Korean article feed and its three original reading pages were live, Codex suggested the feed once through the feedback form linked on DevLog’s About page. The message identified the author and the AI assistant, linked the Korean feed and gave the length-bucketing article as a sample. The form displayed its thank-you confirmation. Inclusion in DevLog’s directory is an editorial decision. [DevLog’s collection policy](https://devlogs.co.kr/about) · [Directory](https://devlogs.co.kr/directory) · [Korean article feed](https://sungeuns.github.io/foundation-model-engineering/ko/articles.xml)
+
+## Existing Reddit introduction
+
+On November 25, 2026, the author's earlier r/learnmachinelearning post was still publicly readable. Both its link card and its in-text link opened the English edition. [Original Reddit post](https://www.reddit.com/r/learnmachinelearning/comments/1t79hjc/i_built_an_opensource_textbook_for_learning/).

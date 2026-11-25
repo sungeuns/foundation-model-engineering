@@ -8,38 +8,40 @@ in a temporary directory so that the original receipts remain available.
 # SPDX-License-Identifier: MIT
 import json
 from pathlib import Path
-import subprocess
-import sys
 from tempfile import TemporaryDirectory
 
 from PIL import Image, ImageDraw, ImageFont
 
 
+
+def quantity_image(original, paper, pencils):
+    edited = original.copy()
+    draw = ImageDraw.Draw(edited)
+    font = ImageFont.load_default(size=25)
+    for top, digit in ((153, paper), (201, pencils)):
+        if digit != 1:
+            draw.rectangle((375, top, 390, top + 25), fill=original.getpixel((0, 0)))
+            draw.text((375, top), str(digit), font=font, fill="#242420")
+    return edited
+
+
 def main():
+    from receipt_grounding import run_images
+
     bundle = Path(__file__).resolve().parent
-    # The original runner reads these three filenames in this order.
     cases = [
-        ("receipt-a.png", "7", "1"),
-        ("receipt-b.png", "1", "8"),
-        ("receipt-missing.png", "7", "8"),
+        ("receipt-a.png", 7, 1),
+        ("receipt-b.png", 1, 8),
+        ("receipt-missing.png", 7, 8),
     ]
     with TemporaryDirectory() as tmp, Image.open(bundle / "receipt-missing.png") as original:
-        font = ImageFont.load_default(size=25)
+        directory = Path(tmp)
         for filename, paper, pencils in cases:
-            edited = original.copy()
-            draw = ImageDraw.Draw(edited)
-            for top, digit in [(153, paper), (201, pencils)]:
-                if digit != "1":
-                    draw.rectangle((375, top, 390, top + 25), fill=original.getpixel((0, 0)))
-                    draw.text((375, top), digit, font=font, fill="#242420")
-            edited.save(Path(tmp) / filename)
-
-        run = subprocess.run([sys.executable, str(bundle / "receipt_grounding.py"), tmp],
-                             stdout=subprocess.PIPE, check=True, text=True)
-    report = json.loads(run.stdout)
+            quantity_image(original, paper, pencils).save(directory / filename)
+        report = run_images(directory)
     for measured, (filename, paper, pencils) in zip(report["cases"], cases, strict=True):
         assert measured["file"] == filename
-        measured.update(paper_packs=int(paper), pencil_boxes=int(pencils))
+        measured.update(paper_packs=paper, pencil_boxes=pencils)
     print(json.dumps(report, ensure_ascii=False, indent=2))
 
 

@@ -223,7 +223,9 @@ Receipt C still shows two `1`s, one beside each item. Which one could explain th
 
 Cover the column headings. From the answer you can recover the pencil count in all four images, but you learn nothing about how much the customer paid. Changing the paper digit made no difference in either column. This isolates a response to the pencil line for this layout and prompt. It does not identify an attention head or show how the model would handle another receipt.
 
-Save the <a href={quantityProbe} download="receipt_quantity_probe.py">quantity experiment (Python)</a> beside the files from the ZIP above and run `python receipt_quantity_probe.py`. It starts with receipt C and generates the three edited PNGs in a temporary directory. The <a href={quantityRecord} download="receipt-quantity-outputs.json">recorded outputs, input hashes, and generated token IDs</a> let you compare your results.
+Run `python receipt_quantity_probe.py` from the extracted ZIP. It includes the <a href={quantityProbe} download="receipt_quantity_probe.py">quantity experiment (Python)</a> and its reference output. It starts with receipt C and generates the three edited PNGs in a temporary directory. The <a href={quantityRecord} download="receipt-quantity-outputs.json">recorded outputs, input hashes, and generated token IDs</a> let you compare your results.
+
+Does the answer follow the pencils wherever they appear? With seven packs of paper and eight boxes of pencils, swapping the two printed rows changed the answer from `8 box` to `7.` under the same prompt. [Inspect all eight inputs and compare the generated strings](../../articles/receipt-grounding/).
 
 These three cases test copying and abstention on one layout. To test retrieval, separately rank the receipt description against descriptions of other documents. To test image order, present both labeled receipts, reverse them and ask about the same label. Hold the images and decoding settings fixed when measuring changes in visual budget, latency or peak memory.
 

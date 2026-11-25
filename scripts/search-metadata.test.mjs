@@ -401,6 +401,27 @@ test('the OER catalogue opens each attention worksheet at the section with its P
   }
 });
 
+test('OERSI lists both receipt experiments at their reader pages with the downloadable CPU bundle', () => {
+  const records = load(readFileSync('metadata.yml', 'utf8'));
+  const download = new URL(`${base}/labs/2026-11/receipt-grounding.zip`);
+  for (const [lang, edition] of [['en', ''], ['ko', '/ko']]) {
+    const route = `${edition}/articles/receipt-grounding/`;
+    const matches = records.filter(record => record.id === base + route);
+    assert.equal(matches.length, 1, route);
+    const [record] = matches;
+    assert.deepEqual(record.inLanguage, [lang]);
+    assert.deepEqual(record.learningResourceType, ['https://w3id.org/kim/hcrt/experiment']);
+    assert.deepEqual(record.encoding, [{ type: 'MediaObject', encodingFormat: 'application/zip', contentUrl: download.href }]);
+    assert.ok(record.isPartOf.some(parent => parent.id === `${base}${edition}/`));
+    const html = readFileSync(`${outputDir}${route}index.html`, 'utf8');
+    const main = html.match(/<main\b[^>]*>([\s\S]*?)<\/main>/)[1];
+    const title = parseFragment(main).childNodes.find(node => node.tagName === 'h1');
+    assert.equal(title?.childNodes[0].value, record.name, record.id);
+    const urls = [...main.matchAll(/<a\b[^>]*\bhref="([^"]+)"/g)].map(match => new URL(match[1], record.id).href);
+    assert.ok(urls.includes(download.href), record.id);
+  }
+});
+
 test('the book and README open the same worked KV budget in each edition', () => {
   for (const edition of ['', '/ko']) {
     const html = readFileSync(`${outputDir}${edition}/index.html`, 'utf8');

@@ -32,6 +32,12 @@ for (const language of ['en', 'ko']) {
         assert.equal(controls.tagName, 'fieldset');
         assert.equal(attr(controls, 'disabled'), '');
         assert.deepEqual(elements(controls).filter(node => node.tagName === 'input').map(node => attr(node, 'max')), ['11']);
+        const totals = simulation.filter(node => hasClass(node, 'cb-board-summary'));
+        const remaining = language === 'ko' ? '남은 토큰 22개' : 'Tokens left 22';
+        assert.deepEqual(totals.map(node => content(node).endsWith(remaining)), [true, true]);
+        const targets = content(simulation.find(node => hasClass(node, 'cb-workload')));
+        assert.ok(targets.startsWith(language === 'ko' ? '시작 시 요청별 생성 목표' : 'Starting decode targets'));
+        assert.match(targets, /A=4 · B=2 · C=6 · D=3 · E=5 · F=2$/);
       }
     }
   });

@@ -3,7 +3,7 @@ import './continuous-batching.css';
 
 type Request = { id: string; length: number; color: string };
 type Slot = Request & { generated: number };
-type Frame = { slots: (Slot | null)[]; waiting: string[]; finished: string[] };
+type Frame = { slots: (Slot | null)[]; waiting: string[]; finished: string[]; remainingTokens: number };
 const REQUESTS: Request[] = [
   { id: 'A', length: 4, color: '#93c5fd' },
   { id: 'B', length: 2, color: '#fda4af' },
@@ -19,7 +19,8 @@ function schedule(continuous: boolean): Frame[] {
   const waiting = [...REQUESTS];
   const slots: (Slot | null)[] = Array(CAPACITY).fill(null);
   const finished: string[] = [];
-  const frames: Frame[] = [{ slots: [...slots], waiting: waiting.map(r => r.id), finished: [] }];
+  let remainingTokens = waiting.reduce((total, request) => total + request.length, 0);
+  const frames: Frame[] = [{ slots: [...slots], waiting: waiting.map(r => r.id), finished: [], remainingTokens }];
   while (waiting.length || slots.some(Boolean)) {
     if (continuous || slots.every(slot => slot === null)) {
       for (let i = 0; i < CAPACITY && waiting.length; i++) {
@@ -29,6 +30,7 @@ function schedule(continuous: boolean): Frame[] {
     for (const slot of slots) {
       if (slot) {
         slot.generated += 1;
+        remainingTokens -= 1;
         if (slot.generated === slot.length) finished.push(slot.id);
       }
     }
@@ -36,6 +38,7 @@ function schedule(continuous: boolean): Frame[] {
       slots: slots.map(slot => slot ? { ...slot } : null),
       waiting: waiting.map(r => r.id),
       finished: [...finished],
+      remainingTokens,
     });
     for (let i = 0; i < CAPACITY; i++) {
       if (slots[i]?.generated === slots[i]?.length) slots[i] = null;
@@ -46,7 +49,7 @@ function schedule(continuous: boolean): Frame[] {
 const STATIC = schedule(false);
 const CONTINUOUS = schedule(true);
 const LAST_STEP = Math.max(STATIC.length, CONTINUOUS.length) - 1;
-const COMPLETE: Frame = { slots: Array(CAPACITY).fill(null), waiting: [], finished: REQUESTS.map(r => r.id) };
+const COMPLETE: Frame = { slots: Array(CAPACITY).fill(null), waiting: [], finished: REQUESTS.map(r => r.id), remainingTokens: 0 };
 
 export default function ContinuousBatchingVisualizer({ lang = 'en' }: { lang?: 'en' | 'ko' }) {
   const ko = lang === 'ko';
@@ -65,8 +68,8 @@ export default function ContinuousBatchingVisualizer({ lang = 'en' }: { lang?: '
 
   return <section className="cb-visualizer-container" aria-label={ko ? '정적 배칭과 연속 배칭 실행 비교' : 'Static and continuous batching comparison'}>
     <p className="cb-explanation">{ko
-      ? '세 슬롯, 여섯 요청. 모두 시작 전에 도착했고 prefill은 생략합니다. 각 칸은 이번 반복을 끝낸 상태입니다. 완료한 자리는 다음 반복에서 다시 쓸 수 있습니다.'
-      : 'Three slots, six requests, all queued at the start; prefill is omitted. Each card shows the end of this iteration. A completed slot can be reused in the next iteration.'}</p>
+      ? '세 슬롯으로 여섯 요청을 처리합니다. 모두 시작 전에 도착했고 prefill은 생략합니다. 각 칸은 이번 반복이 끝난 상태입니다. 남은 토큰 수에는 대기 중인 요청과 실행 중인 요청이 앞으로 생성할 토큰이 모두 들어갑니다.'
+      : 'Six requests share three slots. All requests arrive before decoding starts. Prefill is omitted. Each card shows the end of this iteration. The remaining token count includes tokens still to be generated for both queued and active requests.'}</p>
     <noscript><p>{ko ? '위 표에서 11번의 반복을 전부 비교할 수 있습니다. 아래 카드는 요청을 받기 전 상태입니다.' : 'The table above compares all 11 iterations. The cards below show the queue before any request starts.'}</p></noscript>
     <fieldset className="cb-controls" disabled={!ready} aria-label={ko ? '반복 재생과 선택' : 'Iteration playback and selection'}>
       <button type="button" className="cb-btn" onClick={() => {
@@ -86,7 +89,7 @@ export default function ContinuousBatchingVisualizer({ lang = 'en' }: { lang?: '
         const frame = frames[step] ?? COMPLETE;
         return <div className="cb-board" key={title}>
           <h3 className="cb-board-title">{title}</h3>
-          <p className="cb-board-summary">{ko ? `완료 ${frame.finished.length}/6 · 대기 ${frame.waiting.length}` : `Finished ${frame.finished.length}/6 · Queued ${frame.waiting.length}`}</p>
+          <p className="cb-board-summary">{ko ? `완료 ${frame.finished.length}/6 · 대기 ${frame.waiting.length}` : `Finished ${frame.finished.length}/6 · Queued ${frame.waiting.length}`} · <strong>{ko ? `남은 토큰 ${frame.remainingTokens}개` : `Tokens left ${frame.remainingTokens}`}</strong></p>
           <div className="cb-slots">{frame.slots.map((slot, index) => <div key={index} className={`cb-slot ${slot ? 'cb-filled' : 'cb-empty'}`} style={slot ? { borderColor: slot.color } : undefined}>
             <span className="cb-slot-number">{ko ? '슬롯' : 'Slot'} {index + 1}</span>
             {slot ? <>
@@ -100,7 +103,7 @@ export default function ContinuousBatchingVisualizer({ lang = 'en' }: { lang?: '
         </div>;
       })}
     </div>
-    <p className="cb-workload">{ko ? '요청별 남은 decode 토큰' : 'Remaining decode tokens'}: {REQUESTS.map(req => `${req.id}=${req.length}`).join(' · ')}</p>
+    <p className="cb-workload">{ko ? '시작 시 요청별 생성 목표(토큰)' : 'Starting decode targets (tokens per request)'}: {REQUESTS.map(req => `${req.id}=${req.length}`).join(' · ')}</p>
     <p className="cb-source">{ko
       ? '직접 만든 교육용 일정입니다. 반복 횟수는 밀리초나 GPU 활용률이 아닙니다. 토큰·KV 예산, 도착 시각, prefill, 통신·스케줄러 비용을 생략합니다. 전체 완료 후의 빈칸은 낭비된 연산이 아닙니다.'
       : 'Hand-authored teaching workload. Iterations are not milliseconds or GPU utilization. Token/KV budgets, arrival timing, prefill, communication and scheduler costs are omitted. Empty slots after completion are not wasted computation.'}</p>

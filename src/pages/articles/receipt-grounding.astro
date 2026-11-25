@@ -1,0 +1,7 @@
+---
+import BookLayout from '../../layouts/BookLayout.astro';
+import { Content, frontmatter } from '../../data/articles/receipt-grounding.md';
+---
+<BookLayout lang="en" title={frontmatter.title} description={frontmatter.description} firstPublished={frontmatter.firstPublished}>
+  <Content />
+</BookLayout>

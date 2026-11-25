@@ -9,17 +9,30 @@ firstPublished: "2026-11-25T02:37:21Z"
 
 44,100 Hz로 재생하면 한 옥타브 차이 나는 두 음이 1초 안에 끝납니다. 16,000 Hz로 재생하면 두 음이 모두 낮아지고, 2초가 지나도 두 번째 음이 들립니다.
 
-두 파일에는 합성한 음의 샘플 44,100개가 똑같이 들어 있습니다. 재생기는 WAV 헤더를 보고 샘플을 1초에 몇 개씩 읽을지 정합니다. 1초에 16,000개를 읽으면 끝까지 정확히 2.75625초가 걸립니다. <a href="https://sungeuns.github.io/foundation-model-engineering/labs/audio/sample-clock-44100.wav" download="sample-clock-44100.wav">44,100 Hz WAV</a>와 <a href="https://sungeuns.github.io/foundation-model-engineering/labs/audio/sample-clock-16000.wav" download="sample-clock-16000.wav">16,000 Hz WAV</a>를 같은 폴더에 내려받은 뒤 Python으로 열면 소리를 담은 PCM 바이트가 같은지 확인할 수 있습니다.
+두 파일에는 합성한 음의 샘플 44,100개가 똑같이 들어 있습니다. 재생기는 WAV 헤더를 보고 샘플을 1초에 몇 개씩 읽을지 정합니다. 1초에 16,000개를 읽으면 끝까지 정확히 2.75625초가 걸립니다. <a href="https://sungeuns.github.io/foundation-model-engineering/labs/audio/sample-clock-44100.wav" download="sample-clock-44100.wav">44,100 Hz WAV</a>와 <a href="https://sungeuns.github.io/foundation-model-engineering/labs/audio/sample-clock-16000.wav" download="sample-clock-16000.wav">16,000 Hz WAV</a>를 각각 열어 들어 볼 수 있습니다. 아래 Python 코드는 두 파일을 인터넷에서 바로 읽어 헤더에 적힌 값으로 재생 시간을 계산하고 PCM 바이트를 비교합니다. 파이썬 표준 라이브러리만 있으면 실행할 수 있습니다.
 
 ```python
 import wave
+from io import BytesIO
+from urllib.request import urlopen
 
-def samples(path):
-    with wave.open(path, "rb") as wav:
-        return wav.readframes(wav.getnframes())
+audio_url = "https://sungeuns.github.io/foundation-model-engineering/labs/audio/"
 
-assert samples("sample-clock-44100.wav") == samples("sample-clock-16000.wav")
+def read_pcm(file_rate):
+    with urlopen(f"{audio_url}sample-clock-{file_rate}.wav", timeout=15) as response:
+        data = response.read()
+    with wave.open(BytesIO(data), "rb") as wav:
+        frames = wav.getnframes()
+        rate = wav.getframerate()
+        print(f"{frames} / {rate} = {frames / rate:g} s")
+        return wav.readframes(frames)
+
+fast = read_pcm(44100)
+slow = read_pcm(16000)
+assert fast == slow
 ```
+
+출력은 차례로 `44100 / 44100 = 1 s`, `44100 / 16000 = 2.75625 s`입니다. 샘플은 그대로인데 재생 속도가 달라진 셈입니다.
 
 ## 텐서 크기 검사로는 왜 놓쳤을까?
 

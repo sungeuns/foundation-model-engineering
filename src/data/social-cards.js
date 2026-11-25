@@ -13,6 +13,16 @@ const lengthBucketingCard = {
 
 export const socialCards = {
   '/articles/length-bucketing': lengthBucketingCard,
+  '/articles/receipt-grounding': {
+    en: {
+      image: '/social/receipt-grounding-en.png',
+      alt: 'The actual synthetic receipt shows one pack of drawing paper and one box of pencils. The space for the Total line is blank. Asked to answer MISSING when that line is absent, SmolVLM-256M-Instruct returned 1 in this CPU run.',
+    },
+    ko: {
+      image: '/social/receipt-grounding-ko.png',
+      alt: '실험에 쓴 합성 영수증에는 도화지 한 묶음과 연필 한 상자가 적혀 있고 합계 줄은 비어 있습니다. 합계 줄이 없을 때 MISSING을 답하라고 했지만, CPU에서 실행한 SmolVLM-256M-Instruct의 응답은 1이었습니다.',
+    },
+  },
   '/articles/loop-cache-storage': {
     en: {
       image: '/social/loop-cache-storage-en.png',

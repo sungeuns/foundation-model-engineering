@@ -1,3 +1,4 @@
+import * as receipt from '../data/articles/receipt-grounding.md';
 import * as bucketing from '../data/articles/length-bucketing.md';
 import * as loop from '../data/articles/loop-cache-storage.md';
 import * as speech from '../data/articles/whisper-sample-rate.md';
@@ -5,6 +6,7 @@ import { shortArticlePaths } from '../data/site.js';
 import { selectedArticleFeed } from '../utils/selected-article-feed.js';
 
 const articles = [
+  { source: receipt, path: shortArticlePaths.receipt },
   { source: loop, path: shortArticlePaths.loop, keepChapterGuid: true },
   { source: speech, path: shortArticlePaths.whisper, keepChapterGuid: true },
   { source: bucketing, path: shortArticlePaths.bucketing, keepChapterGuid: true },

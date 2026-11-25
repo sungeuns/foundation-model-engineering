@@ -18,6 +18,7 @@ import { denseResults, bm25Results, fuseRanks } from '../src/components/chapter-
 import { GiB, kvCapacity } from '../src/components/chapter-12/kv-capacity.mjs';
 import loopCacheRun from '../public/labs/2026-11/loop-cache.json' with { type: 'json' };
 import bucketingRun from '../public/labs/2026-11/kv-batch-bucketing.json' with { type: 'json' };
+import receiptRun from '../public/labs/2026-11/receipt-grounding-cpu.json' with { type: 'json' };
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const escape = value => String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
@@ -25,6 +26,19 @@ const text = (value, x, y, size, opts = '') => `<text x="${x}" y="${y}" font-siz
 const ink = '#192a30', teal = '#256257', muted = '#4e5d61';
 
 const copy = {
+  'receipt-grounding': {
+    path: '/articles/receipt-grounding', render: receiptGroundingSvg,
+    en: {
+      title: 'What if the receipt has no total?',
+      instruction: 'Copy the printed Total line. If it is absent, answer MISSING.',
+      input: 'Synthetic receipt used in the run', expected: 'Expected reply', actual: 'Recorded reply',
+    },
+    ko: {
+      title: '영수증의 합계 줄을 지우면?',
+      instruction: '합계 줄을 그대로 옮기고, 줄이 없으면 MISSING이라고 답하라는 과제입니다.',
+      input: '실험에 사용한 합성 영수증', expected: '기대 응답', actual: '실제 모델 응답',
+    },
+  },
   'loop-cache-storage': {
     path: '/articles/loop-cache-storage', render: loopCacheStorageSvg,
     en: {
@@ -259,6 +273,29 @@ if (args.length && (args.length !== 2 || args[0] !== '--only' || !Object.hasOwn(
   throw new Error(`Usage: node scripts/generate-lab-social-cards.mjs [--only ${Object.keys(copy).join('|')}]`);
 }
 const selectedKind = args[1];
+
+async function receiptGroundingSvg(lesson, lang, card) {
+  const c = lesson[lang];
+  const run = receiptRun.cases.find(row => row.file === 'receipt-missing.png');
+  const png = await fs.readFile(path.join(root, 'src/assets/images/chapter-11', run.file));
+  const model = receiptRun.model.split('/').pop();
+  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1200" height="630" viewBox="0 0 1200 630" xml:lang="${lang}" role="img" aria-labelledby="card-title card-description">
+<title id="card-title">${escape(c.title)}</title><desc id="card-description">${escape(card.alt)}</desc>
+<rect width="1200" height="630" fill="#f5f2eb"/>
+<g font-family="${lang === 'ko' ? 'Noto Sans CJK KR, DejaVu Sans' : 'DejaVu Sans'}, sans-serif" fill="${ink}">
+${text(c.title, 60, 86, 58, 'font-weight="700"')}
+${text(c.instruction, 64, 145, 32, `fill="${muted}"`)}
+<rect x="63" y="184" width="514" height="386" fill="white" stroke="#bec7bf" stroke-width="2"/>
+<image x="64" y="185" width="512" height="384" xlink:href="data:image/png;base64,${png.toString('base64')}"/>
+${text(c.input, 64, 607, 24, `fill="${muted}"`)}
+${text(c.expected, 647, 241, 34)}
+${text('MISSING', 642, 324, 76, `font-weight="700" fill="${teal}"`)}
+<path d="M647 366H1136" stroke="#b9c3ba" stroke-width="2"/>
+${text(c.actual, 647, 420, 34)}
+${text(run.raw_text.trim(), 640, 529, 114, 'font-weight="700" fill="#8e442e"')}
+${text(model + ' · CPU', 647, 607, 26, `fill="${muted}"`)}
+</g></svg>\n`;
+}
 
 function loopCacheStorageSvg(lesson, lang, card) {
   const c = lesson[lang];

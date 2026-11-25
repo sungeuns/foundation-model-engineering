@@ -12,17 +12,30 @@ firstPublished: "2026-11-25T02:00:59Z"
 
 At 44,100 Hz, two notes an octave apart fit into one second. At 16,000 Hz, both notes sound lower, and the second note is still playing two seconds in.
 
-Both files contain the same 44,100 synthesized samples. The WAV header tells your player how quickly to consume them. At 16,000 samples per second, playback takes exactly 2.75625 seconds. Download the <a href="https://sungeuns.github.io/foundation-model-engineering/labs/audio/sample-clock-44100.wav" download="sample-clock-44100.wav">44,100 Hz WAV</a> and the <a href="https://sungeuns.github.io/foundation-model-engineering/labs/audio/sample-clock-16000.wav" download="sample-clock-16000.wav">16,000 Hz WAV</a> to one directory to compare their PCM audio bytes with Python.
+Both files contain the same 44,100 synthesized samples. The WAV header tells your player how quickly to consume them. At 16,000 samples per second, playback takes exactly 2.75625 seconds. You can open the <a href="https://sungeuns.github.io/foundation-model-engineering/labs/audio/sample-clock-44100.wav" download="sample-clock-44100.wav">44,100 Hz WAV</a> and the <a href="https://sungeuns.github.io/foundation-model-engineering/labs/audio/sample-clock-16000.wav" download="sample-clock-16000.wav">16,000 Hz WAV</a> files separately. This Python example fetches both into memory, calculates their durations from their headers, and checks that the PCM audio bytes match. It uses only the standard library and needs an internet connection.
 
 ```python
 import wave
+from io import BytesIO
+from urllib.request import urlopen
 
-def samples(path):
-    with wave.open(path, "rb") as wav:
-        return wav.readframes(wav.getnframes())
+audio_url = "https://sungeuns.github.io/foundation-model-engineering/labs/audio/"
 
-assert samples("sample-clock-44100.wav") == samples("sample-clock-16000.wav")
+def read_pcm(file_rate):
+    with urlopen(f"{audio_url}sample-clock-{file_rate}.wav", timeout=15) as response:
+        data = response.read()
+    with wave.open(BytesIO(data), "rb") as wav:
+        frames = wav.getnframes()
+        rate = wav.getframerate()
+        print(f"{frames} / {rate} = {frames / rate:g} s")
+        return wav.readframes(frames)
+
+fast = read_pcm(44100)
+slow = read_pcm(16000)
+assert fast == slow
 ```
+
+The two lines read `44100 / 44100 = 1 s` and `44100 / 16000 = 2.75625 s`. Only the playback clock changed.
 
 ## Why the shape check passed
 

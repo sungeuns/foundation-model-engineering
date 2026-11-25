@@ -63,12 +63,11 @@ PROMPT = ("Read the printed Total line. Copy that line exactly. "
 FILES = ("receipt-a.png", "receipt-b.png", "receipt-missing.png")
 
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("images", type=Path)
-    args = parser.parse_args()
+def run_images(directory, filenames=FILES):
+    """Evaluate a sequence of PNGs using the recorded processor and decoding settings."""
     torch.set_num_threads(2)
-    torch.set_num_interop_threads(1)
+    if torch.get_num_interop_threads() != 1:
+        torch.set_num_interop_threads(1)
     torch.manual_seed(0)
     processor = AutoProcessor.from_pretrained(
         MODEL, revision=REVISION, token=False, backend="pil",
@@ -105,8 +104,8 @@ def main():
         "max_new_tokens": 32,
         "cases": [],
     }
-    for name in FILES:
-        path = args.images / name
+    for name in filenames:
+        path = directory / name
         with Image.open(path) as image:
             inputs = processor(text=formatted, images=[image.convert("RGB")], return_tensors="pt")
         with torch.inference_mode():
@@ -129,7 +128,14 @@ def main():
             ),
         }
         result["cases"].append(case)
-    print(json.dumps(result, ensure_ascii=False, indent=2))
+    return result
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("images", type=Path)
+    args = parser.parse_args()
+    print(json.dumps(run_images(args.images), ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":
