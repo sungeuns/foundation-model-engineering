@@ -8,5 +8,5 @@
   <path d="M80 445H1120" stroke="#bbc8c1" stroke-width="2"/>
   <text x="80" y="499" font-family="DejaVu Sans, sans-serif" font-size="22" fill="#192a30">Architectures · Training · Inference · RAG · Agents</text>
   <text x="80" y="556" font-family="DejaVu Sans, sans-serif" font-size="20" fill="#256257">English / Korean</text>
-  <text x="1120" y="556" text-anchor="end" font-family="DejaVu Sans, sans-serif" font-size="20" fill="#4e5d61">sungeuns.github.io</text>
+  <text x="1120" y="556" text-anchor="end" font-family="DejaVu Sans, sans-serif" font-size="20" fill="#4e5d61">sungeuns.github.io/foundation-model-engineering/</text>
 </svg>

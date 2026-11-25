@@ -25,6 +25,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const escape = value => String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
 const text = (value, x, y, size, opts = '') => `<text x="${x}" y="${y}" font-size="${size}" ${opts}>${escape(value)}</text>`;
 const ink = '#192a30', teal = '#256257', muted = '#4e5d61';
+const bookAddress = lang => 'sungeuns.github.io/foundation-model-engineering/' + (lang === 'ko' ? 'ko/' : '');
 
 const copy = {
   'ddp-sampler-audit': {
@@ -546,7 +547,7 @@ ${text(c.memory, 711, 444, korean ? 23 : 21, 'fill="#82491f"')}
 ${text(c.note, 64, 529, korean ? 21 : 22, `fill="${muted}"`)}
 <path d="M64 554H1136" stroke="#bbc8c1" stroke-width="2"/>
 ${text(korean ? '무료 온라인 교재 · 한국어 / 영어' : 'Free online textbook · English / Korean', 64, 597, 20, `fill="${teal}"`)}
-${text('sungeuns.github.io', 1136, 597, 20, `fill="${muted}" text-anchor="end"`)}
+${text(bookAddress(lang), 1136, 597, 20, `fill="${muted}" text-anchor="end"`)}
 </g></svg>\n`;
 }
 
@@ -849,7 +850,7 @@ ${c.checks.map(([label, detail], i) => {
 ${evaluation ? `<path d="M742 373H1110" stroke="#dbe1db"/>${c.decisions.map((label, i) => `<rect x="${742 + i * 126}" y="399" width="116" height="46" rx="8" fill="${['#e3efe5','#f8eed6','#f4e5e3'][i]}"/>${text(label, 800 + i * 126, 429, 22, `text-anchor="middle" font-weight="600" fill="${['#245c37','#775208','#913c34'][i]}"`)}`).join('')}${text(c.gate, 742, 479, 18, `fill="${muted}"`)}` : ''}
 <path d="M64 543H1136" stroke="#bbc8c1" stroke-width="2"/>
 ${text(korean ? '무료 온라인 교재 · 한국어 / 영어' : 'Free online textbook · English / Korean', 64, 587, 20, `fill="${teal}"`)}
-${text('sungeuns.github.io', 1136, 587, 20, `fill="${muted}" text-anchor="end"`)}
+${text(bookAddress(lang), 1136, 587, 20, `fill="${muted}" text-anchor="end"`)}
 </g></svg>\n`;
     const imagePath = path.join(root, 'public', card.image);
     const sourcePath = imagePath.replace(/\.png$/, '.svg');

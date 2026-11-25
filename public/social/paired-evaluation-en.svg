@@ -19,5 +19,5 @@
 <path d="M742 373H1110" stroke="#dbe1db"/><rect x="742" y="399" width="116" height="46" rx="8" fill="#e3efe5"/><text x="800" y="429" font-size="22" text-anchor="middle" font-weight="600" fill="#245c37">Pass</text><rect x="868" y="399" width="116" height="46" rx="8" fill="#f8eed6"/><text x="926" y="429" font-size="22" text-anchor="middle" font-weight="600" fill="#775208">Review</text><rect x="994" y="399" width="116" height="46" rx="8" fill="#f4e5e3"/><text x="1052" y="429" font-size="22" text-anchor="middle" font-weight="600" fill="#913c34">Block</text><text x="742" y="479" font-size="18" fill="#4e5d61">Synthetic offline gates</text>
 <path d="M64 543H1136" stroke="#bbc8c1" stroke-width="2"/>
 <text x="64" y="587" font-size="20" fill="#256257">Free online textbook · English / Korean</text>
-<text x="1136" y="587" font-size="20" fill="#4e5d61" text-anchor="end">sungeuns.github.io</text>
+<text x="1136" y="587" font-size="20" fill="#4e5d61" text-anchor="end">sungeuns.github.io/foundation-model-engineering/</text>
 </g></svg>

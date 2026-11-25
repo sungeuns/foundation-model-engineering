@@ -8,5 +8,5 @@
   <path d="M80 445H1120" stroke="#bbc8c1" stroke-width="2"/>
   <text x="80" y="499" font-family="Noto Sans CJK KR, sans-serif" font-size="24" fill="#192a30">아키텍처 · 학습 · 추론 · RAG · 에이전트</text>
   <text x="80" y="556" font-family="Noto Sans CJK KR, sans-serif" font-size="21" fill="#256257">한국어 / 영어</text>
-  <text x="1120" y="556" text-anchor="end" font-family="DejaVu Sans, sans-serif" font-size="20" fill="#4e5d61">sungeuns.github.io</text>
+  <text x="1120" y="556" text-anchor="end" font-family="DejaVu Sans, sans-serif" font-size="20" fill="#4e5d61">sungeuns.github.io/foundation-model-engineering/ko/</text>
 </svg>
