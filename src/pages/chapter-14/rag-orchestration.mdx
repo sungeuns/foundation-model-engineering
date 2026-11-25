@@ -6,163 +6,105 @@ lang: en
 
 # 14.4 RAG Orchestration: Routing and Agents
 
-Having mastered advanced retrieval techniques like Hybrid Search, Re-ranking, and Query Transformation, the next challenge is building the system that coordinates all these components. This is **RAG Orchestration**.
+“How long do I have to cancel a renewal?” and “Can I still cancel **my** renewal?” use almost the same words. A support assistant can answer the first from the current policy. To answer the second it also needs the caller’s renewal date. Searching the handbook twice will never produce that date.
 
-In a production environment, you cannot simply run every query through every retrieval pipeline. It is too expensive and slow. You need an intelligent controller that decides *what* to do based on the user's intent.
-
----
+A RAG orchestrator decides which sources a request needs, what evidence fits in the prompt, and when to stop. Follow those decisions for a fictional subscription service.
 
 ## 1. Query Routing
 
-Query Routing is the process of classifying an incoming query and directing it to the most appropriate retrieval pipeline or data source.
+A public question about the policy takes one handbook lookup. A question about a particular renewal also needs a read-only account lookup. An exact error code deserves a different route again: the [previous lesson](../advanced-retrieval/) shows how a lexical search can find an identifier that a semantic search missed.
 
-Not all queries are created equal:
-- **"What is the capital of France?"** -> No search needed (parametric knowledge).
-- **"What was my account balance yesterday?"** -> SQL database query.
-- **"How do I fix error XJ-992?"** -> Vector search over technical manuals.
+<a id="renewal-routing"></a>
 
 ### LLM-Based Routing
 
-The most flexible way to route queries is using a small, fast LLM as a router. We provide the LLM with a list of available tools/sources and ask it to output a JSON deciding where to go.
+Give the routing model a small vocabulary such as `policy`, `my_renewal` and `clarify`. Its output proposes a route. The application still controls which operations can run. A well-formed `{"route":"my_renewal"}` contains neither the caller’s identity nor a probability that the decision is right.
 
-> **Educational API sketch; no live model call is smoke-tested.** Set `ROUTER_MODEL` to a verified JSON-capable endpoint. JSON syntax does not authorize database access: validate the enum, handle refusal/timeout/malformed output, and enforce permissions outside the model. The result shown is illustrative.
+The Python example replays four possible replies. It only constructs a plan. In a service, the authorization flag comes from the server’s access check, and the account tool binds its lookup to the caller’s authenticated account. No account identifier comes from the model.
 
 ```python
 import json
-import os
-from openai import OpenAI
 
-client = OpenAI()
+def plan(reply, *, can_read_own_renewal):
+    try:
+        decision = json.loads(reply)
+    except (TypeError, ValueError):
+        return ("clarify",)
 
-def route_query(query: str) -> dict:
-    prompt = f"""
-    Classify the following user query and route it to the best source.
-    Available sources:
-    1. 'parametric': For general knowledge questions the model already knows.
-    2. 'vector_db': For technical documentation, manuals, and guides.
-    3. 'sql_db': For structured user data like balances, order history.
+    if decision == {"route": "policy"}:
+        return ("read_current_policy",)
+    if decision == {"route": "my_renewal"}:
+        if can_read_own_renewal:
+            return ("read_current_policy", "read_own_renewal")
+        return ("sign_in",)
+    return ("clarify",)
 
-    Query: "{query}"
-
-    Output JSON in this format: {{"source": "source_name", "reason": "why"}}
-    """
-
-    response = client.chat.completions.create(
-        model=os.environ["ROUTER_MODEL"], # Use a fast model for routing
-        messages=[{"role": "user", "content": prompt}],
-        response_format={"type": "json_object"}
-    )
-
-    result = json.loads(response.choices[0].message.content)
-    if not isinstance(result, dict) or result.get("source") not in {"parametric", "vector_db", "sql_db"}:
-        raise ValueError("Invalid routing decision")
-    return result
-
-# Example Usage
-print(route_query("How do I reset my password in the portal?"))
-# Output: {'source': 'vector_db', 'reason': 'Asking for instructions in the documentation.'}
+for reply, allowed in [
+    ('{"route":"policy"}', False),
+    ('{"route":"my_renewal"}', False),
+    ('{"route":"my_renewal"}', True),
+    ('{"route":"my_renewal","account":"other"}', True),
+]:
+    print(plan(reply, can_read_own_renewal=allowed))
 ```
+
+The first reply selects the handbook. The same personal-renewal reply gives `('sign_in',)` for a visitor and a two-source plan for an authorized customer. The last reply adds an unexpected field, so the planner returns `('clarify',)`. A refusal, an unrecognized label or malformed JSON also needs a fallback. Even a reply that passes these checks can select the wrong source.
 
 ### Routing Is a Budgeting Problem, Not Just a Classification Problem
 
-In production, routing is rarely about semantic intent alone. It is also about latency, cost, trust, and permissions.
-
-- A parametric answer may be fast, but unsafe for rapidly changing facts.
-- A SQL route may be accurate, but only if the user is authenticated and the query has the right filters.
-- A vector route may be appropriate, but only if the retrieval budget and evidence quality justify the extra work.
-
-Good orchestrators therefore route not just by **topic**, but by **operational policy**: freshness requirements, access control, expected latency, and whether the system is allowed to answer at all without clarification.
-
----
+Suppose the router sends a personal question to the public-policy route. The handbook can supply a cancellation window, but the assistant still lacks the date needed for a yes-or-no answer. To evaluate the router, label questions by the evidence they require. Count personal questions that lost their account lookup separately from public questions that triggered an unnecessary sign-in. Also measure retrieval calls per answered question and end-to-end latency.
 
 ## 2. Context Management and "Lost in the Middle"
 
-Once you retrieve documents, you must fit them into the LLM's context window. However, simply stuffing as many documents as possible leads to performance degradation.
+The two-source plan returns a policy passage and a renewal record. Suppose the model has a 2,048-token window. The instructions and message framing use 448 tokens, the question and conversation use 256, and the application reserves 256 for the answer. That leaves **1,088 tokens** for evidence. A 640-token policy passage and a 128-token account record fit, leaving 320. A 512-token FAQ would exceed the budget by 192. These counts are invented for the exercise. Measure with the serving tokenizer and actual message template.
 
 ### The "Lost in the Middle" Phenomenon [[1]](#ref-1)
 
-Research has shown that LLMs are best at utilizing information at the very beginning and the very end of the context window. Information placed in the middle is often ignored or forgotten.
-
-**Best Practices for Context Management:**
-1.  **Rank-Aware Placement:** Place the most relevant documents (highest re-ranker scores) at the *beginning* and *end* of the context window, not in the middle.
-2.  **Information Density:** Use summarization to condense retrieved chunks before feeding them to the generation model.
-3.  **Dynamic Truncation:** Stop adding documents once a relevance threshold is met, rather than filling the window.
+Liu and colleagues moved the answer-bearing document within a multi-document question and varied the position of a target key in a lookup task. For several models and settings, accuracy fell when the evidence was in the middle. Try moving the same policy passage to the start, middle and end with the question, other passages and total length held fixed. Check both the answer and whether its citation supports it. The best order for this service is a measurement. [[1]](#ref-1)
 
 ### Context Assembly Is a Policy Layer
 
-This is why strong RAG systems treat context assembly as its own stage rather than a trivial concatenation step. The orchestrator may decide to:
-
-- include a short answer-first summary and append evidence afterward
-- separate structured facts from free-form passages
-- keep mutually contradictory documents apart and ask the model to compare them explicitly
-- reserve part of the context window for tool results or conversation state
-
-In other words, orchestration is what turns retrieval outputs into a usable prompt budget.
-
----
+Reserve space for the renewal record before adding background material. If you shorten the handbook passage, check that the summary still distinguishes a renewal from a first purchase. A summary can preserve the number of days while silently changing which transactions it covers. Record the policy version and the passage IDs actually sent so you can reconstruct a wrong answer.
 
 ## 3. Agentic RAG: Beyond Linear Pipelines
 
-Traditional RAG is a linear pipeline: `Retrieve -> Augment -> Generate`.
-**Agentic RAG** introduces a loop where the LLM can decide to retrieve more information if the first attempt was insufficient.
+If the two required sources are known up front, the service can fetch them directly once the access check passes. A loop becomes useful when a result determines the next lookup.
 
 ### The ReAct Framework (Reasoning + Acting)
 
-An agent uses a loop of **Thought**, **Action**, and **Observation**.
-
-1.  **Thought:** "I need to find out who won the 2024 election."
-2.  **Action:** `search("2024 election winner")`
-3.  **Observation:** "Results show candidates but not the final winner."
-4.  **Thought:** "I need to check for certification news."
-5.  **Action:** `search("2024 election certification")`
-
-This allows the system to solve complex, multi-step problems that a single retrieval step cannot handle.
+ReAct interleaves reasoning and actions so an observation can change the next action. [[2]](#ref-2) Suppose the handbook says that partner subscriptions follow their provider’s policy. The customer’s authorized renewal record names partner P. The next lookup is P’s current policy. If the account record instead identifies a direct subscription, the assistant can use the handbook and skip that lookup.
 
 ### Agentic RAG Needs Stop Conditions
 
-Agentic retrieval loops are powerful, but without explicit stop conditions they turn into expensive failure amplifiers. A practical orchestrator usually bounds:
-
-- the maximum number of retrieval rounds
-- the total token or tool budget
-- the confidence threshold for asking another question versus answering
-- the conditions for escalation to a human or a fallback workflow
-
-This is the real difference between a neat demo and an operable system. The orchestration layer decides not only how to retrieve more, but also when to stop searching and admit that grounding is still insufficient.
-
----
+Give this example a limit of three source calls per request. The handbook and the renewal record use two calls. One remains for P’s policy. If the third call returns only an expired policy, the answer should identify the missing current rule and offer a support handoff. Repeating the first search would spend more time without resolving the question. Track why the loop stopped and how often customers received a supported answer within the budget.
 
 ## 4. Summary
 
-RAG Orchestration moves us from static pipelines to dynamic, intelligent systems. By implementing Query Routing, we save costs and reduce latency. By understanding Context Management, we avoid the "Lost in the Middle" trap. And by embracing Agentic RAG, we enable models to solve complex, multi-hop problems autonomously.
-
-In the next section, we will explore the ultimate form of structured retrieval: **GraphRAG**, where we move beyond text chunks to traversing relationships in a knowledge graph.
-
----
+For one renewal question, three checks catch different mistakes. Did the plan request the right evidence? Did the prompt include the policy exception and the renewal date? Did the final answer cite a rule that applies to this customer? If a citation looks plausible but the answer is wrong, [trace the refund-policy incident](../rag-failure-modes-and-operational-design/#trace-a-rag-answer). The [next section](../graphrag-and-ontology/) looks at a different retrieval problem in which the evidence is spread across relationships.
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: What is the primary benefit of implementing Query Routing in a RAG system?</summary>
-*It allows the system to save costs and reduce latency by directing queries to the most appropriate specialized source (or skipping search entirely) rather than running every query through every expensive retrieval pipeline.*
+<summary>Quiz 1: Two visitors ask about renewals. Which question can the service answer using the handbook alone?</summary>
+*It can give the general cancellation window. To decide whether a particular renewal is still within that window it also needs an authorized record with the renewal date.*
 </details>
 
 <details>
-<summary>Quiz 2: Describe the "Lost in the Middle" phenomenon and how to mitigate it in context management.</summary>
-*The "Lost in the Middle" phenomenon refers to the tendency of LLMs to ignore or forget information placed in the middle of a long context window, performing best with information at the very beginning or end. It can be mitigated by placing the most relevant documents at the beginning and end, condensing information, or using dynamic truncation.*
+<summary>Quiz 2: The planner receives valid JSON naming the personal-renewal route. What evidence would tell you how reliable that choice is?</summary>
+*Compare the router’s choices with the required sources for labeled questions, including closely worded public and personal requests. The JSON label itself carries no calibrated probability.*
 </details>
 
 <details>
-<summary>Quiz 3: How does Agentic RAG differ from traditional linear RAG pipelines?</summary>
-*Traditional RAG follows a strict linear `Retrieve -> Augment -> Generate` pipeline. Agentic RAG introduces a loop where the LLM can use reasoning (e.g., the ReAct framework) to decide to retrieve more information or use different tools if the initial results were insufficient, allowing it to solve complex, multi-step problems.*
+<summary>Quiz 3: With 320 evidence tokens left, what should happen to a 512-token FAQ?</summary>
+*It would exceed the window by 192 tokens. Leave it out if the policy and account record already answer the question. If it contains a necessary exception, extract that passage and measure the new total.*
 </details>
 
 <details>
-<summary>Quiz 4: Formulate the probabilistic classification sequence for an LLM Router deciding to call a specialized SQL tool over a general Vector DB. What parameters dictate the logical routing threshold?</summary>
-*The router processes intention classification over discrete tools $T \in \{SQL, Vector, Parametric\}$. It assigns soft-logits to intentions: $P(T=SQL | Q) = \frac{\exp(w_{SQL}^T E(Q))}{\sum_{T'} \exp(w_{T'}^T E(Q))}$, where $E(Q)$ is the query embedding and $w_T$ represents trained intention vectors. The system triggers the SQL pipeline if $P(T=SQL | Q) \ge \theta_{threshold}$ and structured parameters are extracted with logical consistency. This explicit formulation enables developers to set deterministic validation bounds to avoid expensive hallucinated tool calls.*
+<summary>Quiz 4: The third source call returns an expired partner policy. What can the assistant tell the customer?</summary>
+*It can explain that the subscription is handled by the partner and that the current cancellation rule is missing. It can offer a handoff. The expired deadline cannot establish current eligibility.*
 </details>
-
----
 
 ## References
 
-1. <a id="ref-1"></a>Liu, N. F., et al. (2023). *Lost in the Middle: How Language Models Use Long Contexts.* [arXiv:2307.03172](https://arxiv.org/abs/2307.03172).
+1. <a id="ref-1"></a>Nelson F. Liu et al. (2024). *Lost in the Middle: How Language Models Use Long Contexts*. [Transactions of the Association for Computational Linguistics](https://aclanthology.org/2024.tacl-1.9/).
+2. <a id="ref-2"></a>Shunyu Yao et al. (2023). *ReAct: Synergizing Reasoning and Acting in Language Models*. [Paper](https://arxiv.org/abs/2210.03629).

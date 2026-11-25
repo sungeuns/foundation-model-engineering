@@ -8,188 +8,121 @@ import RnnMemoryVisualizer from '../../components/chapter-2/RnnMemoryVisualizer'
 
 # 2.1 Markov Chains to RNNs
 
-Before the revolution of Transformers, modeling sequential data like natural language required architectures designed to handle temporal dependencies. This journey started with simple statistical models and led to the development of Recurrent Neural Networks (RNNs).
+<a id="motivation-the-arrow-of-time-in-data"></a>
 
----
+Suppose a machine announces a color, says `wait` and `ready`, then repeats the color. You have two recordings, `red wait ready red` and `blue wait ready blue`. Pause each one just after `ready`. Which word comes next?
 
-### **Motivation: The Arrow of Time in Data**
-Most traditional machine learning models assume that data points are independent and identically distributed (i.i.d.). However, language is inherently sequential. The meaning of a word depends on what came before it.
-*   **Context Matters:** "I am going to the bank" (river bank or financial bank?) depends on the surrounding words.
-*   **Variable Length:** Sentences can be 3 words or 100 words long. We need architectures that can handle this flexibility.
+<a id="the-metaphor-the-conveyor-belt-with-memory"></a>
 
-Understanding how we moved from simple statistics to neural memory is crucial for grasping why Transformers were necessary.
-
----
-
-### **The Metaphor: The Conveyor Belt with Memory**
-
-Imagine you are a worker at a conveyor belt, inspecting objects passing by.
-
-*   **The Markov Approach** is like having a **goldfish memory**. You look at the current object and maybe the one right before it. You make a decision based *only* on that tiny window. If a red ball comes after a green ball, you perform an action. You have no idea what passed by 5 minutes ago.
-*   **The RNN Approach** is like having a **notebook**. As each object passes, you look at it, read your notebook (previous hidden state), make a decision, and then *update* your notebook with new notes. Even if the red ball appeared 10 objects ago, a note about it might still be in your notebook, influencing your current decision.
-
-RNNs introduced this "notebook" (hidden state) to maintain memory across time.
-
----
+A model that looks back one word sees `ready` in both recordings. Looking back two words still gives the same clue, `wait ready`. A listener could answer both questions with a single bit of memory: “Did this recording start with red?” This is the difference between keeping the last few tokens and keeping a feature of the past.
 
 ## Markov Chains: The Simplest Sequence Models
 
-A **Markov Chain** is a stochastic model describing a sequence of possible events in which the probability of each event depends only on the state attained in the previous event.
-
-**A Piece of History:** When the Russian mathematician Andrey Markov first introduced this concept in 1913, his application was to analyze the sequence of letters in Alexander Pushkin's poem *Eugene Onegin*. He manually counted 20,000 letters to show that the probability of a vowel following another vowel was different from following a consonant, proving that letters in language are not independent. This became an early statistical precursor to language modeling.
+In 1913, Andrey Markov examined 20,000 letters in Pushkin’s *Eugene Onegin*. He counted how often a vowel followed another vowel and how often one followed a consonant. The counts let him study dependence between neighboring letters. [[1]](#ref-1)
 
 ### The Markov Property
-Mathematically, a sequence of random variables $X_1, X_2, X_3, \dots$ has the Markov property if:
-$$P(X_{n+1} = x | X_1 = x_1, X_2 = x_2, \dots, X_n = x_n) = P(X_{n+1} = x | X_n = x_n)$$
 
-In NLP, an $n$-gram model is a type of Markov chain. A bigram model predicts the next word based only on the previous word.
+Let $X_t$ denote the state at step $t$ and $x_t$ its observed value. For a first-order Markov chain, knowing the current state is enough to specify the distribution of the next one.
 
-**The Limitation:** Natural language is not Markovian. Understanding a sentence often requires memory of words that appeared much earlier. Markov chains fail to capture long-range dependencies.
+$$P(X_{t+1}=x \mid X_1=x_1,\ldots,X_t=x_t)=P(X_{t+1}=x \mid X_t=x_t)$$
+
+In a **bigram** language model, the state is the last token. In the two recordings, `red` and `blue` each follow `ready` once. Estimating by relative frequency gives $P(\text{red}\mid\text{ready})=1/2$ in both cases. A **trigram** conditions on the last two tokens, which also coincide here. A 4-gram has enough context to distinguish these recordings. Insert one more `wait` into each and its last three tokens coincide again.
 
 ### Why Markov Models Still Matter
 
-Even though $n$-gram models are too limited for modern language modeling, they teach two important lessons that never went away.
+A finite-order model can process a stream of any finite length by sliding its window one token at a time. The order limits which observed tokens can affect a prediction. With a vocabulary of $V$ tokens, a window of $k$ tokens has up to $V^k$ distinct histories. Many have few or no observations, so a count-based model can fall back to shorter histories when estimating probabilities.
 
-First, they make the sequence problem explicit: prediction quality depends on what information from the past the model is allowed to use. Second, they show the engineering trade-off between **context size** and **data sparsity**. If we increase the Markov order from bigrams to 5-grams, the model can use more context, but the number of possible histories explodes and most of them are rarely observed. In practice, early language modeling spent enormous effort on smoothing, backoff, and counting tricks because larger context windows created brittle statistics.
-
-RNNs were attractive because they replaced this manually designed fixed window with a learned hidden state. Instead of storing counts for every possible history, the model learned a compressed representation of history.
-
----
+The choice of state matters. A hand-built Markov model could store the announced color as its state across any number of `wait` tokens. An RNN lets the training objective shape which features the state carries forward. Elman demonstrated this idea by feeding hidden activations back into a network that predicted successive inputs. [[2]](#ref-2)
 
 ## Recurrent Neural Networks (RNNs): Adding Memory
 
-To capture long-term dependencies, **Recurrent Neural Networks (RNNs)** were developed. Unlike standard feed-forward networks, RNNs have connections that loop back, allowing information to persist.
+<div style={{ maxWidth: '600px', margin: '20px auto' }}>
 
-<div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', margin: '20px 0' }}>
+![One recurrent cell with a loop, shown again as successive copies passing a hidden state forward.](../../assets/images/chapter-2/RNN-unrolled.png)
 
-<div style={{ maxWidth: '600px', width: '100%' }}>
-![RNN Unrolled](../../assets/images/chapter-2/RNN-unrolled.png)
-</div>
-
-<em style={{ marginTop: '10px', color: '#7f8c8d' }}>Source: [colah's blog](https://colah.github.io/posts/2015-08-Understanding-LSTMs/)</em>
+*Each copy uses the same weights. Figure by Christopher Olah.* [[3]](#ref-3)
 
 </div>
 
-### The Mechanism
-At each time step $t$, the RNN takes an input vector $\mathbf{x}_t$ and the hidden state from the previous time step $\mathbf{h}_{t-1}$. It computes the new hidden state $\mathbf{h}_t$ and the output $\mathbf{y}_t$:
+<a id="the-mechanism"></a>
 
-$$\mathbf{h}_t = \sigma(\mathbf{W}_{hh}\mathbf{h}_{t-1} + \mathbf{W}_{xh}\mathbf{x}_t + \mathbf{b}_h)$$
-$$\mathbf{y}_t = \text{softmax}(\mathbf{W}_{hy}\mathbf{h}_t + \mathbf{b}_y)$$
+At step $t$, the input vector $\mathbf{x}_t$ and the previous hidden state $\mathbf{h}_{t-1}$ determine the new state $\mathbf{h}_t$. A separate output layer converts it into a distribution $\mathbf{y}_t$ over the next token.
 
-Where $\mathbf{W}$ are weight matrices and $\sigma$ is an activation function (typically tanh in a vanilla RNN).
+$$\mathbf{h}_t=\tanh(\mathbf{W}_{hh}\mathbf{h}_{t-1}+\mathbf{W}_{xh}\mathbf{x}_t+\mathbf{b}_h)$$
+$$\mathbf{y}_t=\operatorname{softmax}(\mathbf{W}_{hy}\mathbf{h}_t+\mathbf{b}_y)$$
 
-The hidden state $\mathbf{h}_t$ acts as the network's memory, accumulating information over time.
+The matrices $\mathbf{W}_{hh}$, $\mathbf{W}_{xh}$ and $\mathbf{W}_{hy}$ map the previous state, input and new state respectively. The vectors $\mathbf{b}_h$ and $\mathbf{b}_y$ are biases. At inference, a single cell needs just its current hidden vector to continue the stream. If two histories reach exactly the same hidden state, the network will give the same predictions for any identical continuation.
 
 ### Training Reality: Unrolling Through Time
 
-The conceptual diagram of an RNN often hides the operational detail that makes training difficult: the same cell is reused over and over across the entire sequence. During training we **unroll** the network through time, turning one recurrent cell into a very deep computation graph with shared weights.
+During next-token training with **teacher forcing**, each input is the observed token from the training sequence. The following observed token is its target. All the inputs are available at the start, yet the cell must compute $\mathbf{h}_1$ before $\mathbf{h}_2$. Different recordings can run side by side in a batch.
 
-That has two immediate consequences:
-
-- **Teacher forcing:** during training, the model is often fed the true previous token rather than its own prediction so the optimization problem stays stable.
-- **Backpropagation Through Time (BPTT):** gradients must flow through every unrolled step, so the effective depth of the network grows with sequence length.
-
-This is the key reason RNNs were such an important milestone but also such a frustrating one in practice. They gave us a way to model variable-length context, but they did so with a sequential computation graph that was hard to parallelize and numerically fragile over long horizons. The next sub-chapters on LSTMs, GRUs, and eventually attention can be read as attempts to keep the good part, learned sequence memory, while removing the bad part, unstable long-range credit assignment.
-
----
+With full **backpropagation through time** (BPTT), a prediction error after `ready` can affect the update that processed `red`. Its gradient passes through every intervening state update. If each update shrinks that gradient, the first token receives a weak learning signal. The network may be able to represent a memory that the optimizer struggles to learn. [Section 2.2](/chapter-2/vanishing-exploding-gradients/) works through this gradient product. [[4]](#ref-4)
 
 ## PyTorch RNN
 
-Let's see how a basic RNN cell is implemented in PyTorch and how we loop over a sequence.
+Give the two recordings one hidden number each. Encode `red` as $+1$, `blue` as $-1$, and both `wait` and `ready` as zero. Set both recurrent-cell weights to one and omit biases. With $h_0=0$, the update becomes $h_t=\tanh(h_{t-1}+x_t)$. The code runs the two recordings as a batch on the CPU. The weights are chosen by hand so the calculation can be checked without fitting a model. [[5]](#ref-5)
 
 ```python
 import torch
-import torch.nn as nn
+from torch import nn
 
-class SimpleRNN(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size):
-        super(SimpleRNN, self).__init__()
-        self.hidden_size = hidden_size
+cell = nn.RNNCell(input_size=1, hidden_size=1, bias=False)
+steps = torch.tensor([[1., -1.], [0., 0.], [0., 0.]])
+hidden = torch.zeros(2, 1)
 
-        # RNN Cell operations
-        self.i2h = nn.Linear(input_size + hidden_size, hidden_size)
-        self.i2o = nn.Linear(input_size + hidden_size, output_size)
-        self.tanh = nn.Tanh()
-        self.softmax = nn.LogSoftmax(dim=1)
-
-    def forward(self, input, hidden):
-        # Concatenate input and hidden state
-        combined = torch.cat((input, hidden), 1)
-        hidden = self.tanh(self.i2h(combined))
-        output = self.i2o(combined)
-        output = self.softmax(output)
-        return output, hidden
-
-    def initHidden(self):
-        return torch.zeros(1, self.hidden_size)
-
-# Example usage
-input_size = 5  # e.g., one-hot vector size
-hidden_size = 10
-output_size = 5
-
-rnn = SimpleRNN(input_size, hidden_size, output_size)
-
-# Simulate a sequence of 3 words
-seq_len = 3
-hidden = rnn.initHidden()
-
-# Random input sequence (seq_len, batch_size, input_size)
-sequence = torch.randn(seq_len, 1, input_size)
-
-for i in range(seq_len):
-    output, hidden = rnn(sequence[i], hidden)
-    print(f"Step {i+1} Output shape:", output.shape)
-    print(f"Step {i+1} Hidden shape:", hidden.shape)
+with torch.no_grad():
+    cell.weight_ih.fill_(1.)
+    cell.weight_hh.fill_(1.)
+    for inputs in steps:
+        hidden = cell(inputs.reshape(2, 1), hidden)
+        print([round(value, 3) for value in hidden[:, 0].tolist()])
 ```
 
----
+The three rows printed are `[0.762, -0.762]`, `[0.642, -0.642]` and `[0.566, -0.566]`. After `ready`, the sign still identifies the first color. Try changing the recurrent weight to zero. Both states then become zero at `wait`, showing exactly where the earlier color was lost.
 
 ## Example: The Fading Memory of RNN
 
-Visualize how the hidden state changes as words are processed. Notice how early words have less influence as more words are added (Vanishing Gradient problem in disguise).
+Follow both recordings to `wait`. With the recurrent weight set to 1, their states are still distinguishable. What will each state be at `ready` if the recurrent weight is 0 throughout the recording? Compare your answer with the trace.
 
 <RnnMemoryVisualizer client:load lang="en" />
-
----
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: Why are n-gram models considered Markovian?</summary>
-*Because an n-gram model predicts the next token based only on a fixed window of $n-1$ previous tokens. It assumes that history beyond that window does not affect the future, which is the core assumption of a Markov model.*
+<summary>Quiz 1: Why does a trigram give the same distribution in both recordings?</summary>
+*After `ready` both histories end in `wait ready`. A trigram uses these last two tokens to choose one distribution for both histories.*
 </details>
 
 <details>
-<summary>Quiz 2: What is the purpose of the hidden state in an RNN?</summary>
-*The hidden state acts as the network's memory. It carries information from previous time steps and combines it with the current input to produce the current hidden state and output. This allows the network to process sequential data and capture temporal dependencies.*
+<summary>Quiz 2: Could a two-state Markov model remember the color across a thousand waits?</summary>
+*Yes. Use one state for each color and have each wait leave the state unchanged. The choice of state determines which information survives.*
 </details>
 
 <details>
-<summary>Quiz 3: Can a standard RNN process sequences of infinite length?</summary>
-*In theory, yes, because the same operation is applied at each time step recursively. In practice, no, because the memory fades quickly (vanishing gradients) and numerical instabilities prevent learning over very long sequences.*
+<summary>Quiz 3: If a cell can read a million tokens, what does that tell you about its prediction at the last token?</summary>
+*The update can be applied a million times. To test whether the first token still matters, change it and replay the same remaining tokens. Compare the final predictions.*
 </details>
 
 <details>
-<summary>Quiz 4: What is the main difference between a bigram model and an RNN?</summary>
-*A bigram model (1st order Markov chain) only looks at the immediately preceding word to predict the next one. An RNN can potentially retain information from *all* previous words in the sequence via its hidden state, although in practice it struggles with very long-range dependencies.*
+<summary>Quiz 4: How could the output layer lose the color even if the two hidden states differ?</summary>
+*If all its weights are zero, only the output bias affects the probabilities. Both hidden states then produce the same distribution.*
 </details>
 
 <details>
-<summary>Quiz 5: Why is parallelization difficult in RNNs compared to CNNs or Transformers?</summary>
-*Parallelization is difficult in RNNs because the computation at time step $t$ depends on the hidden state from time step $t-1$. This sequential dependency prevents processing all elements of the sequence at once, unlike CNNs or Transformers where operations can be parallelized across the sequence length.*
+<summary>Quiz 5: Why can the two recordings run together, while the steps within each recording must run in order?</summary>
+*Each recording has its own state, so its update is independent of the other recording. Within a recording each update needs the state produced by the previous step.*
 </details>
 
 <details>
 <summary>Quiz 6: What is a sufficient condition for vanishing gradients in the BPTT Jacobian product?</summary>
-*For column-vector states, $J_j=\operatorname{diag}(1-h_j^2)W_{hh}$ and $\partial h_t/\partial h_k=J_t\cdots J_{k+1}$. If every operator norm satisfies $\|J_j\|_2\le\rho<1$, the product norm is at most $\rho^{t-k}$. Individual eigenvalues do not establish the behavior of a noncommuting product. Column-vector loss gradients propagate through the transpose of this ordered product.*
+*For column-vector states, let $J_j=\operatorname{diag}(1-h_j^2)W_{hh}$ be the derivative of step $j$ with respect to the previous state, with the square taken elementwise. The derivative from step $k$ to step $t$ is $J_t\cdots J_{k+1}$. If each operator norm satisfies $\|J_j\|_2\le\rho<1$, the product norm is at most $\rho^{t-k}$. Backpropagation applies the transpose of that product to the loss gradient.*
 </details>
-
----
 
 ## References
 
-1. <a id="ref-1"></a>Rosenblatt, F. (1958). *The perceptron: a probabilistic model for information storage and organization in the brain*. Psychological review, 65(6), 386.
-2. <a id="ref-2"></a>Rumelhart, D. E., Hinton, G. E., & Williams, R. J. (1986). *Learning representations by back-propagating errors*. Nature, 323(6088), 533-536.
-3. <a id="ref-3"></a>Lipton, Z. C., Berkowitz, J., & Elkan, C. (2015). *A Critical Review of Recurrent Neural Networks for Sequence Learning*. [arXiv:1506.00019](https://arxiv.org/abs/1506.00019).
-4. <a id="ref-4"></a>**Recommended Video**: [StatQuest: Recurrent Neural Networks (RNNs)](https://www.youtube.com/watch?v=UN7O424H8dM) A great visual explanation of how RNNs work.
+1. <a id="ref-1"></a>Markov, A. A. (1913). [An Example of Statistical Investigation of the Text *Eugene Onegin* Concerning the Connection of Samples in Chains](https://doi.org/10.1017/S0269889706001074). English translation, *Science in Context* (2006).
+2. <a id="ref-2"></a>Elman, J. L. (1990). [Finding Structure in Time](https://cogsci.ucsd.edu/~rik/courses/readings/elman90-fsit.pdf). *Cognitive Science*, 14, 179–211.
+3. <a id="ref-3"></a>Olah, C. (2015). [Understanding LSTM Networks](https://colah.github.io/posts/2015-08-Understanding-LSTMs/).
+4. <a id="ref-4"></a>Bengio, Y., Simard, P., & Frasconi, P. (1994). [Learning Long-Term Dependencies with Gradient Descent Is Difficult](https://pubmed.ncbi.nlm.nih.gov/18267787/). *IEEE Transactions on Neural Networks*, 5, 157–166.
+5. <a id="ref-5"></a>PyTorch. [RNNCell](https://docs.pytorch.org/docs/2.15/generated/torch.nn.RNNCell.html).

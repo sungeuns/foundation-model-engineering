@@ -235,8 +235,8 @@ export const searchDescriptions = {
     ko: 'BM25와 밀집 검색의 순위를 RRF로 결합하세요. 각 검색기가 넘기는 후보 수를 바꾸면서 문서별 점수가 어떻게 변하고 어떤 근거가 재순위화 단계에 도달하는지 확인합니다.',
   },
   '/chapter-14/rag-orchestration': {
-    en: 'Design RAG orchestration through query routing, context management, lost-in-the-middle effects, and agent-driven retrieval loops.',
-    ko: '질의 라우팅, 문맥 관리, 긴 문맥 중간의 정보 누락 문제와 에이전트 검색 루프를 통해 RAG 오케스트레이션을 설계합니다.',
+    en: 'Route two nearly identical renewal questions to different sources, fit the evidence into 1,088 tokens, and decide when a RAG assistant should stop searching.',
+    ko: '표현이 비슷한 두 갱신 질문을 약관과 계정 기록으로 나누어 보냅니다. 근거를 1,088토큰에 담고, 언제 검색을 멈춰야 하는지 판단합니다.',
   },
   '/chapter-14/graphrag-and-ontology': {
     en: 'A graph walk ranks a CEO and a vendor equally. Follow two typed edges back to source passages to check which candidate the evidence supports.',
@@ -259,8 +259,8 @@ export const searchDescriptions = {
     ko: '서튼의 ‘쓴 교훈’을 Gopher와 Chinchilla의 학습 실험으로 살펴봅니다. 두 모델의 파라미터와 토큰 수를 비교하고, 파이썬 예제로 같은 연산 예산을 세 가지로 배분해 봅니다.',
   },
   '/chapter-2/markov-chains-to-rnns': {
-    en: 'Trace sequence modeling from Markov chains to recurrent neural networks, with hidden-state intuition and a PyTorch RNN example.',
-    ko: '마르코프 체인에서 순환 신경망으로 이어지는 시퀀스 모델링의 발전을 따라가며 은닉 상태와 PyTorch RNN 예제를 살펴봅니다.',
+    en: 'A trigram sees the same last two words in two recordings. Follow a one-unit PyTorch RNN to see how its hidden state can still distinguish the first words.',
+    ko: '끝의 두 단어가 같은 녹음을 트라이그램으로 읽으면 다음 단어의 예측도 같습니다. PyTorch 순환 신경망에서 은닉 상태 하나가 첫 단어의 차이를 어떻게 간직하는지 살펴봅니다.',
   },
   '/chapter-2/vanishing-exploding-gradients': {
     en: 'Understand vanishing and exploding gradients through backpropagation through time, repeated multiplication, and gradient-flow visualizations.',

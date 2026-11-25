@@ -1,0 +1,36 @@
+.rnn-memory {
+  --red-trace: #95402c;
+  --blue-trace: #145e87;
+  margin: 1.25rem 0;
+  padding: clamp(.7rem, 3vw, 1.25rem);
+  border: 1px solid #adbec7;
+  border-radius: .5rem;
+  background: white;
+  color: #203741;
+  font-variant-numeric: tabular-nums;
+}
+.rnn-memory figcaption { font-size: 1.1rem; font-weight: 700; }
+.rnn-memory-equation { margin: .45rem 0 1rem; overflow-wrap: anywhere; }
+.rnn-memory fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
+.rnn-memory legend { padding: 0; font-weight: 600; }
+.rnn-memory label { display: inline-flex; align-items: center; gap: .4rem; min-height: 2.5rem; margin-right: 1rem; cursor: pointer; }
+.rnn-memory input { margin: 0; accent-color: #205d6b; }
+.rnn-memory input:focus-visible { outline: 3px solid #15599d; outline-offset: 3px; }
+.rnn-memory-key { display: flex; flex-wrap: wrap; gap: .3rem 1rem; margin: .65rem 0 0; font-size: .9rem; }
+.rnn-memory-key span { display: inline-flex; align-items: center; gap: .4rem; }
+.rnn-memory-key i { width: .65rem; height: .65rem; box-sizing: border-box; border-radius: 50%; }
+.rnn-memory-red-dot { background: var(--red-trace); }
+.rnn-memory-blue-ring { border: 2px solid var(--blue-trace); }
+.rnn-memory-chart { display: block; width: 100%; max-width: 32rem; height: auto; margin: .2rem auto .65rem; }
+.rnn-memory-chart text { fill: #354b55; font: 11px system-ui, sans-serif; }
+.rnn-memory-grid { stroke: #a5b4bc; stroke-width: .8; }
+.rnn-memory-chart polyline { fill: none; stroke-width: 2; }
+.rnn-memory-red-line { stroke: var(--red-trace); }
+.rnn-memory-blue-line { stroke: var(--blue-trace); stroke-dasharray: 4 3; }
+.rnn-memory-red-point { fill: var(--red-trace); }
+.rnn-memory-blue-point { fill: none; stroke: var(--blue-trace); stroke-width: 1.7; }
+.rnn-memory table { display: table; width: 100%; margin: 0; }
+.rnn-memory caption { text-align: left; padding-bottom: .35rem; font-size: .9rem; }
+.rnn-memory :is(th, td) { text-align: right; padding: .35rem clamp(.2rem, 1vw, .65rem); }
+.rnn-memory th:first-child { text-align: left; }
+.rnn-memory-result { margin: .7rem 0 0; }

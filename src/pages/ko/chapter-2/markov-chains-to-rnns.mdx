@@ -8,188 +8,131 @@ import RnnMemoryVisualizer from '../../../components/chapter-2/RnnMemoryVisualiz
 
 # 2.1 마르코프 체인에서 RNN까지 (Markov Chains to RNNs)
 
-트랜스포머의 혁명 이전에는 자연어와 같은 시퀀스 데이터를 모델링하기 위해 시간적 종속성을 처리할 수 있도록 설계된 아키텍처가 필요했습니다. 이 여정은 단순한 통계 모델에서 시작하여 순환 신경망(RNN)의 개발로 이어졌습니다.
+<a id="동기-데이터-속-시간의-화살"></a>
 
----
+어떤 기계가 색깔 하나를 말하고, `wait`, `ready`를 차례로 말한 뒤 처음 색깔을 한 번 더 말합니다. 녹음은 두 개입니다. 하나는 `red wait ready red`, 다른 하나는 `blue wait ready blue`입니다. 각각 `ready`에서 멈춰 보면, 다음 단어를 어떻게 맞힐 수 있을까요?
 
-### **동기: 데이터 속 시간의 화살**
-대부분의 전통적인 머신러닝 모델은 데이터 포인트가 독립적이고 동일하게 분포(i.i.d.)되어 있다고 가정합니다. 하지만 언어는 본질적으로 시퀀스(순서가 있는 데이터)입니다. 단어의 의미는 그 앞에 어떤 단어가 왔는지에 따라 달라집니다.
-* **문맥의 중요성:** "I am going to the bank" (강둑으로 가는 것인가, 아니면 은행으로 가는 것인가?)는 주변 단어에 따라 달라집니다.
-* **가변적인 길이:** 문장은 3단어일 수도 있고 100단어일 수도 있습니다. 우리는 이러한 유연성을 처리할 수 있는 아키텍처가 필요합니다.
+<a id="비유-메모리가-있는-컨베이어-벨트"></a>
 
-단순한 통계에서 신경망 메모리로 어떻게 이동했는지 이해하는 것은 왜 트랜스포머가 필요했는지 파악하는 데 매우 중요합니다.
-
----
-
-### **비유: 메모리가 있는 컨베이어 벨트**
-당신이 컨베이어 벨트에서 지나가는 물건들을 검사하는 작업자라고 상상해 보세요.
-
-* **마르코프 방식** 은 **금붕어 기억력** 을 가진 것과 같습니다. 당신은 현재 물건과 어쩌면 바로 이전의 물건만 봅니다. 오직 그 작은 창(window)에만 기반해서 결정을 내립니다. 초록색 공 다음에 빨간색 공이 오면 어떤 행동을 취합니다. 5분 전에 무엇이 지나갔는지는 전혀 모릅니다.
-* **RNN 방식** 은 **노트** 를 가지고 있는 것과 같습니다. 각 물건이 지나갈 때마다 그것을 보고, 노트를 읽고(이전 은닉 상태), 결정을 내린 다음, 새로운 메모로 노트를 **업데이트** 합니다. 빨간색 공이 10개 전에 나타났더라도, 그것에 대한 메모가 여전히 노트에 남아 있어 현재 결정에 영향을 미칠 수 있습니다.
-
----
+직전 단어는 둘 다 `ready`입니다. 두 단어를 거슬러 올라가도 `wait ready`로 같습니다. 사람은 “처음에 빨간색이라고 했나?”에 대한 답 하나만 기억해도 두 녹음에서 다음 단어를 맞힐 수 있습니다. 최근 단어 몇 개를 보관하는 것과, 나중에 쓸 단서 하나를 골라 기억하는 것의 차이입니다.
 
 ## 마르코프 체인: 가장 단순한 시퀀스 모델
 
-**마르코프 체인 (Markov Chain)** 은 각 이벤트의 확률이 이전 이벤트에서 달성된 상태에만 의존하는 가능한 이벤트 시퀀스를 설명하는 확률적 모델입니다.
+1913년 안드레이 마르코프는 푸시킨의 《예브게니 오네긴》에서 글자 2만 개를 조사했습니다. 모음 뒤에 다시 모음이 오는 경우와 자음 뒤에 모음이 오는 경우를 따로 세어 이웃한 두 글자가 통계적으로 어떻게 연관되는지 살펴봤습니다. [[1]](#ref-1)
 
-**흥미로운 역사:** 러시아의 수학자 안드레이 마르코프(Andrey Markov)가 1913년에 이 개념을 증명하기 위해 사용한 데이터는 다름 아닌 푸쉬킨의 시소설 *'예브게니 오네긴'*이었습니다. 그는 20,000개의 글자를 수작업으로 분석하여 모음 뒤에 자음이 올 확률 등을 계산했고, 이를 통해 글자 간의 통계적 종속성을 보여주었습니다. 이는 통계적 언어 모델링의 초기 선구적 사례였습니다.
+<a id="마르코프-속성"></a>
 
-### 마르코프 속성
-수학적으로 확률 변수 시퀀스 $X_1, X_2, X_3, \dots$은 다음과 같은 경우 마르코프 속성을 가집니다:
-$$P(X_{n+1} = x | X_1 = x_1, X_2 = x_2, \dots, X_n = x_n) = P(X_{n+1} = x | X_n = x_n)$$
+### 마르코프 성질
 
-NLP에서 $n$-gram 모델은 마르코프 체인의 일종입니다. 바이그램(bigram) 모델은 이전 단어 하나만을 기반으로 다음 단어를 예측합니다.
+$X_t$는 $t$번째 시점의 상태를 나타내는 확률 변수이고, $x_t$는 관측한 값입니다. 1차 마르코프 체인에서는 현재 상태만 알면 다음 상태의 확률분포가 정해집니다.
 
-**한계:** 자연어는 마르코프적이지 않습니다. 문장을 이해하려면 종종 훨씬 더 일찍 나타난 단어에 대한 기억이 필요합니다. 마르코프 체인은 장기 종속성(Long-range dependencies)을 포착하지 못합니다.
+$$P(X_{t+1}=x \mid X_1=x_1,\ldots,X_t=x_t)=P(X_{t+1}=x \mid X_t=x_t)$$
+
+**바이그램(bigram)** 언어 모델은 직전 토큰을 상태로 삼습니다. 위 녹음에서는 `ready` 뒤에 `red`와 `blue`가 한 번씩 나옵니다. 빈도로 추정하면 어느 녹음에서든 $P(\text{red}\mid\text{ready})=1/2$입니다. **트라이그램(trigram)** 은 직전 두 토큰을 보지만, 여기서는 두 토큰 모두 같습니다. 4-그램이 되면 처음 색깔까지 볼 수 있습니다. 그러나 두 녹음에 `wait`를 하나씩 더 끼워 넣으면 마지막 세 토큰이 다시 같아집니다.
 
 ### 마르코프 모델이 여전히 중요한 이유
 
-$n$-gram 모델은 현대 언어 모델링에는 너무 제한적이지만, 시퀀스 문제의 본질을 아주 선명하게 보여 줍니다.
+차수를 고정해도 토큰 하나를 읽을 때마다 창을 한 칸씩 옮기면 아무리 긴 문장이라도 끝까지 읽을 수 있습니다. 차수가 제한하는 것은 다음 예측에 반영할 수 있는 최근 토큰의 수입니다. 어휘가 $V$개이고 최근 $k$개 토큰을 본다면 가능한 조합은 최대 $V^k$개입니다. 관측 자료에서는 드물거나 아예 없던 조합이 많으므로, 빈도 기반 모델은 이런 경우 더 짧은 문맥의 빈도를 활용하기도 합니다.
 
-첫째, 예측 품질은 "과거의 어떤 정보를 볼 수 있게 하느냐"에 달려 있다는 점을 드러냅니다. 둘째, **문맥 크기** 와 **데이터 희소성** 사이의 트레이드오프를 보여 줍니다. 바이그램에서 5-그램으로 갈수록 더 많은 문맥을 쓸 수 있지만, 가능한 과거 패턴의 수가 폭발적으로 늘어나 대부분은 충분히 관측되지 않습니다. 그래서 초기 언어 모델링 연구에서는 더 큰 문맥 창을 쓰기 위해 smoothing, backoff, count 기반 기법에 엄청난 공을 들여야 했습니다.
+마르코프 모델이라도 **무엇을 상태로 삼느냐** 에 따라 답이 달라집니다. 상태를 ‘처음 들은 색깔’로 설계하면 `wait`가 몇 번 반복되든 색깔을 기억할 수 있습니다. RNN에서는 예측 과제를 학습하면서 어떤 단서를 다음 시점까지 전달할지가 정해집니다. 엘먼은 다음 입력을 예측하는 신경망에 직전 시점의 은닉층 출력을 다시 입력해 이 방식을 실험했습니다. [[2]](#ref-2)
 
-RNN이 매력적이었던 이유는 이 고정된 창을 사람이 설계한 통계 대신 학습된 은닉 상태로 바꾸었기 때문입니다. 가능한 모든 과거 패턴의 카운트를 저장하는 대신, 모델이 과거를 압축한 표현을 직접 학습하게 만든 것입니다.
+<a id="순환-신경망-rnn-메모리-추가"></a>
 
-## 순환 신경망 (RNN): 메모리 추가
+## 순환 신경망(RNN)의 은닉 상태
 
-장기 종속성을 포착하기 위해 **순환 신경망 (RNN, Recurrent Neural Networks)** 이 개발되었습니다. 표준 피드포워드 네트워크와 달리 RNN은 뒤로 순환하는 연결을 가지고 있어 정보가 지속될 수 있습니다.
+<div style={{ maxWidth: '600px', margin: '20px auto' }}>
 
-<div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', margin: '20px 0' }}>
+![하나의 순환 셀을 시간 순서대로 펼쳐 각 시점의 은닉 상태가 다음 셀로 넘어가는 모습을 보여 주는 그림.](../../../assets/images/chapter-2/RNN-unrolled.png)
 
-<div style={{ maxWidth: '600px', width: '100%' }}>
-![RNN Unrolled](../../../assets/images/chapter-2/RNN-unrolled.png)
-</div>
-
-<em style={{ marginTop: '10px', color: '#7f8c8d' }}>Source: [colah's blog](https://colah.github.io/posts/2015-08-Understanding-LSTMs/)</em>
+*시간 순서대로 펼쳐 그린 셀은 모두 같은 가중치를 씁니다. 그림 출처는 Christopher Olah의 글입니다.* [[3]](#ref-3)
 
 </div>
 
-### 메커니즘
-각 시간 단계 $t$에서 RNN은 입력 벡터 $\mathbf{x}_t$와 이전 시간 단계의 은닉 상태 $\mathbf{h}_{t-1}$을 입력으로 받습니다. 그리고 새로운 은닉 상태 $\mathbf{h}_t$와 출력 $\mathbf{y}_t$를 계산합니다:
+<a id="메커니즘"></a>
 
-$$\mathbf{h}_t = \sigma(\mathbf{W}_{hh}\mathbf{h}_{t-1} + \mathbf{W}_{xh}\mathbf{x}_t + \mathbf{b}_h)$$
-$$\mathbf{y}_t = \text{softmax}(\mathbf{W}_{hy}\mathbf{h}_t + \mathbf{b}_y)$$
+시점 $t$의 입력 벡터 $\mathbf{x}_t$와 직전 은닉 상태 $\mathbf{h}_{t-1}$로 새 은닉 상태 $\mathbf{h}_t$를 구합니다. 출력층은 이 값을 다음 토큰의 확률분포 $\mathbf{y}_t$로 바꿉니다.
 
-여기서 $\mathbf{W}$는 가중치 행렬이고 $\sigma$는 활성화 함수(일반적으로 vanilla RNN에서는 tanh)입니다.
+$$\mathbf{h}_t=\tanh(\mathbf{W}_{hh}\mathbf{h}_{t-1}+\mathbf{W}_{xh}\mathbf{x}_t+\mathbf{b}_h)$$
+$$\mathbf{y}_t=\operatorname{softmax}(\mathbf{W}_{hy}\mathbf{h}_t+\mathbf{b}_y)$$
 
-은닉 상태 $\mathbf{h}_t$는 네트워크의 메모리 역할을 하며 시간이 지남에 따라 정보를 누적합니다.
+$\mathbf{W}_{hh}$, $\mathbf{W}_{xh}$, $\mathbf{W}_{hy}$는 차례로 직전 상태, 현재 입력, 갱신된 상태에 곱하는 가중치 행렬입니다. $\mathbf{b}_h$와 $\mathbf{b}_y$는 편향 벡터입니다. 추론 중인 셀은 현재 은닉 벡터 하나만 보관하면 다음 토큰을 읽을 수 있습니다. 서로 다른 두 입력을 읽고도 은닉 상태가 정확히 같아졌다면, 이후에 같은 토큰을 넣는 한 두 예측은 계속 같습니다.
 
-### 학습의 현실: 시간을 따라 펼쳐지는 계산 그래프
+<a id="학습의-현실-시간을-따라-펼쳐지는-계산-그래프"></a>
 
-RNN 다이어그램은 직관적으로는 단순해 보이지만, 실제 학습에서는 중요한 디테일이 숨어 있습니다. 같은 셀을 시퀀스 전체에 반복해서 재사용하기 때문에, 학습 시에는 네트워크를 시간축을 따라 **펼쳐서(unroll)** 하나의 매우 깊은 계산 그래프로 다뤄야 합니다.
+### 시간 순서대로 펼쳐서 학습하기
 
-이 때문에 두 가지 결과가 바로 따라옵니다.
+**티처 포싱(teacher forcing)** 으로 다음 토큰을 예측하도록 학습할 때는 학습 자료에 있는 토큰을 입력하고 그다음 토큰을 정답으로 씁니다. 처음부터 입력 전체를 알고 있어도 셀은 $\mathbf{h}_1$을 구한 뒤에야 $\mathbf{h}_2$를 구할 수 있습니다. 녹음이 서로 다르면 한 배치에 담아 동시에 계산할 수 있습니다.
 
-- **Teacher forcing:** 학습 안정성을 위해 이전 시점의 모델 예측 대신 실제 정답 토큰을 입력으로 넣는 경우가 많습니다.
-- **BPTT(시간을 통한 역전파):** 그래디언트가 펼쳐진 모든 시점을 통과해야 하므로, 시퀀스가 길수록 사실상 네트워크 깊이가 커집니다.
+<a id="약속과-현실"></a>
 
-여기가 바로 RNN이 역사적으로 중요한 동시에 실무적으로는 까다로웠던 이유입니다. RNN은 가변 길이 문맥을 학습할 수 있게 해 주었지만, 그 대가로 병렬화가 어렵고 긴 구간에서는 수치적으로 불안정한 순차 계산 그래프를 받아들여야 했습니다. 다음 절에서 다룰 LSTM, GRU, 그리고 더 나아가 어텐션은 모두 "학습된 시퀀스 메모리"라는 장점은 유지하되, "긴 거리에서의 불안정한 학습"이라는 약점을 줄이려는 시도로 읽을 수 있습니다.
-
-### 약속과 현실
-RNN은 가변 길이의 시퀀스를 처리할 수 있기 때문에 획기적이었습니다. 이론적으로 은닉 상태는 시퀀스의 시작부터 끝까지 정보를 전달할 수 있습니다.
-
-그러나 다음 섹션에서 보겠지만, 표준 RNN을 긴 시퀀스에 대해 학습하는 것은 기울기 문제로 인해 실제로 거의 불가능한 것으로 판명되었습니다.
-
----
+시간을 따라 끝까지 **역전파(BPTT)** 하면 `ready` 뒤에서 틀린 예측이 첫 단어 `red`를 처리한 연산에까지 학습 신호를 보냅니다. 이 기울기는 중간의 상태 갱신을 하나씩 거슬러 갑니다. 매 단계에서 기울기가 줄어든다면 첫 시점에 도달하는 학습 신호는 약해집니다. 셀의 구조상 기억할 수 있는 단서도 실제 학습에서 놓칠 수 있다는 뜻입니다. [2.2절](/ko/chapter-2/vanishing-exploding-gradients/)에서 이때 기울기가 어떻게 달라지는지 계산합니다. [[4]](#ref-4)
 
 ## PyTorch RNN
 
-기본적인 RNN 셀이 PyTorch에서 어떻게 구현되는지, 그리고 시퀀스에 대해 어떻게 루프를 도는지 살펴보겠습니다.
+녹음 한 개당 은닉 상태로 숫자 하나만 둡니다. `red`는 $+1$, `blue`는 $-1$, `wait`와 `ready`는 둘 다 0으로 입력합니다. 입력과 직전 상태에 곱하는 가중치를 각각 1로 두고 편향을 빼면, 초깃값 $h_0=0$에서 매번 $h_t=\tanh(h_{t-1}+x_t)$만 계산하면 됩니다. 아래 코드는 두 녹음을 한 배치에 담아 CPU에서 계산합니다. 학습 없이도 손으로 검산할 수 있게 가중치를 직접 정했습니다. [[5]](#ref-5)
 
 ```python
 import torch
-import torch.nn as nn
+from torch import nn
 
-class SimpleRNN(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size):
-        super(SimpleRNN, self).__init__()
-        self.hidden_size = hidden_size
+cell = nn.RNNCell(input_size=1, hidden_size=1, bias=False)
+steps = torch.tensor([[1., -1.], [0., 0.], [0., 0.]])
+hidden = torch.zeros(2, 1)
 
-        # RNN 셀 연산
-        self.i2h = nn.Linear(input_size + hidden_size, hidden_size)
-        self.i2o = nn.Linear(input_size + hidden_size, output_size)
-        self.tanh = nn.Tanh()
-        self.softmax = nn.LogSoftmax(dim=1)
-
-    def forward(self, input, hidden):
-        # 입력과 은닉 상태를 연결 (concatenate)
-        combined = torch.cat((input, hidden), 1)
-        hidden = self.tanh(self.i2h(combined))
-        output = self.i2o(combined)
-        output = self.softmax(output)
-        return output, hidden
-
-    def initHidden(self):
-        return torch.zeros(1, self.hidden_size)
-
-# 사용 예시
-input_size = 5  # 예: 원-핫 벡터 크기
-hidden_size = 10
-output_size = 5
-
-rnn = SimpleRNN(input_size, hidden_size, output_size)
-
-# 3개 단어의 시퀀스 시뮬레이션
-seq_len = 3
-hidden = rnn.initHidden()
-
-# 무작위 입력 시퀀스 (seq_len, batch_size, input_size)
-sequence = torch.randn(seq_len, 1, input_size)
-
-for i in range(seq_len):
-    output, hidden = rnn(sequence[i], hidden)
-    print(f"Step {i+1} Output shape:", output.shape)
-    print(f"Step {i+1} Hidden shape:", hidden.shape)
+with torch.no_grad():
+    cell.weight_ih.fill_(1.)
+    cell.weight_hh.fill_(1.)
+    for inputs in steps:
+        hidden = cell(inputs.reshape(2, 1), hidden)
+        print([round(value, 3) for value in hidden[:, 0].tolist()])
 ```
 
----
+출력은 차례로 `[0.762, -0.762]`, `[0.642, -0.642]`, `[0.566, -0.566]`입니다. `ready`까지 읽어도 부호만 보면 처음 색깔을 구분할 수 있습니다. 이번에는 직전 상태에 곱하는 가중치 `weight_hh`를 0으로 바꿔 보세요. `wait`가 들어오자마자 두 은닉 상태가 모두 0이 됩니다. 처음 색깔을 구별하던 단서가 이 시점에서 사라집니다.
 
-## 예제: RNN의 흐려지는 기억 (Fading Memory)
+<a id="예제-rnn의-흐려지는-기억-fading-memory"></a>
 
-단어가 처리됨에 따라 은닉 상태가 어떻게 변하는지 시각화해 보세요. 단어가 추가될수록 초기 단어의 영향력이 어떻게 줄어드는지 확인할 수 있습니다 (기울기 소실 문제의 변형).
+## 예제: RNN의 흐려지는 기억
+
+두 녹음을 `wait`까지 따라가 보세요. 직전 상태에 곱하는 가중치가 1이면 이때도 두 녹음을 구별할 수 있습니다. 녹음의 처음부터 이 가중치를 0으로 두었다면 `ready`에서 두 상태의 값은 각각 얼마일까요? 먼저 답을 예상하고 아래에서 확인해 보세요.
 
 <RnnMemoryVisualizer client:load lang="ko" />
-
----
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: 왜 n-gram 모델은 마르코프적이라고 간주됩니까?</summary>
-*n-gram 모델은 이전 $n-1$개 토큰의 고정된 창(window)만을 기반으로 다음 토큰을 예측하기 때문입니다. 이 창을 벗어난 과거는 미래에 영향을 미치지 않는다고 가정하며, 이는 마르코프 모델의 핵심 가정입니다.*
+<summary>Quiz 1: 트라이그램이 두 녹음에서 똑같은 분포를 내놓는 이유는 무엇일까요?</summary>
+*두 녹음 모두 마지막 두 토큰이 `wait ready`입니다. 트라이그램은 이 두 토큰으로 다음 토큰의 분포를 정하므로 두 녹음의 앞부분을 구별할 수 없습니다.*
 </details>
 
 <details>
-<summary>Quiz 2: RNN에서 은닉 상태(hidden state)의 목적은 무엇입니까?</summary>
-*은닉 상태는 네트워크의 메모리 역할을 합니다. 이전 시간 단계의 정보를 전달하고 이를 현재 입력과 결합하여 현재 은닉 상태와 출력을 생성합니다. 이를 통해 네트워크는 시퀀스 데이터를 처리하고 시간적 종속성을 캡처할 수 있습니다.*
+<summary>Quiz 2: 상태가 두 개인 마르코프 모델로 천 번의 대기 신호 뒤에도 색깔을 기억할 수 있을까요?</summary>
+*가능합니다. 색깔마다 상태를 하나씩 배정하고 대기 신호가 들어오면 현재 상태에 머물도록 합니다. 무엇을 상태에 담는지가 어떤 정보를 보존할지 결정합니다.*
 </details>
 
 <details>
-<summary>Quiz 3: 표준 RNN은 무한한 길이의 시퀀스를 처리할 수 있습니까?</summary>
-*이론적으로는 동일한 연산이 각 시간 단계에서 재귀적으로 적용되므로 가능합니다. 하지만 실제로는 메모리가 빠르게 사라지고(기울기 소실) 수치적 불안정성으로 인해 매우 긴 시퀀스에 대한 학습이 불가능합니다.*
+<summary>Quiz 3: 셀이 백만 토큰을 읽을 수 있다면 마지막 예측에 대해 무엇을 알 수 있을까요?</summary>
+*갱신 연산을 백만 번 반복할 수 있다는 점만 알 수 있습니다. 첫 토큰의 영향이 남는지 보려면 첫 토큰만 바꾸고 나머지는 그대로 다시 입력해 마지막 예측을 비교해야 합니다.*
 </details>
 
 <details>
-<summary>Quiz 4: 바이그램(bigram) 모델과 RNN의 가장 큰 차이점은 무엇인가요?</summary>
-*바이그램 모델(1차 마르코프 체인)은 다음 단어를 예측하기 위해 바로 이전의 단어 하나만을 확인합니다. 반면 RNN은 은닉 상태를 통해 시퀀스의 모든 이전 단어로부터 정보를 잠재적으로 유지할 수 있습니다. 다만 실제로는 매우 긴 범위의 종속성을 처리하는 데 어려움을 겪습니다.*
+<summary>Quiz 4: 두 은닉 상태가 다른데도 출력층이 처음 색깔을 구분하지 못하는 경우가 있을까요?</summary>
+*출력층의 가중치가 전부 0이면 편향만으로 확률이 정해집니다. 은닉 상태가 달라도 예측 분포는 같습니다.*
 </details>
 
 <details>
-<summary>Quiz 5: 왜 RNN은 CNN이나 트랜스포머에 비해 병렬화가 어렵나요?</summary>
-*RNN은 시간 단계 $t$에서의 계산이 시간 단계 $t-1$의 은닉 상태에 의존하기 때문에 병렬화가 어렵습니다. 이러한 순차적 종속성으로 인해 시퀀스의 모든 요소를 한 번에 처리할 수 없으며, 이는 연산을 시퀀스 길이에 따라 병렬화할 수 있는 CNN이나 트랜스포머와 대조적입니다.*
+<summary>Quiz 5: 녹음 두 개는 동시에 처리하면서 한 녹음의 토큰은 왜 차례로 처리할까요?</summary>
+*녹음마다 은닉 상태가 따로 있어 다른 녹음의 계산을 기다릴 필요가 없습니다. 한 녹음 안에서는 직전 시점에 구한 상태가 있어야 다음 시점을 계산할 수 있습니다.*
 </details>
 
 <details>
-<summary>Quiz 6: BPTT의 야코비안 곱에서 어떤 조건이 기울기 소실의 충분조건인가요?</summary>
-*열벡터 상태에서 $J_j=\operatorname{diag}(1-h_j^2)W_{hh}$ 이고 $\partial h_t/\partial h_k=J_t\cdots J_{k+1}$ 입니다. 모든 연산자 norm이 $\|J_j\|_2\le\rho<1$ 이면 곱의 norm은 $\rho^{t-k}$ 이하로 수축합니다. 각 행렬의 고유값만으로 비가환 곱의 거동을 증명할 수는 없습니다. 손실의 열벡터 그래디언트에는 이 곱의 전치를 적용합니다.*
+<summary>Quiz 6: BPTT에서 야코비안의 곱이 작아지는 충분조건은 무엇일까요?</summary>
+*은닉 상태를 열벡터로 쓰면 $j$번째 상태를 직전 상태로 미분한 야코비안은 $J_j=\operatorname{diag}(1-h_j^2)W_{hh}$입니다. 제곱은 원소별 연산입니다. $k$시점의 상태가 $t$시점까지 전달되는 경로를 미분하면 $J_t\cdots J_{k+1}$입니다. 각 행렬의 연산자 노름이 $\|J_j\|_2\le\rho<1$을 만족하면 곱의 노름은 최대 $\rho^{t-k}$입니다. 역전파에서는 이 곱을 전치해 손실의 기울기에 곱합니다.*
 </details>
-
----
 
 ## References
 
-1. <a id="ref-1"></a>Rosenblatt, F. (1958). *The perceptron: a probabilistic model for information storage and organization in the brain*. Psychological review, 65(6), 386.
-2. <a id="ref-2"></a>Rumelhart, D. E., Hinton, G. E., & Williams, R. J. (1986). *Learning representations by back-propagating errors*. Nature, 323(6088), 533-536.
-3. <a id="ref-3"></a>Lipton, Z. C., Berkowitz, J., & Elkan, C. (2015). *A Critical Review of Recurrent Neural Networks for Sequence Learning*. [arXiv:1506.00019](https://arxiv.org/abs/1506.00019).
-4. <a id="ref-4"></a>**추천 영상**: [StatQuest: Recurrent Neural Networks (RNNs)](https://www.youtube.com/watch?v=UN7O424H8dM) RNN의 작동 원리를 특유의 직관적인 시각화로 설명한 영상입니다.
+1. <a id="ref-1"></a>Markov, A. A. (1913). [An Example of Statistical Investigation of the Text *Eugene Onegin* Concerning the Connection of Samples in Chains](https://doi.org/10.1017/S0269889706001074). 영어 번역본, *Science in Context* (2006).
+2. <a id="ref-2"></a>Elman, J. L. (1990). [Finding Structure in Time](https://cogsci.ucsd.edu/~rik/courses/readings/elman90-fsit.pdf). *Cognitive Science*, 14, 179–211.
+3. <a id="ref-3"></a>Olah, C. (2015). [Understanding LSTM Networks](https://colah.github.io/posts/2015-08-Understanding-LSTMs/).
+4. <a id="ref-4"></a>Bengio, Y., Simard, P., & Frasconi, P. (1994). [Learning Long-Term Dependencies with Gradient Descent Is Difficult](https://pubmed.ncbi.nlm.nih.gov/18267787/). *IEEE Transactions on Neural Networks*, 5, 157–166.
+5. <a id="ref-5"></a>PyTorch. [RNNCell](https://docs.pytorch.org/docs/2.15/generated/torch.nn.RNNCell.html).

@@ -11,7 +11,7 @@
 
 ### **Chapter 2: The Sequence Modeling Era**
 
-* **2.1 Markov Chains to RNNs:** 시계열 데이터 처리를 위한 초기 접근법.
+* **2.1 Markov Chains to RNNs:** 같은 두 단어로 끝나는 녹음을 트라이그램과 PyTorch 순환 신경망에 넣어 예측에 쓰이는 정보를 비교합니다.
 * **2.2 Vanishing & Exploding Gradients:** RNN의 고질적 문제와 LSTM/GRU의 해결책.
 * **2.3 The Dawn of Attention:** red fox의 프랑스어 번역에서 가산 어텐션과 점곱의 원문 가중치·문맥 벡터를 계산하고 PyTorch로 검산.
 * **2.4 CNNs for NLP:** 일곱 토큰을 읽는 TextCNN 필터로 어순과 최대 풀링의 관계를 살펴보고 패딩이 섞인 배치를 PyTorch로 검증.
@@ -125,7 +125,7 @@
 * **14.1 From Lexical to Semantic Search:** 지원 문서 네 개에서 동의어와 식별자를 검색해 BM25와 코사인 점수를 비교하고 문서 분할의 영향을 확인.
 * **14.2 Vector Indexing & DB Solutions:** HNSW, ScaNN 등 벡터 인덱싱 알고리즘 비교 및 상용 벡터 DB 솔루션.
 * **14.3 Advanced Retrieval & Reranking:** 하이브리드 검색, Bi-encoder와 Cross-encoder를 이용한 리랭킹(BERT와의 연결), 쿼리 변환(HyDE 등).
-* **14.4 RAG Orchestration:** Self-RAG, Corrective RAG (CRAG) 등 복합 워크플로우.
+* **14.4 RAG Orchestration:** 약관과 개인 갱신 기록을 조회하는 예로 라우팅, 문맥 예산, 검색 종료 조건을 살펴봅니다.
 * **14.5 GraphRAG & Ontology:** 그래프 탐색에서 동점을 받은 CEO와 거래처를 구분하고, 답을 뒷받침하는 관계와 원문을 추적.
 * **14.6 RAG Failure Modes and Operational Design:** 검색 실패, 오래된 문서, 라우팅 불확실성, 리랭커 타임아웃 같은 운영 이슈와 방어 설계.
 * **Summary:** 외부 지식을 실시간으로 참조하여 모델의 할루시네이션(환각)을 줄이는 검색 증강 생성 기술을 다룹니다.

@@ -271,10 +271,10 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 1.3 | `/chapter-1/deep-learning-paradigms` | Inspected 2026-11-25 | 1aa8d28c79625d3e4be36b6e46ce2b2c86b63c9c53dd0db9ac608a41c59975cb | c4a90dc9fd17d0663a430eb4e665bbe961cfe618a1e17b74d6bf2b463aee5d67 |
 | 1.4 | `/chapter-1/bitter-lesson` | Inspected 2026-11-25 | a9734cd48043475a436dce8ac4bf6dcb9695e12adb0c518f95cc022c5b926370 | 8ef44e8465f5b8d8cb23f7e97b9192f976d086b6aee03d576c860691ca039c0e |
 | 1.5 | `/chapter-1/learning-path-and-mastery` | Inspected 2026-11-17 | 0f8f04bb12ad70521b3c701fae89e83133b936a5d28d74a07b17d6a0f9d55c12 | 7afd35142e5986833e81c484c1c3d7fe0b717d7d728be32693fb4ec93a0ff029 |
-| 2.1 | `/chapter-2/markov-chains-to-rnns` | Inspected 2026-11-15 | 0ce137827271786ce59fbb687ede850189b1842843a7e11d9420e8d51da672c8 | 0d4b5440f58a02205e9c981af00a3d028f6e7081b2923f0a609a0f0f9e581e2a |
+| 2.1 | `/chapter-2/markov-chains-to-rnns` | Inspected 2026-11-25 | e22a9fc9937c5f2484b77344235ddad1ce661a3e5b8dafc23a618959c7612fe2 | 48a1c052e2261bde6058fb0f204ce413ae7e03acddd6b95d6ef1a4628ce96079 |
 | 2.2 | `/chapter-2/vanishing-exploding-gradients` | Inspected 2026-11-15 | f883974659fb302e235151e51e0cffb5a6f9418089342fa6be149d94c207ffac | 7a4baf6b5be2bf9ff72621f15581483e6595c47296cb169d5d1c03395b882385 |
 | 2.3 | `/chapter-2/dawn-of-attention` | Inspected 2026-11-25 | 9d4d10844df85b73e86171a5d6e2fca5ba60492e9c8c588b91cda52c9035b7c3 | 0c1ee582b7fa825c0e51faf268d0b585210bd10aa7a2aa7b75700ecd2b0f9506 |
-| 2.4 | `/chapter-2/cnns-for-nlp` | Inspected 2026-11-25 | 3ea1f3cff839b4a390d8a98af7bf540f1367736bdb09d50869c6a05ba369437c | a44815cf317e2f8a2e4068d1a8584eafc24a81e5c85c4d7e5a09f8ff5c481aa6 |
+| 2.4 | `/chapter-2/cnns-for-nlp` | Inspected 2026-11-25 | 325543b031a0af62c68dc5d50185a3dd4c5dfe74c698f4c5c5039897216837be | 46fed3ed8a21f06a1f93875d4c4fa18e3fe3efdd9cb27d7ac3b7b9432ba05fe8 |
 | 3.1 | `/chapter-3/self-attention-mathematics` | Inspected 2026-11-25 | 66d78404bf11b7765a62237eb7a1e685ae13c39b5bb2a4cc5e81653ecc0fe783 | 675e58f127fc9e2618f2dbd556d554e72576fbcb8c0a3032398d6839eaf2b6df |
 | 3.2 | `/chapter-3/multi-head-attention` | Inspected 2026-11-25 | bc5026a7ec1b9aa4d5bc4589f7f6011630bc877efcb8d179954ee0560d8a705f | 4316a26ed2c414ccdb0c4f4ad6642d98286b9350748fd362920a1d183cac8b68 |
 | 3.3 | `/chapter-3/position-encoding-strategy` | Inspected 2026-11-25 | 3bf657d00573be4a6ad6b8384b52e2451d7535a8087d12ae4b90478de7f520b7 | b41b53f6f42b514e50bde14247d432181b57acf5f4eb1c6cefd17a57fb819884 |
@@ -337,7 +337,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 14.1 | `/chapter-14/lexical-to-semantic-search` | Mechanical only | 574d2f06bca9f1e9abfb7f9dc24e53fa7663593dc2b2c639166427c55a192525 | 1325e1a8df962341a047b9d4eed6316547d3924ff664f0328d02d2f8166df949 |
 | 14.2 | `/chapter-14/vector-indexing-and-db-solutions` | Mechanical only | b05cb9aae6df7f6e0cd6fe781d78745f295de704e51b507520b787435b2aa576 | 1267760b1088795e8ca2d69ac2cee83ead1a36c748fe2a02d073e9f46019af8e |
 | 14.3 | `/chapter-14/advanced-retrieval` | Inspected 2026-11-25 | 9d36c4745fed765a1bc1d313e25a34dcff6d3a98454117ed3f068b5011014de5 | 3fd737ee0f924360584f111037eb2eea565eb57df15498251914528cae92396a |
-| 14.4 | `/chapter-14/rag-orchestration` | Inspected 2026-11-15 | c0415652280790508493840235e671903d660547416bc0bf3a73aba796039dd8 | 71eb996863fcf49fa62bc979e9167173c39fec0312811f89ac3095eca414b283 |
+| 14.4 | `/chapter-14/rag-orchestration` | Inspected 2026-11-25 | da01996eb65c39df3866cf23dc3831a4707ed3b9687c025eca9a7d6897b063cb | 4d34716b838c5514941a298fb0e7bce2f8a5babdf2b7cc30cfb718347cc8a2f8 |
 | 14.5 | `/chapter-14/graphrag-and-ontology` | Inspected 2026-11-25 | 1d56da922b530c30f04507318a0384f06ab78fde769574a20d96de1d2777026e | 0a9106cf60adb75afe3e3dd465c6c642b79fe2153b696ad812a7cc9e745cb780 |
 | 14.6 | `/chapter-14/rag-failure-modes-and-operational-design` | Inspected 2026-11-25 | c72856114d2cb84479aafdc3b30c627c29b5aef1166e94797f37f2694fdf81ac | 8087cbcf0189649a93b9ae5cd534eebce28cb31bbfdeed8359f7cd5d1d4583f5 |
 | 15.1 | `/chapter-15/chain-of-thought` | Inspected 2026-11-18 | dfa755568cbd54f3636f06ca66bc5a279f0d5f54f81d0589f4293abdabc5979b | 217a9074408e2c33d9405b96de888fd38d7b46a996ca24cffb9ce5056c16bf55 |

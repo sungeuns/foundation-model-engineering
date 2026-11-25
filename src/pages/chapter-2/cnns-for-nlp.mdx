@@ -115,9 +115,15 @@ ids = torch.tensor([[1, 2, 3, 4, 5]])
 batch = torch.tensor([[1, 2, 3, 4, 5, 0, 0], [5, 4, 3, 2, 1, 6, 7]])
 with torch.no_grad():
     torch.testing.assert_close(model(ids)[0], model(batch, lengths=[5, 7])[0])
+    # Encode "on" as 1 and "off" as 2.
+    logs = torch.tensor([[1, 2, 1, 2, 1, 2], [2, 1, 2, 1, 2, 1]])
+    logits = model(logs)
+    torch.testing.assert_close(logits[0], logits[1])
 ```
 
 ## From local receptive fields to global attention
+
+Could this classifier tell whether a switch ended on or off? Compare the six-token logs `on off on off on off` and `off on off on off on`. Each log has the same two width-5 windows, one starting with `on` and one with `off`. At widths 3 and 4 both starting patterns occur as well. Every filter in the classifier above therefore sees the same set of windows and returns the same maximum for both logs, whatever weights it learns. The final switch states differ. For this task, reading the last valid token would settle the question.
 
 Stacking $L$ convolution layers of width $k$ and stride one, without dilation, gives each output a receptive field spanning $1+L(k-1)$ input positions. Dilation spaces filter taps farther apart. ByteNet used dilated convolutions for character-level translation [[3]](#ref-3). WaveNet used causal dilated convolutions for autoregressive audio generation [[4]](#ref-4). A one-layer TextCNN classifier instead aggregates local detections with global pooling. That lets a detection anywhere affect the label while losing its position.
 
