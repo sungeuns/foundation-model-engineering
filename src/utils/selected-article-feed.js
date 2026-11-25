@@ -6,7 +6,8 @@ export async function selectedArticleFeed({ lang, site = book.url, articles }) {
   const ko = lang === 'ko';
   const prefix = ko ? '/ko' : '';
   const base = getBasePath();
-  const home = new URL(withPagePath(prefix || '/', base), site);
+  const collection = new URL(withPagePath(prefix || '/', base), site);
+  collection.hash = 'short-reads';
   const self = new URL(withBasePath(prefix + '/articles.xml', base), site);
   const items = await Promise.all(articles.map(async ({ source, path, keepChapterGuid }) => {
     const { title, chapter, anchor, firstPublished, description, tags } = source.frontmatter;
@@ -30,7 +31,7 @@ export async function selectedArticleFeed({ lang, site = book.url, articles }) {
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
     <title>${ko ? '파운데이션 모델 엔지니어링 — 짧은 기술 글' : 'Foundation Model Engineering — Selected articles'}</title>
-    <link>${escapeXml(home.href)}</link>
+    <link>${escapeXml(collection.href)}</link>
     <description>${ko ? '파운데이션 모델 엔지니어링 실험을 코드와 측정값으로 풀어 쓴 한국어 글입니다.' : 'Standalone articles from Foundation Model Engineering, with worked examples and reproducible experiments.'}</description>
     <language>${lang}</language>
     <atom:link href="${escapeXml(self.href)}" rel="self" type="application/rss+xml" />

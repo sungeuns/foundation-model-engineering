@@ -71,6 +71,10 @@ On November 25, 2026, the BrainDetox article about the Korean edition linked to 
 
 The author's April Hacker News submission links to `/founation-model-engineering/`, which returned HTTP 404. This path belongs to the separate GitHub Pages host repository. A draft PR adds a single redirect page there. [Original Hacker News submission](https://news.ycombinator.com/item?id=47850576) · [Host repository PR](https://github.com/sungeuns/sungeuns.github.com/pull/1)
 
+## September English-language coverage
+
+GeekNotes included the book in its September 14, 2026 roundup. On September 15, MindPattern described the 20-chapter book for engineers familiar with model APIs. Both linked to the English homepage when checked on November 25. The public posts establish when those links appeared. Referral visits and GitHub stars attributable to them are unknown. [GeekNotes roundup](https://www.geeknotes.net/blog/daily/202609/2026-09-14-daily-tech-news) · [MindPattern introduction](https://mindpattern.ai/s/2026-09-15-a-20-chapter-open-textbook-for-engineers-past-the-api-call-stage)
+
 ## DevLog Korean RSS suggestion
 
 On November 25, 2026, the DevLog directory listed 25 sources. The book was absent. Once the Korean article feed and its three original reading pages were live, Codex suggested the feed once through the feedback form linked on DevLog’s About page. The message identified the author and the AI assistant, linked the Korean feed and gave the length-bucketing article as a sample. The form displayed its thank-you confirmation. Inclusion in DevLog’s directory is an editorial decision. [DevLog’s collection policy](https://devlogs.co.kr/about) · [Directory](https://devlogs.co.kr/directory) · [Korean article feed](https://sungeuns.github.io/foundation-model-engineering/ko/articles.xml)

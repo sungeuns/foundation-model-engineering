@@ -178,9 +178,13 @@ test('every built page has canonical, reciprocal language links, and a local soc
     if (route !== '/' && route !== '/ko') {
       const home = absolute(lang === 'ko' ? '/ko' : '/');
       const chapter = chapters.find(ch => ch.subs.some(sub => sub.path === en));
-      const expected = chapter ? [home, home + '#chapter-' + chapter.id, absolute(route)] : [home, absolute(route)];
+      const expected = [home];
+      if (chapter) expected.push(home + '#chapter-' + chapter.id);
+      if (articles.includes(route)) expected.push(home + '#short-reads');
+      expected.push(absolute(route));
       const items = breadcrumb.itemListElement;
       assert.deepEqual(items.map(item => item.item), expected, route);
+      if (articles.includes(route)) assert.equal(items[1].name, lang === 'ko' ? '짧은 글' : 'Short reads', route);
       assert.deepEqual(items.map(item => item.position), expected.map((_, i) => i + 1), route);
       const trail = html.match(/<nav class="breadcrumbs"[^>]*>([\s\S]*?)<\/nav>/)[1];
       const list = parseFragment(trail).childNodes.find(node => node.tagName === 'ol');

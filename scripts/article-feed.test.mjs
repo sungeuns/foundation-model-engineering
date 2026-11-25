@@ -44,7 +44,8 @@ print(json.dumps([self_link.attrib['href'], [hub.attrib['href'] for hub in hubs]
 }
 
 test('the selected feed imports a complete, runnable article under its new permalink and keeps the original GUID', () => {
-  const [self, hubs, items] = readSelectedFeed();
+  const [self, hubs, items, , collection] = readSelectedFeed();
+  assert.equal(collection, base + '#short-reads');
   assert.equal(self, base + 'articles.xml');
   assert.deepEqual(hubs, [chapterFeedHub]);
   const item = items.find(post => post.link === bucketingArticle);
@@ -197,9 +198,9 @@ test('the loop-cache article preserves the measured bytes and points to the bili
 });
 
 test('Korean subscribers receive each short article with local permalinks, code and measurements', () => {
-  const [self, hubs, items, language, home] = readSelectedFeed('ko/');
+  const [self, hubs, items, language, collection] = readSelectedFeed('ko/');
   assert.equal(language, 'ko');
-  assert.equal(home, base + 'ko/');
+  assert.equal(collection, base + 'ko/#short-reads');
   assert.equal(self, base + 'ko/articles.xml');
   assert.deepEqual(hubs, [chapterFeedHub]);
   assert.deepEqual(items.map(item => item.link).sort(),

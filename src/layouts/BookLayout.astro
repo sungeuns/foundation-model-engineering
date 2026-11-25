@@ -136,11 +136,16 @@ const structuredData = {
     },
   }),
 };
+const shortReadRoutes = articleRoutes(lang);
 const breadcrumbItems = [
   { name: isKo ? '홈' : 'Home', href: toHref(homePath) },
   ...(currentChapter ? [{
     name: currentChapter.title[lang],
     href: `${toHref(homePath)}#chapter-${currentChapter.id}`,
+  }] : []),
+  ...(shortReadRoutes.includes(currentPath) ? [{
+    name: isKo ? '짧은 글' : 'Short reads',
+    href: `${toHref(homePath)}#short-reads`,
   }] : []),
   { name: contentTitle, href: toHref(currentPath) },
 ];
@@ -234,7 +239,7 @@ if (currentIndex !== -1) {
       <div id="contentsSearch" hidden>
         <label class="chapter-search-label" for="chapterSearch">{isKo ? '교재 검색' : 'Search the book'}</label>
         <input id="chapterSearch" data-index-url={withBasePath(`/search/${lang}.json`, basePath)}
-          data-article-paths={JSON.stringify(articleRoutes(lang).map(toHref))}
+          data-article-paths={JSON.stringify(shortReadRoutes.map(toHref))}
           type="search" placeholder={isKo ? '예: GLM-5.4, 첫 토큰 지연' : 'e.g. GLM-5.4, first token'} autocomplete="off" />
       </div>
       <div id="contentsLinks">
