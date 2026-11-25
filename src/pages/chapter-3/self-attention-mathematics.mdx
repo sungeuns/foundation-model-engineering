@@ -30,47 +30,28 @@ In self-attention every position supplies all three vectors. A causal mask limit
 
 ## From Embeddings to Q, K, V: Linear Projections
 
-In practice, we don't use the input word embeddings directly as Queries, Keys, and Values. Instead, we project them into different spaces using learnable weight matrices.
+Each row of $X$ describes one token at the input to this layer. If there are $T$ tokens with $d_{model}$ coordinates each, $X$ has shape $T \times d_{model}$. A head learns three projections:
 
-Given an input sequence represented as a matrix $X \in \mathbb{R}^{T \times d_{model}}$, where $T$ is the sequence length and $d_{model}$ is the embedding dimension:
+$$Q=XW_Q,\qquad K=XW_K,\qquad V=XW_V.$$
 
-$$Q = XW_Q$$
-$$K = XW_K$$
-$$V = XW_V$$
+$W_Q$ and $W_K$ have shape $d_{model} \times d_k$, so a query and a key have the same width $d_k$ and can be compared by a dot product. $W_V$ has shape $d_{model} \times d_v$. Choosing $d_v$ sets the width of the information a head can return.
 
-Where the learnable weight matrices are:
-*   $W_Q \in \mathbb{R}^{d_{model} \times d_k}$
-*   $W_K \in \mathbb{R}^{d_{model} \times d_k}$
-*   $W_V \in \mathbb{R}^{d_{model} \times d_v}$
+<figure style={{ maxWidth: '28rem', margin: '1.2rem auto' }}>
 
-**Why do we do this?**
-Using $X$ for all three roles would tie “what to look for,” “how to be found,” and “what to return” to the same representation. Separate learned projections let those roles differ. In deeper layers, $X$ already contains contextual information from earlier layers; it is not necessarily a table of static word embeddings.
+![In each of three rows, the same 2-by-4 input matrix multiplies a different 4-by-3 weight matrix, producing two queries, two keys or two values.](../../assets/images/chapter-3/self-attention-matrix-calculation.png)
+
+<figcaption>Both rows of the input keep their own positions through all three projections. The next operation compares positions. <a href="https://jalammar.github.io/illustrated-transformer/#matrix-calculation-of-self-attention">Jay Alammar, <cite>The Illustrated Transformer</cite></a> · <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a>.</figcaption>
+</figure>
 
 ---
 
 ## The Mathematics of Scaled Dot-Product Attention
 
-The core operation of Self-Attention is the **Scaled Dot-Product Attention**. Given a set of Queries, Keys, and Values packed into matrices $Q, K,$ and $V$, the operation is defined as:
+Compare each query with every key, then use those scores to mix the values. For a sequence of $T$ tokens the full calculation is
 
 $$\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V$$
 
-<div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', margin: '20px 0' }}>
-
-<div style={{ maxWidth: '600px', width: '100%' }}>
-![Query–key matrix multiplication, scaling and softmax produce the weights used to mix the value vectors.](../../assets/images/chapter-3/self-attention-matrix-calculation.png)
-</div>
-
-<em style={{ marginTop: '10px', color: '#7f8c8d' }}>Source: [The Illustrated Transformer by Jay Alammar](https://jalammar.github.io/illustrated-transformer/)</em>
-
-</div>
-
-Where:
-*   $Q \in \mathbb{R}^{T \times d_k}$ (Matrix of Queries)
-*   $K \in \mathbb{R}^{T \times d_k}$ (Matrix of Keys)
-*   $V \in \mathbb{R}^{T \times d_v}$ (Matrix of Values)
-*   $T$ is the sequence length.
-*   $d_k$ is the dimension of the keys (and queries).
-*   $\sqrt{d_k}$ is the scaling factor.
+Each row of $QK^T$ contains $T$ scores for one query. Softmax acts across that row. Multiplication by $V$ then gives one output vector of width $d_v$ for each of the $T$ queries.
 
 ### Step-by-Step Breakdown
 
@@ -81,7 +62,25 @@ Where:
 
 ---
 
+<a id="context-projection"></a>
+
+### When does “cat” first depend on the word before it?
+
+Pass `red cat` and `blue cat` through the base SmolLM2-135M checkpoint. With special tokens disabled, each phrase has two tokens. In both, the second token has ID 2644. Record the largest absolute difference between matching coordinates at that position. [[3]](#ref-3)
+
+| Where the script measures “cat” | Largest difference |
+| --- | ---: |
+| First layer, Q / K / V projections (before rotary position encoding for Q and K) | 0 / 0 / 0 |
+| First layer, attention output after the output projection | 0.08247 |
+| Second layer, Q projection | 0.20685 |
+
+The first query is identical in both runs, but the key at the **earlier** position changed. In head 0 the final query assigns 0.3381 of its weight to `red` and 0.3990 to `blue`. Mixing the values changes what reaches the next layer. Reverse the experiment by replacing `red cat` with `red dog` and observing the first token instead. At `red`, all five differences stay zero because its causal attention cannot read the changed suffix.
+
+<a href={withBasePath('/labs/context_projection.py')} download>Reproduce the comparison on CPU (Python)</a> · <a href={withBasePath('/labs/2026-11/context-projection.json')} download>Inspect token IDs, head weights and measured differences (JSON)</a>. These measurements describe two-token inputs in FP32. They establish where the representations diverge in this example. A head’s weight alone cannot tell you whether the model understood the color.
+
 ## PyTorch Implementation
+
+For a calculation you can do by hand, use the four tokens in `The cat sat here` and assign their vectors explicitly. Give “cat” the query $[1,1]$ and use the keys $[1,0]$, $[1,1]$, $[0,1]$ and $[-1,0]$ in sentence order.
 
 For the query at “cat,” the four raw dot products are 1, 2, 1 and −1. After scaling by $1/\sqrt{2}$ and masking future keys, only “The” and “cat” compete. Their weights are about 0.3302 and 0.6698. Multiplying by their values, $[1,0]$ and $[0,2]$, gives $[0.3302,1.3395]$. Open the mask to all four keys and the output becomes about $[0.6455,1.2407]$. You can reproduce both rows with the controls below at temperature 1.
 
@@ -159,3 +158,4 @@ Here each query used one set of weights for both value coordinates. In the [two-
 
 1. <a id="ref-1"></a>Vaswani, A., et al. (2017). *Attention is all you need*. In Advances in neural information processing systems (pp. 5998-6008). [arXiv:1706.03762](https://arxiv.org/abs/1706.03762).
 2. <a id="ref-2"></a>PyTorch. [Scaled dot product attention, PyTorch 2.15](https://docs.pytorch.org/docs/2.15/generated/torch.nn.functional.scaled_dot_product_attention.html).
+3. <a id="ref-3"></a>Hugging Face TB. [SmolLM2-135M base checkpoint and configuration](https://huggingface.co/HuggingFaceTB/SmolLM2-135M/tree/93efa2f097d58c2a74874c7e644dbc9b0cee75a2).

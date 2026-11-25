@@ -4,11 +4,12 @@ title: 6.3 Large-scale Training Stability
 lang: en
 ---
 
+import replaySource from '../../components/chapter-6/loss_replay.py?url&no-inline';
 import LossSpikeSimulator from '../../components/chapter-6/LossSpikeSimulator.tsx';
 
 # 6.3 Large-scale Training Stability
 
-A loss spike is an incident signal, not a root cause. The same curve can be produced by a malformed batch, a mask or label-shift bug, activation growth, low-precision overflow, an optimizer transition, a desynchronized rank, a bad checkpoint, or hardware/storage corruption. A useful stability system preserves enough evidence to distinguish these hypotheses before changing the run.
+A training dashboard reports a sudden jump in loss. You reload the checkpoint and replay the batch. The spike comes back. Has the model become unstable, or did it just receive a different target? The replay below produces the same loss and the same parameter gradient from two different changes. To tell them apart you need to look inside the batch.
 
 Provider reports can show that a particular training stack completed a long run without an unrecoverable spike—for example, the DeepSeek-V3 report describes its own FP8 training outcome [[1]](#ref-1). That is evidence about the reported system, not a guarantee that QK normalization, FP8, or one recipe makes another model rollback-free.
 
@@ -22,10 +23,24 @@ $$
 
 Each component lies in $[-1,1]$. Therefore, one out-of-distribution target token does not directly create an “astronomical” gradient with respect to its final logit. Parameter gradients can still become large because the bounded logit gradient is multiplied by large activations and network Jacobians; accumulation, optimizer state, numerical overflow, or distributed corruption can amplify the effect. This distinction determines what to inspect.
 
-![Signals that can precede a training loss spike](../../assets/images/chapter-6/loss_spike_anatomy.png)
-*Source: AI-generated illustration. Treat the shown trajectory as intuition, not a universal causal sequence.*
+<a id="loss-spike-replay"></a>
 
-Separate four incident classes:
+### Two ways to produce the same spike
+
+Replay five synthetic samples, A through E, with a fixed scalar weight $w=2$. Each sample has one input $x$ and one target $y$. The two class logits are $[0, wx]$. Normally $x=1$ and $y=1$. Change only sample C. On the first replay change its target to 0. On the second replay keep the target and change the input sign to $-1$. The weight stays fixed throughout so an optimizer update cannot change the next sample.
+
+<figure style={{maxWidth: '32rem', margin: '1.5rem auto'}}>
+
+![In both replays, loss rises from 0.127 to 2.127 nats at sample C. The class 1 minus class 0 logit stays at +2 when the target changes and falls to −2 when the input sign changes.](../../assets/images/chapter-6/loss-spike-replay-en.png)
+
+<figcaption>Figure 1. The upper line shows both loss traces. The lower panel shows the signed difference between the two class logits. Drawn with Matplotlib from the CPU PyTorch replay.</figcaption>
+</figure>
+
+At C, the target receives probability $1/(1+e^2)$ in both runs. Cross-entropy is **2.126928 nats** and autograd gives $\partial\mathcal{L}/\partial w=+0.880797$ in both. The reason is $\partial\mathcal{L}/\partial w=(p_1-y)x$, where $p_1$ is the predicted probability of class 1. The target change gives $(0.880797-0)(+1)$, while the input change gives $(0.119203-1)(-1)$. The target ID and the signed logit difference tell the two cases apart. In a real incident, preserve the sample ID, the label after preprocessing and a replayable input before deciding which transform to fix.
+
+<a href={replaySource} download="loss_replay.py">Download the CPU replay (Python)</a>. Run `python loss_replay.py` with PyTorch installed to print both sets of five records. The script checks the two loss and gradient traces to an absolute tolerance of $10^{-12}$ using float64. These are per-example measurements from a two-class model.
+
+For a training run, check four possible sources of a spike.
 
 - **Data/objective:** corrupted text, extreme repetition, wrong labels, lost EOS boundaries, attention or padding-mask mistakes, duplicated packs, unexpected mixture drift.
 - **Optimization:** learning-rate discontinuity, insufficient warmup, clipping regime change, optimizer-state mismatch, excessive effective batch or stale gradients.
@@ -164,11 +179,11 @@ FP8 adds tensor-specific range and scaling state. The E4M3 maximum and chosen bl
 
 ## 8. Interactive: The Loss Spike Simulator
 
-The simulator illustrates how internal norm growth and stabilizers can affect a hypothetical run. It is not an incident classifier; use the evidence and replay workflow above on real training jobs.
+Set the observed step to 50 and switch scenarios. Both show a loss of 5. Move forward eight steps. One curve has begun to recover while the other keeps rising. These two trajectories are constructed examples.
 
 <LossSpikeSimulator client:load />
 
-Stability engineering is successful when the team can detect, localize, reproduce, repair, and safely resume an incident—not merely when a dashboard looks smooth.
+At step 50, what evidence would you preserve before the next optimizer update? Start with the exact batch and the most recent checkpoint that passed a restore test.
 
 ## Quizzes
 

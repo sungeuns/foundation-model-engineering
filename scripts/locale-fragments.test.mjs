@@ -101,6 +101,8 @@ test('shared exercise IDs belong to the same authored content in both translatio
     ['/chapter-17/commercial-model-benchmarks', 'background-completion-cost'],
     ['/chapter-17/commercial-model-benchmarks', 'ling-32-air-context'],
     ['/chapter-2/dawn-of-attention', 'translation-alignment-example'],
+    ['/chapter-3/self-attention-mathematics', 'context-projection'],
+    ['/chapter-6/large-scale-training-stability', 'loss-spike-replay'],
     ['/chapter-2/cnns-for-nlp', 'textcnn-filter-example'],
     ['/chapter-3/position-encoding-strategy', 'positional-encoding-grid'],
     ['/chapter-17/academic-benchmarks', 'pass-at-k-example'],

@@ -377,6 +377,28 @@ test('the OER catalogue opens the localized guide and points to its current EPUB
   }
 });
 
+test('the OER catalogue opens each attention worksheet at the section with its PDF', () => {
+  const records = load(readFileSync('metadata.yml', 'utf8'));
+  for (const [lang, edition] of [['en', ''], ['ko', '/ko']]) {
+    const route = `${edition}/chapter-3/self-attention-mathematics/`;
+    const landing = `${base}${route}#attention-weight-example`;
+    const matches = records.filter(record => record.id === landing);
+    assert.equal(matches.length, 1, landing);
+    const [record] = matches;
+    assert.deepEqual(record.inLanguage, [lang]);
+    assert.deepEqual(record.learningResourceType, ['https://w3id.org/kim/hcrt/worksheet']);
+    const download = new URL(`${base}/labs/attention-worksheet-${lang}.pdf`);
+    assert.deepEqual(record.encoding, [{ type: 'MediaObject', encodingFormat: 'application/pdf', contentUrl: download.href }]);
+
+    const html = readFileSync(`${outputDir}${route}index.html`, 'utf8');
+    const sections = html.split(' id="attention-weight-example"');
+    assert.equal(sections.length, 2, landing);
+    const section = sections[1].split(/<h2\b/)[1];
+    assert.ok(section?.includes(`href="${download.pathname}"`), landing);
+    assert.equal(readFileSync(`${outputDir}/labs/attention-worksheet-${lang}.pdf`).subarray(0, 5).toString(), '%PDF-');
+  }
+});
+
 test('the book and README open the same worked KV budget in each edition', () => {
   for (const edition of ['', '/ko']) {
     const html = readFileSync(`${outputDir}${edition}/index.html`, 'utf8');

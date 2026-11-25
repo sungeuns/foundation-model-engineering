@@ -1,4 +1,4 @@
-import { findSections, normalizeSearchText, readSectionIndex, searchPhrases } from './section-search.js';
+import { findSections, readSectionIndex, searchableText, searchPhrases, termPatterns } from './section-search.js';
 
 export function setupContentsSearch(sidebar: HTMLElement, closeDrawer: () => void) {
   const input = sidebar.querySelector<HTMLInputElement>('#chapterSearch')!;
@@ -10,7 +10,7 @@ export function setupContentsSearch(sidebar: HTMLElement, closeDrawer: () => voi
   const groups = [...sidebar.querySelectorAll<HTMLElement>('.chapter-group')].map(group => ({
     group,
     links: [...group.querySelectorAll<HTMLAnchorElement>('li a')].map(link => ({
-      link, text: normalizeSearchText(link.dataset.search || ''),
+      link, text: searchableText(link.dataset.search || ''),
     })),
   }));
   const paths = new Set(groups.flatMap(({ links }) => links.map(({ link }) => link.pathname)));
@@ -88,12 +88,12 @@ export function setupContentsSearch(sidebar: HTMLElement, closeDrawer: () => voi
 
   function search() {
     const query = input.value.trim();
-    const termSets = searchPhrases(query).map(phrase => phrase.split(' '));
+    const termSets = termPatterns(searchPhrases(query));
     chapterCount = 0;
     for (const { group, links } of groups) {
       let visible = 0;
       for (const { link, text } of links) {
-        const matches = !query || termSets.some(terms => terms.every(term => text.includes(term)));
+        const matches = !query || termSets.some(terms => terms.every(term => term.test(text)));
         link.parentElement!.hidden = !matches;
         if (matches) visible++;
       }

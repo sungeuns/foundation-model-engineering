@@ -1,0 +1,55 @@
+{
+  "model": "HuggingFaceTB/SmolLM2-135M",
+  "revision": "93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
+  "torch": "2.15.0+cpu",
+  "transformers": "5.24.1",
+  "device": "cpu",
+  "dtype": "float32",
+  "prompts": [
+    "red cat",
+    "blue cat",
+    "red dog"
+  ],
+  "token_ids": [
+    [
+      455,
+      2644
+    ],
+    [
+      16591,
+      2644
+    ],
+    [
+      455,
+      2767
+    ]
+  ],
+  "max_abs_delta_at_cat_after_changing_prefix": {
+    "layer0.q_proj": 0.0,
+    "layer0.k_proj": 0.0,
+    "layer0.v_proj": 0.0,
+    "layer0.o_proj": 0.08246917277574539,
+    "layer1.q_proj": 0.20685215294361115
+  },
+  "max_abs_delta_at_red_after_changing_suffix": {
+    "layer0.q_proj": 0.0,
+    "layer0.k_proj": 0.0,
+    "layer0.v_proj": 0.0,
+    "layer0.o_proj": 0.0,
+    "layer1.q_proj": 0.0
+  },
+  "layer0_head0_final_query_weights": [
+    [
+      0.338140070438385,
+      0.6618598699569702
+    ],
+    [
+      0.39896920323371887,
+      0.6010307669639587
+    ],
+    [
+      0.35316142439842224,
+      0.6468385457992554
+    ]
+  ]
+}

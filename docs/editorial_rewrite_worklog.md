@@ -275,7 +275,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 2.2 | `/chapter-2/vanishing-exploding-gradients` | Inspected 2026-11-15 | f883974659fb302e235151e51e0cffb5a6f9418089342fa6be149d94c207ffac | 7a4baf6b5be2bf9ff72621f15581483e6595c47296cb169d5d1c03395b882385 |
 | 2.3 | `/chapter-2/dawn-of-attention` | Inspected 2026-11-25 | 9d4d10844df85b73e86171a5d6e2fca5ba60492e9c8c588b91cda52c9035b7c3 | 0c1ee582b7fa825c0e51faf268d0b585210bd10aa7a2aa7b75700ecd2b0f9506 |
 | 2.4 | `/chapter-2/cnns-for-nlp` | Inspected 2026-11-25 | 3ea1f3cff839b4a390d8a98af7bf540f1367736bdb09d50869c6a05ba369437c | a44815cf317e2f8a2e4068d1a8584eafc24a81e5c85c4d7e5a09f8ff5c481aa6 |
-| 3.1 | `/chapter-3/self-attention-mathematics` | Mechanical only | 45dfc9b6952fe909bf0cb5186bdba1a2a2d787135f4ad7d7f0b21d9934887a72 | ff79c40491b61616307824ec8a574fa980b5e193b938253207a2b998f4893133 |
+| 3.1 | `/chapter-3/self-attention-mathematics` | Inspected 2026-11-25 | 66d78404bf11b7765a62237eb7a1e685ae13c39b5bb2a4cc5e81653ecc0fe783 | 675e58f127fc9e2618f2dbd556d554e72576fbcb8c0a3032398d6839eaf2b6df |
 | 3.2 | `/chapter-3/multi-head-attention` | Inspected 2026-11-25 | bc5026a7ec1b9aa4d5bc4589f7f6011630bc877efcb8d179954ee0560d8a705f | 4316a26ed2c414ccdb0c4f4ad6642d98286b9350748fd362920a1d183cac8b68 |
 | 3.3 | `/chapter-3/position-encoding-strategy` | Inspected 2026-11-25 | fde9e5daa7404ba9c213feaeac0bb80b8e6342ba2164885a911cb7e98ee4a1ef | 37d4d640ad0c9f5edbda4657a564c77931db24b6a455b646ab77eec260bfc51e |
 | 3.4 | `/chapter-3/layer-normalization-residuals` | Inspected 2026-11-25 | a3587f46c53f4796ac71f768e9561130af2c053e394f20d83a1d8f12a6841487 | a69ef3c4fc27e17f5313847ce8003f1b3acb57db1b99557a5354f904818065ba |
@@ -292,7 +292,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 5.5 | `/chapter-5/case-study` | Mechanical only | 233d28301c04e7e23dcd0fcca92bd41c79d09a16fd2a33cf29cc3715df60c1de | a29bae4a04b6688590d092d63d11a3ba43d0a19c6de3f09508e7384eb4f54d1a |
 | 6.1 | `/chapter-6/data-engineering-at-scale` | Inspected 2026-11-15 | c962ed779370d70734cdc1d8dad26fd622732ab5add4b42eb33ca13d4e9e1978 | 196b5d2f730cb1450a5c68054444814151be61cda197d8cad6d5e761caf2e85e |
 | 6.2 | `/chapter-6/tokenization-science` | Mechanical only | 7ba6775126c477f22a17c635ab98ad31750024efc719d1a719edaa46b4acc746 | 1885f6495fb1c739c2dd034c5ea36d8267e97382c90d1e9e97665cc1589d31f4 |
-| 6.3 | `/chapter-6/large-scale-training-stability` | Inspected 2026-11-15 | 233421b292101c94f4746e41c29de6422c5c103333a5c1c6968cfe0cd3cc6604 | 149cc8e85a1db21731313a38038b3f3d23c5fdc16711b51534764c5e4fd2da89 |
+| 6.3 | `/chapter-6/large-scale-training-stability` | Inspected 2026-11-25 | 13d79942a8362d2ba33e34a33d8e955ca62dae5cfbb6bf3efa0a6bc53132fa8d | 56952bb6a5ad0a59fead3570c94c1afec2dd3db49715d00e996e78b9cb91abf9 |
 | 6.4 | `/chapter-6/infrastructure` | Mechanical only | b6d232e0decc655e38767ca986e99f77e30350ea24241c4bbf8e74737e3779b1 | b51344d034e91b490957311ea8525b46aa9ff09ae2f602ed8481a44513546c06 |
 | 6.5 | `/chapter-6/synthetic-data-for-pre-training` | Mechanical only | 3d2bab63db26c5456f88eab0f51e2e7e70ac49d93d868427783f625e4ae166ee | dd5381b0b44cb0223b04f689d010f40ea3349d668ebf9e79c98fe3d3204af54c |
 | 6.6 | `/chapter-6/optimization-mechanics` | Inspected 2026-11-17 | 942111c9629675b61e7af38dd1e0bb94a0dbe0aeff5c9d142fd7c7d0cc167b3e | 948f68b51e05f15a67755538714f595ff03ec214fe3c5d518eb6ebbff8000c22 |

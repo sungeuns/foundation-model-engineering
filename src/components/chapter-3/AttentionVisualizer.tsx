@@ -1,28 +1,34 @@
-import React, { useId, useState } from 'react';
+import React, { useEffect, useId, useState } from 'react';
+import { withBasePath } from '../../utils/paths.js';
 import { attentionTokens, queries, keys, values, calculateAttention } from './attention-example.mjs';
 import './attention-example.css';
 
 export default function AttentionVisualizer({ lang = 'en' }: { lang?: 'en' | 'ko' }) {
   const ko = lang === 'ko';
   const id = useId();
+  const [ready, setReady] = useState(false);
   const [selected, setSelected] = useState(1);
   const [temperature, setTemperature] = useState(1);
   const [causal, setCausal] = useState(false);
+  useEffect(() => setReady(true), []);
   const { scores, weights, output } = calculateAttention(selected, temperature, causal);
   const vector = (v: number[]) => `[${v.map(n => Number.isInteger(n) ? n : n.toFixed(3)).join(', ')}]`;
 
   return <section className="attention-example" aria-labelledby={`${id}-title`}>
     <h3 id={`${id}-title`}>{ko ? '가중치에서 출력 벡터까지' : 'From attention weights to an output vector'}</h3>
-    <p>{ko ? '질의 토큰을 고른 다음, 미래 토큰을 가리거나 점수의 온도를 바꿔 보세요. 모든 가중치와 출력은 아래의 작은 벡터로 직접 계산합니다.' : 'Choose a query token, then hide future tokens or change the score temperature. Every weight and output is calculated from the small vectors below.'}</p>
-    <fieldset className="attention-token-picker">
+    {ready
+      ? <p>{ko ? '질의 토큰을 고른 다음, 미래 토큰을 가리거나 점수의 온도를 바꿔 보세요. 모든 가중치와 출력은 아래의 작은 벡터로 직접 계산합니다.' : 'Choose a query token, then hide future tokens or change the score temperature. Every weight and output is calculated from the small vectors below.'}</p>
+      : <p>{ko ? '아래는 ‘cat’이 온도 1에서 네 토큰을 모두 볼 때의 계산입니다. 자바스크립트를 켜면 조건을 바꿀 수 있습니다. ' : 'The calculation below shows “cat” attending to all four tokens at temperature 1. Enable JavaScript to change the inputs, or compare the masked and unmasked results in the '}
+        <a href={withBasePath(`/labs/attention-worksheet-${lang}.pdf`)}>{ko ? '활동지와 풀이(PDF)' : 'worksheet and answer key (PDF)'}</a>{ko ? '로 마스크 적용 전후의 결과를 직접 비교해 보세요.' : '.'}</p>}
+    <fieldset className="attention-token-picker" disabled={!ready}>
       <legend>{ko ? '1. 질의 토큰 선택' : '1. Choose the query token'}</legend>
       <div>{attentionTokens.map((token, index) => <button type="button" key={index} aria-pressed={selected === index} onClick={() => setSelected(index)}>{token}<small>Q{index + 1}</small></button>)}</div>
     </fieldset>
     <div className="attention-controls">
       <label htmlFor={`${id}-temperature`}>{ko ? '2. 점수 온도 τ' : '2. Score temperature τ'}: <strong>{temperature.toFixed(2)}</strong>
-        <input id={`${id}-temperature`} type="range" min="0.25" max="2" step="0.25" value={temperature} onChange={e => setTemperature(Number(e.target.value))} />
+        <input id={`${id}-temperature`} type="range" min="0.25" max="2" step="0.25" disabled={!ready} value={temperature} onChange={e => setTemperature(Number(e.target.value))} />
       </label>
-      <label className="attention-mask"><input type="checkbox" checked={causal} onChange={e => setCausal(e.target.checked)} />{ko ? '미래 토큰 가리기 (인과 마스크)' : 'Hide future tokens (causal mask)'}</label>
+      <label className="attention-mask"><input type="checkbox" disabled={!ready} checked={causal} onChange={e => setCausal(e.target.checked)} />{ko ? '미래 토큰 가리기 (인과 마스크)' : 'Hide future tokens (causal mask)'}</label>
     </div>
     <p className="attention-formula">softmax(Q{selected + 1}Kᵀ / (√2 × {temperature.toFixed(2)}){causal ? ' + M' : ''}) V</p>
     {causal && <p className="attention-mask-definition">{ko ? 'M은 미래 토큰 위치에서 −∞, 나머지 위치에서 0입니다.' : 'M is −∞ at future-token positions and 0 elsewhere.'}</p>}

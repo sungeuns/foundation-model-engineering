@@ -45,11 +45,11 @@ function worksheet(lang) {
   const t = (en, ko) => lang === 'ko' ? ko : en;
   const lesson = base + (lang === 'ko' ? 'ko/' : '') + 'chapter-3/self-attention-mathematics/#attention-weight-example';
   const title = t('What can “cat” read?', '‘cat’은 어느 토큰을 읽을 수 있을까?');
-  const work = t('Worksheet', '문제');
+  const work = t('Causal attention worksheet', '인과 어텐션 활동지');
   const answers = t('Worked solution', '풀이');
   const intro = t('Each row is one token. Use the query at “cat”. The key width is 2 and the score temperature is 1. A calculator is enough.', '각 행은 토큰 하나입니다. ‘cat’ 위치의 질의로 계산하세요. 키의 차원은 2, 점수 온도는 1입니다. 계산기만 있으면 됩니다.');
   const page = (number, label, content) => `<article><header><strong>Foundation Model Engineering</strong><span>3.1 · ${label}</span></header>${content}
-    <footer><span>Seongeun So · <a href="${repo}">github.com/sungeuns/foundation-model-engineering</a></span><span>${number} / 2</span></footer></article>`;
+    <footer><span>© 2026 Seongeun So · <a href="${repo}">github.com/sungeuns/foundation-model-engineering</a> · <a href="${repo}/blob/main/LICENSE">${t('MIT license', 'MIT 라이선스')}</a></span><span>${number} / 2</span></footer></article>`;
   const lines = n => '<div class="workline"></div>'.repeat(n);
   const table = filled => `<table><thead><tr>${[
     t('Token','토큰'), 'K', 'V', 'q · k', t('All keys','전체 가중치'), t('Causal','인과 가중치'),

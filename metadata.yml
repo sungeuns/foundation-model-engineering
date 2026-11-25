@@ -328,3 +328,67 @@
     - type: [LearningResource]
       id: https://sungeuns.github.io/foundation-model-engineering/ko/
       name: 파운데이션 모델 엔지니어링
+
+- "@context": https://schema.org/
+  type: LearningResource
+  creativeWorkStatus: Published
+  id: https://sungeuns.github.io/foundation-model-engineering/chapter-3/self-attention-mathematics/#attention-weight-example
+  image: https://sungeuns.github.io/foundation-model-engineering/social/attention-weights-en.png
+  name: What can “cat” read? A self-attention worksheet
+  description: >-
+    Given four tokens and their key and value vectors, calculate what the token
+    “cat” can read with and without a causal mask. Change one future value and
+    use the row sum to diagnose a misplaced mask. The two-page printable PDF
+    puts the four questions on the first page and worked solutions on the second.
+    A calculator is enough.
+  inLanguage: [en]
+  creator:
+    - type: Person
+      givenName: Seongeun
+      familyName: So
+  datePublished: "2026-11-25"
+  license: https://opensource.org/license/mit
+  educationalLevel: [https://w3id.org/kim/educationalLevel/level_A]
+  learningResourceType: [https://w3id.org/kim/hcrt/worksheet]
+  about: [https://w3id.org/kim/hochschulfaechersystematik/n079]
+  keywords: [self-attention, causal masking, softmax, attention weights]
+  encoding:
+    - type: MediaObject
+      encodingFormat: application/pdf
+      contentUrl: https://sungeuns.github.io/foundation-model-engineering/labs/attention-worksheet-en.pdf
+  isPartOf:
+    - type: [LearningResource]
+      id: https://sungeuns.github.io/foundation-model-engineering/
+      name: Foundation Model Engineering
+
+- "@context": https://schema.org/
+  type: LearningResource
+  creativeWorkStatus: Published
+  id: https://sungeuns.github.io/foundation-model-engineering/ko/chapter-3/self-attention-mathematics/#attention-weight-example
+  image: https://sungeuns.github.io/foundation-model-engineering/social/attention-weights-ko.png
+  name: ‘cat’은 어느 토큰을 읽을 수 있을까? 셀프 어텐션 활동지
+  description: >-
+    네 토큰의 키와 값 벡터를 보고 인과 마스크를 씌우기 전후에 ‘cat’이 각 토큰을
+    얼마나 반영하는지 계산합니다. 미래 토큰의 값 하나를 바꿔 출력이 어떻게 달라지는지
+    확인하고, 가중치의 합을 구해 마스크를 어느 단계에서 잘못 적용했는지 찾아봅니다.
+    계산기만 있으면 풀 수 있습니다. 인쇄용 PDF 첫 쪽에는 네 문제를, 둘째 쪽에는
+    식과 풀이를 실었습니다.
+  inLanguage: [ko]
+  creator:
+    - type: Person
+      givenName: Seongeun
+      familyName: So
+  datePublished: "2026-11-25"
+  license: https://opensource.org/license/mit
+  educationalLevel: [https://w3id.org/kim/educationalLevel/level_A]
+  learningResourceType: [https://w3id.org/kim/hcrt/worksheet]
+  about: [https://w3id.org/kim/hochschulfaechersystematik/n079]
+  keywords: [셀프 어텐션, 인과 마스크, 소프트맥스, 어텐션 가중치]
+  encoding:
+    - type: MediaObject
+      encodingFormat: application/pdf
+      contentUrl: https://sungeuns.github.io/foundation-model-engineering/labs/attention-worksheet-ko.pdf
+  isPartOf:
+    - type: [LearningResource]
+      id: https://sungeuns.github.io/foundation-model-engineering/ko/
+      name: 파운데이션 모델 엔지니어링

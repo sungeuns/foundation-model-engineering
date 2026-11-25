@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { findSections, normalizeSearchText, readSectionIndex, searchPhrases } from '../src/utils/section-search.js';
+import { findSections, normalizeSearchText, readSectionIndex, searchableText, searchPhrases, termPatterns } from '../src/utils/section-search.js';
 
 const paths = new Set(['/book/architecture/', '/book/profiles/']);
 const index = {
@@ -69,6 +69,37 @@ test('quantities stay searchable and numbered section titles keep their ranking'
   assert.deepEqual(results('3-bit'), [labels[6]]);
   assert.deepEqual(results('1.5 GiB'), [labels[7]]);
   assert.deepEqual(results('1.5'), [labels[7]]);
+});
+
+test('short terms match word starts and technical compounds, and topic lessons win heading ties', () => {
+  const data = { version: 1, lang: 'en', chapters: [
+    { path: '/memory/', title: 'Weight storage', sections: [
+      ['KV backing storage', 'backing'], ['When RAG changes the result', 'example'],
+    ] },
+    { path: '/retrieval/', title: 'RAG Orchestration', sections: [
+      ['When RAG needs tools', 'tools'], ['When GraphRAG helps', 'graph'],
+      ['PyTorch TextCNN', 'cnn'], ['FlashAttention in C++', 'flash'], ['검색품질 평가', 'search'],
+    ] },
+  ] };
+  const entries = readSectionIndex(data, 'en', new Set(['/memory/', '/retrieval/']));
+  const labels = term => findSections(entries, term).matches.map(entry => entry.label);
+  assert.deepEqual(labels('rag'), ['When RAG needs tools', 'When GraphRAG helps', 'When RAG changes the result']);
+  assert.deepEqual(labels('GraphRA'), ['When GraphRAG helps']);
+  assert.deepEqual(labels('attention'), ['FlashAttention in C++']);
+  assert.deepEqual(labels('C++'), ['FlashAttention in C++']);
+  assert.deepEqual(labels('CNN'), ['PyTorch TextCNN']);
+  assert.deepEqual(labels('품질'), ['검색품질 평가']);
+  const chapterMatches = (title, query) => termPatterns(searchPhrases(query)).some(patterns =>
+    patterns.every(pattern => pattern.test(searchableText(title))));
+  assert.equal(chapterMatches('Weight storage', 'rag'), false);
+  assert.equal(chapterMatches('GraphRAG', 'rag'), true);
+  assert.equal(chapterMatches('Continued Pre-training', 'continued pretraining'), true);
+  assert.equal(chapterMatches('지속 사전 학습 및 도메인 적응', '도메인적응'), true);
+  for (const query of ['kv cache calculator', 'kv 캐시 계산기', 'KV캐시 calculator', 'kv cache 계산기']) {
+    assert.equal(chapterMatches('24 GiB KV 캐시 계산기', query), true);
+    assert.equal(chapterMatches('KV Cache 계산기', query), true);
+    assert.equal(chapterMatches('KV cache calculator', query), true);
+  }
 });
 
 test('reject index responses for the wrong deployment, locale, version, or malformed section pair', () => {

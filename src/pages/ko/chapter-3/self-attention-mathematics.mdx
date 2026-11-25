@@ -30,47 +30,28 @@ import AttentionVisualizer from '../../../components/chapter-3/AttentionVisualiz
 
 ## 임베딩에서 Q, K, V로: 선형 투영 (Linear Projections)
 
-각 토큰의 입력 벡터에 세 가중치 행렬을 각각 곱해 질의, 키, 값을 만듭니다. 세 행렬은 학습 과정에서 달라질 수 있습니다.
+행렬 $X$의 각 행에는 이 층에 들어오는 토큰 하나의 표현이 담겨 있습니다. 토큰이 $T$개이고 각 토큰에 $d_{model}$개의 좌표가 있다면 $X$의 모양은 $T \times d_{model}$입니다. 한 헤드는 서로 다른 세 투영 행렬을 학습합니다.
 
-$T$를 시퀀스 길이, $d_{model}$을 임베딩 차원이라고 할 때, 행렬 $X \in \mathbb{R}^{T \times d_{model}}$로 표현되는 입력 시퀀스가 주어지면 다음과 같이 계산합니다:
+$$Q=XW_Q,\qquad K=XW_K,\qquad V=XW_V.$$
 
-$$Q = XW_Q$$
-$$K = XW_K$$
-$$V = XW_V$$
+$W_Q$와 $W_K$의 모양은 모두 $d_{model} \times d_k$입니다. 질의와 키의 너비가 $d_k$로 같아야 둘을 내적으로 비교할 수 있습니다. $W_V$의 모양은 $d_{model} \times d_v$입니다. $d_v$는 헤드가 읽어 와서 출력하는 값 벡터의 너비입니다.
 
-여기서 학습 가능한 가중치 행렬은 다음과 같습니다:
-*   $W_Q \in \mathbb{R}^{d_{model} \times d_k}$
-*   $W_K \in \mathbb{R}^{d_{model} \times d_k}$
-*   $W_V \in \mathbb{R}^{d_{model} \times d_v}$
+<figure style={{ maxWidth: '28rem', margin: '1.2rem auto' }}>
 
-**왜 이렇게 할까요?**
-세 역할에 모두 $X$를 쓰면 “무엇을 찾을지”, “어떻게 검색될지”, “어떤 정보를 반환할지”가 같은 표현에 묶입니다. 서로 다른 투영을 학습하면 각 역할에 필요한 특징을 따로 정할 수 있습니다. 더 깊은 층의 $X$에는 이미 앞선 층에서 얻은 문맥 정보가 들어 있으므로, 항상 정적인 단어 임베딩인 것은 아닙니다.
+![같은 2×4 입력 행렬에 서로 다른 4×3 가중치 행렬을 곱하는 세 줄의 그림. 결과는 차례로 두 토큰의 질의, 키, 값이다.](../../../assets/images/chapter-3/self-attention-matrix-calculation.png)
+
+<figcaption>세 투영 모두 입력의 각 행을 같은 위치에 둡니다. 서로 다른 위치끼리 비교하는 연산은 다음 단계에서 이루어집니다. <a href="https://jalammar.github.io/illustrated-transformer/#matrix-calculation-of-self-attention">Jay Alammar, <cite>The Illustrated Transformer</cite></a> · <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a>.</figcaption>
+</figure>
 
 ---
 
 ## Scaled Dot-Product Attention의 수학적 원리
 
-질의 하나와 모든 키의 내적을 구해 크기를 조정한 뒤, 소프트맥스를 적용합니다. 이렇게 얻은 가중치로 값 벡터를 섞는 연산이 **스케일드 닷 프로덕트 어텐션** 입니다. 모든 질의에 대한 연산을 행렬로 쓰면 다음과 같습니다.
+각 질의를 모든 키와 비교하고, 그 점수로 값 벡터를 섞습니다. 토큰이 $T$개일 때 이 계산을 행렬로 쓰면 다음과 같습니다.
 
 $$\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V$$
 
-<div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', margin: '20px 0' }}>
-
-<div style={{ maxWidth: '600px', width: '100%' }}>
-![질의와 키의 곱에 스케일링과 소프트맥스를 적용하고, 그 가중치로 값을 합하는 행렬 계산](../../../assets/images/chapter-3/self-attention-matrix-calculation.png)
-</div>
-
-<em style={{ marginTop: '10px', color: '#7f8c8d' }}>그림 출처 · Jay Alammar의 [The Illustrated Transformer](https://jalammar.github.io/illustrated-transformer/)</em>
-
-</div>
-
-여기서:
-*   $Q \in \mathbb{R}^{T \times d_k}$ (Query 행렬)
-*   $K \in \mathbb{R}^{T \times d_k}$ (Key 행렬)
-*   $V \in \mathbb{R}^{T \times d_v}$ (Value 행렬)
-*   $T$는 시퀀스 길이입니다.
-*   $d_k$는 Key(및 Query)의 차원입니다.
-*   $\sqrt{d_k}$는 스케일링 요소입니다.
+$QK^T$의 한 행에는 한 질의가 각 키에 매긴 점수 $T$개가 들어 있습니다. 각 행에 소프트맥스를 적용하고 $V$를 곱하면 질의마다 너비가 $d_v$인 출력 벡터 하나를 얻습니다.
 
 ### 단계별 분석
 
@@ -81,7 +62,25 @@ $$\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)
 
 ---
 
+<a id="context-projection"></a>
+
+### ‘cat’의 표현은 언제 앞 단어의 영향을 받을까?
+
+SmolLM2-135M 기본 체크포인트에 `red cat`과 `blue cat`을 넣어 봅시다. 특수 토큰을 추가하지 않으면 두 문구 모두 두 토큰이고, 둘째 토큰의 ID도 2644로 같습니다. 둘째 위치에서 두 벡터의 같은 좌표끼리 뺀 뒤 절댓값이 가장 큰 차이를 기록했습니다. [[3]](#ref-3)
+
+| ‘cat’을 측정한 위치 | 가장 큰 좌표 차이 |
+| --- | ---: |
+| 첫째 층의 Q / K / V 투영 직후(Q와 K에 회전 위치 인코딩을 적용하기 전) | 0 / 0 / 0 |
+| 첫째 층의 어텐션 출력에 출력 투영을 적용한 직후 | 0.08247 |
+| 둘째 층의 Q 투영 직후 | 0.20685 |
+
+첫 질의는 같지만 **앞 위치** 의 키가 달라집니다. 0번 헤드에서 마지막 질의가 앞 단어에 주는 가중치는 `red`일 때 0.3381, `blue`일 때 0.3990입니다. 그 가중치로 값들을 섞고 나면 다음 층에 전달되는 표현이 달라집니다. 이번에는 `red cat`의 뒤를 바꿔 `red dog`를 넣고 첫 토큰을 관찰해 보세요. `red` 위치에서는 다섯 측정값의 차이가 모두 0입니다. 인과 마스크 때문에 뒤에서 바뀐 토큰을 읽을 수 없기 때문입니다.
+
+<a href={withBasePath('/labs/context_projection.py')} download>CPU 비교 실험 재현하기 (Python)</a> · <a href={withBasePath('/labs/2026-11/context-projection.json')} download>토큰 ID·헤드 가중치·좌표 차이 확인하기 (JSON)</a>. 두 토큰짜리 입력을 FP32로 실행한 이 예제는 어느 단계부터 표현이 달라지는지 보여 줍니다. 헤드 하나의 가중치만으로 모델이 색깔의 뜻을 이해했는지 판정할 수는 없습니다.
+
 ## PyTorch 구현
+
+이번에는 손으로 계산할 수 있도록 `The cat sat here`의 네 토큰에 벡터를 직접 지정해 봅시다. ‘cat’의 질의는 $[1,1]$이고, 네 키는 문장 순서대로 $[1,0]$, $[1,1]$, $[0,1]$, $[-1,0]$입니다.
 
 ‘cat’ 위치에서 구한 네 내적은 차례로 1, 2, 1, −1입니다. 여기에 $1/\sqrt{2}$를 곱하고 미래 위치를 가리면 ‘The’와 ‘cat’만 남습니다. 두 가중치는 약 0.3302와 0.6698입니다. 각각의 값 벡터 $[1,0]$, $[0,2]$에 이 가중치를 곱해 더하면 출력은 $[0.3302,1.3395]$입니다. 네 위치를 모두 열었을 때의 출력은 약 $[0.6455,1.2407]$입니다. 아래 실습에서 ‘cat’을 고르고 온도 1로 두 경우를 확인해 보세요.
 
@@ -159,3 +158,4 @@ $$\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)
 
 1. <a id="ref-1"></a>Vaswani, A., et al. (2017). *Attention is all you need*. In Advances in neural information processing systems (pp. 5998-6008). [arXiv:1706.03762](https://arxiv.org/abs/1706.03762).
 2. <a id="ref-2"></a>PyTorch. [Scaled dot product attention, PyTorch 2.15](https://docs.pytorch.org/docs/2.15/generated/torch.nn.functional.scaled_dot_product_attention.html).
+3. <a id="ref-3"></a>Hugging Face TB. [SmolLM2-135M 기본 체크포인트 및 설정](https://huggingface.co/HuggingFaceTB/SmolLM2-135M/tree/93efa2f097d58c2a74874c7e644dbc9b0cee75a2).
