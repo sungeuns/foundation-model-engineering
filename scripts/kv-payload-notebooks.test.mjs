@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { kvCapacity } from '../src/components/chapter-12/kv-capacity.mjs';
@@ -64,6 +65,70 @@ test('notebook links reproduce both the measured tensors and the 120 MiB exercis
     assert.equal(reservation.prompt.capacity, 5);
     assert.equal(reservation.peak.capacity, 3);
   }
+});
+
+test('worked notebooks preserve every starter cell and publish four measured decoding steps', () => {
+  const report = JSON.parse(read('public/labs/2026-11/kv-batch-padding-cpu.json'));
+  const rows = report.unequal_lengths.rows;
+  const modelOutputs = [];
+  for (const lang of ['en', 'ko']) {
+    const starterPath = 'public/labs/kv-cache-payload-' + lang + '.ipynb';
+    const filename = 'kv-cache-payload-worked-' + lang + '.ipynb';
+    const starterBytes = read(starterPath);
+    const starter = JSON.parse(starterBytes);
+    const worked = JSON.parse(read('public/labs/2026-11/' + filename));
+    const { recorded_run: run, ...originalMetadata } = worked.metadata.fme;
+    assert.deepEqual(originalMetadata, starter.metadata.fme);
+    assert.equal(run.input_notebook, starterPath);
+    assert.equal(run.input_notebook_sha256, createHash('sha256').update(starterBytes).digest('hex'));
+    assert.equal(run.model_revision, report.revision);
+    assert.equal(run.model, report.model);
+    assert.equal(run.device, 'cpu');
+    assert.equal(run.dtype, 'float32');
+    assert.equal(run.cpu_threads, report.threads);
+    for (const name of ['python', 'torch', 'transformers']) assert.equal(run[name], report[name]);
+    assert.match(run.model_safetensors_sha256, /^[a-f0-9]{64}$/);
+    assert.equal(run.date, '2026-11-25');
+
+    const inputs = notebook => notebook.cells.map(({ cell_type, id, source }) => ({ cell_type, id, source }));
+    assert.deepEqual(inputs(worked), inputs(starter));
+    const cells = worked.cells.filter(cell => cell.cell_type === 'code');
+    assert.deepEqual(cells.map(cell => cell.execution_count), [1, 2, 3, 4, 5, 6]);
+    assert.deepEqual(cells[0].outputs, []);
+    const stdout = cells.slice(1).map(cell => {
+      assert.equal(cell.outputs.length, 1);
+      const [output] = cell.outputs;
+      assert.deepEqual([output.output_type, output.name], ['stream', 'stdout']);
+      const text = output.text.join('');
+      assert.doesNotMatch(text, /\/home\/|\/tmp\/|Traceback|warning|token=/i);
+      return text;
+    });
+    assert.match(stdout[0], /46,080 bytes per stored position per request/);
+    assert.match(stdout[1], /\(2, 3, 11, 64\)/);
+    assert.match(stdout[2], /Prompt cache: 1,013,760 bytes/);
+    assert.match(stdout[2], /368,640 bytes occupy padding positions/);
+    const steps = stdout[3].trim().split('\n');
+    assert.equal(steps.length, 4);
+    for (const [index, line] of steps.entries()) {
+      const match = /^\+(\d+): ([\d,]+) cache bytes; largest logit difference (\S+)$/.exec(line);
+      assert.ok(match, line);
+      const row = rows[index + 1];
+      assert.equal(Number(match[1]), row.step);
+      assert.equal(Number(match[2].replaceAll(',', '')), row.dense_key + row.dense_value);
+      const measuredDelta = Number(match[3]);
+      assert.ok(measuredDelta >= 0 && measuredDelta < 1e-4);
+    }
+    assert.match(stdout[4], /prompt: 4 requests use 90 MiB; 5 requests fit/);
+    assert.match(stdout[4], /reserved: 4 requests use 135 MiB; 3 requests fit/);
+    modelOutputs.push(stdout);
+
+    const lesson = read('src/pages/' + (lang === 'ko' ? 'ko/' : '') + 'chapter-12/kv-cache-management.mdx');
+    const url = 'https://nbviewer.org/urls/sungeuns.github.io/foundation-model-engineering/labs/2026-11/' + filename;
+    assert.ok(lesson.includes(url + '#cell-id=' + cells[4].id));
+    assert.ok(read(lang === 'en' ? 'README.md' : 'README.ko.md').includes(url + '#cell-id=' + cells[4].id));
+    assert.ok(lesson.includes('download="' + filename + '"'));
+  }
+  assert.deepEqual(modelOutputs[0], modelOutputs[1]);
 });
 
 test('both padding tables report the recorded dense and independent cache sizes', () => {

@@ -81,8 +81,10 @@ export const teachingLabGroups = [
         [file('workbook', localized('/labs/kv-queue-en.xlsx', '/labs/kv-queue-ko.xlsx'))]),
       task(cacheChapter, 'kv-payload-notebook',
         'Measure a real decoder’s KV cache by counting its key and value tensor bytes.',
-        '실제 디코더의 키·값 텐서가 차지하는 바이트 수로 KV 캐시 용량을 재 보세요.',
-        [file('notebook', localized('/labs/kv-cache-payload-en.ipynb', '/labs/kv-cache-payload-ko.ipynb'))]),
+        '실제 디코더의 키·값 텐서가 차지하는 바이트 수로 KV 캐시 용량을 재 보세요.', [
+          file('notebook', localized('/labs/kv-cache-payload-en.ipynb', '/labs/kv-cache-payload-ko.ipynb')),
+          file('workedNotebook', localized('/labs/2026-11/kv-cache-payload-worked-en.ipynb', '/labs/2026-11/kv-cache-payload-worked-ko.ipynb')),
+        ]),
       task(cacheChapter, 'kv-batch-padding',
         'Measure the padding cost of batching a 3-token prompt with an 11-token prompt.',
         '3토큰 프롬프트와 11토큰 프롬프트를 한 배치로 묶을 때 패딩 비용을 측정하세요.',

@@ -320,7 +320,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 11.4 | `/chapter-11/image-diffusion-models` | Inspected 2026-11-24 | 5bb8bc33ff8adf86105e24018b03423e9f19e0d29739f64b843c0cbeadea05e8 | 308de426fdbc7b1c845a4d63be36b83988abe2eb36026affba1dd101194816b7 |
 | 11.5 | `/chapter-11/video-generation-foundations` | Inspected 2026-11-15 | b34544d0352be5feafdfc0d30ac23092d50edf3a3af5f3e4d37cc62531230c20 | 55c0488a07c962041cdbb0cdb945d18c8e136b23dba2aed6f6970f1c33cb4b4b |
 | 11.6 | `/chapter-11/commercial-video-models` | Mechanical only | 12216aad67ffc900bcfe437f20a7fcf9be618ccc5d617f698f4466ef15ff33cb | 6ee6e17876daa24bd17b8d709b7f541276019da545887510035b916819ae13a3 |
-| 12.1 | `/chapter-12/kv-cache-management` | Inspected 2026-11-25 | 935f12739893fa2962ccfe02fcfe5dd9b9b5fb4309120554871df360db5779d5 | 17f463bb01cab5ab4492380b448c1a46a9efdb192771178299124211d1e00c3c |
+| 12.1 | `/chapter-12/kv-cache-management` | Mechanical only | ca43262bc1d043203ce027a791410789814b59f2e884674229b1592557de8513 | e24568059567b641d89c05e798e7b62d15cb7118b0d6c46288c0d281102b633e |
 | 12.2 | `/chapter-12/paged-attention-vllm` | Inspected 2026-11-25 | 52cf569f107eda54688b02ae4a5149d5191e4e56e3241ffe32a2b53ae8bc66d8 | 14402809f988d4e8b12edd29476af19ece120d3abe6c86ac16ca1a664496bb46 |
 | 12.3 | `/chapter-12/continuous-batching` | Inspected 2026-11-25 | 588de002d211758e1fbb83af67004497e5280cad3512efc790f73f9b3d2a24b3 | 3f9ff09b65675139196bd073123e28a306180a8ec7d07398d1e331351f5a7124 |
 | 12.4 | `/chapter-12/speculative-decoding` | Inspected 2026-11-25 | a5f93ea8411bab0fe68bf277224f8f19f111ac0f0fd73f6b4eda75739a8990b5 | 61986787b62bf6d99f59ab08a66d2ea6312e472faea94ded13c4a7d627d03cc4 |
@@ -762,3 +762,7 @@ For §13.4, checked the teacher-signal distinctions and the fixed two-coordinate
 ### November 25, 2026 — The sample rate of a Whisper input
 
 In §11.2, checked both editions of the 11-second speech experiment against the pinned OpenAI test recording and the two CPU decodes. Both inputs produce 3,000 mel frames. The attention mask distinguishes 1,100 valid frames from 3,000, and changing the declared duration changes which reference phrases survive decoding. This review covered the new experiment, its downloads and its sources.
+
+### November 25, 2026 — Reading a KV cache trace before starting a kernel
+
+For §12.1, checked the two notebook entry points and the four-step decode trace in both translations. Each worked notebook retains the six code cells of its local starter. Both executions grew the cache from 1,013,760 to 1,382,400 bytes and passed all four comparisons with recomputed logits. The source review covered the revised passage and its links.
