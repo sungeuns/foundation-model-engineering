@@ -10,77 +10,43 @@ import LinearAttentionVisualizer from '../../../components/chapter-20/LinearAtte
 
 # 20.3 선형 어텐션
 
-앞 절의 Mamba는 “어텐션 대신 상태를 업데이트하자”는 방향이었습니다. Linear Attention은 조금 다른 길을 택합니다. 어텐션이라는 인터페이스는 유지하되, 모든 토큰 쌍을 명시적으로 계산하는 softmax attention을 더 싼 형태로 바꾸려는 시도입니다. 즉, SSM이 순환 상태의 언어로 문제를 푼다면, Linear Attention은 어텐션을 **연관적으로 다시 묶을 수 있는 커널 계산** 으로 바꿉니다.
-
-긴 컨텍스트 모델링은 계속 같은 벽에 부딪힙니다. 표준 어텐션은 우아하고 표현력이 높지만 비쌉니다. 시퀀스 길이가 충분히 길어지면, 모든 토큰 쌍의 상호작용을 정확하게 유지하는 비용은 아키텍처 문제이면서 동시에 시스템 문제이기도 합니다. Linear Attention은 바로 이 긴장 위에 놓여 있습니다. softmax attention을 완전히 대체하는 만능 해법이라기보다, 정확도의 일부를 더 나은 확장성과 바꾸려는 대표적인 시도에 가깝습니다.
+디코더가 2, 8, 20이라는 값을 차례로 읽었습니다. 첫 번째 값과 세 번째 값의 키가 같다면 나중에 첫 번째 값만 다시 꺼낼 수 있을까요? 세 번째 토큰을 처리한 뒤 상태에 무엇이 남는지 보면 답을 알 수 있습니다. 덧셈으로 상태를 갱신하는 선형 어텐션을 예로 들어, 값을 어떻게 쓰고 읽는지 확인하고 필요한 메모리까지 계산해 봅시다.
 
 ---
 
 ## 1. 핵심 아이디어
 
-밀집 softmax 어텐션은 토큰 쌍의 상호작용을 계산합니다. 융합 커널은 같은 계산을 수행하면서 전체 점수 행렬의 저장을 피할 수 있습니다.
+쿼리 $Q$, 키 $K$, 값 $V$ 와 키의 폭 $d$ 가 주어지면 밀집 softmax 어텐션은 보이는 토큰 쌍마다 점수를 구합니다. 융합 커널은 전체 점수 행렬을 저장하지 않고 아래 식을 계산할 수 있습니다.
 
 $$
 \text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d}}\right)V
 $$
 
-여기서 비싼 부분은 모든 토큰 쌍에 대한 조밀한 상호작용 패턴입니다. Linear Attention은 softmax를 feature map $\phi(\cdot)$로 바꿔 연산 순서를 다시 묶을 수 있게 만듭니다.
+두 특징 벡터의 내적 $\phi(q)^T\phi(k)$ 으로 점수를 구하는 커널을 택하면, 정규화 전의 분자는 곱하는 순서를 다음과 같이 바꿔 쓸 수 있습니다.
 
 $$
 \phi(Q)\left(\phi(K)^T V\right)
 $$
 
-실용적인 매력은 분명합니다. 과거를 compact한 running state로 요약할 수 있다면, 전체 시퀀스를 처리하는 동안 메모리 증가를 full quadratic attention보다 훨씬 완만하게 만들 수 있습니다.
+디코더에서 각 쿼리가 볼 수 있는 토큰은 합산 범위로 결정됩니다. 시점 $t$ 의 쿼리가 볼 수 있는 범위로 두 합을 제한합니다.
 
----
+$$ S_t=\sum_{i=1}^t \phi(k_i)v_i^T,\qquad z_t=\sum_{i=1}^t \phi(k_i),\qquad y_t^T=\frac{\phi(q_t)^T S_t}{\phi(q_t)^T z_t}. $$
 
-인과적이고 정규화된 kernel attention에서는 시점 $t$ 까지의 누적 상태와 정규화 벡터를 함께 유지합니다.
-
-$$ S_t=\sum_{i=1}^t \phi(k_i)v_i^T,\quad z_t=\sum_{i=1}^t \phi(k_i),\quad y_t^T=\frac{\phi(q_t)^T S_t}{\phi(q_t)^T z_t+\epsilon}. $$
-
-여기서 $q_i,k_i,v_i$ 는 query·key·value, $\phi$ 는 폭 $m$ 의 비음수 특징 맵, $S_t\in\mathbb R^{m\times d_v}$, $z_t\in\mathbb R^m$, $\epsilon>0$ 은 수치 안정화 항입니다. 위 비정규화 곱만으로는 이 연산 전체를 나타내지 않습니다. [[1]](#ref-1)
+$q_i$, $k_i$, $v_i$ 는 위치 $i$ 의 쿼리, 키, 값입니다. $\phi$ 는 폭이 $m$ 인 비음수 특징 맵입니다. 새 토큰마다 $m\times d_v$ 행렬 $S_t$ 에 외적을 더하고 길이가 $m$ 인 벡터 $z_t$ 에 키 특징을 더합니다. 분모는 이 쿼리에서 보이는 커널 가중치의 합입니다. 위 식은 합이 양수인 경우에 성립합니다. 구현할 때는 합이 0이거나 아주 작은 경우를 어떻게 처리할지도 정해야 합니다. [[1]](#ref-1)
 
 ## 2. 왜 이 아이디어가 계속 매력적인가
 
-프롬프트 길이가 수백 토큰에서 수십만 토큰으로 늘어나는 문서 처리 파이프라인을 떠올려 봅시다. 모델 품질이 괜찮더라도, 실제 병목은 serving cost와 KV-cache pressure일 수 있습니다. Linear Attention은 바로 이런 구간에서 매력적입니다.
-
-- 더 낮은 메모리 압박
-- 긴 컨텍스트에서 더 나은 확장성
-- 시퀀스를 더 recurrent하게 보는 계산 관점
-
-그래서 예전의 관심이 한 번 식었다가도, 긴 컨텍스트 문제가 커질 때마다 다시 돌아옵니다.
-
----
+특징 폭과 값의 폭을 고정하면 디코딩 한 단계마다 $m d_v$ 개 원소를 갱신하고 같은 크기의 상태에서 값을 읽습니다. 접두사 길이가 늘어나도 행렬 크기는 그대로입니다. 순환 계산을 구조화된 행렬 곱으로 다루는 관점은 상태 공간 쌍대성에서도 볼 수 있습니다. [[3]](#ref-3) 한편 밀집 어텐션은 보이는 위치마다 키와 값을 보관하므로 각 키의 점수를 따로 계산할 수 있습니다. 짧은 문맥에서는 고정 크기의 행렬이 오히려 공간을 더 차지할 수 있습니다. [계산기](#context-state-memory)에서 역전되는 길이를 찾아보세요.
 
 ## 3. 초기 변형들이 왜 고전했는가
 
-아이디어가 이렇게 매력적인데도 왜 softmax attention이 오랫동안 주류였을까요?
-
-초기의 linear 계열 모델은 종종 품질 대가를 치렀기 때문입니다.
-
-- 학습 불안정성
-- 약한 exact recall
-- 정밀한 token-level interaction이 필요한 작업에서의 성능 저하
-
-즉, 과거를 compact state로 요약하는 것은 효율적이지만, 동시에 모델을 좋게 만드는 정보를 과도하게 압축할 수도 있습니다.
-
----
+값 2와 20의 키 특징이 모두 $(1,0)$ 이고, 값 8의 키 특징이 $(0,1)$ 이라고 합시다. 마지막 상태에는 합 $(22,8)$ 과 횟수 $(2,1)$ 가 남습니다. 특징이 $(1,0)$ 인 쿼리는 $22/2=11$ 을 읽습니다. 2와 20의 순서를 바꿔도 이 상태는 같으므로, 마지막 상태만 받은 쪽은 어느 값이 먼저 나왔는지 알아낼 수 없습니다. 위치 정보를 특징에 넣거나 문맥에 따라 키가 달라지거나 상태 갱신 규칙을 바꾸면 결과도 달라질 수 있습니다.
 
 ## 4. 최근 연구가 고치려는 것
 
-최근 작업은 recurrent state를 단순 덧셈이 아니라 더 선택적으로 유지하도록 만드는 데 집중하고 있습니다. gating, delta-style update, 더 구조화된 state transition은 모두 같은 문제를 겨냥합니다. 중요한 과거는 남기고, state가 포화되지 않도록 하려는 것입니다.
-
-이런 접근은 **이미 확정된 승자** 라기보다 **떠오르는 설계 패턴** 으로 보는 편이 더 정확합니다. 현재까지의 증거는 linear-attention 계열 레이어가 긴 컨텍스트 구간에서 유용할 수 있음을 보여 주지만, 그것만으로 전체 네트워크를 설명하기에는 아직 이른 편입니다.
-
 ### 떠오르는 Hybrid Pattern
 
-현재 상황을 조심스럽게 요약하면 이렇습니다.
-
-- pure linear attention은 효율성 측면에서 매력적이다
-- full attention은 여전히 exact하고 고해상도 상호작용에 가치가 있다
-- 그래서 hybrid stack은 자연스러운 엔지니어링 절충안이 된다
-
-하지만 이것이 곧 하나의 보편적인 recipe로 정착됐다는 뜻은 아닙니다. 어느 위치에 비싼 full attention을 남기고, 어디에 더 효율적인 메커니즘을 둘지에 대해 여러 팀이 계속 탐색 중이라는 뜻에 가깝습니다.
+Yang 등은 델타 규칙을 쓰는 층에 슬라이딩 윈도 또는 전역 어텐션을 섞어 실험했습니다. 이들의 검색 실험은 언어 모델의 평균 손실 외에 앞서 등장한 값을 정확하게 꺼낼 수 있는지도 따로 측정할 이유를 보여 줍니다. 밀집 어텐션 층은 이전 키를 개별적으로 보관할 수 있고, 순환 층은 고정 크기 상태를 유지합니다. 두 방식을 섞은 모델을 서빙할 때는 양쪽 메모리를 모두 계산해야 합니다. [[2]](#ref-2)
 
 ### 덧셈 메모리와 delta rule의 차이
 
@@ -88,114 +54,115 @@ $$ S_t=\sum_{i=1}^t \phi(k_i)v_i^T,\quad z_t=\sum_{i=1}^t \phi(k_i),\quad y_t^T=
 
 $$ S_t=(I-\beta_t k_tk_t^T)S_{t-1}+\beta_t k_tv_t^T. $$
 
-여기서 $S_t\in\mathbb R^{d_k\times d_v}$, $k_t\in\mathbb R^{d_k}$, $v_t\in\mathbb R^{d_v}$ 이고 $\beta_t$ 는 쓰기 강도입니다. 단위 norm key를 쓰면 $k_tk_t^T$ 는 그 key 방향의 투영입니다. 일반적인 이 행렬 교정을 스칼라 감쇠 $\gamma_t S_{t-1}$ 와 혼동하면 안 됩니다. Gated DeltaNet은 망각도 결합하며 구현의 정규화·게이트 순서를 확인해야 합니다. [[4]](#ref-4)
+여기서 $S_t\in\mathbb R^{d_k\times d_v}$, $k_t\in\mathbb R^{d_k}$, $v_t\in\mathbb R^{d_v}$ 이고 $\beta_t$ 는 쓰기 강도입니다. 단위 norm key를 쓰면 $k_tk_t^T$ 는 그 key 방향의 투영입니다. 교정은 한 키의 방향으로 작용하고, 그 키에 수직인 성분은 그대로 보존할 수 있습니다. Gated DeltaNet은 망각도 결합하며 구현의 정규화·게이트 순서를 확인해야 합니다. [[4]](#ref-4)
 
 ## 5. 교육용 PyTorch 예제
 
-아래의 단순화된 블록은 핵심 계산 아이디어를 보여 줍니다. history를 compact state로 만든 뒤, 그것을 query에 다시 적용하는 방식입니다.
+<a id="causal-linear-scan"></a>
 
-> **의도적으로 단순화한 예제.** 전체 시퀀스를 요약하는 양방향 블록이므로 앞의 출력이 뒤 토큰에 의존할 수 있습니다. causal decoder나 Gated DeltaNet 구현이 아닙니다. causal prefix scan·점진 상태·padding mask·분모 안정성·분산 커널은 빠져 있습니다.
+### 마지막 값을 바꾸면 앞의 두 출력은 어떻게 될까?
+
+첫 쿼리가 읽을 수 있는 값은 2 하나입니다. 두 번째 쿼리의 특징은 $(1,1)$ 이므로 보이는 두 키에 똑같이 가중치 1을 주고 $(2+8)/2=5$ 를 읽습니다. 세 번째 값을 20에서 100으로 바꾸면 이 두 출력은 어떻게 될까요? Python 3.10 이상과 PyTorch가 설치된 CPU에서 확인할 수 있습니다.
+
+**예제의 범위.** 헤드 하나가 패딩 없는 float32 시퀀스 하나를 처리합니다. 쿼리와 키는 특징 변환을 마친 값으로 주어집니다. 반복문에서 각 토큰이 기록된 직후의 상태를 볼 수 있습니다. 배치 디코더에는 투영, 마스크, 요청별 상태 관리와 하드웨어에 맞는 커널도 필요합니다.
 
 ```python
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
 
-class GatedLinearAttention(nn.Module):
-    def __init__(self, d_model: int, num_heads: int):
-        super().__init__()
-        assert d_model % num_heads == 0
-        self.d_model = d_model
-        self.num_heads = num_heads
-        self.d_head = d_model // num_heads
+# 한 헤드의 쿼리 특징과 키 특징을 토큰마다 한 행씩 넣습니다.
+queries = torch.tensor([[1., 0.], [1., 1.], [1., 0.]])
+keys = torch.tensor([[1., 0.], [0., 1.], [1., 0.]])
+values = torch.tensor([[2.], [8.], [20.]])
 
-        self.q_proj = nn.Linear(d_model, d_model)
-        self.k_proj = nn.Linear(d_model, d_model)
-        self.v_proj = nn.Linear(d_model, d_model)
-        self.g_proj = nn.Linear(d_model, d_model)
-        self.out_proj = nn.Linear(d_model, d_model)
+def scan(queries, keys, values, state=None):
+    if state is None:
+        memory = values.new_zeros(keys.shape[1], values.shape[1])
+        counts = keys.new_zeros(keys.shape[1])
+    else:
+        memory, counts = state
 
-    def feature_map(self, x: torch.Tensor) -> torch.Tensor:
-        return F.elu(x) + 1.0
+    outputs = []
+    for query, key, value in zip(queries, keys, values, strict=True):
+        memory = memory + torch.outer(key, value)
+        counts = counts + key
+        normalizer = query @ counts
+        if normalizer <= 0:
+            raise ValueError("query has no overlap with the visible keys")
+        outputs.append((query @ memory) / normalizer)
+    return torch.stack(outputs), (memory, counts)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        bsz, seq_len, dim = x.shape
+stream, _ = scan(queries, keys, values)
+weights = (queries @ keys.T).tril()
+reference = (weights @ values) / weights.sum(dim=1, keepdim=True)
+torch.testing.assert_close(stream, reference)
+print(stream.flatten().tolist())
 
-        q = self.q_proj(x).view(bsz, seq_len, self.num_heads, self.d_head).transpose(1, 2)
-        k = self.k_proj(x).view(bsz, seq_len, self.num_heads, self.d_head).transpose(1, 2)
-        v = self.v_proj(x).view(bsz, seq_len, self.num_heads, self.d_head).transpose(1, 2)
-        g = torch.sigmoid(self.g_proj(x))
+_, prefix_state = scan(queries[:2], keys[:2], values[:2])
+suffix, _ = scan(queries[2:], keys[2:], values[2:], prefix_state)
+torch.testing.assert_close(suffix, stream[2:])
 
-        q_phi = self.feature_map(q)
-        k_phi = self.feature_map(k)
-
-        kv_state = torch.matmul(k_phi.transpose(-1, -2), v)
-        z_state = k_phi.sum(dim=2, keepdim=True).transpose(-1, -2)
-
-        numerator = torch.matmul(q_phi, kv_state)
-        denominator = torch.matmul(q_phi, z_state) + 1e-6
-        out = numerator / denominator
-
-        out = out.transpose(1, 2).contiguous().view(bsz, seq_len, dim)
-        out = out * g
-        return self.out_proj(out)
+changed_values = values.clone()
+changed_values[2] = 100.
+changed, _ = scan(queries, keys, changed_values)
+torch.testing.assert_close(changed[:2], stream[:2])
+print(changed.flatten().tolist())
 ```
 
-이 코드는 교육용입니다. 실제 시스템에서는 더 정교한 normalization, gating, masking, hardware-specific optimization이 추가됩니다.
+처음에는 `[2.0, 5.0, 11.0]`, 값을 바꾼 뒤에는 `[2.0, 5.0, 51.0]` 이 출력됩니다. 삼각 행렬로 구한 참조값은 같은 커널로 모든 토큰 쌍의 가중치를 직접 구한 결과입니다. 저장한 $(S_2,z_2)$ 에서 이어서 계산해도 마지막 출력이 같습니다. 매 단계의 누적 합 대신 시퀀스 전체의 합을 한 번만 구하면 첫 쿼리도 세 번째 값을 읽게 됩니다.
 
----
+<a id="6-interactive-memory-complexity-visualizer"></a>
 
-## 6. Interactive: Memory Complexity Visualizer
+## 6. 문맥 상태 메모리 계산기
 
-아래 시각화는 이 논쟁을 직관적으로 이해하는 데 도움이 됩니다. 시퀀스 길이가 커질수록 메모리 사용량이 어떻게 증가하는지를 보면, 왜 이런 아키텍처적 시도가 반복해서 등장하는지 훨씬 명확해집니다.
+<a id="context-state-memory"></a>
+
+32층, KV 헤드 8개, 헤드 폭 128, KV 원소당 2바이트이면 토큰 하나를 보관하는 데 128 KiB가 듭니다. 비교할 순환 모델은 층마다 헤드가 32개입니다. 특징 폭과 값의 폭이 모두 128일 때 FP32 상태는 요청당 64.5 MiB입니다. KV 토큰 하나의 크기는 $2\times32\times8\times128\times2$ 바이트이고 순환 상태 전체는 $32\times32\times(128^2+128)\times4$ 바이트입니다. 길이를 **128, 516, 4,096** 으로 바꿔 보세요. KV 캐시는 차례로 16 MiB, 64.5 MiB, 512 MiB가 됩니다. 순환 상태를 BF16으로 저장하면 두 크기가 같아지는 지점은 어디일까요?
 
 <LinearAttentionVisualizer client:load lang="ko" />
 
----
+<a id="7-practical-takeaway"></a>
 
-## 7. Practical Takeaway
+## 7. 모델을 고를 때 확인할 것
 
-Linear Attention은 표준 어텐션을 이미 대체한 승자라기보다, 긴 컨텍스트 시대에 중요한 효율성 방향으로 이해하는 편이 적절합니다. 매력적인 이유는 긴 컨텍스트가 비싸기 때문이고, 어려운 이유는 compact recurrent state가 어떤 작업에는 꼭 필요한 exact한 정보를 잃게 만들 수 있기 때문입니다. 그래서 가까운 시기의 그럴듯한 시나리오는 “linear attention의 완승”보다는 “정밀도와 효율성이 필요한 위치에 따라 서로 다른 interaction mechanism을 섞는 모델”에 가깝습니다.
-
----
+같은 프롬프트로 두 가지를 측정하세요. 먼저 같은 키가 반복되거나 문서 중간에서 값이 수정됐을 때 나중의 쿼리가 원하는 값을 꺼내는지 봅니다. 다음으로, 접두사 길이마다 실행 중인 요청 하나를 위해 실제로 보관하는 바이트 수를 잽니다. 긴 문맥에서 메모리를 절약하는 모델도 과제에 꼭 필요한 수정 사항을 놓칠 수 있습니다.
 
 ## 최근 연구: gating·delta update·상태를 가진 서빙
 
-**2026-10-13 기준.** Gated DeltaNet은 선택적 망각과 delta-rule의 목표 지향 update를 결합하고 하이브리드 어텐션 stack을 연구합니다 [[4]](#ref-4). 이는 특정 recurrent 메커니즘이며 양방향 선형 어텐션 출력에 gate를 곱하는 것과 같은 연산은 아닙니다.
+**2026-10-13 기준.** Gated DeltaNet은 선택적 망각과 delta-rule의 목표 지향 update를 결합하고 하이브리드 어텐션 stack을 연구합니다 [[4]](#ref-4). 새 값을 쓰기 전에 기존 상태의 일부를 지울 수 있어 이후의 읽기 결과도 달라집니다.
 
 효율적인 레이어도 정확한 상태 계약이 필요합니다. 접두사 재사용에서는 recurrent 상태와 어텐션 KV를 같은 위치에서 복원해야 합니다. 분기형 speculation은 토큰 버퍼를 줄이는 것만으로 되돌릴 수 없는 상태를 격리해야 합니다. [12.1절](/ko/chapter-12/kv-cache-management)과 [12.4절](/ko/chapter-12/speculative-decoding)의 최근 통합 근거가 아키텍처의 메모리 절감에도 scheduler·복구 검증이 필요한 이유를 설명합니다. 처리량과 함께 연상 회상·위치 민감도·장문 품질·cold/복원 continuation을 평가합니다.
 
 
 ### 10월 배포 사례: 계층마다 다른 상태
 
-**2026-10-25 기준**, Ling 3.1 Flash 공개 카드는 KDA 63계층·gated-MLA 9계층의 7:1 하이브리드를 명시합니다 [[5]](#ref-5). 공개된 구체적 스택이며 모든 “선형” 모델이 같은 순환식을 쓴다는 근거는 아닙니다. 순환 상태와 어텐션 KV를 따로 계산하고 실제 런타임에서 정확한 회상·접두사 재사용·분기·롤백을 시험하세요. 호스팅 1019 프로필과 공개 가중치 리비전의 동등성은 확인되지 않았습니다. 출처 범위 안의 비교는 17.6절을 보세요.
+**2026-11-25 기준**, Ling 3.1 Flash 공개 카드는 KDA 63계층·gated-MLA 9계층의 7:1 하이브리드를 명시합니다 [[5]](#ref-5). 공개된 구체적 스택이며 모든 “선형” 모델이 같은 순환식을 쓴다는 근거는 아닙니다. 순환 상태와 어텐션 KV를 따로 계산하고 실제 런타임에서 정확한 회상·접두사 재사용·분기·롤백을 시험하세요. 호스팅 1019 프로필과 공개 가중치 리비전의 동등성은 확인되지 않았습니다. 출처 범위 안의 비교는 17.6절을 보세요.
 
 ## Muir: 고정 상태의 용량과 읽기·쓰기 동역학
 
-**2026-11-15 기준 — 초기 연구.** Muir는 채널별 게이트를 가진 delta 메모리를 분석합니다. 민감도에 따라 저랭크 게이트 용량을 배분하고 시간 척도별 읽기를 조절하며, 경계를 기준으로 계산하는 청크 커널을 제안합니다. 정적 읽기와 동적 읽기는 단일 지연의 기억 유지와 여러 지연에 대한 적응 사이에서 절충합니다. TPU 중심 커널과 제한된 회상 과제의 결과를 모든 하드웨어의 우위로 일반화할 수는 없습니다. [[6]](#ref-6)
+**2026-11-25 기준 — 초기 연구.** Muir는 채널별 게이트를 가진 delta 메모리를 분석합니다. 민감도에 따라 저랭크 게이트 용량을 배분하고 시간 척도별 읽기를 조절하며, 경계를 기준으로 계산하는 청크 커널을 제안합니다. 정적 읽기와 동적 읽기는 단일 지연의 기억 유지와 여러 지연에 대한 적응 사이에서 절충합니다. TPU 중심 커널과 제한된 회상 과제의 결과를 모든 하드웨어의 우위로 일반화할 수는 없습니다. [[6]](#ref-6)
 
 단일 사실 검색, 서로 의존하는 여러 사실, 연속 텍스트 모델링을 나누어 평가하세요. 동일 파라미터·연산 예산의 품질, 수치 조건과 실제 처리량은 선형 복잡도만으로 결정되지 않습니다.
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: Linear Attention이 근본적으로 해결하려는 문제는 무엇인가요?</summary>
-*긴 컨텍스트를 다룰 때 시퀀스 상호작용 비용을 줄여, 메모리와 연산 측면에서 더 다루기 쉬운 구조를 만드는 것입니다.*
+<summary>Quiz 1: 마지막 쿼리가 11을 반환하는 이유는 무엇인가요?</summary>
+*첫 번째와 세 번째 키가 각각 가중치 1로 쿼리와 일치합니다. 두 값의 합 22를 가중치 합 2로 나누면 11입니다.*
 </details>
 
 <details>
-<summary>Quiz 2: 초기의 Linear Attention 계열이 full attention보다 종종 성능이 낮았던 이유는 무엇인가요?</summary>
-*과거를 compact state로 요약하는 과정에서 exact recall이나 세밀한 token-level interaction에 필요한 정보까지 과도하게 압축해 버리기 쉬웠기 때문입니다.*
+<summary>Quiz 2: 중간부터 이어서 계산할 때 값의 합과 함께 정규화 벡터도 필요한 이유는 무엇인가요?</summary>
+*값의 합은 분자를 결정합니다. 앞에서 읽은 키의 횟수를 잊으면 분모에서 이전에 일치했던 토큰이 빠져 출력의 크기가 달라집니다.*
 </details>
 
 <details>
-<summary>Quiz 3: hybrid stack이 자연스러운 엔지니어링 절충안인 이유는 무엇인가요?</summary>
-*linear 계열 메커니즘은 효율성에 도움이 되고, full attention은 여전히 정밀한 상호작용에 강점이 있기 때문입니다. 둘을 섞으면 각자의 장점을 필요한 곳에 배치할 수 있습니다.*
+<summary>Quiz 3: 계산기의 초기 설정에서 128토큰짜리 KV 캐시가 더 작은 이유는 무엇인가요?</summary>
+*토큰당 128 KiB씩 128개이므로 KV 캐시는 16 MiB입니다. 순환 상태는 첫 토큰부터 행렬과 정규화 벡터에 64.5 MiB를 씁니다. 두 크기가 같아지는 길이는 516토큰입니다.*
 </details>
 
 <details>
-<summary>Quiz 4: 특정한 hybrid 비율 하나를 오늘의 “production standard”라고 부르는 것이 왜 오해를 부를 수 있나요?</summary>
-*현재 분야는 여전히 여러 설계와 trade-off를 탐색 중이기 때문입니다. hybrid design 자체는 떠오르는 패턴이지만, 하나의 정확한 공식이 보편 표준으로 굳었다고 보기는 어렵습니다.*
+<summary>Quiz 4: 값 2와 20의 순서를 바꾸면 쿼리가 마지막 상태에서 이 차이를 알아낼 수 있나요?</summary>
+*예제에서 두 값의 키 특징이 같으므로 순서를 바꿔도 합과 횟수가 같습니다. 마지막 상태는 완전히 같지만, 그 전에 계산한 출력은 달라질 수 있습니다.*
 </details>
 
 ---
@@ -206,5 +173,5 @@ Linear Attention은 표준 어텐션을 이미 대체한 승자라기보다, 긴
 2. <a id="ref-2"></a>Yang, S., et al. (2024). *Parallelizing Linear Transformers with the Delta Rule over Sequence Length.* [arXiv:2406.06484](https://arxiv.org/abs/2406.06484).
 3. <a id="ref-3"></a>Dao, T., & Gu, A. (2024). *Transformers are SSMs: Generalized Models and Efficient Algorithms Through Structured State Space Duality.* [arXiv:2405.21060](https://arxiv.org/abs/2405.21060).
 4. <a id="ref-4"></a>Yang, S., Kautz, J., & Hatamizadeh, A. (2024). Gated Delta Networks: Improving Mamba2 with Delta Rule. [Source](https://arxiv.org/abs/2412.06464).
-5. <a id="ref-5"></a>inclusionAI. *Ling-3.1-flash model card*, revision `93e96ab91e800998388563295340a4238ff3e962`, verified 2026-10-25. [Card](https://huggingface.co/inclusionAI/Ling-3.1-flash).
-6. <a id="ref-6"></a>Research preprint (2026). [Muir: Linear Attention with Sensitivity-Allocated Gating and Matched-Filter Readout](https://arxiv.org/html/2611.08376v1). Version pinned; accessed 2026-11-15.
+5. <a id="ref-5"></a>inclusionAI. *Ling-3.1-flash model card*, revision `93e96ab91e800998388563295340a4238ff3e962`, verified 2026-11-25. [Card](https://huggingface.co/inclusionAI/Ling-3.1-flash/blob/93e96ab91e800998388563295340a4238ff3e962/README.md).
+6. <a id="ref-6"></a>Gangavarapu, T., Tabak, G., & Schaefer, C. J. (2026). [Muir: Linear Attention with Sensitivity-Allocated Gating and Matched-Filter Readout](https://arxiv.org/html/2611.08376v1). Version pinned; accessed 2026-11-25.

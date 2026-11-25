@@ -1,0 +1,78 @@
+{
+  "torch": "2.15.0+cpu",
+  "transformers": "5.24.1",
+  "device": "cpu",
+  "dtype": "float32",
+  "parameter_count": 232704,
+  "runs": [
+    {
+      "passes": 1,
+      "distinct_layers": 24,
+      "prefill_layer_calls": 24,
+      "prefill": {
+        "slots": 24,
+        "first_sliding_key_bytes": [
+          192,
+          384
+        ],
+        "logical_bytes": 10752,
+        "backing_bytes": 18432
+      },
+      "after_one_token": {
+        "slots": 24,
+        "first_sliding_key_bytes": [
+          192,
+          256
+        ],
+        "logical_bytes": 11264,
+        "backing_bytes": 13824
+      }
+    },
+    {
+      "passes": 3,
+      "distinct_layers": 24,
+      "prefill_layer_calls": 48,
+      "prefill": {
+        "slots": 48,
+        "first_sliding_key_bytes": [
+          192,
+          384
+        ],
+        "logical_bytes": 21504,
+        "backing_bytes": 36864
+      },
+      "after_one_token": {
+        "slots": 48,
+        "first_sliding_key_bytes": [
+          192,
+          256
+        ],
+        "logical_bytes": 22528,
+        "backing_bytes": 27648
+      }
+    },
+    {
+      "passes": 5,
+      "distinct_layers": 24,
+      "prefill_layer_calls": 72,
+      "prefill": {
+        "slots": 72,
+        "first_sliding_key_bytes": [
+          192,
+          384
+        ],
+        "logical_bytes": 32256,
+        "backing_bytes": 55296
+      },
+      "after_one_token": {
+        "slots": 72,
+        "first_sliding_key_bytes": [
+          192,
+          256
+        ],
+        "logical_bytes": 33792,
+        "backing_bytes": 41472
+      }
+    }
+  ]
+}

@@ -4,15 +4,14 @@ title: "4.5 Various LLM Architectures"
 lang: "en"
 ---
 
+import { withBasePath } from '../../utils/paths.js';
 import AttentionMaskVisualizer from '../../components/chapter-4/AttentionMaskVisualizer';
 
 # 4.5 Various LLM Architectures
 
-By the time many readers reach this section, it is tempting to think the architecture debate is over: decoder-only won, everyone copied GPT, and the rest is just scaling. In practice, that is where the real engineering begins. The moment you ask for longer context windows, lower serving cost, better throughput, or stronger tool use, models start to diverge again.
+You have room for the weights, but does another pass through the same layers need more memory? In the CPU experiment below, 24 decoder layers run 72 times. There is still one copy of each layer, yet each repeat leaves new keys and values for the next token to read.
 
-A useful analogy is transportation. Cargo ships, racing cars, and commuter trains all move people or goods, but each is optimized for a different bottleneck. Modern LLMs are similar. They still generate text autoregressively, yet they make different architectural trade-offs depending on whether the main pain point is KV-cache growth, attention complexity, routing efficiency, or training stability.
-
-This section looks at those design pressures first, then the architectural ideas they produced.
+This chapter follows three design decisions through an inference request. Which earlier tokens can a layer see? Which parameters does it touch? What stays in memory after the request advances by one token?
 
 The [November 24 update](#glm-54-reusing-layers-separates-depth-from-capacity) adds GLM-5.4's shared-depth design and GPT-6.2's documented interface. Earlier dated tables remain historical snapshots.
 
@@ -328,6 +327,36 @@ The columns are passes, layer executions per token, and distinct decoder layers.
 
 What would a quality comparison at one and five passes tell you? It holds the checkpoint fixed, but training favored three passes. The lab sampled one through five passes in a 1:2:6:2:1 ratio during later midtraining and used three during post-training. A test on the same prompts shows what changing depth buys **on this checkpoint**. A claim about the best depth to train from scratch needs a separate experiment. [[44]](#ref-44)
 
+<a id="loop-cache-storage"></a>
+
+### One more token, less KV backing storage
+
+Run the 24-layer schedule in the `Inkling2LoopTextModel` implementation with small, randomly initialized weights. The 232,704 parameters fit on a CPU. Twenty layers use a four-token attention window and four use full attention. Give the model six tokens, measure its keys and values, then decode a seventh. The code runs the seven-token sequence from scratch as a check on the cached result. [[46]](#ref-46)
+
+| Passes | Layer calls at prefill | KV payload after six tokens | KV backing storage after six | KV backing storage after seven |
+| ---: | ---: | ---: | ---: | ---: |
+| 1 | 24 | 10.5 KiB | 18 KiB | 13.5 KiB |
+| 3 | 48 | 21 KiB | 36 KiB | 27 KiB |
+| 5 | 72 | 31.5 KiB | 54 KiB | 40.5 KiB |
+
+Why does storage fall when the sequence grows? Look at one sliding layer. After prefill it keeps the last three keys for the next query. Their 192-byte tensor is a view into a 384-byte allocation holding all six keys. Decoding appends the seventh key to those three. The next three-key view occupies the same 192 logical bytes, now backed by a 256-byte allocation. The four full-attention layers grow with the sequence, but here the savings across the sliding layers outweigh that growth. [[47]](#ref-47)
+
+You can see the difference with a single key tensor.
+
+```python
+import torch
+
+kept = torch.zeros(1, 2, 6, 8, dtype=torch.float32)[:, :, -3:, :]
+print(kept.nbytes, kept.untyped_storage().nbytes())       # 192 384
+next_key = torch.ones(1, 2, 1, 8, dtype=kept.dtype)
+kept = torch.cat([kept, next_key], dim=2)[:, :, -3:, :]
+print(kept.nbytes, kept.untyped_storage().nbytes())       # 192 256
+```
+
+<a href={withBasePath('/labs/loop_cache.py')} download>Download the CPU experiment (Python)</a> · <a href={withBasePath('/labs/2026-11/loop-cache.json')} download>Inspect the six- and seven-token measurements (JSON)</a>
+
+These are FP32 measurements on the small text model in Transformers 5.24.1, without pretrained weights. The script counts each underlying KV storage allocation once. Convolution state, activations, allocator reservations and process memory need separate measurements. GLM-5.4 uses a different cache design, described above. [[43]](#ref-43)
+
 ## GPT-6.2: Documented Interfaces and Undisclosed Internals
 
 **As of 2026-11-25.** OpenAI released **GPT-6.2 Astra** and **GPT-6.2 Sol** on November 17 through its API, ChatGPT Work and Codex. The weights remain undisclosed. [[42]](#ref-42) Both models accept text or images and return text. The API supports Responses and Chat Completions, with tool calling available through Responses. These interfaces tell us little about the attention layers, expert routing, parameter counts or training mixture. [[39]](#ref-39) [[40]](#ref-40) [[41]](#ref-41)
@@ -442,3 +471,5 @@ For an agent comparison, record whether a result used a single model call or orc
 45. <a id="ref-45"></a>[Thinking Machines Lab, released checkpoint configuration](https://huggingface.co/thinkingmachines/TML-d24-varloop-research/blob/91a57fe2b779bbd12c0f74d1f518cbd5b84e8d0d/config.json).
 
 46. <a id="ref-46"></a>[Hugging Face Transformers, decoder passes and cache allocation](https://github.com/huggingface/transformers/blob/fa9c04ea60c5e1d2ecc38064442973fa1ddccc72/src/transformers/models/inkling2_loop/modeling_inkling2_loop.py#L1354-L1427).
+
+47. <a id="ref-47"></a>[PyTorch 2.15, tensor storage and views](https://docs.pytorch.org/docs/2.15/storage.html).

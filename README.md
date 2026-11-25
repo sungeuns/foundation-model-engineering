@@ -1,6 +1,6 @@
 # Foundation Model Engineering
 
-**[Read the book in English](https://sungeuns.github.io/foundation-model-engineering/)** · [한국어판](https://sungeuns.github.io/foundation-model-engineering/ko/) · [한국어 README](README.ko.md) · [Download the serving guide (EPUB)](https://github.com/sungeuns/foundation-model-engineering/releases/download/serving-guide-2026-11/llm-serving-en-r2.epub)
+**[Read the book in English](https://sungeuns.github.io/foundation-model-engineering/)** · [한국어판](https://sungeuns.github.io/foundation-model-engineering/ko/) · [한국어 README](README.ko.md) · [Download the serving guide (EPUB)](https://github.com/sungeuns/foundation-model-engineering/releases/download/serving-guide-2026-11-r3/llm-serving-en-r3.epub)
 
 A free textbook on training, serving, and evaluating foundation models. [Browse the labs and teaching materials](https://sungeuns.github.io/foundation-model-engineering/labs/) for worked examples, CPU notebooks, and printable worksheets.
 
@@ -30,7 +30,7 @@ Both editions have [108 published lessons across 20 chapters](https://sungeuns.g
 
 Expect Python, linear algebra, and probability. Examples identify their simplifications; teaching simulations are not benchmark results. Time-sensitive comparisons identify their source and snapshot date. A provider's claim is kept separate from independently measured evidence.
 
-The November 24 comparison includes direct links to each profile. Check [GLM-5.4’s release status](https://sungeuns.github.io/foundation-model-engineering/chapter-17/commercial-model-benchmarks/#model-glm-54), find the [context limit of the Ling-3.2-air checkpoint](https://sungeuns.github.io/foundation-model-engineering/chapter-17/commercial-model-benchmarks/#ling-32-air-context), inspect the evaluation for [GPT-6.2 Sol](https://sungeuns.github.io/foundation-model-engineering/chapter-17/commercial-model-benchmarks/#model-gpt-62-sol), or read how [GLM-5.4 reuses its layers](https://sungeuns.github.io/foundation-model-engineering/chapter-4/various-llm-architectures/#glm-54-reusing-layers-separates-depth-from-capacity).
+The November 24 comparison includes direct links to each profile. Check [GLM-5.4’s release status](https://sungeuns.github.io/foundation-model-engineering/chapter-17/commercial-model-benchmarks/#model-glm-54), find the [context limit of the Ling-3.2-air checkpoint](https://sungeuns.github.io/foundation-model-engineering/chapter-17/commercial-model-benchmarks/#ling-32-air-context), inspect the evaluation for [GPT-6.2 Sol](https://sungeuns.github.io/foundation-model-engineering/chapter-17/commercial-model-benchmarks/#model-gpt-62-sol), or read how [GLM-5.4 reuses its layers](https://sungeuns.github.io/foundation-model-engineering/chapter-4/various-llm-architectures/#glm-54-reusing-layers-separates-depth-from-capacity). [Measure how adding one token reduced the backing storage for a small CPU model’s KV cache by 4,608 bytes.](https://sungeuns.github.io/foundation-model-engineering/chapter-4/various-llm-architectures/#loop-cache-storage)
 
 ### Try a CPU lab
 

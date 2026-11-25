@@ -1,11 +1,12 @@
 import * as bucketing from '../data/articles/length-bucketing.md';
+import * as loop from '../data/articles/loop-cache-storage.md';
 import * as speech from '../data/articles/whisper-sample-rate.md';
 import { site as book, whisperArticlePath } from '../data/site.js';
 import { chapterFeedHub, escapeXml } from '../utils/chapter-feed.js';
 import { getBasePath, withBasePath, withPagePath } from '../utils/paths.js';
 
 // Only full-length adaptations explicitly selected for syndication belong here.
-const articles = [{ source: speech, path: whisperArticlePath }, { source: bucketing }];
+const articles = [{ source: loop }, { source: speech, path: whisperArticlePath }, { source: bucketing }];
 
 export async function GET({ site = book.url }) {
   const base = getBasePath();

@@ -284,7 +284,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 4.2 | `/chapter-4/decoder-only` | Inspected 2026-11-25 | 566f11bdb11a6760f26ac9639bd0922af4ad46077497b6332ca7d4647a090e8b | 7a42e67720a62c01c9801e20b6ef5523aa9f6fb0fe3b60cdb074afb20dc23897 |
 | 4.3 | `/chapter-4/encoder-decoder` | Inspected 2026-11-25 | a81d35a1f33c94b446e07b1a1c911d1288c7936c2231803a570350bdf7ff76ae | 124605867b0725c421d411857fa79b4d56f1a39a0f1c02d401f7c82686e5128a |
 | 4.4 | `/chapter-4/hybrid-prefix-lm` | Inspected 2026-11-25 | 6edb93ff3d69526c5abd2108193b487cc82eb60c9c9887033237a77e72052127 | 59715e846873b8af91b74291aa803ff3047a646a79042af60da4b04a3dccef60 |
-| 4.5 | `/chapter-4/various-llm-architectures` | Mechanical only | e7133e6f49ee07717a39e05ab087a90e433bbe47b793a19f4c47026ca5b221f8 | bcd8acb486748aefb095a0ce9e49699c3ab4ac7dde1f8644bb6fd9d8214a0226 |
+| 4.5 | `/chapter-4/various-llm-architectures` | Mechanical only | cc9574ca5e217ffdcaaa7fd1c280e1c543bec2b763e6499fc85f98f060977828 | 291078dc40eab877d4947bc710a6aa95df76f1dba704e10aabe5df1911c34dd7 |
 | 5.1 | `/chapter-5/sparse-vs-dense-models` | Inspected 2026-11-25 | 01f8735ffcc52bb919dfea3402cb6fbdb0313849c20a83c447820f04e5bb6c08 | 7908d7d81bd30342d4223623ac332bf1d17f91a47e55e1deb8ba8d3ee2b88c37 |
 | 5.2 | `/chapter-5/routing-algorithms` | Inspected 2026-11-15 | 3b83671dec53a4a69ee8c357d810ac48b3b2b069f1b54fdb76a8e567ae6ed3e7 | 436d75fa19297b28084c3bf55cb2e92e341e86d33370e1843de1c263a8f9d356 |
 | 5.3 | `/chapter-5/expert-parallelism` | Inspected 2026-11-25 | df54ccd0e27298c0c41c0cd3ff6104c3a5577f92bef8de72f50201f3e41e050a | 20913a153b99ed266ca7853becfac6cd36e8cda7c1450eda46a451932ec2486b |
@@ -369,7 +369,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 19.4 | `/chapter-19/sparse-autoencoders-sae` | Mechanical only | 1c9eeb21d547629108ec41532289a1de144a79897f4e85d20b421ac6603187fd | 223a4aa84b4b0a99a418e04aae959b76c0b804a2ca4a1eb0fe600388a503b075 |
 | 20.1 | `/chapter-20/state-space-models-ssm` | Inspected 2026-11-15 | 62c29a98f3b7b0a6ec6474bcb6d941c649a324cb4c28be9a9f6c7938f0a939a5 | 21d0a1a63ca16d7a1777695359d7abc310d56a9d594b70b0097af63e11def139 |
 | 20.2 | `/chapter-20/mamba-and-s6` | Inspected 2026-11-18 | a89134b1f0ca60b397d0fd46c4bcfa0a1ce045cd294ff4895af664f745a59255 | f4805c489887aa69e2c78a4c55b8d10219d9a37aecdcf070a4b5f7d1b10ec988 |
-| 20.3 | `/chapter-20/linear-attention` | Mechanical only | fa24114e779a597a2e5337fbdfd4578973ed02167d343d554d3e87eb46afdd95 | 20a4f1b50a1fdf248d15a5ba1e421f02b4db55c4bf90f1b430c2865a4c17ca85 |
+| 20.3 | `/chapter-20/linear-attention` | Inspected 2026-11-25 | 38832a45ce660bd657c5bfd1a1509543665b0f7511fe675911d212c7a1e5c478 | 7eb725bc6b9e797fd51c71ab939d650fa49b424f7902fbad671d52273d0b7432 |
 | 20.4 | `/chapter-20/neural-networks-as-programs` | Inspected 2026-11-15 | 55b5f77c413bfd3de7fa682467ff500d07887f4dabafbb79903beccf9b5c4759 | e88b792d77ef04624e0dee7e78480fadde710c80d0f3c1cdc729c60f56e765bf |
 | 20.5 | `/chapter-20/multi-token-prediction` | Inspected 2026-11-18 | e6f6d2d7bcefe3b290e7c0d81c7612e000d2bcfe5dc3593a29a285e27416f560 | d407bab93f7b3b6e03c5ec9d36bced5d4df7e538fe6083aadd5d636b14fe80a9 |
 | 20.6 | `/chapter-20/diffusion-based-llms` | Inspected 2026-11-15 | f2236899fbf327ac90e1c1edae9c77a4173fb6721102a7364fbf85542541d836 | 0d5a117e60a90c1f8d746e5b29f01a13cc4929aa7a0e729e93fc003611ef22ed |
@@ -531,7 +531,7 @@ Each row passed EN/KO × 1280px/390px mount/range checks. This table records bro
 | `chapter-19/mechanistic-interpretability` | `InductionHeadVisualizer` | 202078a1c76f8012010ce9aa3f3bf8d2b1302ee5b2a4266451c5985a3b6a34b1 |
 | `chapter-19/probing-classifiers` | `LinearProbeVisualizer` | ea7eec5a2c60ef145627fed639558ba1d4583e17a0b63e213179e4e85e855ecf |
 | `chapter-19/sparse-autoencoders-sae` | `PolysemanticVisualizer` | fa9b9e1fbb8e71acb5af373421aaceb24370055fa3d15f52bf00072b357e621c |
-| `chapter-20/linear-attention` | `LinearAttentionVisualizer` | b5f004ec68fb2eab41361a24120bc2e7d505f555518ce9d219521b02f875a3ca | 855616db495c32f6d6686876915334dcba7b91187a3959988dc8052d230c42d3 |
+| `chapter-20/linear-attention` | `LinearAttentionVisualizer` | 30cae9697bc69e5059534bef75a01aa3e7739b1b4bcc167e0e518270e2984c10 |
 | `chapter-20/mamba-and-s6` | `SSMDualityVisualizer` | 3b61a556b96561c7b5b5e5a8bb6281133ac98b09c4184d9620f1688e647129a5 |
 | `chapter-20/multi-token-prediction` | `MTPVisualizer` | 06fb312e5b07e1d7141142738fd1027574ce377df309276ae6cc41f7d651d58f |
 | `chapter-20/state-space-models-ssm` | `SSMVsTransformerVisualizer` | 3ae63bf94cec0a20a7b5030f9ea65f3c0c88c995cfa54a3e5168b6e707ae7763 |

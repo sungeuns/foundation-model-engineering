@@ -4,15 +4,14 @@ title: "4.5 다양한 LLM 아키텍처"
 lang: "ko"
 ---
 
+import { withBasePath } from '../../../utils/paths.js';
 import AttentionMaskVisualizer from '../../../components/chapter-4/AttentionMaskVisualizer';
 
 # 4.5 다양한 LLM 아키텍처
 
-이쯤 오면 아키텍처 논쟁은 끝났다고 느끼기 쉽습니다. decoder-only가 이겼고, 모두가 GPT를 조금씩 변형하는 정도라고 생각하기 쉽죠. 하지만 실제 엔지니어링은 그 지점에서 시작됩니다. 컨텍스트를 더 길게 가져가야 하고, 서빙 비용은 낮춰야 하고, 처리량은 높여야 하며, tool use나 reasoning 같은 능력도 챙겨야 하기 때문입니다.
+가중치가 메모리에 들어간다면 같은 층을 한 번 더 실행할 공간도 충분할까요? 아래 CPU 실험에서는 디코더 24개 층을 총 72번 실행합니다. 각 층의 가중치는 한 벌이지만, 같은 층을 다시 통과할 때마다 다음 토큰이 읽을 키와 값이 새로 생깁니다.
 
-교통수단에 비유하면 이해가 쉽습니다. 화물선, 경주용 자동차, 통근 열차는 모두 무언가를 이동시키지만 최적화 대상이 완전히 다릅니다. 현대 LLM도 비슷합니다. 모두 자기회귀적으로 텍스트를 생성하지만, KV cache 성장, attention 복잡도, routing 효율, 학습 안정성 중 무엇이 더 아픈 병목인지에 따라 내부 설계가 달라집니다.
-
-이 절에서는 최신 모델 이름을 외우는 대신, 어떤 압력이 어떤 설계를 낳았는지를 먼저 보겠습니다.
+이 절에서는 추론 요청 하나를 따라가며 세 가지를 살펴봅니다. 각 층은 앞선 토큰 중 어디까지 볼 수 있을까요? 토큰 하나를 처리할 때 어떤 파라미터를 쓸까요? 다음 토큰으로 넘어갈 때 무엇이 메모리에 남을까요?
 
 [11월 24일 업데이트](#glm-54-레이어-재사용으로-깊이와-용량을-구분하기)에서는 GLM-5.4의 레이어 반복 구조와 GPT-6.2의 공개된 인터페이스를 추가합니다. 앞선 날짜가 붙은 표는 당시의 기록입니다.
 
@@ -328,6 +327,36 @@ for passes in (1, loop["num_passes"], 5):
 
 한 번 반복했을 때와 다섯 번 반복했을 때의 정답률을 비교하면 무엇을 알 수 있을까요? 가중치는 같지만 학습 때 가장 많이 접한 조건은 세 번 반복하는 경우입니다. 연구진은 중간 학습 후반에 한 번부터 다섯 번까지의 반복 횟수를 1:2:6:2:1 비율로 뽑았고, 사후 학습에서는 세 번으로 고정했습니다. 같은 문제를 풀게 하면 **이 체크포인트에서** 깊이를 바꿨을 때의 효과를 볼 수 있습니다. 처음부터 어느 깊이로 학습하는 편이 나을지는 별도의 실험이 필요합니다. [[44]](#ref-44)
 
+<a id="loop-cache-storage"></a>
+
+### 토큰을 하나 더 읽었는데 KV 저장 공간이 줄어든 이유
+
+`Inkling2LoopTextModel`의 디코더 24개 층을 그대로 두고 차원을 줄여 가중치를 무작위로 초기화했습니다. 파라미터가 232,704개여서 CPU에서도 실행할 수 있습니다. 20개 층은 네 토큰짜리 창을 쓰고, 나머지 네 층은 전체 문맥을 봅니다. 여섯 토큰을 먼저 입력해 키와 값을 측정한 뒤 일곱 번째 토큰을 하나 더 넣습니다. 코드는 일곱 토큰을 처음부터 다시 계산해 캐시를 쓴 결과와 마지막 위치의 출력이 일치하는지도 확인합니다. [[46]](#ref-46)
+
+| 반복 횟수 | 프리필에서 층을 호출한 횟수 | 6토큰 뒤 KV 텐서 크기 | 6토큰 뒤 KV 저장 공간 | 7토큰 뒤 KV 저장 공간 |
+| ---: | ---: | ---: | ---: | ---: |
+| 1 | 24 | 10.5 KiB | 18 KiB | 13.5 KiB |
+| 3 | 48 | 21 KiB | 36 KiB | 27 KiB |
+| 5 | 72 | 31.5 KiB | 54 KiB | 40.5 KiB |
+
+토큰이 늘었는데 저장 공간은 왜 줄었을까요? 창을 쓰는 층 하나를 보면, 프리필 뒤에는 다음 쿼리에 필요한 마지막 키 세 개만 남습니다. 이 텐서의 크기는 192바이트지만, 키 여섯 개가 들어 있는 384바이트 버퍼의 일부를 가리킵니다. 한 토큰을 디코딩할 때는 남겨 둔 키 세 개에 일곱 번째 키 하나를 붙입니다. 다시 마지막 세 개를 가리키는 텐서를 만들면 크기는 여전히 192바이트지만, 이번 버퍼는 256바이트면 됩니다. 전체 문맥을 보는 네 층에서는 캐시가 늘었지만, 이 예제에서는 나머지 층에서 줄어든 공간이 더 큽니다. [[47]](#ref-47)
+
+키 텐서 하나만 만들어 두 수치가 어떻게 달라지는지 확인할 수 있습니다.
+
+```python
+import torch
+
+kept = torch.zeros(1, 2, 6, 8, dtype=torch.float32)[:, :, -3:, :]
+print(kept.nbytes, kept.untyped_storage().nbytes())       # 192 384
+next_key = torch.ones(1, 2, 1, 8, dtype=kept.dtype)
+kept = torch.cat([kept, next_key], dim=2)[:, :, -3:, :]
+print(kept.nbytes, kept.untyped_storage().nbytes())       # 192 256
+```
+
+<a href={withBasePath('/labs/loop_cache.py')} download>CPU 실험 코드 받기 (Python)</a> · <a href={withBasePath('/labs/2026-11/loop-cache.json')} download>6토큰과 7토큰 측정값 보기 (JSON)</a>
+
+측정 환경은 Transformers 5.24.1, CPU, FP32이며 사전학습 가중치를 사용하지 않았습니다. 스크립트는 여러 KV 텐서가 같은 저장 공간을 참조하면 한 번만 셉니다. 합성곱 상태와 활성값, 할당기가 예약한 메모리, 프로세스의 메모리 사용량은 따로 측정해야 합니다. 앞서 살펴본 GLM-5.4는 다른 캐시 구조를 사용합니다. [[43]](#ref-43)
+
 ## GPT-6.2: 공개된 인터페이스와 미공개 내부 구조
 
 **2026-11-25 기준.** OpenAI는 11월 17일 **GPT-6.2 Astra** 와 **GPT-6.2 Sol** 을 API, ChatGPT Work, Codex에 출시했습니다. 가중치는 공개하지 않았습니다. [[42]](#ref-42) 두 모델 모두 텍스트와 이미지를 입력받아 텍스트를 출력합니다. API에서는 Responses와 Chat Completions를 쓸 수 있고, 도구 호출은 Responses에서 지원합니다. 이 인터페이스만으로 내부 어텐션 구성, 전문가 라우팅, 파라미터 수나 학습 데이터 혼합을 알 수는 없습니다. [[39]](#ref-39) [[40]](#ref-40) [[41]](#ref-41)
@@ -442,3 +471,5 @@ for passes in (1, loop["num_passes"], 5):
 45. <a id="ref-45"></a>[Thinking Machines Lab이 공개한 체크포인트 설정](https://huggingface.co/thinkingmachines/TML-d24-varloop-research/blob/91a57fe2b779bbd12c0f74d1f518cbd5b84e8d0d/config.json).
 
 46. <a id="ref-46"></a>[Hugging Face Transformers의 디코더 반복과 캐시 할당 구현](https://github.com/huggingface/transformers/blob/fa9c04ea60c5e1d2ecc38064442973fa1ddccc72/src/transformers/models/inkling2_loop/modeling_inkling2_loop.py#L1354-L1427).
+
+47. <a id="ref-47"></a>[PyTorch 2.15의 텐서 저장 공간과 뷰 설명](https://docs.pytorch.org/docs/2.15/storage.html).

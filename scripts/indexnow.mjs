@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { pathToFileURL } from 'node:url';
 import { chapters } from '../src/data/chapters.js';
-import { site, whisperArticlePath } from '../src/data/site.js';
+import { servingGuide, site, whisperArticlePath } from '../src/data/site.js';
 
 const base = new URL('/foundation-model-engineering/', site.url);
 const endpoint = 'https://api.indexnow.org/indexnow';
@@ -26,7 +26,9 @@ const sharedRoutes = new Map([
   ['src/components/TeachingLabs.astro', catalogRoutes],
   ['src/data/teaching-labs.js', catalogRoutes],
   ['src/data/lab-datasets.js', catalogRoutes],
-  ['src/data/site.js', catalogRoutes], // Both catalog titles come from this module.
+  ['src/data/site.js', [...catalogRoutes, '', 'ko/', ...servingGuide.lessons.flatMap(lesson => [
+    lesson.slice(1) + '/', 'ko' + lesson + '/',
+  ])]],
   // The catalog includes a bundled link whose URL contains the script's hash.
   ['scripts/verify-dp-ddp-gradients.py', catalogRoutes],
 ]);

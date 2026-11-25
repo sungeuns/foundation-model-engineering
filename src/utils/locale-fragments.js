@@ -5,6 +5,7 @@ import { readReleaseScenario } from '../components/chapter-17/release-scenario.j
 // These IDs name the same authored exercise in both translations. Do not infer
 // counterparts from heading order, translated slugs, or reference numbers.
 const lessonFragments = {
+  '/chapter-20/linear-attention': ['causal-linear-scan', 'context-state-memory'],
   '/chapter-1/deep-learning-paradigms': ['next-token-loss-example'],
   '/chapter-1/bitter-lesson': ['chinchilla-budget-example'],
   '/chapter-1/symbolism-vs-connectionism': ['logic-gate-lab'],
@@ -18,7 +19,7 @@ const lessonFragments = {
   '/chapter-4/encoder-only': ['mlm-target-example'],
   '/chapter-4/decoder-only': ['shifted-target-example'],
   '/chapter-4/encoder-decoder': ['cross-attention-example'],
-  '/chapter-4/various-llm-architectures': ['glm-54-layer-reuse', 'glm-54-cache-positions', 'mla-cache-example', 'variable-loop-checkpoint'],
+  '/chapter-4/various-llm-architectures': ['glm-54-layer-reuse', 'glm-54-cache-positions', 'mla-cache-example', 'variable-loop-checkpoint', 'loop-cache-storage'],
   '/chapter-4/hybrid-prefix-lm': ['prefix-mask-test'],
   '/chapter-5/sparse-vs-dense-models': ['moe-routing-lab'],
   '/chapter-5/expert-parallelism': ['expert-dispatch-lab'],

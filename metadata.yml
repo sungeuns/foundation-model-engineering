@@ -130,8 +130,8 @@
     Three lessons from Foundation Model Engineering in a reflowable English EPUB.
     Calculate how many requests fit in a KV cache, follow requests through a
     continuously changing batch, and compare time to first token with delays
-    between streamed tokens. Worked examples, figures and quiz answers are
-    included for offline reading.
+    between streamed tokens. Revision 3 includes the measured 990 to 1,350 KiB
+    KV cache example, all three scheduling timelines and 16 quizzes with answers.
   inLanguage: [en]
   creator:
     - type: Person
@@ -149,7 +149,7 @@
   encoding:
     - type: MediaObject
       encodingFormat: application/epub+zip
-      contentUrl: https://github.com/sungeuns/foundation-model-engineering/releases/download/serving-guide-2026-11/llm-serving-en-r2.epub
+      contentUrl: https://github.com/sungeuns/foundation-model-engineering/releases/download/serving-guide-2026-11-r3/llm-serving-en-r3.epub
   isPartOf:
     - type: [LearningResource]
       id: https://sungeuns.github.io/foundation-model-engineering/
@@ -175,7 +175,8 @@
     파운데이션 모델 엔지니어링에서 서빙을 다루는 세 절을 모은 한국어 EPUB입니다.
     KV 캐시에 요청을 몇 개까지 담을 수 있는지 계산하고, 연속 배칭에서 요청이
     들어오고 빠지는 순서를 따라갑니다. 첫 토큰이 도착하기까지의 시간과 이후
-    토큰 사이의 지연도 비교합니다. 예제, 그림, 퀴즈 풀이를 오프라인으로 읽을 수 있습니다.
+    토큰 사이의 지연도 비교합니다. 개정 3판에는 990 KiB에서 1,350 KiB로 늘어난
+    KV 캐시 실측 예제, 세 가지 스케줄의 실행 순서, 퀴즈 16개의 풀이를 담았습니다.
   inLanguage: [ko]
   creator:
     - type: Person
@@ -193,7 +194,7 @@
   encoding:
     - type: MediaObject
       encodingFormat: application/epub+zip
-      contentUrl: https://github.com/sungeuns/foundation-model-engineering/releases/download/serving-guide-2026-11/llm-serving-ko-r2.epub
+      contentUrl: https://github.com/sungeuns/foundation-model-engineering/releases/download/serving-guide-2026-11-r3/llm-serving-ko-r3.epub
   isPartOf:
     - type: [LearningResource]
       id: https://sungeuns.github.io/foundation-model-engineering/ko/

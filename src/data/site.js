@@ -17,7 +17,7 @@ export const site = {
   },
 };
 
-const servingGuideRelease = 'https://github.com/sungeuns/foundation-model-engineering/releases/download/serving-guide-2026-11';
+const servingGuideRelease = 'https://github.com/sungeuns/foundation-model-engineering/releases/download/serving-guide-2026-11-r3';
 export const servingGuide = {
   lessons: [
     '/chapter-12/kv-cache-management',
@@ -25,7 +25,7 @@ export const servingGuide = {
     '/chapter-12/serving-policies-slos-and-fallbacks',
   ],
   downloads: {
-    en: `${servingGuideRelease}/llm-serving-en-r2.epub`,
-    ko: `${servingGuideRelease}/llm-serving-ko-r2.epub`,
+    en: `${servingGuideRelease}/llm-serving-en-r3.epub`,
+    ko: `${servingGuideRelease}/llm-serving-ko-r3.epub`,
   },
 };

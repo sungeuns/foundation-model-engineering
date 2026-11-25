@@ -28,7 +28,7 @@ test('edition-specific catalog edits select one URL and shared inputs select bot
   assert.deepEqual(changedRoutes(['src/pages/ko/labs/index.astro']), ['ko/labs/']);
   for (const shared of [
     'src/components/TeachingLabs.astro', 'src/data/teaching-labs.js',
-    'src/data/lab-datasets.js', 'src/data/site.js', 'scripts/verify-dp-ddp-gradients.py',
+    'src/data/lab-datasets.js', 'scripts/verify-dp-ddp-gradients.py',
   ]) {
     assert.deepEqual(changedRoutes([shared, 'src/pages/labs/index.astro', shared]), ['labs/', 'ko/labs/']);
   }
@@ -91,4 +91,12 @@ test('a timeline-only change selects both lessons using it in both languages', (
   assert.deepEqual(changedRoutes([steps, timeline]), [
     ...batching, 'chapter-12/long-context-serving/', 'ko/chapter-12/long-context-serving/',
   ]);
+});
+
+
+test('a new serving EPUB reaches the landing pages and the six lesson downloads', () => {
+  const routes = changedRoutes(['src/data/site.js']);
+  const lessons = ['kv-cache-management', 'continuous-batching', 'serving-policies-slos-and-fallbacks'];
+  assert.deepEqual(new Set(routes), new Set(['labs/', 'ko/labs/', '', 'ko/', ...lessons.flatMap(slug =>
+    [`chapter-12/${slug}/`, `ko/chapter-12/${slug}/`])]));
 });

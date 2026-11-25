@@ -153,3 +153,34 @@ test('readers can discover each edition’s feeds from the homepage or an articl
     }
   }
 });
+
+test('the loop-cache article preserves the measured bytes and points to the bilingual CPU exercise', () => {
+  const chapter = 'chapter-4/various-llm-architectures/';
+  const record = JSON.parse(readFileSync(join(dist, 'labs/2026-11/loop-cache.json'), 'utf8'));
+  const source = readFileSync('src/data/articles/loop-cache-storage.md', 'utf8');
+  const [, snippet] = source.match(/^```python\n([\s\S]+?)\n```/m);
+  const articleUrl = base + chapter + '#loop-cache-storage';
+  const [, , items] = readSelectedFeed();
+  const matches = items.filter(item => item.link === articleUrl);
+  assert.equal(matches.length, 1);
+  assert.equal(matches[0].guid, articleUrl);
+  const body = matches[0]['{http://purl.org/rss/1.0/modules/content/}encoded'];
+  const first = record.runs.find(row => row.passes === 1);
+  const savings = first.prefill.backing_bytes - first.after_one_token.backing_bytes;
+  assert.ok(body.includes(savings.toLocaleString('en-US')));
+  assert.ok(first.after_one_token.logical_bytes > first.prefill.logical_bytes);
+  assert.ok(body.includes(base + 'labs/loop_cache.py'));
+  assert.ok(body.includes(base + 'labs/2026-11/loop-cache.json'));
+  for (const prefix of ['', 'ko/']) {
+    const lesson = readFileSync(`src/pages/${prefix}${chapter.slice(0, -1)}.mdx`, 'utf8');
+    assert.ok(lesson.includes('```python\n' + snippet + '\n```'));
+    for (const row of record.runs) {
+      assert.equal(row.distinct_layers, 24);
+      const cells = [row.passes, row.prefill_layer_calls,
+        ...[row.prefill.logical_bytes, row.prefill.backing_bytes, row.after_one_token.backing_bytes]
+          .map(bytes => `${bytes / 1024} KiB`)];
+      assert.ok(lesson.includes('| ' + cells.join(' | ') + ' |'));
+    }
+    assert.ok(readFileSync(join(dist, prefix, chapter, 'index.html'), 'utf8').includes('id="loop-cache-storage"'));
+  }
+});
