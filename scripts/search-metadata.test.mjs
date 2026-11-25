@@ -405,26 +405,42 @@ test('the OER catalogue opens each attention worksheet at the section with its P
   }
 });
 
-test('OERSI lists both receipt experiments at their reader pages with the downloadable CPU bundle', () => {
-  const records = load(readFileSync('metadata.yml', 'utf8'));
-  const download = new URL(`${base}/labs/2026-11/receipt-grounding.zip`);
-  for (const [lang, edition] of [['en', ''], ['ko', '/ko']]) {
-    const route = `${edition}/articles/receipt-grounding/`;
-    const matches = records.filter(record => record.id === base + route);
-    assert.equal(matches.length, 1, route);
-    const [record] = matches;
-    assert.deepEqual(record.inLanguage, [lang]);
-    assert.deepEqual(record.learningResourceType, ['https://w3id.org/kim/hcrt/experiment']);
-    assert.deepEqual(record.encoding, [{ type: 'MediaObject', encodingFormat: 'application/zip', contentUrl: download.href }]);
-    assert.ok(record.isPartOf.some(parent => parent.id === `${base}${edition}/`));
-    const html = readFileSync(`${outputDir}${route}index.html`, 'utf8');
-    const main = html.match(/<main\b[^>]*>([\s\S]*?)<\/main>/)[1];
-    const title = parseFragment(main).childNodes.find(node => node.tagName === 'h1');
-    assert.equal(title?.childNodes[0].value, record.name, record.id);
-    const urls = [...main.matchAll(/<a\b[^>]*\bhref="([^"]+)"/g)].map(match => new URL(match[1], record.id).href);
-    assert.ok(urls.includes(download.href), record.id);
-  }
-});
+const articleExperiments = {
+  'receipt-grounding': [
+    ['application/zip', '/labs/2026-11/receipt-grounding.zip'],
+  ],
+  'ddp-sampler-audit': [
+    ['text/x-python', '/labs/ddp_sampler_audit.py'],
+    ['application/json', '/labs/2026-11/ddp-sampler-audit.json'],
+  ],
+};
+
+for (const [slug, files] of Object.entries(articleExperiments)) {
+  test(`OERSI links both editions of ${slug} to the activity and its experiment files`, () => {
+    const records = load(readFileSync('metadata.yml', 'utf8'));
+    const encodings = files.map(([encodingFormat, path]) => ({
+      type: 'MediaObject', encodingFormat, contentUrl: base + path,
+    }));
+    for (const [, path] of files) assert.ok(readFileSync(outputDir + path).length > 0, path);
+
+    for (const [lang, edition] of [['en', ''], ['ko', '/ko']]) {
+      const route = `${edition}/articles/${slug}/`;
+      const matches = records.filter(record => record.id === base + route);
+      assert.equal(matches.length, 1, route);
+      const [record] = matches;
+      assert.deepEqual(record.inLanguage, [lang]);
+      assert.deepEqual(record.learningResourceType, ['https://w3id.org/kim/hcrt/experiment']);
+      assert.deepEqual(record.encoding, encodings);
+      assert.ok(record.isPartOf.some(parent => parent.id === `${base}${edition}/`));
+      const html = readFileSync(`${outputDir}${route}index.html`, 'utf8');
+      const main = html.match(/<main\b[^>]*>([\s\S]*?)<\/main>/)[1];
+      const title = parseFragment(main).childNodes.find(node => node.tagName === 'h1');
+      assert.equal(title?.childNodes[0].value, record.name, record.id);
+      const urls = [...main.matchAll(/<a\b[^>]*\bhref="([^"]+)"/g)].map(match => new URL(match[1], record.id).href);
+      for (const { contentUrl } of encodings) assert.ok(urls.includes(contentUrl), `${record.id}: ${contentUrl}`);
+    }
+  });
+}
 
 test('the book and README open the same worked KV budget in each edition', () => {
   for (const edition of ['', '/ko']) {

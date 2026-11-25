@@ -457,3 +457,72 @@
     - type: [LearningResource]
       id: https://sungeuns.github.io/foundation-model-engineering/ko/
       name: 파운데이션 모델 엔지니어링
+
+- "@context": https://schema.org/
+  type: LearningResource
+  creativeWorkStatus: Published
+  id: https://sungeuns.github.io/foundation-model-engineering/articles/ddp-sampler-audit/
+  image: https://sungeuns.github.io/foundation-model-engineering/social/ddp-sampler-audit-en.png
+  name: Why did 4/5 accuracy become 4/6 on two ranks?
+  description: >-
+    Follow five validation IDs through PyTorch’s DistributedSampler and DataLoader.
+    Run both ranks in one CPU process to see which ID is counted twice and which
+    is dropped. Move the only mistake from ID 0 to ID 4 and use the recorded
+    batches to explain why the same six visits now score 5/6.
+  inLanguage: [en]
+  creator:
+    - type: Person
+      givenName: Seongeun
+      familyName: So
+  datePublished: "2026-11-25"
+  license: https://opensource.org/license/mit
+  educationalLevel: [https://w3id.org/kim/educationalLevel/level_A]
+  learningResourceType: [https://w3id.org/kim/hcrt/experiment]
+  about: [https://w3id.org/kim/hochschulfaechersystematik/n079]
+  keywords: [PyTorch, DistributedSampler, model evaluation, accuracy]
+  encoding:
+    - type: MediaObject
+      encodingFormat: text/x-python
+      contentUrl: https://sungeuns.github.io/foundation-model-engineering/labs/ddp_sampler_audit.py
+    - type: MediaObject
+      encodingFormat: application/json
+      contentUrl: https://sungeuns.github.io/foundation-model-engineering/labs/2026-11/ddp-sampler-audit.json
+  isPartOf:
+    - type: [LearningResource]
+      id: https://sungeuns.github.io/foundation-model-engineering/
+      name: Foundation Model Engineering
+
+- "@context": https://schema.org/
+  type: LearningResource
+  creativeWorkStatus: Published
+  id: https://sungeuns.github.io/foundation-model-engineering/ko/articles/ddp-sampler-audit/
+  image: https://sungeuns.github.io/foundation-model-engineering/social/ddp-sampler-audit-ko.png
+  name: 평가 예제는 다섯 개인데 왜 여섯 번 채점했을까?
+  description: >-
+    평가 예제 다섯 개를 PyTorch의 DistributedSampler와 DataLoader가 어떻게
+    나눠 주는지 번호로 추적합니다. CPU 프로세스 하나에서 두 랭크의 배치를 확인해
+    어떤 예제가 두 번 채점되고 어떤 예제가 빠지는지 찾아봅니다. 유일한 오답을
+    0번에서 4번으로 옮기고, 실행 기록으로 같은 여섯 번의 채점 결과가 5/6이 되는
+    이유를 설명합니다.
+  inLanguage: [ko]
+  creator:
+    - type: Person
+      givenName: Seongeun
+      familyName: So
+  datePublished: "2026-11-25"
+  license: https://opensource.org/license/mit
+  educationalLevel: [https://w3id.org/kim/educationalLevel/level_A]
+  learningResourceType: [https://w3id.org/kim/hcrt/experiment]
+  about: [https://w3id.org/kim/hochschulfaechersystematik/n079]
+  keywords: [PyTorch, DistributedSampler, 모델 평가, 정확도]
+  encoding:
+    - type: MediaObject
+      encodingFormat: text/x-python
+      contentUrl: https://sungeuns.github.io/foundation-model-engineering/labs/ddp_sampler_audit.py
+    - type: MediaObject
+      encodingFormat: application/json
+      contentUrl: https://sungeuns.github.io/foundation-model-engineering/labs/2026-11/ddp-sampler-audit.json
+  isPartOf:
+    - type: [LearningResource]
+      id: https://sungeuns.github.io/foundation-model-engineering/ko/
+      name: 파운데이션 모델 엔지니어링

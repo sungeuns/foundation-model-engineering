@@ -63,6 +63,8 @@ On November 25, 2026, RSSAmp accepted the book’s selected-articles feed. Its p
 
 On November 25, the directory subsequently picked up the fourth item, the receipt-grounding experiment. The reader entry linked to the original article. RSSAmp does not expose reader or referral counts on the listing. [Syndicated receipt experiment](https://rssamp.com/foundation-model-engineering-selected-articles/read?p=https%3A%2F%2Fsungeuns.github.io%2Ffoundation-model-engineering%2Farticles%2Freceipt-grounding%2F)
 
+Later that day, the public feed listing showed five stories. The new entry asks why five validation examples yielded six predictions across two ranks. Its **Open** link led to the English article, where readers can download the observed batches and reproduce the calculation. [RSSAmp reader entry](https://rssamp.com/foundation-model-engineering-selected-articles/read?p=https%3A%2F%2Fsungeuns.github.io%2Ffoundation-model-engineering%2Farticles%2Fddp-sampler-audit%2F) · [Original experiment](https://sungeuns.github.io/foundation-model-engineering/articles/ddp-sampler-audit/)
+
 An isolated mobile browser was previously served an RSSAmp pass offer when opening the listing and reader URLs. For direct sharing, use the book’s free article URLs. The English feed keeps each item’s original GUID when its reader URL changes.
 
 ## Published Korean coverage and the old Hacker News link
