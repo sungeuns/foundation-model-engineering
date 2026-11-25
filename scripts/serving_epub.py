@@ -52,10 +52,8 @@ COPY = {
         "credit": "An excerpt from Foundation Model Engineering by Seongeun So, developed with AI assistance.",
         "source": "Source edition on GitHub", "license": "License",
         "kv": "All nine prompts fit with 1.5 GiB to spare. Holding all nine full-length caches at once would put the pool 4.125 GiB over budget.",
-        "kv_link": "Change the nine-request workload in the web calculator",
         "batch": "In the table, follow B at iteration 2 and D at iteration 3. At iteration 5, E has entered the continuous batch while the first static group still waits for C.",
         "batch_link": "Step through the two schedules online", "schedule_link": "Change the prefill schedule online",
-        "schedule": ("Example schedule", "First existing decode finishes", "New prompt prefill finishes", "Unified", "Chunked"),
     },
     "ko": {
         "title": "LLM 서빙 실전", "toc": "차례", "original": "이 절의 웹 원문 읽기",
@@ -64,10 +62,8 @@ COPY = {
         "credit": "Seongeun So가 AI의 도움을 받아 집필한 『파운데이션 모델 엔지니어링』에서 세 절을 발췌했습니다.",
         "source": "GitHub에서 이 판의 원고 보기", "license": "라이선스",
         "kv": "프롬프트 아홉 개를 넣고 나면 1.5 GiB가 남습니다. 최대 길이의 캐시 아홉 개를 동시에 담으려면 4.125 GiB가 더 필요합니다.",
-        "kv_link": "웹 계산기에서 아홉 요청의 조건 바꾸기",
         "batch": "표에서 두 번째 반복의 B와 세 번째 반복의 D를 따라가 보세요. 다섯 번째 반복에서 연속 배치에는 E가 들어왔지만, 첫 번째 정적 배치는 아직 C가 끝나기를 기다립니다.",
         "batch_link": "웹에서 두 배치의 실행 순서를 한 단계씩 보기", "schedule_link": "웹에서 프리필 일정 바꾸기",
-        "schedule": ("예시 일정", "기존 요청의 첫 디코딩 완료", "새 프롬프트 프리필 완료", "통합", "청크"),
     }
 }
 
@@ -101,11 +97,9 @@ def online_labs(main, page_url, c):
         box = etree.Element("div")
         heading = island.xpath("preceding::h3[1]")
         if component == "KVCacheCalculator":
-            preset, = main.xpath('.//a[contains(@href, "?kv=")]')
-            href = urljoin(page_url, preset.get("href"))
-            preset.getparent().drop_tree()
+            # Preset links and their worked examples live in the manuscript.
+            # Keep each one in context when the interactive control is removed.
             add(box, "p", c["kv"])
-            web_link(box, c["kv_link"], href)
         elif component == "ContinuousBatchingVisualizer":
             # The step-by-step instructions immediately before the web control
             # refer to its buttons. The complete 11-iteration trace remains in print.
@@ -116,16 +110,20 @@ def online_labs(main, page_url, c):
             add(box, "p", c["batch"])
             web_link(box, c["batch_link"], page_url + "#" + heading[0].get("id"))
         elif component == "SchedulingVisualizer":
-            table = add(box, "table")
-            head = add(add(table, "thead"), "tr")
-            titles = c["schedule"]
-            for label in titles[:3]:
-                add(head, "th", label, scope="col")
-            body = add(table, "tbody")
-            for row in ((titles[3], "66", "60"), (titles[4], "20", "78")):
-                tr = add(body, "tr")
-                for value in row:
-                    add(tr, "td", value)
+            active, = island.xpath('.//button[@aria-pressed="true"]')
+            legend, = island.xpath('.//fieldset/following-sibling::p[1]')
+            box.append(legend)
+            add(box, "strong", active.text_content())
+            pools = add(box, "ul")
+            for track in island.xpath('.//div[@class="track-row"]'):
+                label, = track.xpath('./div[@class="label"]')
+                times = track.xpath('./div[@class="blocks"]/div/@title')
+                add(pools, "li", label.text_content() + " · " + ", ".join(times))
+            alternatives, = island.xpath(".//noscript/details")
+            for schedule in alternatives.findall("div"):
+                box.append(schedule)
+            source, = island.xpath('.//p[@class="scheduling-source"]')
+            box.append(source)
             web_link(box, c["schedule_link"], page_url + "#" + heading[0].get("id"))
         else:
             raise ValueError(f"New interactive component needs a reading equivalent: {component}")
@@ -185,9 +183,12 @@ def chapter(dist, slug, lang, c, assets):
     parser = html.HTMLParser(encoding="utf-8", remove_comments=True)
     main, = html.parse(dist / route / "index.html", parser).xpath("//main")
     title = main.find("h1").text_content().strip()
+    # Astro can insert hydration scripts beside either island in a given build.
+    for node in main.xpath(".//script | .//style"):
+        node.drop_tree()
     online_labs(main, page_url, c)
     reflow_tables(main, lang)
-    for node in main.xpath(".//script | .//style | .//noscript | .//*[@class='section-permalink']"):
+    for node in main.xpath(".//noscript | .//*[@class='section-permalink']"):
         node.drop_tree()
     for node in main.xpath('.//span[contains(concat(" ", @class, " "), " katex ")]'):
         math, = node.xpath(".//math")
