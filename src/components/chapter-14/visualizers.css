@@ -339,4 +339,26 @@
 .crag-btn:hover {
   background-color: #0b5ed7;
 }
-.hnsw-container{min-width:0;max-width:100%;box-sizing:border-box}.hnsw-canvas{display:block;width:100%;height:auto;min-width:0}.hnsw-controls{display:grid;gap:.75rem}.hnsw-controls label{display:block}.hnsw-controls input{display:block;width:100%}.hnsw-actions{display:flex;flex-wrap:wrap;gap:.5rem;margin:1rem 0}.hnsw-container :is(input,button):focus-visible{outline:3px solid #2563eb;outline-offset:3px}
+.hnsw-container { min-width: 0; max-width: 100%; box-sizing: border-box; }
+.hnsw-container h4 { margin-top: 0; }
+.hnsw-canvas { width: 100%; height: auto; box-sizing: border-box; }
+.hnsw-canvas text { fill: #0c4a6e; stroke: #fff; stroke-width: 4px; paint-order: stroke; font: bold 19px system-ui, sans-serif; }
+.hnsw-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr)); gap: .75rem; }
+.hnsw-controls label, .hnsw-budget { display: block; }
+.hnsw-container input { display: block; width: 100%; margin: .25rem 0 .75rem; accent-color: #075985; }
+.hnsw-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin: .75rem 0; }
+.hnsw-actions button { padding: .45rem .65rem; font: inherit; line-height: 1.3; border: 1px solid #94a3b8; border-radius: .3rem; color: #1e293b; background: #fff; cursor: pointer; }
+.hnsw-actions button[aria-pressed="true"] { background: #075985; border-color: #075985; color: #fff; }
+.hnsw-actions button:disabled { background: #f1f5f9; color: #64748b; cursor: default; }
+.hnsw-container :is(input,button):focus-visible { outline: 3px solid #2563eb; outline-offset: 3px; }
+.hnsw-key { color: #475569; font-size: .9rem; }
+.hnsw-table { width: 100%; table-layout: fixed; font-size: .9rem; font-variant-numeric: tabular-nums; }
+.hnsw-table thead th:first-child { width: 18%; }
+.hnsw-table th { overflow-wrap: anywhere; }
+.hnsw-table caption { text-align: start; margin: .5rem 0; font-weight: 600; }
+.hnsw-container .hnsw-table :is(td,th) { padding: .4rem; text-align: start; }
+.hnsw-table tr[aria-current="step"] { background: #e0f2fe; }
+@media (max-width: 600px) {
+  .hnsw-container { padding: .85rem; }
+  .hnsw-canvas text { font-size: 28px; }
+}

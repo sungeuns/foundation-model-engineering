@@ -38,6 +38,10 @@ test('shared exercise IDs belong to the same authored content in both translatio
     }
   }
   for (const [route, id] of [
+    ['/chapter-14/vector-indexing-and-db-solutions', 'greedy-search-detour'],
+    ['/chapter-14/lexical-to-semantic-search', 'retrieval-measurements'],
+    ['/chapter-13/knowledge-distillation', 'distillation-readout'],
+    ['/chapter-12/length-bucketing-lab', 'prefill-measurements'],
     ['/chapter-7/data-parallelism', 'dp-ddp-gradient-trace'],
     ['/chapter-11/audio-and-speech-integration', 'scribe-speaker-events'],
     ['/chapter-12/serving-policies-slos-and-fallbacks', 'sarvam-ttft-load'],

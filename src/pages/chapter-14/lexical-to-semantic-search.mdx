@@ -5,6 +5,7 @@ lang: en
 ---
 
 import SearchComparisonVisualizer from '../../components/chapter-14/SearchComparisonVisualizer.tsx';
+import LabDataset from '../../components/LabDataset.astro';
 import { withBasePath } from '../../utils/paths.js';
 
 # 14.1 From Lexical to Semantic Search
@@ -89,7 +90,11 @@ E5 found the tire repair across languages. For the receipt it put the battery ma
 
 For a product-specific request, try requiring an exact catalog code before ranking. This leaves only A for `XJ-992-B` and an empty set for `XJ-992-Q`. A support tool can ask the customer to verify the unknown code before giving instructions. A cosine cutoff alone cannot both keep the correct Korean tire result and reject the higher-scoring result for the missing model.
 
-**Reproduce the CPU run (2026-11-25).** The script pins the MIT-licensed `intfloat/multilingual-e5-small` checkpoint. It adds `query: ` and `passage: ` in both languages, averages the non-padding token vectors, L2-normalizes each 384-dimensional vector and ranks all four passages by dot product before rounding [[5]](#ref-5). <a href={withBasePath('/labs/multilingual_retrieval.py')} download>Download the Python script and setup commands</a> or <a href={withBasePath('/labs/2026-11/multilingual-retrieval.json')}>inspect all eight queries, labels and scores</a>.
+**Reproduce the CPU run (2026-11-25).** The script pins the MIT-licensed `intfloat/multilingual-e5-small` checkpoint. It adds `query: ` and `passage: ` in both languages, averages the non-padding token vectors, L2-normalizes each 384-dimensional vector and ranks all four passages by dot product before rounding [[5]](#ref-5). <a href={withBasePath('/labs/multilingual_retrieval.py')} download>Download the Python script and setup commands</a>.
+
+<a id="retrieval-measurements"></a>
+
+<LabDataset dataset="multilingual-retrieval" lang="en" />
 
 ## 3. Advanced Chunking Strategies
 

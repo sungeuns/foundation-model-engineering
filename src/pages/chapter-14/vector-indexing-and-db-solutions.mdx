@@ -20,11 +20,29 @@ Use exact top-k results to define ANN recall on a sampled, authorized corpus, an
 
 HNSW builds nested proximity graphs, with all vectors in the bottom layer and progressively fewer in upper layers [[1]](#ref-1). Bottom-layer connectivity remains sparse, not a complete dense graph. Search uses sparse upper layers to approach a promising region, then explores a bounded candidate set near the bottom.
 
-Distinguish construction parameters from query parameters. `M` influences connectivity and graph memory; `efConstruction` influences build work and graph quality; `efSearch` controls the query exploration budget. Raising a budget may improve recall while increasing distance evaluations and latency. Deletions, filters, data clustering, insertion order and dimension affect the curve. Empirical logarithmic scaling is not a worst-case guarantee for every dataset or configuration.
+`M` influences how many links the graph stores per node. `efConstruction` controls how widely the builder searches for links to a new node. At query time, `efSearch` sets the size of the list of best candidates the layer search keeps. The algorithm can expand more nodes than fit in that list. Measure recall against an exact scan and record the latency on your own queries as you vary `efSearch` [[1]](#ref-1) [[5]](#ref-5).
 
-The experiment below follows actual displayed neighbor edges and compares the final node with a brute-force nearest neighbor. It deliberately uses a deterministic toy graph and greedy search, omitting HNSW insertion, neighbor-selection heuristics and the efSearch queue. It is useful for understanding hierarchy descent and local search, not for benchmarking a database.
+<a id="greedy-search-detour"></a>
+### Why take a step away from the query?
+
+Place the query at $(100,180)$. The upper layers lead to node 25, which is 97.74 units from the query. Of the bottom-layer neighbors of 25, the one nearest the query is node 24 at 105.44 units. A walk that only moves closer stops at 25. Yet node 24 connects to 16, and 16 connects to 17. Node 17 is just 9.49 units from the query, the closest of all 40 points.
+
+Start again at 25. Keep a priority queue of discovered nodes whose neighbors you have yet to inspect. At each expansion, open the closest queued node, choosing the smaller node ID on a tie. Add its unseen neighbors to the queue and update the closest point found so far. After expanding 24 you can already return 16. After expanding 16 you can return 17 **without expanding 17 itself**. Use the slider to see which answer is available after one, two or three expansions. Then switch to $(480,250)$ and see whether the extra expansions change the answer.
 
 <HNSWVisualizer client:load locale="en" />
+
+To check why the greedy rule refuses the detour, calculate all four Euclidean distances with Python’s standard library. The first step would make the distance increase.
+
+```python
+from math import dist
+
+query = (100, 180)
+route = [(25, (112, 277)), (24, (39, 266)), (16, (36, 195)), (17, (109, 183))]
+for node, point in route:
+    print(node, round(dist(query, point), 2))
+```
+
+On each layer, each point selects up to three nearest peers. The links work in both directions, so a point selected by other peers can have more than three neighbors. The three-expansion limit lets you count exactly whose neighbors were inspected. HNSW constructs links during insertion and uses the distance to the worst retained candidate in its stopping rule. Setting `efSearch=3` on a database will therefore give a different search procedure [[1]](#ref-1).
 
 ## 3. Quantization, IVF and ScaNN
 
@@ -66,8 +84,8 @@ Promote a new index using a shadow route and a versioned cutover. Require paired
 </details>
 
 <details>
-<summary>Quiz 2: Why is HNSW not a complete dense graph at layer zero?</summary>
-*It stores bounded proximity links for navigation. Full connectivity would destroy the intended graph storage and search trade-off.*
+<summary>Quiz 2: Why does opening node 24 help even though it is farther from the query than node 25?</summary>
+*Opening 24 reveals node 16. Opening 16 reveals the exact nearest node, 17. A greedy walk stops before it can inspect the first of those edges.*
 </details>
 
 <details>
@@ -91,3 +109,4 @@ Promote a new index using a shadow route and a versioned cutover. Require paired
 2. <a id="ref-2"></a>Guo, R., et al. (2020). *Accelerating Large-Scale Inference with Anisotropic Vector Quantization.* ICML. [Paper](https://arxiv.org/abs/1908.10396).
 3. <a id="ref-3"></a>FAISS maintainers. *Guidelines to choose an index.* Verified 2026-10-25. [Official wiki](https://github.com/facebookresearch/faiss/wiki/Guidelines-to-choose-an-index).
 4. <a id="ref-4"></a>Qdrant. *Filterable HNSW Without Recall Loss.* Verified 2026-10-25. Implementation-specific discussion. [Technical article](https://qdrant.tech/articles/filterable-hnsw/).
+5. <a id="ref-5"></a>hnswlib maintainers. *Algorithm parameters*, search parameter `ef`. [Implementation notes](https://github.com/nmslib/hnswlib/blob/master/ALGO_PARAMS.md).

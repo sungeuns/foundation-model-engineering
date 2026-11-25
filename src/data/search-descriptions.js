@@ -215,8 +215,8 @@ export const searchDescriptions = {
     ko: 'SparseGPT, Wanda, 2:4 희소성과 SliceGPT를 통해 구조적·비구조적 가지치기를 비교하고 하드웨어 실행 제약을 살펴봅니다.',
   },
   '/chapter-13/knowledge-distillation': {
-    en: 'Explore knowledge distillation for language models through logits, rationales, forward and reverse KL, on-policy sampling, and student evaluation.',
-    ko: '로짓과 추론 과정, 순방향·역방향 KL, 온폴리시 샘플링과 학생 모델 평가를 통해 언어 모델의 지식 증류 방법을 살펴봅니다.',
+    en: 'Compare text, logit and feature distillation. Swap two hidden coordinates and their readout columns to see how hidden MSE can be 4 while output KL is zero.',
+    ko: '텍스트·로짓·특징 증류를 비교합니다. 은닉 좌표 둘과 출력층의 열을 바꿔, 은닉 상태의 평균제곱오차가 4여도 출력 KL 발산이 0인 경우를 확인합니다.',
   },
   '/chapter-13/advanced-quantization': {
     en: 'Understand low-bit quantization challenges through activation outliers, rotation transforms, and ternary-weight approaches such as BitNet b1.58.',
@@ -227,8 +227,8 @@ export const searchDescriptions = {
     ko: 'BM25와 코사인 유사도로 제목을 비교한 뒤, 다국어 E5로 한국어 문의에 맞는 영어 설명서를 찾습니다. 제품 번호 끝 글자 하나가 검색 결과에 미치는 영향을 실측값으로 확인합니다.',
   },
   '/chapter-14/vector-indexing-and-db-solutions': {
-    en: 'Compare exact search and approximate nearest-neighbor indexing, including HNSW, ScaNN, metadata filtering, and vector-database access control.',
-    ko: '정확 검색과 근사 최근접 이웃 인덱싱을 비교하며 HNSW, ScaNN, 메타데이터 필터링과 벡터 데이터베이스의 접근 제어를 살펴봅니다.',
+    en: 'Trace a greedy nearest-neighbor search that stops at distance 97.74 when the exact answer is 9.49 away. Compare search budgets, HNSW, IVF, PQ and filters.',
+    ko: '탐색이 거리 97.74에서 멈추는데 실제 최근접 노드는 9.49 거리에 있는 사례를 따라갑니다. 탐색 예산, HNSW, IVF, PQ와 검색 필터를 비교합니다.',
   },
   '/chapter-14/advanced-retrieval': {
     en: 'Combine BM25 and dense search with reciprocal rank fusion. Change candidate depth, trace each document’s score and see which evidence reaches the reranker.',

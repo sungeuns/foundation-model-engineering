@@ -4,6 +4,7 @@ title: "12.7 Length Bucketing and Peak KV Memory"
 lang: "en"
 ---
 
+import LabDataset from '../../components/LabDataset.astro';
 import { withBasePath } from '../../utils/paths.js';
 import BatchPaddingFigure from '../../components/chapter-12/BatchPaddingFigure.astro';
 
@@ -48,7 +49,11 @@ for order in (lengths, sorted(lengths)):
 
 ## Reproduce the CPU measurement
 
-<a href={withBasePath('/labs/kv_batch_bucketing.py')} download="kv_batch_bucketing.py">Download the Python experiment</a> or <a href={withBasePath('/labs/2026-11/kv-batch-bucketing.json')}>inspect its recorded inputs and measurements</a>. The experiment uses a pinned tokenizer, six English film-review snippets, left padding, and per-request position IDs. Run alone, A through F chose next-token IDs 5118, 30, 28, 617, 284 and 30. Both batching policies reproduced all six greedy choices. The file includes the tested environment and setup commands.
+<a href={withBasePath('/labs/kv_batch_bucketing.py')} download="kv_batch_bucketing.py">Download the Python experiment</a>. The experiment uses a pinned tokenizer, six English film-review snippets, left padding, and per-request position IDs. Run alone, A through F chose next-token IDs 5118, 30, 28, 617, 284 and 30. Both batching policies reproduced all six greedy choices. The file includes the tested environment and setup commands.
+
+<a id="prefill-measurements"></a>
+
+<LabDataset dataset="kv-batch-bucketing" lang="en" />
 
 The model configuration gives 30 layers, three KV heads, and 64 coordinates per head (576 hidden coordinates divided by nine query heads). Loading the weights in FP32 gives four bytes per cache element in this run. One position therefore requires $2 \times 30 \times 3 \times 64 \times 4 = 46{,}080$ bytes, or 45 KiB. The factor of two counts keys and values. [[1]](#ref-1)
 

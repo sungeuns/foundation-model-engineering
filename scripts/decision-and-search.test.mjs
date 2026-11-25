@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { decisionCases, decisionFloors, evaluateDecisionPolicy } from '../src/utils/decision-policy.js';
-import { demoNodes, greedyTrace, layerGraph } from '../src/utils/hierarchical-search-demo.js';
+import { bottomLayerTrace, demoNodes, detourQuery, directQuery, distance, greedyTrace, layerGraph } from '../src/utils/hierarchical-search-demo.js';
 
 test('decision costs count false positives, false negatives and review independently', () => {
   const cases = [{p: .9, y: 0}, {p: .1, y: 1}, {p: .55, y: 1}, {p: .95, y: 1}];
@@ -76,6 +76,34 @@ test('hierarchical traversal only follows actual edges or descends at the same n
     const minimum = Math.min(...demoNodes.map(n => Math.hypot(n.x-x,n.y-y)));
     assert.ok(Math.abs(Math.hypot(exact.x-x,exact.y-y) - minimum) < 1e-10);
   }
+});
+
+test('opening a farther neighbor reveals the exact point on the third expansion', () => {
+  const { steps, exact } = greedyTrace(detourQuery);
+  const entry = steps.find(step => step.layer === 0).node.id;
+  assert.equal(entry, 25);
+  assert.equal(steps.at(-1).node.id, 25);
+  assert.equal(exact.id, 17);
+  const rows = bottomLayerTrace(detourQuery, entry, 3);
+  assert.deepEqual(rows.map(row => row.expanded), [25, 24, 16]);
+  assert.deepEqual(rows.map(row => row.best), [25, 16, 17]);
+  assert.deepEqual([25, 24, 16, 17].map(id => distance(demoNodes[id], detourQuery).toFixed(2)), ['97.74', '105.44', '65.73', '9.49']);
+  for (const limit of [0, 1, 2]) assert.deepEqual(bottomLayerTrace(detourQuery, entry, limit), rows.slice(0, limit));
+});
+
+test('the direct query keeps the same best point and ties expand the smaller ID first', () => {
+  const { steps, exact } = greedyTrace(directQuery);
+  const entry = steps.find(step => step.layer === 0).node.id;
+  assert.equal(entry, 30);
+  assert.equal(steps.at(-1).node.id, exact.id);
+  assert.deepEqual(bottomLayerTrace(directQuery, entry, 3).map(row => row.best), [30, 30, 30]);
+  const tie = { x: 114, y: 76.5 };
+  assert.equal(distance(demoNodes[1], tie), distance(demoNodes[9], tie));
+  const rows = bottomLayerTrace(tie, 0, 100);
+  assert.deepEqual(rows.slice(0, 2).map(row => row.expanded), [0, 1]);
+  assert.equal(rows[0].best, 1);
+  assert.equal(rows.length, demoNodes.length);
+  assert.equal(new Set(rows.map(row => row.expanded)).size, rows.length);
 });
 
 test('n-gram normalization preserves Korean and does not glue words across punctuation', async () => {

@@ -1,0 +1,54 @@
+---
+import { labDatasets } from '../data/lab-datasets.js';
+import { site } from '../data/site.js';
+import { withBasePath, withPagePath } from '../utils/paths.js';
+
+interface Props { dataset: keyof typeof labDatasets; lang: 'en' | 'ko' }
+const { dataset, lang } = Astro.props;
+const record = labDatasets[dataset];
+const { name, description } = record[lang];
+const origin = Astro.site || site.url;
+const original = new URL(withPagePath(record.chapter), origin).href + '#' + record.anchor;
+const dataPath = '/labs/2026-11/' + dataset;
+const license = 'https://github.com/sungeuns/foundation-model-engineering/blob/main/LICENSE';
+const formats = [
+  { ext: '.csv', encodingFormat: 'text/csv' },
+  { ext: '.json', encodingFormat: 'application/json' },
+];
+const metadata = {
+  '@context': 'https://schema.org',
+  '@type': 'Dataset',
+  '@id': original,
+  url: original,
+  name,
+  description,
+  datePublished: '2026-11-25',
+  inLanguage: record.languages,
+  creator: { '@type': 'Person', name: site.author },
+  license,
+  variableMeasured: record.variables,
+  measurementTechnique: new URL(withBasePath(record.script), origin).href,
+  isAccessibleForFree: true,
+  distribution: formats.map(({ ext, encodingFormat }) => ({
+    '@type': 'DataDownload', encodingFormat,
+    contentUrl: new URL(withBasePath(dataPath + ext), origin).href,
+  })),
+};
+---
+<aside class="lab-data" aria-label={name}>
+  <p><strong>{name}</strong></p>
+  <p>{description}</p>
+  <p class="data-links">
+    {formats.map(({ ext, encodingFormat }) =>
+      <a href={withBasePath(dataPath + ext)} type={encodingFormat} download={ext === '.csv' ? dataset + ext : undefined}>
+        {ext === '.csv' ? (lang === 'ko' ? 'CSV 내려받기' : 'Download CSV') : (lang === 'ko' ? '전체 JSON 보기' : 'Read full JSON')}
+      </a>)}
+    <a href={license}>{lang === 'ko' ? '데이터 라이선스 (MIT)' : 'Data license (MIT)'}</a>
+  </p>
+</aside>
+<script type="application/ld+json" set:html={JSON.stringify(metadata).replaceAll('<', '\\u003c')}></script>
+<style>
+  .lab-data { margin-block: 1.25rem; border-inline-start: .2rem solid #477b71; padding-inline-start: 1rem; }
+  .lab-data p { margin-block: .3rem; }
+  .data-links { display: flex; flex-wrap: wrap; column-gap: 1rem; }
+</style>

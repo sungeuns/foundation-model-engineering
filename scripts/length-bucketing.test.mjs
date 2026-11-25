@@ -48,7 +48,7 @@ test('both editions reproduce the receipt from the printed dependency-free calcu
     const code = mdx.match(/```python\n([\s\S]*?)```/)[1];
     assert.equal(execFileSync('python3', ['-c', code], {encoding: 'utf8'}), expected);
     assert.match(mdx, /5118, 30, 28, 617, 284(?: and|,) 30/);
-    assert.ok(mdx.includes('/labs/2026-11/kv-batch-bucketing.json'));
+    assert.ok(mdx.includes('<LabDataset dataset="kv-batch-bucketing"'));
     assert.ok(mdx.includes('/labs/kv_batch_bucketing.py'));
   }
 });

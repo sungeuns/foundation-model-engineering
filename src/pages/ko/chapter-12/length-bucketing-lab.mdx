@@ -4,6 +4,7 @@ title: "12.7 길이별 배칭과 KV 캐시 최대 사용량"
 lang: "ko"
 ---
 
+import LabDataset from '../../../components/LabDataset.astro';
 import { withBasePath } from '../../../utils/paths.js';
 import BatchPaddingFigure from '../../../components/chapter-12/BatchPaddingFigure.astro';
 
@@ -48,7 +49,11 @@ for order in (lengths, sorted(lengths)):
 
 ## CPU 실측 재현하기
 
-<a href={withBasePath('/labs/kv_batch_bucketing.py')} download="kv_batch_bucketing.py">파이썬 실험 코드</a>와 <a href={withBasePath('/labs/2026-11/kv-batch-bucketing.json')}>입력·측정 결과 원본</a>을 함께 제공합니다. 버전을 고정한 토크나이저로 짧은 영문 영화평 여섯 건을 변환하고, 왼쪽에 패딩을 붙인 뒤 각 요청 안에서 실제 토큰의 위치 번호를 지정했습니다. A부터 F까지 단독 실행에서 고른 다음 토큰 ID는 5118, 30, 28, 617, 284, 30입니다. 두 배치 방식 모두 여섯 건의 선택이 단독 실행과 일치했습니다. 실행 환경과 설치 명령은 코드 첫 부분에 있습니다.
+<a href={withBasePath('/labs/kv_batch_bucketing.py')} download="kv_batch_bucketing.py">파이썬 실험 코드</a>를 내려받아 실행할 수 있습니다. 버전을 고정한 토크나이저로 짧은 영문 영화평 여섯 건을 변환하고, 왼쪽에 패딩을 붙인 뒤 각 요청 안에서 실제 토큰의 위치 번호를 지정했습니다. A부터 F까지 단독 실행에서 고른 다음 토큰 ID는 5118, 30, 28, 617, 284, 30입니다. 두 배치 방식 모두 여섯 건의 선택이 단독 실행과 일치했습니다. 실행 환경과 설치 명령은 코드 첫 부분에 있습니다.
+
+<a id="prefill-measurements"></a>
+
+<LabDataset dataset="kv-batch-bucketing" lang="ko" />
 
 모델 설정에는 층 30개, KV 헤드 3개가 명시돼 있습니다. 은닉 차원 576을 질의 헤드 아홉 개로 나누면 헤드 하나에 좌표 64개입니다. 이번 실행에서는 캐시 원소 하나에 4바이트를 썼으므로 토큰 한 칸은 $2 \times 30 \times 3 \times 64 \times 4 = 46{,}080$바이트, 즉 45 KiB입니다. 맨 앞의 2는 키와 값을 모두 저장하기 때문에 붙습니다. [[1]](#ref-1)
 

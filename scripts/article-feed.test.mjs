@@ -3,11 +3,29 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import test from 'node:test';
+import { load } from 'js-yaml';
 import { parseFragment } from 'parse5';
 
 const dist = process.env.SEARCH_DIST_DIR || 'dist';
 const base = 'https://sungeuns.github.io/foundation-model-engineering/';
 const original = base + 'chapter-12/length-bucketing-lab/';
+
+test('the article source can be pasted whole into the DEV Basic Markdown editor', () => {
+  const source = readFileSync(new URL('../src/data/articles/length-bucketing.md', import.meta.url), 'utf8');
+  // Forem Basic reads one leading YAML block. A table separator belongs to the body.
+  const [, yaml, body] = source.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
+  const fields = load(yaml);
+  assert.equal(fields.published, false);
+  assert.equal(fields.canonical_url, original);
+  assert.equal(fields.ai_disclosure_level, 'fully_autonomous');
+  assert.deepEqual(fields.tags.split(',').map(tag => tag.trim()), ['python', 'machinelearning']);
+  assert.match(fields.title, /length bucketing/i);
+  assert.match(fields.description, /peak key\/value cache/i);
+  assert.match(body.trimStart(), /^Six prompts/);
+  assert.match(body, /^\| --- \| --- \| --- \| --- \|$/m);
+  assert.match(body, /^```python$/m);
+  assert.match(body.trimEnd(), /An AI coding assistant wrote this adaptation[^\n]+\*$/);
+});
 
 test('the selected feed imports a complete, runnable article under its original canonical URL', () => {
   const xml = execFileSync('python3', ['-c', `

@@ -5,6 +5,7 @@ lang: ko
 ---
 
 import SearchComparisonVisualizer from '../../../components/chapter-14/SearchComparisonVisualizer.tsx';
+import LabDataset from '../../../components/LabDataset.astro';
 import { withBasePath } from '../../../utils/paths.js';
 
 # 14.1 어휘 검색에서 시맨틱 검색으로
@@ -89,7 +90,11 @@ E5는 한국어 타이어 문의로 영문 수리법을 찾았습니다. 영수�
 
 제품을 명시한 문의라면 순위를 매길 때 카탈로그 코드가 정확히 일치하는 문단만 후보로 두는 방법이 있습니다. `XJ-992-B`에는 A만 남고, `XJ-992-Q`에는 후보가 없습니다. 이때는 교체 절차를 안내하기 전에 고객에게 모델 번호를 다시 확인해 달라고 할 수 있습니다. 코사인 하한만 조정해서는 올바른 타이어 수리법을 남기면서 그보다 점수가 높은 미등록 모델의 오답까지 거를 수 없습니다.
 
-**CPU에서 재현하기(2026-11-25 측정).** 스크립트는 MIT 라이선스로 공개된 `intfloat/multilingual-e5-small` 체크포인트의 버전을 고정합니다. 두 언어 모두 질의 앞에 `query: `, 문단 앞에 `passage: `를 붙입니다. 패딩을 제외한 토큰 벡터를 평균 내고 384차원 벡터를 L2 정규화한 뒤, 네 문단의 내적으로 순위를 정하고 표시할 때만 반올림합니다 [[5]](#ref-5). <a href={withBasePath('/labs/multilingual_retrieval.py')} download>설치 명령이 담긴 파이썬 스크립트</a>와 <a href={withBasePath('/labs/2026-11/multilingual-retrieval.json')}>문의 여덟 건의 원문·정답·점수</a>를 확인할 수 있습니다.
+**CPU에서 재현하기(2026-11-25 측정).** 스크립트는 MIT 라이선스로 공개된 `intfloat/multilingual-e5-small` 체크포인트의 버전을 고정합니다. 두 언어 모두 질의 앞에 `query: `, 문단 앞에 `passage: `를 붙입니다. 패딩을 제외한 토큰 벡터를 평균 내고 384차원 벡터를 L2 정규화한 뒤, 네 문단의 내적으로 순위를 정하고 표시할 때만 반올림합니다 [[5]](#ref-5). <a href={withBasePath('/labs/multilingual_retrieval.py')} download>설치 명령이 담긴 파이썬 스크립트</a>를 내려받아 실행할 수 있습니다.
+
+<a id="retrieval-measurements"></a>
+
+<LabDataset dataset="multilingual-retrieval" lang="ko" />
 
 ## 3. 고급 청킹(Chunking) 전략
 

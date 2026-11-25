@@ -8,34 +8,31 @@ import KDVisualizer from '../../components/chapter-13/KDVisualizer.tsx';
 
 # 13.4 Knowledge Distillation
 
-If quantization is like shaving weight off a suitcase, **Knowledge Distillation (KD)** is like repacking the contents into a smaller bag. Instead of keeping the original model architecture and merely compressing its weights, KD trains a new, smaller **student** model to imitate a larger **teacher**.
+A support team wants a smaller classifier to route messages to *billing* or *returns*. Its teacher replies “billing.” A second teacher supplies both class probabilities. The two answers pick the same queue, but only the second tells the student how close the decision was. **Knowledge distillation** trains a student model on signals from a teacher. Choosing an objective begins with what you can observe.
 
-That distinction matters in practice. Quantization and sparsification are constrained by the shape of the original network. Distillation is freer: the student can have different width, depth, and even a different architecture, as long as it learns the behavior we care about.
+<a id="1-the-evolution-from-logits-to-rationales"></a>
 
-In the LLM era, KD has also become more ambitious. The goal is no longer just to copy output probabilities. Engineers increasingly try to transfer reasoning traces, hidden-state structure, and decoding behavior into smaller models that are cheap enough to serve widely.
+## 1. What can the teacher provide?
 
----
+For the same input, let $z_t$ and $z_s$ be the teacher and student logits over the same classes. At temperature $T>0$, their distributions are $p_T=\operatorname{softmax}(z_t/T)$ and $q_T=\operatorname{softmax}(z_s/T)$. Hinton et al. used softened output probabilities as targets. Increasing $T$ above 1 makes the distribution flatter, exposing differences among low-probability classes. A commonly scaled loss is [[1]](#ref-1)
 
-## 1. The Evolution: From Logits to Rationales
+$$
+\mathcal L_{\mathrm{KD}}=T^2\sum_i p_T(i)\log\frac{p_T(i)}{q_T(i)}.
+$$
 
-Historically, KD relied on **Logit Matching**. Introduced by Geoffrey Hinton and colleagues in 2015 [[1]](#ref-1), the core idea was that the raw output logits of a teacher model contain "dark knowledge"—the relative probabilities of incorrect answers that reveal how the model generalizes.
+Here $i$ indexes classes and the natural logarithm measures forward KL in nats before the $T^2$ scaling. If the teacher gives only its top label, the student cannot reconstruct the full distribution for that input.
 
-By applying a high **Temperature ($T$)** to the Softmax function, the sharp probability distribution is smoothed out, forcing the student to learn these subtle relationships via Kullback-Leibler (KL) Divergence:
+<a id="richer-supervision-in-modern-kd"></a>
 
-$$ \mathcal{L}_{KD} = T^2 \cdot \mathcal{D}_{KL}\left( \text{Softmax}\left(\frac{Z_{teacher}}{T}\right) \Big|\Big| \text{Softmax}\left(\frac{Z_{student}}{T}\right) \right) $$
+### Match the objective to the available signal
 
-While highly effective for classification, logit-only KD is often not enough for harder generative work. In LLMs, matching the final token distribution can teach the student *what* answer tends to appear, but not necessarily *how* the teacher arrived there. That is one reason small students sometimes mimic style well yet still lag on reasoning-heavy tasks.
+| Teacher signal | What the student can train on |
+| --- | --- |
+| An answer or a generated explanation | Collect the text and train the student to predict its tokens. Hsieh et al. used generated rationales as an additional text target. An explanation is observable text. Whether it faithfully describes the computation that produced the answer is a separate question. [[2]](#ref-2) |
+| Full logits or probabilities | Match distributions when both models refer to the same outcomes. For next-token KL, check the token IDs, ordering and conditioning prefix. A few returned top tokens leave the remaining probability allocation unknown. [[1]](#ref-1) |
+| Intermediate features | Capture activations at chosen layers and positions. FitNets, first posted in December 2014, trained a projection from student features to teacher features. This requires access to the relevant tensors. [[6]](#ref-6) |
 
-### Richer Supervision in Modern KD
-
-To reduce that gap, recent work adds supervision beyond final logits:
-
-1. **Rationale-Based Distillation**: The teacher provides intermediate reasoning or step-by-step traces, not just the final answer [[2]](#ref-2).
-2. **Feature-Based Alignment**: The student is nudged to match some internal hidden-state structure of the teacher, not just its output layer.
-
-These methods do not magically guarantee “compressed reasoning,” but they often transfer more useful behavior than output matching alone.
-
-![kd_evolution](../../assets/images/chapter-13/kd_evolution.png)
+Text, probabilities and features can provide complementary supervision. To see exactly what the third option adds, [change the hidden coordinates and the output layer independently](#distillation-readout).
 
 ---
 
@@ -62,15 +59,11 @@ This matters operationally because deployed models do not fail on pristine examp
 
 ## 4. Bridging Architectural Heterogeneity
 
-A practical advantage of KD is that the student does not have to be a miniature copy of the teacher. You can distill from a larger Transformer into a smaller Transformer, and researchers are actively exploring how far these ideas can transfer across model families.
-
-The catch is that hidden representations often live in different spaces. The teacher may have wider layers, different head counts, or different recurrence patterns. A common solution is to add **projection layers** so that student features can be mapped into the teacher’s latent space before alignment losses are applied.
-
-This is where KD stops being a purely conceptual trick and becomes engineering. Which layers do you align? How often? With what loss weight? Those choices meaningfully affect stability and student quality.
+Two models can agree on the next token while using different hidden dimensions or different coordinates within those dimensions. To train on intermediate features, choose a layer and token positions in each model. A learned projection maps the student's state into the space in which the teacher target is defined. FitNets used this idea to train a thinner student from a wider teacher. [[6]](#ref-6)
 
 ### PyTorch Implementation: Feature-Based KD
 
-The following code demonstrates how to engineer a custom KD loss that combines standard task loss, logit-matching (KL Divergence), and feature-based alignment using a learned projection layer.
+This example combines the next-token cross-entropy, forward KL between softened output distributions, and MSE between the projected student state and its teacher target.
 
 > **Educational loss example.** Assumes aligned teacher/student outputs with identical tokenizers, vocabulary ordering and chat templates. Run the pinned teacher checkpoint in `eval()` and `inference_mode()`. Replace the synthetic mask with tokenizer-native assistant-span masks. Avoid duplicate BOS/EOS, match EOS inclusion, truncation and padding, and block cross-sample attention when packing. Full-model training, cross-tokenizer probability mapping and distributed normalization by global token count are omitted.
 
@@ -145,19 +138,47 @@ This is why production distillation is rarely “train a small model on teacher 
 
 ---
 
+<a id="distillation-readout"></a>
+
 ## 6. The geometric constraint of feature alignment
 
-Matching outputs does not require a particular hidden coordinate system. The illustration shows the additional constraint imposed by feature alignment; it does not experimentally compare two training methods.
+Take one hidden state $h=[1,3]^\top$. The output layer has rows $[2,-1]$ for class A and $[1,1]$ for class B. Its logits $Wh$ are $[-1,4]^\top$. The teacher assigns probability 0.993307 to B at $T=1$. Both student switches start in the teacher's configuration. Swap the student's hidden coordinates, predict what will happen, then swap the two columns of its output layer as well.
 
-<KDVisualizer client:load />
+<KDVisualizer lang="en" />
+
+Swapping the hidden coordinates alone changes the logits to $[5,4]^\top$. B falls to 0.268941 and forward KL rises to 1.266389 nats. With both switches on, the logits return to $[-1,4]^\top$ and KL to zero. In both cases the raw hidden-state mean squared error (MSE) is $((3-1)^2+(1-3)^2)/2=4$.
+
+This holds for every hidden state when the output layer undoes the same permutation. With permutation matrix $P$, $h_s=Ph$ and $W_s=WP^\top$ give $W_sh_s=Wh$ because $P^\top P=I$. A feature projection $P^\top$ also maps this student's coordinates back to the teacher's, bringing the projected feature MSE to zero. The identity explains the example without any model training.
+
+**Check it in standard Python.** Each row prints the student's probability of B, forward KL in nats and raw hidden MSE. The order is unchanged, readout only, hidden only, then both.
+
+```python
+from math import exp, log
+
+h = [1, 3]
+W = [[2, -1], [1, 1]]
+
+def probabilities(state, rows):
+    logits = [sum(a * b for a, b in zip(row, state)) for row in rows]
+    terms = [exp(z - max(logits)) for z in logits]
+    return [v / sum(terms) for v in terms]
+
+p = probabilities(h, W)
+for state in (h, h[::-1]):
+    for rows in (W, [row[::-1] for row in W]):
+        q = probabilities(state, rows)
+        kl = sum(a * log(a / b) for a, b in zip(p, q))
+        mse = sum((a - b)**2 for a, b in zip(h, state)) / len(h)
+        print(f"{q[1]:.6f} {kl:.6f} {mse:.0f}")
+```
 
 ---
 
 ## 7. Summary and Next Steps
 
-Knowledge Distillation has grown from a simple logit-matching trick into a broader toolkit for transferring behavior from large models into smaller ones. The most effective pipelines now think carefully about teacher choice, divergence objectives, student-generated trajectories, and hidden-state alignment rather than treating KD as a single recipe.
+Choose the supervision you can collect, then test the behavior you intend to serve. In the support example, held-out routing accuracy tells you whether customers reach the right team. Agreement on an explanation, a logit vector or an intermediate state answers a different question.
 
-Combined with quantization and sparsification, distillation is one of the most practical ways to make capable models deployable on tighter hardware and latency budgets. But smaller models still carry less knowledge internally. In **Chapter 14: RAG (Retrieval Augmented Generation)**, we will see how retrieval can compensate for that limitation at inference time.
+[Section 13.5](../advanced-quantization/) returns to deployment and asks which tensors a low-precision format actually compresses.
 
 ---
 
@@ -176,8 +197,8 @@ Observe token-normalized CE/KL and domain-slice validation, nonfinite/overflow c
 ## Quizzes
 
 <details>
-<summary>Quiz 1: In traditional Knowledge Distillation, what is the mathematical purpose of the Temperature ($T$) parameter applied to the Softmax function?</summary>
-*The Temperature parameter smooths out the probability distribution of the logits. A standard Softmax often produces a distribution heavily skewed towards a single class (e.g., [0.99, 0.005, 0.005]). By dividing logits by $T > 1$, the distribution flattens, amplifying the "dark knowledge" (the relative probabilities of incorrect answers) so the student can learn the teacher's generalization patterns.*
+<summary>Quiz 1: Can one top label determine the forward KL for a multiclass output?</summary>
+*No. Different teacher distributions can share a top label. Full-distribution KL requires the probability of each aligned class, including the alternatives.*
 </details>
 
 <details>
@@ -191,8 +212,8 @@ Observe token-normalized CE/KL and domain-slice validation, nonfinite/overflow c
 </details>
 
 <details>
-<summary>Quiz 4: Why are projection layers often introduced when distilling across different architectures?</summary>
-*Because teacher and student hidden states may live in spaces with different dimensions or geometry. A projection layer maps the student representation into a compatible space so that alignment losses such as MSE can be applied in a meaningful way.*
+<summary>Quiz 4: If the student swaps the two hidden coordinates and both readout columns, what can an output-only loss detect?</summary>
+*The logits stay identical for every hidden state. Forward KL is zero, even though raw hidden MSE is 4 for the worked input. A feature projection can undo the permutation before comparing coordinates.*
 </details>
 
 <details>
@@ -204,8 +225,9 @@ Observe token-normalized CE/KL and domain-slice validation, nonfinite/overflow c
 
 ## References
 
-1. <a id="ref-1"></a>Hinton, G., Vinyals, O., & Dean, J. (2015). *Distilling the Knowledge in a Neural Network.* [arXiv:1503.02531](https://arxiv.org/abs/1503.02531).
-2. <a id="ref-2"></a>Hsieh, C. Y., et al. (2023). *Distilling Step-by-Step! Outperforming Larger Language Models with Less Training Data and Smaller Model Sizes.* [arXiv:2305.02301](https://arxiv.org/abs/2305.02301).
+1. <a id="ref-1"></a>Hinton, G., Vinyals, O., & Dean, J. (2015). *Distilling the Knowledge in a Neural Network.* [arXiv:1503.02531](https://arxiv.org/abs/1503.02531v1).
+2. <a id="ref-2"></a>Hsieh, C. Y., et al. (2023). *Distilling Step-by-Step! Outperforming Larger Language Models with Less Training Data and Smaller Model Sizes.* [arXiv:2305.02301](https://aclanthology.org/2023.findings-acl.507/).
 3. <a id="ref-3"></a>Gu, Y., Dong, L., Wei, F., & Huang, M. (2024). *MiniLLM: On-Policy Distillation of Large Language Models.* [arXiv:2306.08543](https://arxiv.org/abs/2306.08543).
 4. <a id="ref-4"></a>Agarwal, R., et al. (2024). *On-Policy Distillation of Language Models: Learning from Self-Generated Mistakes.* [arXiv:2306.13649](https://arxiv.org/abs/2306.13649).
 5. <a id="ref-5"></a>Research preprint (2026). [SteerDistill: Quantizing LLM Agents via Closed-Loop Teacher Steering](https://arxiv.org/html/2611.13410v1). Version pinned; accessed 2026-11-15.
+6. <a id="ref-6"></a>Romero, A., et al. (2014/2015). *FitNets: Hints for Thin Deep Nets.* [arXiv:1412.6550v4](https://arxiv.org/abs/1412.6550v4).

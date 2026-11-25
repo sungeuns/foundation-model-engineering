@@ -11,7 +11,7 @@ export async function GET({ site = book.url }) {
   const home = new URL(withPagePath('/', base), site);
   const self = new URL(withBasePath('/articles.xml', base), site);
   const items = await Promise.all(articles.map(async ({ frontmatter, compiledContent }) => {
-    const { title, chapter, firstPublished, summary, tags } = frontmatter;
+    const { title, chapter, firstPublished, description, tags } = frontmatter;
     const canonical = escapeXml(new URL(withPagePath(chapter, base), site).href);
     const html = await compiledContent();
     return `    <item>
@@ -19,8 +19,8 @@ export async function GET({ site = book.url }) {
       <link>${canonical}</link>
       <guid isPermaLink="true">${canonical}</guid>
       <pubDate>${new Date(firstPublished).toUTCString()}</pubDate>
-      <description>${escapeXml(summary)}</description>
-      ${tags.map(tag => `<category>${escapeXml(tag)}</category>`).join('\n      ')}
+      <description>${escapeXml(description)}</description>
+      ${tags.split(',').map(tag => `<category>${escapeXml(tag.trim())}</category>`).join('\n      ')}
       <content:encoded>${escapeXml(html)}</content:encoded>
     </item>`;
   }));

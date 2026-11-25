@@ -326,14 +326,14 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 12.4 | `/chapter-12/speculative-decoding` | Inspected 2026-11-25 | a5f93ea8411bab0fe68bf277224f8f19f111ac0f0fd73f6b4eda75739a8990b5 | 61986787b62bf6d99f59ab08a66d2ea6312e472faea94ded13c4a7d627d03cc4 |
 | 12.5 | `/chapter-12/long-context-serving` | Inspected 2026-11-15 | 82f413a5a2e2731fe01603c7036b42dee434b010cc76410eba7e0807d73742e8 | 59933e962b9f0bef0f8b50e9889ec628fd92ade6d7d0fb91636981793bd83052 |
 | 12.6 | `/chapter-12/serving-policies-slos-and-fallbacks` | Mechanical only | 2cac4315bcb3c8ddcfa49d002bed038716ee2de270385476849ecc931d8a6e4b | 827aa4cb30a2c67d93cae2a10297d5435057a56c28d891a7ec483e0b185342f0 |
-| 12.7 | `/chapter-12/length-bucketing-lab` | Inspected 2026-11-25 | 4e9dfc6212c4de7350b847509baa66af85ed428aa492bf524eb10d9358ff46ec | 226d30aa75baf02db770ebada6ff941c5791dac23096079073d28599a61a9af1 |
+| 12.7 | `/chapter-12/length-bucketing-lab` | Mechanical only | 71d24f1fe0faa1b1e6777e1b82999214e627b418a021d0579a0e49c1964a01a1 | 1de6464d0cad99b07f17daabb07ae605f59f4b1243f28f6139e7e4b2dafe6da0 |
 | 13.1 | `/chapter-13/ptq-vs-qat` | Inspected 2026-11-25 | eb93d493239246214375730e26db3328bc55104f01777c0ff0ebb9fc5bf7b5ae | 024687ff4956de8d9b50358821335b863bdc65e10edfdaf7f6a6ab5db3357bba |
 | 13.2 | `/chapter-13/quantization-methods` | Inspected 2026-11-25 | f128eb1a2a438226a64a9e9f82f4eea316a0ddf62f38c32553657fbd9dad6944 | d2ef6a2e7b3349d2fa4a93ef0d79356511c79d4939a24bd5913965064c16bdaf |
 | 13.3 | `/chapter-13/weight-sparsification` | Mechanical only | cef7eea23f21faf8a4719bc13b2f3e28a8743ba0230c67b01438dbac642a6530 | 4d1291c234050b189b7f5c66be305966e3fadd57ef521d171ca9283131987aed |
-| 13.4 | `/chapter-13/knowledge-distillation` | Mechanical only | f184dcb71820a852dee1c7b2d640412cec7cad8a6f765ee912da00daf6b337f0 | 7c19030da7fe737ad78f41f6d09a1aa1107040bbb7cedcf7176b24e5db8dfccb |
+| 13.4 | `/chapter-13/knowledge-distillation` | Mechanical only | 0bd1cd77287c91efbec7971da692b013673de8d9d15b634bb7ef44ad8c008c00 | f10ce58a6a3ffedc0f988f40c782b8b8731b02eaa8eed8739e14b1f9c0c15f98 |
 | 13.5 | `/chapter-13/advanced-quantization` | Inspected 2026-11-15 | 27a364583a8df29cdea48119e65184594a4c27ab9f8f22437778a330596d4a3b | b55fe9860d8cf44911a1bf6508787d6c865bfbdf548adff861878ccdf10fd691 |
-| 14.1 | `/chapter-14/lexical-to-semantic-search` | Mechanical only | 0f021924fa9f3aae95553d882253fc4ac052d26a3e321dccb117fa5b84f0f552 | 588f661682070c3a7c3fbb9a5c4ae8959fa3b2371fab403241a19278f050fcd0 |
-| 14.2 | `/chapter-14/vector-indexing-and-db-solutions` | Inspected 2026-11-15 | 9cd80b8fa316923b8db209981294ea15b991ef55851416fb72455a0f12d92783 | 7f9a5d85dde7cb1d91679e64a99760562b8640003062593ded9483faf4af35c4 |
+| 14.1 | `/chapter-14/lexical-to-semantic-search` | Mechanical only | 574d2f06bca9f1e9abfb7f9dc24e53fa7663593dc2b2c639166427c55a192525 | 1325e1a8df962341a047b9d4eed6316547d3924ff664f0328d02d2f8166df949 |
+| 14.2 | `/chapter-14/vector-indexing-and-db-solutions` | Mechanical only | b05cb9aae6df7f6e0cd6fe781d78745f295de704e51b507520b787435b2aa576 | 1267760b1088795e8ca2d69ac2cee83ead1a36c748fe2a02d073e9f46019af8e |
 | 14.3 | `/chapter-14/advanced-retrieval` | Inspected 2026-11-25 | 9d36c4745fed765a1bc1d313e25a34dcff6d3a98454117ed3f068b5011014de5 | 3fd737ee0f924360584f111037eb2eea565eb57df15498251914528cae92396a |
 | 14.4 | `/chapter-14/rag-orchestration` | Inspected 2026-11-15 | c0415652280790508493840235e671903d660547416bc0bf3a73aba796039dd8 | 71eb996863fcf49fa62bc979e9167173c39fec0312811f89ac3095eca414b283 |
 | 14.5 | `/chapter-14/graphrag-and-ontology` | Inspected 2026-11-25 | 1d56da922b530c30f04507318a0384f06ab78fde769574a20d96de1d2777026e | 0a9106cf60adb75afe3e3dd465c6c642b79fe2153b696ad812a7cc9e745cb780 |
@@ -752,3 +752,9 @@ For §16.6, executed both published SQLite examples and the conflicting-key case
 In §7.1, replaced the parameter-server and ring illustration with a worked update for DataParallel and DistributedDataParallel. In §11.2, checked the Scribe v3 Live transcript and speaker events against the speech API's event reference. In §12.6, checked two concurrency levels in the Sarvam-105B-1711 NVFP4 model card at revision e8a53d1 and distinguished total throughput from requests meeting a latency target. These were scoped reviews of the changed passages and exercises.
 
 Read both §17.3 manuscripts. Replayed the same four votes in opposite orders and compared the displayed Elo values with the Python recurrence. Verified the independent-pair calculation, the half-credit tie convention, and the interpretation of a two-model Bradley–Terry fit with two wins each. Checked the Arena team's historical account of adopting the batch fit in December 2023.
+
+### November 25, 2026 — Dataset downloads, distillation readouts and a greedy-search detour
+
+For §12.7 and §14.1, checked the scope, provenance, variables and download links for the two published CPU measurement tables in both editions. Each CSV is derived at build time from the dated JSON. The original runs and their limitations remain available on the same pages.
+
+For §13.4, checked the teacher-signal distinctions and the fixed two-coordinate example. The historical claim was checked against the 2014 FitNets preprint. A paired coordinate and readout permutation preserves the logits even with hidden MSE 4. For §14.2, verified the greedy miss against all 40 coordinates and the first three bottom-layer expansions against the displayed graph, in both languages. These were focused reviews.

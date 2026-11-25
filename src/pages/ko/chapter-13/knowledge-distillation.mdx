@@ -10,35 +10,31 @@ import KDVisualizer from '../../../components/chapter-13/KDVisualizer.tsx';
 
 # 13.4 지식 증류
 
-양자화가 기존 모델의 무게를 줄이는 작업이라면, **지식 증류(Knowledge Distillation, KD)** 는 아예 짐을 다시 싸는 일에 가깝습니다. 원래 모델 구조를 유지한 채 가중치만 압축하는 대신, 더 큰 **교사(teacher)** 모델의 행동을 따라 하도록 더 작은 **학생(student)** 모델을 새로 학습시키기 때문입니다.
+고객 문의를 *결제* 또는 *반품* 담당자에게 보내는 작은 분류기를 만든다고 해 봅시다. 한 교사 모델은 “결제”라고 답하고, 다른 교사는 두 항목의 확률까지 보여 줍니다. 고른 담당자는 같아도 두 선택지가 얼마나 경합했는지는 두 번째 답에서만 알 수 있습니다. **지식 증류** 는 교사 모델에서 얻은 신호로 학생 모델을 학습하는 방법입니다. 어떤 손실을 쓸 수 있는지는 관찰할 수 있는 신호에 달렸습니다.
 
-이 차이는 실무에서 중요합니다. 양자화와 희소화는 원래 네트워크의 구조에 묶여 있지만, 증류는 더 자유롭습니다. 학생은 폭과 깊이가 달라도 되고, 경우에 따라서는 아키텍처 계열 자체가 달라도 됩니다. 중요한 것은 우리가 원하는 행동을 얼마나 잘 옮겨오느냐입니다.
+<a id="1-로짓-매칭에서-추론-과정으로의-진화"></a>
 
-LLM 시대의 증류도 더 야심차게 바뀌었습니다. 이제는 단순히 출력 확률을 흉내 내는 데서 그치지 않고, reasoning trace, hidden-state structure, decoding behavior까지 더 작은 모델로 옮기려는 시도가 많아졌습니다.
+## 1. 교사가 무엇을 제공할 수 있을까요?
 
----
+같은 입력과 같은 클래스 집합에 대해 교사와 학생의 로짓을 각각 $z_t$, $z_s$라고 합시다. 온도 $T>0$에서 두 분포는 $p_T=\operatorname{softmax}(z_t/T)$와 $q_T=\operatorname{softmax}(z_s/T)$입니다. Hinton 등은 교사의 출력 확률을 부드럽게 바꿔 학습 목표로 삼았습니다. $T$를 1보다 높이면 확률이 한 클래스에 덜 쏠려서 낮은 확률을 받은 클래스 사이의 차이도 드러납니다. 흔히 다음처럼 손실의 크기를 조정합니다. [[1]](#ref-1)
 
-## 1. 로짓 매칭에서 추론 과정으로의 진화
+$$
+\mathcal L_{\mathrm{KD}}=T^2\sum_i p_T(i)\log\frac{p_T(i)}{q_T(i)}.
+$$
 
-역사적으로 지식 증류는 **로짓 매칭 (Logit Matching)** 에 의존했습니다. 2015년 Geoffrey Hinton 등이 제안한 [[1]](#ref-1) 이 방식의 핵심은, 교사 모델의 출력 로짓(Logits)에 숨겨진 '어두운 지식(Dark Knowledge)'—즉, 정답이 아닌 오답 클래스들 간의 상대적 확률 분포—을 학생이 학습하게 만드는 것입니다.
+$i$는 클래스 번호입니다. 자연로그를 쓰므로 $T^2$을 곱하기 전 순방향 KL 발산의 단위는 nat입니다. 교사가 1등 레이블만 알려 주면 그 입력에서 나머지 클래스에 얼마씩 확률을 배분했는지 복원할 수 없습니다.
 
-출력층의 소프트맥스(Softmax) 함수에 높은 **온도 (Temperature, $T$)** 를 적용하면, 날카로운 확률 분포가 부드러워지며 학생 모델은 쿨백-라이블러 발산(KL Divergence)을 통해 이 미세한 관계를 학습합니다.
+<a id="더-풍부한-supervision으로-가는-흐름"></a>
 
-$$ \mathcal{L}_{KD} = T^2 \cdot \mathcal{D}_{KL}\left( \text{Softmax}\left(\frac{Z_{teacher}}{T}\right) \Big|\Big| \text{Softmax}\left(\frac{Z_{student}}{T}\right) \right) $$
+### 관찰할 수 있는 신호에 맞춰 학습 목표 고르기
 
-이 방식은 분류 작업에서는 매우 효과적이지만, 생성과 추론이 핵심인 LLM에서는 한계가 드러납니다. 최종 토큰 분포만 맞추면 학생은 “무슨 답이 자주 나오는지”는 배울 수 있어도, 교사가 그 답에 도달한 과정까지는 배우지 못할 수 있습니다. 그래서 작은 학생 모델이 문체는 비슷하게 흉내 내지만 reasoning-heavy task에서는 여전히 약한 경우가 많습니다.
+| 교사에게 받은 신호 | 학생이 학습할 수 있는 목표 |
+| --- | --- |
+| 답변이나 생성된 설명문 | 문장을 모아 학생이 그 토큰을 예측하도록 학습합니다. Hsieh 등은 교사가 생성한 풀이를 추가 텍스트 목표로 썼습니다. 설명문은 관찰할 수 있지만, 그것이 답을 낸 내부 계산을 충실히 반영하는지는 별도로 확인해야 합니다. [[2]](#ref-2) |
+| 전체 로짓 또는 확률 | 두 모델이 같은 결과 집합에 확률을 매길 때 분포를 맞출 수 있습니다. 다음 토큰의 KL을 계산하려면 토큰 ID와 순서, 앞에 주어진 토큰열까지 맞춰야 합니다. 상위 토큰 몇 개만 받으면 남은 확률이 어떻게 나뉘었는지 알 수 없습니다. [[1]](#ref-1) |
+| 중간 특징 | 지정한 층과 위치에서 활성화 텐서를 읽습니다. 2014년 12월에 처음 공개된 FitNets는 학생의 중간 특징을 교사 특징에 맞추는 투영을 학습했습니다. 그러려면 해당 텐서에 접근할 수 있어야 합니다. [[6]](#ref-6) |
 
-### 더 풍부한 supervision으로 가는 흐름
-
-이 간극을 줄이기 위해 최근 연구는 최종 로짓 바깥의 신호를 더 적극적으로 활용합니다.
-
-1. **Rationale-Based Distillation**: 교사가 최종 답만이 아니라 중간 reasoning step까지 제공합니다 [[2]](#ref-2).
-2. **Feature-Based Alignment**: 학생이 출력뿐 아니라 내부 hidden-state 구조 일부까지 교사와 비슷해지도록 유도합니다.
-
-이 방법들이 “작은 모델도 곧바로 큰 모델처럼 생각하게 만든다”는 뜻은 아닙니다. 다만, 출력만 맞추는 방식보다 더 유용한 행동을 옮겨오는 데 도움이 되는 경우가 많습니다.
-
-![kd_evolution](../../../assets/images/chapter-13/kd_evolution.png)
-*출처: AI 생성 이미지. 로짓 매칭에서 단계별 추론(CoT) 증류 및 특징 정렬로 진화한 지식 증류의 패러다임 변화를 보여주는 개념도.*
+텍스트·확률·특징은 서로 보완할 수 있습니다. [은닉 좌표와 출력층을 따로 바꾸는 실습](#distillation-readout)에서 특징을 맞추는 손실이 어떤 제약을 더하는지 확인해 보세요.
 
 ---
 
@@ -65,17 +61,11 @@ $$ \mathcal{L}_{KD} = T^2 \cdot \mathcal{D}_{KL}\left( \text{Softmax}\left(\frac
 
 ## 4. 아키텍처 비동질성과 특징 정렬
 
-증류의 실질적인 장점 중 하나는 학생이 교사의 축소판일 필요가 없다는 점입니다. 더 큰 Transformer에서 더 작은 Transformer로 옮길 수도 있고, 이런 아이디어를 다른 모델 계열로까지 얼마나 넓힐 수 있는지도 활발히 탐구되고 있습니다.
-
-문제는 hidden representation이 서로 다른 공간에 놓여 있다는 점입니다. 교사는 더 넓은 레이어를 가질 수 있고, head 수나 recurrence 구조도 다를 수 있습니다. 그래서 흔히 **projection layer** 를 추가해 학생의 표현을 교사의 latent space로 매핑한 뒤 alignment loss를 적용합니다.
-
-여기서부터 증류는 개념 설명을 넘어 진짜 엔지니어링 문제가 됩니다. 어느 레이어를 맞출지, 얼마나 자주 맞출지, 손실 가중치를 어떻게 둘지가 학습 안정성과 학생 품질에 직접 영향을 주기 때문입니다.
-
----
+두 모델이 다음 토큰을 같은 확률로 예측해도 은닉 차원의 수나 좌표계는 다를 수 있습니다. 중간 특징으로 학습하려면 어느 층의 어느 토큰 위치를 비교할지 먼저 정합니다. 학습 가능한 투영을 두면 학생의 은닉 상태를 교사 특징과 비교할 수 있는 좌표계로 옮길 수 있습니다. FitNets는 이 방식으로 폭이 넓은 교사에서 더 좁은 학생을 학습했습니다. [[6]](#ref-6)
 
 ### PyTorch 구현: 특징 기반 지식 증류
 
-아래의 PyTorch 코드는 구조적 비동질성(Heterogeneity)을 극복하기 위해 표준 태스크 손실, 로짓 기반 KL 발산, 그리고 투영 레이어를 활용한 특징 정렬(Feature Alignment) 손실을 하나로 결합한 최신 지식 증류 파이프라인을 보여줍니다.
+아래 예제는 다음 토큰의 교차 엔트로피, 온도를 적용한 출력 분포 사이의 순방향 KL, 투영한 학생 은닉 상태와 교사 은닉 상태 사이의 MSE를 하나의 손실로 결합합니다.
 
 > **교육용 loss 예제.** 같은 토크나이저·어휘 순서·채팅 템플릿을 사용하는 정렬된 교사/학생 출력을 가정합니다. 실제 교사는 고정된 체크포인트로 `eval()` 및 `inference_mode()`에서 실행해야 합니다. 아래 합성 마스크는 실제 템플릿의 assistant span 마스크로 대체하세요. BOS/EOS 중복을 피하고 EOS 포함 정책·절단·패딩을 일치시키며, 패킹 시 샘플 간 attention을 차단해야 합니다. 전체 모델 학습, 다른 토크나이저의 분포 매핑, 전역 토큰 수를 사용하는 분산 loss 정규화는 구현하지 않습니다.
 
@@ -150,19 +140,47 @@ print("KD loss:", loss.item())
 
 ---
 
+<a id="distillation-readout"></a>
+
 ## 6. 표현 정렬의 기하학적 제약
 
-출력 일치는 은닉 공간의 특정 좌표를 요구하지 않습니다. 아래 그림은 특징 정렬이 추가하는 제약을 설명하며 두 학습 방법의 우열을 실험하지 않습니다.
+은닉 상태가 $h=[1,3]^\top$이고, 출력층의 행벡터가 클래스 A에는 $[2,-1]$, B에는 $[1,1]$이라고 합시다. 로짓 $Wh$는 $[-1,4]^\top$입니다. 온도 $T=1$에서 교사가 B에 주는 확률은 0.993307입니다. 두 체크 상자가 비어 있으면 학생의 좌표와 출력층은 교사와 같습니다. 학생의 은닉 좌표만 교환하면 어떻게 될지 먼저 예상해 보고, 이어서 출력층의 두 열도 교환해 보세요.
 
-<KDVisualizer lang="ko" client:load />
+<KDVisualizer lang="ko" />
+
+은닉 좌표만 바꾸면 로짓이 $[5,4]^\top$가 됩니다. B의 확률은 0.268941로 낮아지고 순방향 KL은 1.266389 nat으로 커집니다. 두 상자를 모두 선택하면 로짓은 $[-1,4]^\top$, KL은 0으로 돌아옵니다. 두 경우 모두 원래 좌표에서 계산한 은닉 상태의 평균제곱오차(MSE)는 $((3-1)^2+(1-3)^2)/2=4$입니다.
+
+출력층에서 같은 순열을 되돌리면 어느 은닉 상태에서도 이 관계가 성립합니다. 순열 행렬을 $P$라고 하면 $h_s=Ph$, $W_s=WP^\top$일 때 $P^\top P=I$이므로 $W_sh_s=Wh$입니다. 특징을 비교할 때도 학생 좌표를 $P^\top$로 투영하면 교사의 원래 좌표와 일치해 투영 후 MSE는 0이 됩니다. 이 예제에서는 학습 없이도 식으로 결과를 확인할 수 있습니다.
+
+**파이썬 표준 라이브러리로 검산하기.** 각 줄에는 학생이 B에 준 확률, 순방향 KL(nat), 원래 좌표의 은닉 상태 MSE가 나옵니다. 순서대로 원본, 출력층의 열만 교환, 은닉 좌표만 교환, 둘 다 교환한 경우입니다.
+
+```python
+from math import exp, log
+
+h = [1, 3]
+W = [[2, -1], [1, 1]]
+
+def probabilities(state, rows):
+    logits = [sum(a * b for a, b in zip(row, state)) for row in rows]
+    terms = [exp(z - max(logits)) for z in logits]
+    return [v / sum(terms) for v in terms]
+
+p = probabilities(h, W)
+for state in (h, h[::-1]):
+    for rows in (W, [row[::-1] for row in W]):
+        q = probabilities(state, rows)
+        kl = sum(a * log(a / b) for a, b in zip(p, q))
+        mse = sum((a - b)**2 for a, b in zip(h, state)) / len(h)
+        print(f"{q[1]:.6f} {kl:.6f} {mse:.0f}")
+```
 
 ---
 
 ## 7. 요약 및 다음 단계
 
-지식 증류는 단순한 로짓 매칭 기법에서, 큰 모델의 행동을 작은 모델로 옮기는 더 넓은 도구 상자로 발전했습니다. 지금 중요한 것은 “KD를 썼다”가 아니라, 어떤 teacher를 선택했고, 어떤 divergence를 썼고, 학생이 실제로 만드는 궤적까지 평가했는지입니다.
+먼저 수집할 수 있는 교사 신호를 정한 뒤 실제 서비스에서 기대하는 행동을 평가하세요. 고객 문의 분류기라면 학습에 쓰지 않은 문의가 맞는 담당자에게 전달됐는지 확인합니다. 설명문이나 로짓, 중간 특징이 교사와 얼마나 비슷한가는 각각 다른 질문입니다.
 
-양자화와 희소화와 함께 쓰면, 지식 증류는 더 작은 하드웨어와 더 빡빡한 latency budget 안에서도 꽤 강한 모델을 배포하게 해 주는 가장 실용적인 수단 중 하나입니다. 하지만 작은 모델은 내부에 담을 수 있는 지식량이 제한적입니다. 다음 장인 **Chapter 14: RAG (Retrieval Augmented Generation)** 에서는 그 한계를 retrieval로 어떻게 보완하는지 보겠습니다.
+[13.5절](../advanced-quantization/)에서는 배포할 모델의 저정밀 형식이 어떤 텐서를 실제로 압축하는지 살펴봅니다.
 
 ---
 
@@ -181,8 +199,8 @@ print("KD loss:", loss.item())
 ## Quizzes
 
 <details>
-<summary>Quiz 1: 전통적인 로짓 기반 지식 증류에서 소프트맥스 함수에 적용되는 온도(Temperature, $T$) 파라미터의 수학적 역할은 무엇입니까?</summary>
-*일반적인 소프트맥스 함수는 정답 클래스에 확률이 극단적으로 쏠리는 매우 날카로운(Sharp) 분포를 만듭니다. 온도를 1보다 큰 값으로 설정하여 로짓을 나누면 확률 분포가 평평해지며(Smoothed), 이를 통해 정답이 아닌 오답 클래스들 간의 미세한 확률 차이(Dark Knowledge)가 증폭됩니다. 학생 모델은 이 부드러워진 분포를 학습함으로써 교사 모델의 일반화(Generalization) 패턴을 더 잘 흡수할 수 있습니다.*
+<summary>Quiz 1: 1등 레이블 하나만 알면 여러 클래스를 예측하는 학생의 순방향 KL을 계산할 수 있을까요?</summary>
+*계산할 수 없습니다. 확률 분포가 달라도 같은 레이블이 1등일 수 있습니다. 전체 분포에 대한 KL을 구하려면 비교하는 각 클래스에 교사가 준 확률이 필요합니다.*
 </details>
 
 <details>
@@ -196,8 +214,8 @@ print("KD loss:", loss.item())
 </details>
 
 <details>
-<summary>Quiz 4: 아키텍처가 다른 teacher와 student 사이에서 projection layer를 자주 넣는 이유는 무엇입니까?</summary>
-*teacher와 student의 hidden state는 차원 수도 다르고 기하학도 다를 수 있습니다. projection layer는 student 표현을 교사 latent space와 비교 가능한 공간으로 옮겨 주기 때문에, MSE 같은 alignment loss를 의미 있게 적용할 수 있게 해 줍니다.*
+<summary>Quiz 4: 학생의 은닉 좌표 두 개와 출력층의 두 열을 함께 맞바꾸면 출력만 보는 손실로 어떤 차이를 찾을 수 있을까요?</summary>
+*어떤 은닉 상태에서도 로짓이 같아 순방향 KL은 0입니다. 실습의 입력에서는 원래 좌표의 은닉 상태 MSE가 4입니다. 특징을 비교하기 전에 투영으로 순열을 되돌리면 좌표도 다시 일치합니다.*
 </details>
 
 <details>
@@ -209,8 +227,9 @@ print("KD loss:", loss.item())
 
 ## References
 
-1. <a id="ref-1"></a>Hinton, G., Vinyals, O., & Dean, J. (2015). *Distilling the Knowledge in a Neural Network.* [arXiv:1503.02531](https://arxiv.org/abs/1503.02531).
-2. <a id="ref-2"></a>Hsieh, C. Y., et al. (2023). *Distilling Step-by-Step! Outperforming Larger Language Models with Less Training Data and Smaller Model Sizes.* [arXiv:2305.02301](https://arxiv.org/abs/2305.02301).
+1. <a id="ref-1"></a>Hinton, G., Vinyals, O., & Dean, J. (2015). *Distilling the Knowledge in a Neural Network.* [arXiv:1503.02531](https://arxiv.org/abs/1503.02531v1).
+2. <a id="ref-2"></a>Hsieh, C. Y., et al. (2023). *Distilling Step-by-Step! Outperforming Larger Language Models with Less Training Data and Smaller Model Sizes.* [arXiv:2305.02301](https://aclanthology.org/2023.findings-acl.507/).
 3. <a id="ref-3"></a>Gu, Y., Dong, L., Wei, F., & Huang, M. (2024). *MiniLLM: On-Policy Distillation of Large Language Models.* [arXiv:2306.08543](https://arxiv.org/abs/2306.08543).
 4. <a id="ref-4"></a>Agarwal, R., et al. (2024). *On-Policy Distillation of Language Models: Learning from Self-Generated Mistakes.* [arXiv:2306.13649](https://arxiv.org/abs/2306.13649).
 5. <a id="ref-5"></a>Research preprint (2026). [SteerDistill: Quantizing LLM Agents via Closed-Loop Teacher Steering](https://arxiv.org/html/2611.13410v1). Version pinned; accessed 2026-11-15.
+6. <a id="ref-6"></a>Romero, A., et al. (2014/2015). *FitNets: Hints for Thin Deep Nets.* [arXiv:1412.6550v4](https://arxiv.org/abs/1412.6550v4).

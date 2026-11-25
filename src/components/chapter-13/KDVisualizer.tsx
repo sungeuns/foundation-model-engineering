@@ -1,16 +1,72 @@
-import React,{useState} from 'react';
+import React from 'react';
+import { distillationReadout } from './distillation-readout.mjs';
 import './visualizers.css';
-const teacher=[[80,80],[220,80],[150,220]];
-const points=Array.from({length:30},(_,i)=>({id:i,x:25+(i*73%250),y:25+(i*97%250),tx:teacher[i%3][0]+(i*17%35)-17,ty:teacher[i%3][1]+(i*23%35)-17,cluster:i%3}));
-export default function KDVisualizer({lang='en'}:{lang?:'en'|'ko'}) {
- const ko=lang==='ko';const [amount,setAmount]=useState(0);const [align,setAlign]=useState(true);
- return <div className="kd-visualizer-container"><h4>{ko?'표현 정렬의 기하학적 제약':'The geometric constraint of feature alignment'}</h4>
-  <p>{ko?'고정 좌표를 선형 보간하는 그림이며 모델을 학습하지 않습니다. 출력 분포만 맞추는 목적은 특정 은닉 좌표를 요구하지 않습니다. 특징 손실은 추가적인 좌표 제약을 주지만 일반화 개선을 보장하지 않습니다.':'This interpolates fixed coordinates; no model is trained. Matching output distributions does not require a particular hidden coordinate system. Feature loss adds a geometric constraint without guaranteeing better generalization.'}</p>
-  <label><input type="checkbox" checked={align} onChange={e=>setAlign(e.target.checked)}/>{ko?'교사 좌표 방향으로 보간':'Interpolate toward teacher coordinates'}</label>
-  <label style={{display:'block'}}>{ko?'보간 비율 (학습 epoch 아님)':'Interpolation fraction (not training epochs)'}: {amount}% <input type="range" min="0" max="100" value={amount} onChange={e=>setAmount(Number(e.target.value))} disabled={!align}/></label>
-  <div className="kd-canvas-wrapper"><svg viewBox="0 0 300 300" style={{width:'100%',maxWidth:300}} role="img" aria-label={ko?'회색 교사 기준점과 색상별 학생 좌표':'Gray teacher reference points and colored student coordinates'}><title>{ko?'설명용 특징 좌표':'Illustrative feature coordinates'}</title>
-   {teacher.map(([x,y],i)=><circle key={i} cx={x} cy={y} r="20" fill="#94a3b8" opacity=".5"/>)}
-   {points.map(p=><circle key={p.id} cx={p.x+(p.tx-p.x)*(align?amount/100:0)} cy={p.y+(p.ty-p.y)*(align?amount/100:0)} r="4" fill={['#ef4444','#3b82f6','#10b981'][p.cluster]}/>)}
-  </svg></div><p>{ko?'회색: 교사 기준점 · 색 점: 학생 표현. 교사는 정답의 보장이 아니며, 차원이 다르면 학습 가능한 투영과 정렬 위치 선택이 필요합니다.':'Gray: teacher reference points. Colored: student representations. The teacher is not guaranteed correct; different dimensions require a learned projection and a choice of aligned positions.'}</p>
- </div>;
+
+const labels = {
+  en: {
+    controls: 'Change the student',
+    hiddenSwap: 'Swap hidden coordinates',
+    readoutSwap: 'Swap readout columns',
+    unchanged: 'Original order',
+    hiddenOnly: 'Only hidden coordinates swapped',
+    readoutOnly: 'Only readout columns swapped',
+    both: 'Both pairs swapped',
+    hidden: 'Hidden state',
+    weights: 'Readout rows',
+    logits: 'Logits (A, B)',
+    probability: 'Probability of B',
+    kl: 'Forward KL (nats)',
+    mse: 'Hidden MSE',
+  },
+  ko: {
+    controls: '학생 모델 바꾸기',
+    hiddenSwap: '은닉 좌표 교환',
+    readoutSwap: '출력층의 열 교환',
+    unchanged: '처음 순서',
+    hiddenOnly: '은닉 좌표만 교환',
+    readoutOnly: '출력층의 열만 교환',
+    both: '두 쌍 모두 교환',
+    hidden: '은닉 상태',
+    weights: '출력층 행벡터',
+    logits: '로짓 (A, B)',
+    probability: 'B의 확률',
+    kl: '순방향 KL (nat)',
+    mse: '은닉 상태 MSE',
+  },
+};
+
+const cases = [
+  { key: 'unchanged', swapHidden: false, swapReadout: false },
+  { key: 'hiddenOnly', swapHidden: true, swapReadout: false },
+  { key: 'readoutOnly', swapHidden: false, swapReadout: true },
+  { key: 'both', swapHidden: true, swapReadout: true },
+] as const;
+
+const vector = (values: number[]) => '[' + values.join(', ') + ']';
+
+export default function KDVisualizer({ lang = 'en' }: { lang?: 'en' | 'ko' }) {
+  const t = labels[lang];
+  return <div className="kd-readout">
+    <fieldset>
+      <legend>{t.controls}</legend>
+      <label><input className="kd-hidden-swap" type="checkbox" /> {t.hiddenSwap}</label>
+      <label><input className="kd-column-swap" type="checkbox" /> {t.readoutSwap}</label>
+    </fieldset>
+    <div aria-live="polite" aria-atomic="true">
+      {cases.map(({ key, swapHidden, swapReadout }) => {
+        const result = distillationReadout(swapHidden, swapReadout);
+        return <div key={key} className={'kd-result kd-' + key}>
+          <h3>{t[key]}</h3>
+          <dl>
+            <div><dt>{t.hidden}</dt><dd>{vector(result.hidden)}</dd></div>
+            <div><dt>{t.weights}</dt><dd>{result.weights.map(vector).join(', ')}</dd></div>
+            <div><dt>{t.logits}</dt><dd>{vector(result.logits)}</dd></div>
+            <div><dt>{t.probability}</dt><dd>{(100 * result.probabilities[1]).toFixed(2)}%</dd></div>
+            <div><dt>{t.kl}</dt><dd>{result.forwardKl.toFixed(6)}</dd></div>
+            <div><dt>{t.mse}</dt><dd>{result.hiddenMse}</dd></div>
+          </dl>
+        </div>;
+      })}
+    </div>
+  </div>;
 }

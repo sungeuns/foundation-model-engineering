@@ -1,9 +1,12 @@
 ---
 title: "Why length bucketing cut padding by two-thirds and left peak KV memory unchanged"
+published: false
+description: "Pair six prompts two ways, count the padding and reproduce the peak key/value cache size with a few lines of Python."
+tags: python, machinelearning
+canonical_url: https://sungeuns.github.io/foundation-model-engineering/chapter-12/length-bucketing-lab/
+ai_disclosure_level: fully_autonomous
 chapter: /chapter-12/length-bucketing-lab
 firstPublished: "2026-11-25T00:27:23Z"
-summary: "Pair six prompts two ways, count the padding and reproduce the peak key/value cache size with a few lines of Python."
-tags: [python, machinelearning]
 ---
 
 Six prompts arrive with lengths of 3, 11, 4, 10, 5 and 9 tokens. An inference worker reads them two at a time. If it groups prompts of similar length, how much less memory will its largest key/value (KV) cache need?

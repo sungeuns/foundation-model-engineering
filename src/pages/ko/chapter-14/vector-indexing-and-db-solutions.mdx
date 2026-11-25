@@ -20,11 +20,29 @@ import HNSWVisualizer from '../../../components/chapter-14/HNSWVisualizer.tsx';
 
 HNSW는 최하단에 모든 벡터를 두고 위로 갈수록 벡터 수가 줄어드는 중첩 근접 그래프를 만듭니다 [[1]](#ref-1). 최하단도 완전 연결 밀집 그래프가 아니라 희소 연결입니다. 상위 계층으로 유망한 영역에 접근한 뒤 하단에서 후보 집합을 제한해 탐색합니다.
 
-구축과 질의 파라미터를 구분하세요. `M`은 연결도·그래프 메모리, `efConstruction`은 구축량·그래프 품질, `efSearch`는 질의 탐색 예산에 영향을 줍니다. 예산을 높이면 재현율이 좋아질 수 있지만 거리 계산·지연도 늘어납니다. 삭제·필터·데이터 군집·삽입 순서·차원이 곡선을 바꿉니다. 관측된 로그 규모 확장은 모든 데이터·설정의 최악 복잡도 보장이 아닙니다.
+`M`은 노드마다 저장하는 간선 수에 영향을 줍니다. `efConstruction`은 새 노드를 삽입할 때 연결할 이웃을 얼마나 넓게 찾을지 조절합니다. 질의 시점에는 `efSearch`로 가까운 후보를 몇 개까지 보관할지 정합니다. 이 목록의 크기보다 더 많은 노드의 이웃을 살펴볼 수도 있습니다. `efSearch`를 바꾸면서 실제 질의의 지연과 전수 검색 대비 재현율을 함께 측정하세요 [[1]](#ref-1) [[5]](#ref-5).
 
-아래 실험은 실제 그려진 이웃 간선을 따라가며 마지막 노드를 전수 검색의 최근접 노드와 비교합니다. 고정 장난감 그래프와 greedy 탐색을 사용하고 HNSW 삽입·이웃 선택 휴리스틱·efSearch 큐는 생략합니다. 계층 하강·국소 탐색의 이해를 위한 것이며 데이터베이스 벤치마크가 아닙니다.
+<a id="greedy-search-detour"></a>
+### 질의에서 한 걸음 멀어지면 무엇이 보일까요?
+
+질의를 $(100,180)$에 놓고 상위 계층을 따라가면 25번 노드로 내려옵니다. 질의와의 거리는 97.74입니다. 최하층에서 25번의 이웃 중 질의에 가장 가까운 점은 24번인데, 거리가 105.44로 오히려 멀어집니다. 가까워지는 방향으로만 움직이면 여기서 멈춥니다. 그런데 24번은 16번과, 16번은 17번과 연결되어 있습니다. 17번까지의 거리는 9.49로, 40개 점 가운데 가장 가깝습니다.
+
+25번에서 다시 시작해 봅시다. 발견한 노드 중 아직 이웃을 살펴보지 않은 노드를 우선순위 큐에 담습니다. 질의에 가장 가까운 노드를 하나 꺼내 이웃을 살펴보는 것을 **확장** 이라고 합니다. 거리가 같으면 번호가 작은 노드를 먼저 꺼냅니다. 새로 발견한 이웃을 큐에 넣으면서 지금까지의 최단 거리도 갱신합니다. 24번을 확장하면 16번을 답으로 돌려줄 수 있고, 16번을 확장하면 **17번의 이웃을 열어 보기도 전에** 17번을 답으로 돌려줄 수 있습니다. 슬라이더로 확장 횟수를 바꿔 보세요. 질의를 $(480,250)$으로 옮겨도 한 번 더 확장할 때마다 답이 달라질까요?
 
 <HNSWVisualizer client:load locale="ko" />
+
+탐욕 탐색이 왜 우회를 포기하는지 파이썬 표준 라이브러리로 확인해 봅시다. 네 점에서 질의까지의 유클리드 거리를 순서대로 구하면 첫 이동에서 거리가 늘어납니다.
+
+```python
+from math import dist
+
+query = (100, 180)
+route = [(25, (112, 277)), (24, (39, 266)), (16, (36, 195)), (17, (109, 183))]
+for node, point in route:
+    print(node, round(dist(query, point), 2))
+```
+
+이 예제에서는 층마다 각 점이 가까운 이웃을 최대 세 개까지 고릅니다. 간선을 양방향으로 연결하므로 다른 점들이 선택한 노드는 이웃이 세 개보다 많을 수도 있습니다. 세 번만 확장하도록 한 덕에 어느 노드의 이웃을 확인했는지 셀 수 있습니다. 실제 HNSW는 노드를 삽입할 때 간선을 만들고, 탐색 중에는 보관한 후보 가운데 가장 먼 점까지의 거리를 이용해 종료 여부를 판단합니다. 따라서 데이터베이스에 `efSearch=3`을 지정했을 때 밟는 절차는 이 예제와 다릅니다 [[1]](#ref-1).
 
 ## 3. 양자화·IVF·ScaNN
 
@@ -66,8 +84,8 @@ Guo 등의 비등방성 양자화는 큰 내적 점수를 더 잘 보존하도�
 </details>
 
 <details>
-<summary>Quiz 2: HNSW 최하단이 완전 연결 밀집 그래프가 아닌 이유는 무엇일까요?</summary>
-*탐색용 근접 간선을 제한해서 저장합니다. 완전 연결은 의도한 저장·탐색 절충을 무너뜨립니다.*
+<summary>Quiz 2: 24번은 25번보다 질의에서 먼데도 이웃을 살펴볼 가치가 있는 이유는 무엇일까요?</summary>
+*24번을 확장해야 16번을 발견하고, 16번을 확장해야 가장 가까운 17번을 발견합니다. 탐욕 탐색은 이 경로의 첫 간선을 건너기 전에 멈춥니다.*
 </details>
 
 <details>
@@ -91,3 +109,4 @@ Guo 등의 비등방성 양자화는 큰 내적 점수를 더 잘 보존하도�
 2. <a id="ref-2"></a>Guo, R., et al. (2020). *Accelerating Large-Scale Inference with Anisotropic Vector Quantization.* ICML. [Paper](https://arxiv.org/abs/1908.10396).
 3. <a id="ref-3"></a>FAISS maintainers. *Guidelines to choose an index.* Verified 2026-10-25. [Official wiki](https://github.com/facebookresearch/faiss/wiki/Guidelines-to-choose-an-index).
 4. <a id="ref-4"></a>Qdrant. *Filterable HNSW Without Recall Loss.* Verified 2026-10-25. Implementation-specific discussion. [Technical article](https://qdrant.tech/articles/filterable-hnsw/).
+5. <a id="ref-5"></a>hnswlib 유지관리자. *Algorithm parameters*, 검색 파라미터 `ef`. [구현 문서](https://github.com/nmslib/hnswlib/blob/master/ALGO_PARAMS.md).
