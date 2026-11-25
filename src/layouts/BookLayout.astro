@@ -39,11 +39,10 @@ const getLocalePath = (basePath, locale) => {
 const enTarget = hasRoute(enPath) ? normalizePathname(enPath) : normalizePathname(koPath);
 const koTarget = hasRoute(koPath) ? normalizePathname(koPath) : normalizePathname(enPath);
 const homePath = getLocalePath('/', lang);
-const currentSub = chapters
-  .flatMap((chapter) => chapter.subs)
-  .find((sub) => currentPath === normalizePathname(getLocalePath(sub.path, lang)));
+const currentChapter = chapters.find(chapter => chapter.subs.some(sub => sub.path === enPath));
+const currentSub = currentChapter?.subs.find(sub => sub.path === enPath);
 const localeFragments = isHomePage
-  ? ['serving-guide', 'book-contents']
+  ? ['serving-guide', 'book-contents', ...chapters.map(chapter => `chapter-${chapter.id}`)]
   : isLabsPage ? teachingLabGroups.flatMap(group => [group.id, ...group.tasks.map(task => task.id)])
   : enPath === whisperArticlePath ? ['sample-rate-listen']
   : sharedLocaleFragments(currentSub?.path, modelSnapshot.models.map(model => model.id));
@@ -133,14 +132,19 @@ const structuredData = {
   }),
 };
 const breadcrumbItems = [
-  { name: isKo ? '홈' : 'Home', item: toAbsoluteUrl(homePath) },
-  { name: contentTitle, item: canonicalUrl },
+  { name: isKo ? '홈' : 'Home', href: toHref(homePath) },
+  ...(currentChapter ? [{
+    name: currentChapter.title[lang],
+    href: `${toHref(homePath)}#chapter-${currentChapter.id}`,
+  }] : []),
+  { name: contentTitle, href: toHref(currentPath) },
 ];
 const breadcrumbData = {
   '@context': 'https://schema.org',
   '@type': 'BreadcrumbList',
   itemListElement: breadcrumbItems.map((item, index) => ({
-    '@type': 'ListItem', position: index + 1, ...item,
+    '@type': 'ListItem', position: index + 1, name: item.name,
+    item: new URL(item.href, Astro.site || site.url).href,
   })),
 };
 
@@ -279,8 +283,9 @@ if (currentIndex !== -1) {
         {!isHomePage && (
           <nav class="breadcrumbs" aria-label={isKo ? '현재 위치' : 'Breadcrumb'}>
             <ol>
-              <li><a href={toHref(homePath)}>{isKo ? '홈' : 'Home'}</a></li>
-              <li aria-current="page">{contentTitle}</li>
+              {breadcrumbItems.map((item, index) => index === breadcrumbItems.length - 1
+                ? <li aria-current="page">{item.name}</li>
+                : <li><a href={item.href}>{item.name}</a></li>)}
             </ol>
           </nav>
         )}

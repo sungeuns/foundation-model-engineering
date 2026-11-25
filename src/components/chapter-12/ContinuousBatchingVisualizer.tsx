@@ -50,8 +50,10 @@ const COMPLETE: Frame = { slots: Array(CAPACITY).fill(null), waiting: [], finish
 
 export default function ContinuousBatchingVisualizer({ lang = 'en' }: { lang?: 'en' | 'ko' }) {
   const ko = lang === 'ko';
+  const [ready, setReady] = useState(false);
   const [step, setStep] = useState(0);
   const [playing, setPlaying] = useState(false);
+  useEffect(() => setReady(true), []);
   useEffect(() => {
     if (!playing) return;
     if (step >= LAST_STEP) { setPlaying(false); return; }
@@ -65,7 +67,8 @@ export default function ContinuousBatchingVisualizer({ lang = 'en' }: { lang?: '
     <p className="cb-explanation">{ko
       ? '세 슬롯, 여섯 요청. 모두 시작 전에 도착했고 prefill은 생략합니다. 각 칸은 이번 반복을 끝낸 상태입니다. 완료한 자리는 다음 반복에서 다시 쓸 수 있습니다.'
       : 'Three slots, six requests, all queued at the start; prefill is omitted. Each card shows the end of this iteration. A completed slot can be reused in the next iteration.'}</p>
-    <div className="cb-controls">
+    <noscript><p>{ko ? '위 표에서 11번의 반복을 전부 비교할 수 있습니다. 아래 카드는 요청을 받기 전 상태입니다.' : 'The table above compares all 11 iterations. The cards below show the queue before any request starts.'}</p></noscript>
+    <fieldset className="cb-controls" disabled={!ready} aria-label={ko ? '반복 재생과 선택' : 'Iteration playback and selection'}>
       <button type="button" className="cb-btn" onClick={() => {
         if (step === LAST_STEP) setStep(0);
         setPlaying(value => !value);
@@ -76,7 +79,7 @@ export default function ContinuousBatchingVisualizer({ lang = 'en' }: { lang?: '
       <label className="cb-step-control">{ko ? '반복 선택' : 'Choose iteration'}
         <input type="range" min="0" max={LAST_STEP} value={step} onChange={event => chooseStep(Number(event.target.value))} />
       </label>
-    </div>
+    </fieldset>
     <p className="cb-step-indicator" role="status">{step === 0 ? (ko ? '시작 전: 모든 요청 대기 중' : 'Before execution: all requests queued') : `${ko ? '반복' : 'Iteration'} ${step} / ${LAST_STEP}`}</p>
     <div className="cb-boards">
       {([{ title: ko ? '정적 배칭' : 'Static batching', frames: STATIC }, { title: ko ? '연속 배칭' : 'Continuous batching', frames: CONTINUOUS }]).map(({ title, frames }) => {

@@ -10,7 +10,10 @@
 .scheduling-visualizer .controls {
   display: flex;
   gap: 10px;
-  margin-bottom: 20px;
+  margin: 0 0 20px;
+  padding: 0;
+  border: 0;
+  min-inline-size: 0;
   flex-wrap: wrap;
 }
 
@@ -24,7 +27,7 @@
   transition: all 0.2s;
 }
 
-.scheduling-visualizer button:hover {
+.scheduling-visualizer button:enabled:hover {
   background: #3f3f5a;
 }
 
@@ -32,6 +35,8 @@
   background: #3b82f6;
   border-color: #3b82f6;
 }
+
+.scheduling-visualizer button:disabled { opacity: .55; cursor: default; }
 
 .timeline-container {
   background: #0f0f1a;
@@ -440,3 +445,14 @@
 .scheduling-visualizer .timeline-container:focus-visible { outline: 3px solid #fbbf24; outline-offset: 3px; }
 .scheduling-visualizer progress { width: 100%; margin-top: 12px; }
 .scheduling-visualizer .scheduling-source { color: #cbd5e1; font-size: 0.85rem; }
+@media (max-width: 600px) {
+  .scheduling-visualizer { padding: 12px; }
+  .scheduling-visualizer .timeline-container { padding: 10px; min-height: 0; }
+  .scheduling-visualizer .timeline-track, .scheduling-visualizer .blocks { min-width: 0; }
+  .scheduling-visualizer .track-row { display: grid; height: auto; gap: 4px; }
+  .scheduling-visualizer .label { width: auto; }
+  .scheduling-visualizer .block { overflow: visible; font-size: .625rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .scheduling-visualizer .block { transition: none; }
+}

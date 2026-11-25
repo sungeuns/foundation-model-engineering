@@ -32,7 +32,10 @@ import { withBasePath, withPagePath } from '../utils/paths.js';
   <div class="toc">
     {chapters.map(ch => (
       <div class="toc-chapter">
-        <h3>{ch.title.en}</h3>
+        <h3 id={`chapter-${ch.id}`}>
+          <a href={`#chapter-${ch.id}`}>{ch.title.en}</a>
+          <small>({ch.subs.length} {ch.subs.length === 1 ? 'lesson' : 'lessons'})</small>
+        </h3>
         <ul>
           {ch.subs.map(sub => (
             <li><a href={withPagePath(sub.path)}>{sub.title.en}</a></li>
@@ -55,8 +58,11 @@ import { withBasePath, withPagePath } from '../utils/paths.js';
   .toc h3 {
     font-size: 1.3rem;
     margin-bottom: 0.5rem;
-    color: #111;
+    color: var(--text-color);
+    scroll-margin-top: 4rem;
   }
+  .toc h3 a { color: inherit; }
+  .toc h3 small { font-size: .88rem; font-weight: normal; color: var(--secondary-color); }
   .toc ul {
     list-style: none;
     padding-left: 1rem;

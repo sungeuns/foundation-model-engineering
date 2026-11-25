@@ -49,7 +49,7 @@ python public/labs/paired_release.py --scenario missing
 
 ## 책의 범위와 읽는 방법
 
-20개 장에서 모델 아키텍처, 사전학습·후속학습, 추론, 검색, 에이전트, 평가, 안전성, 해석 가능성을 다룹니다. 각 절에는 이해를 확인할 퀴즈와 참고문헌이 있습니다. 시점에 따라 달라지는 비교에는 기준일과 출처를 붙이고, 제공자의 발표와 독립 평가를 구분합니다.
+한국어판과 영문판 모두 [20개 장, 108개 절](https://sungeuns.github.io/foundation-model-engineering/ko/#book-contents)을 읽을 수 있습니다. 마지막 네 장에서 다루는 주제는 [평가(7개 절)](https://sungeuns.github.io/foundation-model-engineering/ko/#chapter-17), [안전성(4개 절)](https://sungeuns.github.io/foundation-model-engineering/ko/#chapter-18), [해석 가능성(4개 절)](https://sungeuns.github.io/foundation-model-engineering/ko/#chapter-19), [상태 공간 모델을 비롯한 새로운 아키텍처(7개 절)](https://sungeuns.github.io/foundation-model-engineering/ko/#chapter-20)입니다. 각 절에는 이해를 확인할 퀴즈와 참고문헌이 있습니다. 시점에 따라 달라지는 비교에는 기준일과 출처를 붙이고, 제공자의 발표와 독립 평가를 구분합니다.
 
 ## 업데이트와 기여
 

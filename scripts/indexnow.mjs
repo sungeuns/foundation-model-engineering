@@ -13,7 +13,12 @@ const catalogRoutes = ['labs/', 'ko/labs/'];
 const article = whisperArticlePath.slice(1) + '/';
 const koArticle = 'ko/' + article;
 const speechChapter = 'chapter-11/audio-and-speech-integration/';
+const batchingRoutes = ['chapter-12/continuous-batching/', 'ko/chapter-12/continuous-batching/'];
 const sharedRoutes = new Map([
+  ['src/components/chapter-12/ContinuousBatchingVisualizer.tsx', batchingRoutes],
+  ['src/components/chapter-12/SchedulingVisualizer.tsx', [
+    ...batchingRoutes, 'chapter-12/long-context-serving/', 'ko/chapter-12/long-context-serving/',
+  ]],
   ['src/data/articles/whisper-sample-rate.md', [article]],
   ['src/data/articles/whisper-sample-rate.ko.md', [koArticle]],
   ['src/components/chapter-11/SampleRateListening.astro', [article, koArticle, speechChapter, 'ko/' + speechChapter]],

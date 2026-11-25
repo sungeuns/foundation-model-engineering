@@ -26,7 +26,7 @@
     - https://w3id.org/kim/hochschulfaechersystematik/n079
   keywords: [foundation models, inference, retrieval, PyTorch]
   hasPart:
-    - type: LearningResource
+    - type: [LearningResource]
       id: https://sungeuns.github.io/foundation-model-engineering/labs/
       name: Hands-on labs and teaching materials
 
@@ -56,7 +56,7 @@
     - https://w3id.org/kim/hochschulfaechersystematik/n079
   keywords: [파운데이션 모델, 추론, 검색, PyTorch]
   hasPart:
-    - type: LearningResource
+    - type: [LearningResource]
       id: https://sungeuns.github.io/foundation-model-engineering/ko/labs/
       name: 실습과 수업 자료
 
@@ -86,7 +86,7 @@
     - https://w3id.org/kim/hochschulfaechersystematik/n079
   keywords: [PyTorch, causal attention, checkpoint replay]
   isPartOf:
-    - type: LearningResource
+    - type: [LearningResource]
       id: https://sungeuns.github.io/foundation-model-engineering/
       name: Foundation Model Engineering
 
@@ -116,7 +116,7 @@
     - https://w3id.org/kim/hochschulfaechersystematik/n079
   keywords: [PyTorch, 인과 어텐션, 체크포인트 재개]
   isPartOf:
-    - type: LearningResource
+    - type: [LearningResource]
       id: https://sungeuns.github.io/foundation-model-engineering/ko/
       name: 파운데이션 모델 엔지니어링
 
@@ -151,17 +151,17 @@
       encodingFormat: application/epub+zip
       contentUrl: https://github.com/sungeuns/foundation-model-engineering/releases/download/serving-guide-2026-11/llm-serving-en-r2.epub
   isPartOf:
-    - type: LearningResource
+    - type: [LearningResource]
       id: https://sungeuns.github.io/foundation-model-engineering/
       name: Foundation Model Engineering
   hasPart:
-    - type: LearningResource
+    - type: [LearningResource]
       id: https://sungeuns.github.io/foundation-model-engineering/chapter-12/kv-cache-management/
       name: "12.1 KV Cache: How It Works and Memory Use"
-    - type: LearningResource
+    - type: [LearningResource]
       id: https://sungeuns.github.io/foundation-model-engineering/chapter-12/continuous-batching/
       name: "12.3 Continuous Batching: Request Scheduling and Chunked Prefill"
-    - type: LearningResource
+    - type: [LearningResource]
       id: https://sungeuns.github.io/foundation-model-engineering/chapter-12/serving-policies-slos-and-fallbacks/
       name: 12.6 Serving Policies, SLOs, and Fallbacks
 
@@ -195,17 +195,17 @@
       encodingFormat: application/epub+zip
       contentUrl: https://github.com/sungeuns/foundation-model-engineering/releases/download/serving-guide-2026-11/llm-serving-ko-r2.epub
   isPartOf:
-    - type: LearningResource
+    - type: [LearningResource]
       id: https://sungeuns.github.io/foundation-model-engineering/ko/
       name: 파운데이션 모델 엔지니어링
   hasPart:
-    - type: LearningResource
+    - type: [LearningResource]
       id: https://sungeuns.github.io/foundation-model-engineering/ko/chapter-12/kv-cache-management/
       name: 12.1 KV 캐시 원리와 메모리 계산
-    - type: LearningResource
+    - type: [LearningResource]
       id: https://sungeuns.github.io/foundation-model-engineering/ko/chapter-12/continuous-batching/
       name: "12.3 연속 배칭: 요청 교체와 청크 프리필"
-    - type: LearningResource
+    - type: [LearningResource]
       id: https://sungeuns.github.io/foundation-model-engineering/ko/chapter-12/serving-policies-slos-and-fallbacks/
       name: 12.6 서빙 정책, SLO, 그리고 폴백
 
@@ -239,7 +239,7 @@
       encodingFormat: application/x-ipynb+json
       contentUrl: https://sungeuns.github.io/foundation-model-engineering/labs/kv-cache-payload-en.ipynb
   isPartOf:
-    - type: LearningResource
+    - type: [LearningResource]
       id: https://sungeuns.github.io/foundation-model-engineering/
       name: Foundation Model Engineering
 
@@ -273,7 +273,7 @@
       encodingFormat: application/x-ipynb+json
       contentUrl: https://sungeuns.github.io/foundation-model-engineering/labs/kv-cache-payload-ko.ipynb
   isPartOf:
-    - type: LearningResource
+    - type: [LearningResource]
       id: https://sungeuns.github.io/foundation-model-engineering/ko/
       name: 파운데이션 모델 엔지니어링
 
@@ -299,7 +299,7 @@
   about: [https://w3id.org/kim/hochschulfaechersystematik/n079]
   keywords: [model serving, prompt length, padding, KV cache]
   isPartOf:
-    - type: LearningResource
+    - type: [LearningResource]
       id: https://sungeuns.github.io/foundation-model-engineering/
       name: Foundation Model Engineering
 
@@ -324,6 +324,6 @@
   about: [https://w3id.org/kim/hochschulfaechersystematik/n079]
   keywords: [모델 서빙, 프롬프트 길이, 패딩, KV 캐시]
   isPartOf:
-    - type: LearningResource
+    - type: [LearningResource]
       id: https://sungeuns.github.io/foundation-model-engineering/ko/
       name: 파운데이션 모델 엔지니어링

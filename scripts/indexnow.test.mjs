@@ -82,3 +82,13 @@ test('an invalid route or unavailable proof prevents submission, and a rejected 
   assert.equal((await submit([''], proof, rejected)).status, 429);
   assert.equal(posts, 1);
 });
+
+test('a timeline-only change selects both lessons using it in both languages', () => {
+  const steps = 'src/components/chapter-12/ContinuousBatchingVisualizer.tsx';
+  const timeline = 'src/components/chapter-12/SchedulingVisualizer.tsx';
+  const batching = ['chapter-12/continuous-batching/', 'ko/chapter-12/continuous-batching/'];
+  assert.deepEqual(changedRoutes([steps]), batching);
+  assert.deepEqual(changedRoutes([steps, timeline]), [
+    ...batching, 'chapter-12/long-context-serving/', 'ko/chapter-12/long-context-serving/',
+  ]);
+});

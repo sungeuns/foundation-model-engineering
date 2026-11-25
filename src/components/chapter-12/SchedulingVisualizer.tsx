@@ -36,14 +36,17 @@ const schedules: Record<Mode, { label: [string, string]; blocks: Block[] }[]> = 
 export default function SchedulingVisualizer({ lang = 'en' }: { lang?: 'en' | 'ko' }) {
   const ko = lang === 'ko';
   const [mode, setMode] = useState<Mode>('unified');
-  const [progress, setProgress] = useState(0);
+  const [ready, setReady] = useState(false);
+  const [progress, setProgress] = useState(100);
   const [replay, setReplay] = useState(0);
+  useEffect(() => setReady(true), []);
   useEffect(() => {
-    setProgress(0);
+    if (replay === 0) return;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       setProgress(100);
       return;
     }
+    setProgress(0);
     let value = 0;
     const timer = window.setInterval(() => {
       value = Math.min(100, value + 2);
@@ -51,7 +54,7 @@ export default function SchedulingVisualizer({ lang = 'en' }: { lang?: 'en' | 'k
       if (value === 100) window.clearInterval(timer);
     }, 50);
     return () => window.clearInterval(timer);
-  }, [mode, replay]);
+  }, [replay]);
 
   const names: Record<Mode, string> = ko
     ? { unified: '통합 서빙', chunked: '청크 prefill', disaggregated: '분리형 서빙' }
@@ -67,14 +70,19 @@ export default function SchedulingVisualizer({ lang = 'en' }: { lang?: 'en' | 'k
   };
 
   return <section className="scheduling-visualizer" aria-label={ko ? '서빙 실행 순서 도식' : 'Serving schedule illustration'}>
-    <div className="controls">
+    <fieldset className="controls" disabled={!ready} aria-label={ko ? '실행 방식과 재생' : 'Schedule and playback'}>
       {(Object.keys(names) as Mode[]).map(option => <button key={option} type="button"
         className={mode === option ? 'active' : ''} aria-pressed={mode === option}
-        onClick={() => setMode(option)}>{names[option]}</button>)}
+        onClick={() => {
+          if (option !== mode) {
+            setMode(option);
+            setReplay(value => value + 1);
+          }
+        }}>{names[option]}</button>)}
       <button type="button" onClick={() => setReplay(value => value + 1)}>{ko ? '다시 재생' : 'Replay'}</button>
-    </div>
+    </fieldset>
     <p>{ko ? 'P: prefill · D1–D3: 기존 decode · KV: 상태 인계 · New: 새 요청 decode' : 'P: prefill · D1–D3: existing decodes · KV: state handoff · New: new request decode'}</p>
-    <div className="timeline-container" tabIndex={0} aria-label={ko ? '시간축, 임의 단위; 좁은 화면에서 가로 스크롤' : 'Timeline in invented units; scroll horizontally on narrow screens'}>
+    <div className="timeline-container" tabIndex={0} role="region" aria-label={ko ? '실행 시간축(임의 단위)' : 'Execution timeline in illustrative units'}>
       <div className="timeline-track">
         {schedules[mode].map((row, i) => <div className="track-row" key={i}>
           <div className="label">{row.label[ko ? 1 : 0]}</div>
@@ -90,6 +98,17 @@ export default function SchedulingVisualizer({ lang = 'en' }: { lang?: 'en' | 'k
     </div>
     <progress value={progress} max={100} aria-label={ko ? '애니메이션 진행' : 'Animation progress'} />
     <p className="status-text" role="status">{help[mode]}</p>
+    <noscript>
+      <details>
+        <summary>{ko ? '청크 프리필과 분리형 서빙의 실행 구간 보기' : 'Read the chunked and disaggregated schedules'}</summary>
+        {(['chunked', 'disaggregated'] as const).map(other => <div key={other}>
+          <strong>{names[other]}</strong>
+          <ul>{schedules[other].map(row => <li key={row.label[0]}>
+            {row.label[ko ? 1 : 0]} · {row.blocks.map(block => `${block.label} (${block.start}–${block.end})`).join(', ')}
+          </li>)}</ul>
+        </div>)}
+      </details>
+    </noscript>
     <p className="scheduling-source">{ko ? '2026-10-18 · 생성 방식: 수작업으로 정한 교육용 실행 순서. 임의 단위이며 하드웨어 측정·속도 향상 예측이 아닙니다. 분리형은 자원 풀도 추가됩니다.' : '2026-10-18 · Generation method: hand-authored teaching schedules in invented units. These are not hardware measurements or speedup predictions. Disaggregation also adds a resource pool.'}</p>
   </section>;
 }

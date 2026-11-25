@@ -26,7 +26,7 @@ A free textbook on training, serving, and evaluating foundation models. [Browse 
 
 ## What is inside
 
-20 chapters connect architectures, pre-training, post-training, inference, retrieval, agents, evaluation, safety, and interpretability. Each lesson ends with reasoning questions and references. The [learning paths](https://sungeuns.github.io/foundation-model-engineering/chapter-1/learning-path-and-mastery/) help you check prerequisites and choose a route.
+Both editions have [108 published lessons across 20 chapters](https://sungeuns.github.io/foundation-model-engineering/#book-contents). The last four chapters include [evaluation (7 lessons)](https://sungeuns.github.io/foundation-model-engineering/#chapter-17), [safety (4)](https://sungeuns.github.io/foundation-model-engineering/#chapter-18), [interpretability (4)](https://sungeuns.github.io/foundation-model-engineering/#chapter-19), and [state-space models and other emerging architectures (7)](https://sungeuns.github.io/foundation-model-engineering/#chapter-20). Each lesson ends with reasoning questions and references. The [learning paths](https://sungeuns.github.io/foundation-model-engineering/chapter-1/learning-path-and-mastery/) help you check prerequisites and choose a route.
 
 Expect Python, linear algebra, and probability. Examples identify their simplifications; teaching simulations are not benchmark results. Time-sensitive comparisons identify their source and snapshot date. A provider's claim is kept separate from independently measured evidence.
 

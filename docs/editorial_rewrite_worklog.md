@@ -258,11 +258,13 @@ This pass scanned all 20 chapters and the 102 current EN/KO pairs for mutable cl
 - Replaced the speculative-decoding toy implementation with a standard-library reference. Smoke checks covered last-position rejection, all-accepted bonus sampling, and a 40,000-trial marginal-distribution check (target 0.75; observed 0.750125). Other educational tensor examples explicitly state their integration limits.
 - Synchronized EN/KO body structure, quizzes, code, formulas, reference anchors and URLs for the changed pairs. Added the missing terminology baseline and 15.5 search metadata.
 
-## Current Canonical Inventory (as of 2026-10-25)
+<a id="current-canonical-inventory-as-of-2026-10-25"></a>
 
-This maintained table is in navigation order. Each inspected row binds its own inspection date to the current EN/KO SHA-256 content hashes. The original 2026-10-13 table is preserved in commit `423311d`; rows re-inspected on October 18 or October 25 carry their own dates and hashes below. UI-only or partial updates remain Mechanical only pending a whole-page editorial inspection. `Mechanical only` retains earlier historical records without claiming a fresh editorial inspection. Subsequent edits require fresh inspection evidence.
+## Current Canonical Inventory
 
-| Number | Route | October review evidence | EN SHA-256 | KO SHA-256 |
+This maintained table is in navigation order. Each inspected row binds its own inspection date to the current EN/KO SHA-256 content hashes. The original 2026-10-13 table is preserved in commit `423311d`; each later inspection has its own date and hashes below. UI-only or partial updates remain Mechanical only pending a whole-page editorial inspection. `Mechanical only` retains earlier historical records without claiming a fresh editorial inspection. Subsequent edits require fresh inspection evidence.
+
+| Number | Route | Latest inspection of this manuscript pair | EN SHA-256 | KO SHA-256 |
 |---|---|---|---|---|
 | 1.1 | `/chapter-1/symbolism-vs-connectionism` | Inspected 2026-11-25 | 0716f9db3899f06858b670a0db1a2df64c2b7604cfd43271b47e8dc4fde62724 | 53beeda6131ee1bbdbdf19474ab6627888550515acee9b3805e2c6d330f14cd3 |
 | 1.2 | `/chapter-1/power-of-representation` | Inspected 2026-11-25 | 594cb7c0c43d5e5ed15a129a3d067bb6076a8a51c9a325fba642f5b85fcbb9d0 | 1d914327b1d0f84d6af190450901d013b3dee6ecc439156f61209203c220c6da |
@@ -499,9 +501,9 @@ Each row passed EN/KO × 1280px/390px mount/range checks. This table records bro
 | `chapter-10/ppo-proximal-policy-optimization` | `PPOClippingVisualizer` | 1e2019addb4eeed08760491f1b4eb8f554c47f290b06ef604fe7425c80802b98 |
 | `chapter-11/image-diffusion-models` | `DiffusionVisualizer` | 89d8c76a3552193fa4a004176f77b1a66ac3ac22be96c45e83d03f4c6ecc5eab | 3d131457c3967a1b0526d533d4c1fd4dacc32efd613fae4a0d51df28ea6404c0 |
 | `chapter-11/video-generation-foundations` | `SpatiotemporalAttentionVisualizer` | e96a3ac89197abad00629c7e5298f502a5c7c2b9be87f1196fbda6f83c25b49b |
-| `chapter-12/continuous-batching` | `ContinuousBatchingVisualizer` | c70f80f573cb1a4e4e827d5114328aaf0329ebade51331c6b6eb28099c4a1d29 |
+| `chapter-12/continuous-batching` | `ContinuousBatchingVisualizer` | c5dbf271aff8950bb7fc886c478ff12a198fb59ed0338cdd6e49e823474b2f62 |
 | `chapter-12/kv-cache-management` | `KVCacheCalculator` | 3bac9d22a074afb4276e2bf705e295fdc15ee34c36c45fa073861a54a0455a64 |
-| `chapter-12/long-context-serving` | `SchedulingVisualizer` | 7c677ebf310739fb9d41c6e19ae2f48472f1b6f93b2339a61a3000e921cf1d22 |
+| `chapter-12/long-context-serving` | `SchedulingVisualizer` | 4254e784d9a1ba15f42991dbfd41536d7e15dd92d1f4dc9c9d560f06610370e3 |
 | `chapter-12/paged-attention-vllm` | `PagedAttentionVisualizer` | af544ff9f266fdcaf3a3e0f51fe20ff4b621d6ab5d4264850715cbc1611bb70c |
 | `chapter-13/knowledge-distillation` | `KDVisualizer` | 8a144507608305431c17e24740a1feca192750d6d718593233e98ebf09384415 |
 | `chapter-13/ptq-vs-qat` | `QuantizationErrorVisualizer` | 5e3392378cb6f94f5118e745f20941979f460980aadea1460b1ba7bc62542185 | ef6b7fd390c5ec19460cf86378893cd6bfd67e4b55fd193307a6eebc40b051a4 |
@@ -792,3 +794,9 @@ In §5.3 the expert dispatch trace now follows the same six tokens as the two-pr
 In §19.1, reviewed both manuscripts, their PyTorch hook example and the induction-head sources. The four interactive prompts distinguish an earlier successor, an absent predecessor and two competing successors. Keyboard control, zeroed output and the default JavaScript-free trace were checked at 320 and 1280 px. The separate FP32 CPU experiment on SmolLM2-135M selected L18H6 on 16 development sequences. The 32 held-out pairs gave a mean logit shift of 13.61 intact and 10.21 after zeroing this head at the final position. Two offline runs of the pinned script produced identical JSON.
 
 On the first public build, a keyboard press in the expert trace could precede React initialization and leave the stage unchanged. Held back each trace's JavaScript in the English and Korean builds and verified that the controls stay disabled until the handlers are ready. The first enabled selection then changed the displayed results.
+
+### November 25, 2026 — Serving timelines and published chapter contents
+
+The GeekNews announcement links directly to the Korean KV cache and continuous batching lessons. Checked that both links open the intended exercises. In §§12.3 and 12.5, the first HTML response now includes the unified timeline. Readers using a browser without JavaScript can also inspect all three schedules and the KV handoff. In both languages, the controls enable when the program can handle input. Checked first paint, keyboard selection, replay, reduced motion and all time labels on narrow screens.
+
+Each of the 20 published chapter groups now has an address in both tables of contents. The chapter breadcrumb returns the reader to its actual lesson list. The last four groups contain seven evaluation lessons, four on safety, four on interpretability and seven on emerging architectures in each edition. Publication counts describe available lessons. The manuscript table above records editorial inspection dates separately.

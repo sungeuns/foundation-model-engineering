@@ -25,6 +25,39 @@ test('search descriptions have real routes and equivalent language coverage', ()
   }
 });
 
+test('each localized chapter fragment leads to the lessons listed in the README and chapter trail', () => {
+  const attr = (node, name) => node.attrs?.find(a => a.name === name)?.value;
+  function descendants(node) {
+    return [node, ...(node.childNodes || []).flatMap(descendants)];
+  }
+  for (const [lang, prefix] of [['en', ''], ['ko', '/ko']]) {
+    const home = `${base}${prefix}/`;
+    const nodes = descendants(parse(readFileSync(`${outputDir}${prefix}/index.html`, 'utf8')));
+    const switcher = nodes.find(node => attr(node, 'id') === 'localeLink');
+    const shared = JSON.parse(attr(switcher, 'data-shared-fragments'));
+    const readme = readFileSync(lang === 'ko' ? 'README.ko.md' : 'README.md', 'utf8');
+    const advertised = [...readme.matchAll(/\[[^\]]+\]\((https:\/\/[^)]+#chapter-\d+)\)/g)].map(match => match[1]);
+    assert.ok(advertised.length > 0);
+    const actual = [];
+    for (const chapter of chapters) {
+      const id = 'chapter-' + chapter.id;
+      assert.ok(shared.includes(id), id);
+      const named = nodes.filter(node => attr(node, 'id') === id);
+      assert.equal(named.length, 1, id);
+      const heading = named[0];
+      assert.equal(heading.tagName, 'h3');
+      const list = descendants(heading.parentNode).filter(node => node.tagName === 'a');
+      assert.deepEqual(list.map(node => attr(node, 'href')), [
+        '#' + id, ...chapter.subs.map(sub => new URL(base + prefix + sub.path + '/').pathname),
+      ]);
+      const label = descendants(heading).find(node => node.tagName === 'small');
+      assert.match(label.childNodes.map(node => node.value).join(''), new RegExp(`\\b${chapter.subs.length}\\b`));
+      actual.push(home + '#' + id);
+    }
+    for (const link of advertised) assert.ok(actual.includes(link), link);
+  }
+});
+
 test('the long-context price link opens the 272K exercise in both editions', () => {
   for (const locale of ['', '/ko']) {
     const html = readFileSync(`${outputDir}${locale}/chapter-17/commercial-model-benchmarks/index.html`, 'utf8');
@@ -141,10 +174,26 @@ test('every built page has canonical, reciprocal language links, and a local soc
     assert.equal(schemas[0].image, `${base}${socialImage}`, `${route}: structured image parity`);
     const breadcrumb = schemas.find(schema => schema['@type'] === 'BreadcrumbList');
     if (route !== '/' && route !== '/ko') {
-      assert.deepEqual(breadcrumb.itemListElement.map(item => item.position), [1, 2], route);
-      assert.equal(breadcrumb.itemListElement[0].item, absolute(lang === 'ko' ? '/ko' : '/'));
-      assert.equal(breadcrumb.itemListElement[1].item, absolute(route));
-      assert.ok(html.includes('aria-current="page"'), `${route}: breadcrumb must be visible`);
+      const home = absolute(lang === 'ko' ? '/ko' : '/');
+      const chapter = chapters.find(ch => ch.subs.some(sub => sub.path === en));
+      const expected = chapter ? [home, home + '#chapter-' + chapter.id, absolute(route)] : [home, absolute(route)];
+      const items = breadcrumb.itemListElement;
+      assert.deepEqual(items.map(item => item.item), expected, route);
+      assert.deepEqual(items.map(item => item.position), expected.map((_, i) => i + 1), route);
+      const trail = html.match(/<nav class="breadcrumbs"[^>]*>([\s\S]*?)<\/nav>/)[1];
+      const list = parseFragment(trail).childNodes.find(node => node.tagName === 'ol');
+      const rows = list.childNodes.filter(node => node.tagName === 'li');
+      assert.equal(rows.length, items.length, route);
+      for (const [i, row] of rows.entries()) {
+        const link = row.childNodes.find(node => node.tagName === 'a');
+        if (i < rows.length - 1) {
+          assert.equal(new URL(link.attrs.find(a => a.name === 'href').value, base).href, items[i].item, route);
+          assert.equal(link.childNodes[0].value, items[i].name, route);
+        } else {
+          assert.ok(row.attrs.some(a => a.name === 'aria-current' && a.value === 'page'), route);
+          assert.equal(row.childNodes[0].value, items[i].name, route);
+        }
+      }
     } else {
       assert.equal(breadcrumb, undefined);
       assert.equal(schemas[0].isPartOf, undefined, 'a book must not be part of itself');
@@ -277,6 +326,19 @@ test('each OER catalogue entry previews the localized lesson or its EPUB cover',
   }
 });
 
+test('OERSI accepts the declared types on parent and child resource references', () => {
+  const records = load(readFileSync('metadata.yml', 'utf8'));
+  for (const record of records) {
+    for (const related of [...(record.hasPart || []), ...(record.isPartOf || [])]) {
+      // The GitHub importer passes nested types straight through to OERSI's type.json.
+      if (related.type === undefined) continue;
+      assert.ok(Array.isArray(related.type), related.id);
+      assert.ok(related.type.every(value => typeof value === 'string'), related.id);
+      assert.ok(related.type.includes('LearningResource'), related.id);
+    }
+  }
+});
+
 test('the indexed OER textbook records link their own teaching material collections', () => {
   const records = load(readFileSync('metadata.yml', 'utf8'));
   const hubUrls = [`${base}/labs/`, `${base}/ko/labs/`];
@@ -287,7 +349,7 @@ test('the indexed OER textbook records link their own teaching material collecti
     assert.deepEqual(books[0].inLanguage, [lang]);
     const hub = `${base}${edition}/labs/`;
     const parts = books[0].hasPart.filter(part => hubUrls.includes(part.id));
-    assert.deepEqual(parts, [{ type: 'LearningResource', id: hub, name: title }]);
+    assert.deepEqual(parts, [{ type: ['LearningResource'], id: hub, name: title }]);
     const html = readFileSync(`${outputDir}${edition}/labs/index.html`, 'utf8');
     assert.ok(html.includes(`rel="canonical" href="${hub}"`), hub);
     assert.ok(html.includes(`<h1>${escape(title)}</h1>`), hub);
