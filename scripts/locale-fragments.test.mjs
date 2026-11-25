@@ -141,6 +141,21 @@ test('switching editions preserves a valid shared KV calculation only on its les
   assert.equal(localeHref(other, '#two-head-calculation', sharedLocaleFragments('/chapter-3/multi-head-attention'), query), other + '#two-head-calculation');
 });
 
+test('both editions preserve every shareable decode iteration and discard ambiguous links', () => {
+  const route = '/chapter-12/continuous-batching';
+  const fragments = sharedLocaleFragments(route);
+  const anchor = '#batching-simulator';
+  for (const base of [route + '/', '/ko' + route + '/']) {
+    for (let step = 0; step <= 11; step++) {
+      const query = '?iteration=' + step;
+      assert.equal(localeHref(base, anchor, fragments, query + '&utm_source=feed'), base + query + anchor);
+    }
+    for (const value of ['', '3.5', '-1', '12', '3&iteration=7', 'invalid']) {
+      assert.equal(localeHref(base, anchor, fragments, '?iteration=' + value), base + anchor);
+    }
+  }
+});
+
 test('locale links keep deployment paths and only verified fragments as the location changes', () => {
   const fragments = sharedLocaleFragments('/chapter-17/commercial-model-benchmarks', modelIds);
   for (const base of ['', '/foundation-model-engineering', '/preview']) {

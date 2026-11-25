@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import test from 'node:test';
 import { parse } from 'parse5';
+import { lastBatchingIteration } from '../src/components/chapter-12/batching-iteration.js';
 
 const output = process.env.SEARCH_DIST_DIR || 'dist';
 const attr = (node, key) => node.attrs?.find(pair => pair.name === key)?.value;
@@ -31,7 +33,7 @@ for (const language of ['en', 'ko']) {
         const controls = simulation.find(node => hasClass(node, 'cb-controls'));
         assert.equal(controls.tagName, 'fieldset');
         assert.equal(attr(controls, 'disabled'), '');
-        assert.deepEqual(elements(controls).filter(node => node.tagName === 'input').map(node => attr(node, 'max')), ['11']);
+        assert.deepEqual(elements(controls).filter(node => node.tagName === 'input').map(node => attr(node, 'max')), [String(lastBatchingIteration)]);
         const totals = simulation.filter(node => hasClass(node, 'cb-board-summary'));
         const remaining = language === 'ko' ? '남은 토큰 22개' : 'Tokens left 22';
         assert.deepEqual(totals.map(node => content(node).endsWith(remaining)), [true, true]);
@@ -42,3 +44,21 @@ for (const language of ['en', 'ko']) {
     }
   });
 }
+
+test('the published decode schedulers accept a request stream and require whole decode tokens', () => {
+  for (const language of ['', 'ko']) {
+    const source = readFileSync(join('src/pages', language, 'chapter-12/continuous-batching.mdx'), 'utf8');
+    const code = source.match(/^```python\n([\s\S]*?)\n```$/m)[1];
+    execFileSync('python3', ['-I', '-c', code + `
+for policy in (True, False):
+    assert schedule(iter(requests), continuous=policy) == schedule(requests, continuous=policy)
+for rows, slots in [([('A', 1.5)], 3), ([('A', 1)], 2.5), ([('A', 2), ('A', 3)], 1)]:
+    try:
+        schedule(iter(rows), slots)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError((rows, slots))
+`], { timeout: 5000 });
+  }
+});

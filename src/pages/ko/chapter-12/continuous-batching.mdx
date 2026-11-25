@@ -13,6 +13,8 @@ import SchedulingVisualizer from '../../../components/chapter-12/SchedulingVisua
 
 [12.2절](/ko/chapter-12/paged-attention-vllm/#2-the-os-inspiration-paging-and-block-tables)에서는 계속 늘어나는 KV 상태를 어디에 저장하는지 살펴봤습니다. 이번에는 어떤 요청을 다음에 실행할지 결정합니다. 메모리 블록을 재사용할 수 있으면 새 요청을 받기 쉬워지지만, 메모리 할당자만으로 실행 순서가 정해지지는 않습니다.
 
+<a id="decode-schedule"></a>
+
 ## 1. 세 슬롯에서 여섯 요청 따라가기
 
 이 절에서는 같은 설명용 워크로드를 사용합니다. 요청 A–F의 **남은 decode 토큰은 각각 4, 2, 6, 3, 5, 2개** 입니다. 모두 실행 전에 대기열에 도착했고 슬롯은 세 개입니다. 선택된 요청은 반복마다 토큰 하나를 생성합니다. 요청을 받는 규칙만 비교하도록 prefill은 제외했습니다. 아래 숫자는 반복 횟수이며 밀리초 측정값이 아닙니다.
@@ -39,7 +41,7 @@ B는 반복 2에서 끝납니다. 연속 배칭에서는 반복 3에 D가 그 �
 
 ### 완료되는 경계를 직접 확인하기
 
-반복 2와 3을 비교하며 B의 자리에 D가 들어오는지 확인하세요. 이어서 반복 5의 대기열과 반복 9의 완료 상태를 비교해보세요. 카드는 방금 완료한 요청을 포함해 각 반복의 끝을 보여줍니다. 0단계는 아직 요청을 배정하지 않은 상태입니다.
+[3회차](?iteration=3#batching-simulator)를 열어 보세요. 어느 쪽에서 D가 생성을 시작했나요? [7회차](?iteration=7#batching-simulator)에는 한쪽에서 D가 첫 토큰을 만들고, 다른 쪽에서는 이미 끝난 상태입니다. 카드는 매 회차가 끝난 직후를 보여 주므로 그 회차에 막 끝난 요청도 표시됩니다. 0회차는 첫 요청을 배정하기 전입니다.
 
 <ContinuousBatchingVisualizer lang="ko" client:load />
 
@@ -99,11 +101,13 @@ from collections import deque
 
 def schedule(requests, capacity=3, continuous=True):
     """Decode-only FIFO model; requests are (ID, remaining_decode_tokens)."""
-    if capacity <= 0 or any(length <= 0 for _, length in requests):
-        raise ValueError("capacity and decode lengths must be positive")
-    if len({name for name, _ in requests}) != len(requests):
-        raise ValueError("request IDs must be unique")
     waiting = deque(requests)
+    if type(capacity) is not int or capacity <= 0:
+        raise ValueError("capacity must be a positive integer")
+    if any(type(length) is not int or length <= 0 for _, length in waiting):
+        raise ValueError("decode lengths must be positive integers")
+    if len({name for name, _ in waiting}) != len(waiting):
+        raise ValueError("request IDs must be unique")
     active = [None] * capacity
     trace, finished = [], {}
     while waiting or any(request is not None for request in active):

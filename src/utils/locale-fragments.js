@@ -1,4 +1,5 @@
 import { canonicalKvSearch } from '../components/chapter-12/kv-scenario.mjs';
+import { readBatchingIteration } from '../components/chapter-12/batching-iteration.js';
 import { retrievalFragments } from '../components/chapter-14/retrieval-presets.js';
 import { readReleaseScenario } from '../components/chapter-17/release-scenario.js';
 
@@ -38,6 +39,7 @@ const lessonFragments = {
   '/chapter-11/audio-and-speech-integration': ['scribe-speaker-events', 'whisper-sample-rate', 'sample-rate-listen'],
   '/chapter-11/vision-language-bridges': ['visual-token-budget', 'receipt-grounding'],
   '/chapter-12/length-bucketing-lab': ['prefill-measurements'],
+  '/chapter-12/continuous-batching': ['decode-schedule', 'batching-simulator'],
   '/chapter-12/kv-cache-management': ['kv-cache-capacity', 'kv-calculator', 'mixed-request-budget', 'kv-payload-notebook', 'kv-batch-padding'],
   '/chapter-12/paged-attention-vllm': ['paged-kv-addresses'],
   '/chapter-12/speculative-decoding': ['speculative-sampling-example'],
@@ -94,6 +96,10 @@ export function sharedHeadingAliases(headings, sharedFragments) {
 export function localeHref(baseHref, hash, sharedFragments, search = '', aliases) {
   let scenario = '';
   if (search && sharedFragments.includes('kv-calculator')) scenario = canonicalKvSearch(search);
+  if (search && sharedFragments.includes('batching-simulator')) {
+    const iteration = readBatchingIteration(search);
+    if (iteration !== null) scenario = `?iteration=${iteration}`;
+  }
   if (search && sharedFragments.includes('release-lab')) {
     const release = readReleaseScenario(search);
     if (release) scenario = `?scenario=${release}`;

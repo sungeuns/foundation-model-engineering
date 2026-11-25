@@ -54,7 +54,7 @@ function renderedTargets(html) {
       elementsById.set(id, node);
       // The layout places authored MDX headings directly beneath main. Widgets
       // can also render named headings, which are outside the compiler's list.
-      if (node.parentNode?.tagName === 'main' && ['h2', 'h3'].includes(node.tagName)) {
+      if (node.parentNode?.tagName === 'main' && ['h2', 'h3', 'h4'].includes(node.tagName)) {
         chapterHeadings.set(id, headingText(node).replace(/\s+/gu, ' ').trim());
       }
     }
@@ -120,7 +120,8 @@ for (const lang of ['en', 'ko']) {
       assert.ok(Array.isArray(entry.sections));
       const html = readFileSync(join(output, localized[i], 'index.html'), 'utf8');
       const { elementsById, chapterHeadings, outlineLinks } = renderedTargets(html);
-      assert.deepEqual(outlineLinks, [...chapterHeadings], `static outline labels, order and targets: ${entry.path}`);
+      const outlineHeadings = [...chapterHeadings].filter(([id]) => elementsById.get(id).tagName !== 'h4');
+      assert.deepEqual(outlineLinks, outlineHeadings, `static outline labels, order and targets: ${entry.path}`);
       const labelsById = new Map();
       for (const section of entry.sections) {
         assert.ok(Array.isArray(section) && section.length === 2, entry.path);
@@ -132,7 +133,7 @@ for (const lang of ['en', 'ko']) {
         assert.ok(target, `missing rendered target: ${entry.path}#${id}`);
         const tag = target.tagName;
         assert.ok(id !== 'quizzes' && id !== 'references');
-        assert.ok(tag === 'h2' || tag === 'h3' || (sub.path === modelPage && modelIds.has(id))
+        assert.ok(['h2', 'h3', 'h4'].includes(tag) || (sub.path === modelPage && modelIds.has(id))
           || (labs[sub.path]?.id === id && tag === 'section'),
           `unexpected section target: ${entry.path}#${id}`);
         assert.ok(!labelsById.has(id), `duplicate: ${entry.path}#${id}`);
@@ -141,6 +142,10 @@ for (const lang of ['en', 'ko']) {
       for (const [id, label] of chapterHeadings) {
         if (id === 'quizzes' || id === 'references') continue;
         assert.equal(labelsById.get(id), label, `heading label: ${entry.path}#${id}`);
+        if (elementsById.get(id).tagName === 'h4') {
+          const href = entry.path + '#' + encodeURIComponent(id);
+          assert.ok(findSections(entries, label).matches.some(match => match.href === href), href);
+        }
       }
       const lab = labs[sub.path];
       if (lab) {

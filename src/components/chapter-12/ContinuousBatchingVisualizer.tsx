@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { readBatchingIteration } from './batching-iteration.js';
 import './continuous-batching.css';
 
 type Request = { id: string; length: number; color: string };
@@ -51,29 +52,60 @@ const CONTINUOUS = schedule(true);
 const LAST_STEP = Math.max(STATIC.length, CONTINUOUS.length) - 1;
 const COMPLETE: Frame = { slots: Array(CAPACITY).fill(null), waiting: [], finished: REQUESTS.map(r => r.id), remainingTokens: 0 };
 
+function showIterationInAddress(iteration: number) {
+  const url = new URL(window.location.href);
+  url.searchParams.set('iteration', String(iteration));
+  url.hash = 'batching-simulator';
+  window.history.replaceState(window.history.state, '', url);
+  window.dispatchEvent(new Event('batching-iteration-change'));
+}
+
 export default function ContinuousBatchingVisualizer({ lang = 'en' }: { lang?: 'en' | 'ko' }) {
   const ko = lang === 'ko';
   const [ready, setReady] = useState(false);
   const [step, setStep] = useState(0);
   const [playing, setPlaying] = useState(false);
-  useEffect(() => setReady(true), []);
+  const [invalidStep, setInvalidStep] = useState(false);
+  useEffect(() => {
+    const restore = () => {
+      const query = new URLSearchParams(window.location.search);
+      const requested = readBatchingIteration(query);
+      setInvalidStep(query.has('iteration') && requested === null);
+      setStep(requested ?? 0);
+      setPlaying(false);
+    };
+    restore();
+    setReady(true);
+    window.addEventListener('popstate', restore);
+    return () => window.removeEventListener('popstate', restore);
+  }, []);
   useEffect(() => {
     if (!playing) return;
     if (step >= LAST_STEP) { setPlaying(false); return; }
-    const timer = window.setTimeout(() => setStep(value => value + 1), 800);
+    const timer = window.setTimeout(() => {
+      setStep(step + 1);
+      showIterationInAddress(step + 1);
+    }, 800);
     return () => window.clearTimeout(timer);
   }, [playing, step]);
-  const chooseStep = (value: number) => { setPlaying(false); setStep(value); };
+  const chooseStep = (value: number) => {
+    setPlaying(false);
+    setInvalidStep(false);
+    setStep(value);
+    showIterationInAddress(value);
+  };
   const requestName = (id: string) => `${ko ? '요청' : 'Request'} ${id}`;
 
-  return <section className="cb-visualizer-container" aria-label={ko ? '정적 배칭과 연속 배칭 실행 비교' : 'Static and continuous batching comparison'}>
+  return <section id="batching-simulator" className="cb-visualizer-container" aria-label={ko ? '정적 배칭과 연속 배칭 실행 비교' : 'Static and continuous batching comparison'}>
     <p className="cb-explanation">{ko
       ? '세 슬롯으로 여섯 요청을 처리합니다. 모두 시작 전에 도착했고 prefill은 생략합니다. 각 칸은 이번 반복이 끝난 상태입니다. 남은 토큰 수에는 대기 중인 요청과 실행 중인 요청이 앞으로 생성할 토큰이 모두 들어갑니다.'
       : 'Six requests share three slots. All requests arrive before decoding starts. Prefill is omitted. Each card shows the end of this iteration. The remaining token count includes tokens still to be generated for both queued and active requests.'}</p>
-    <noscript><p>{ko ? '위 표에서 11번의 반복을 전부 비교할 수 있습니다. 아래 카드는 요청을 받기 전 상태입니다.' : 'The table above compares all 11 iterations. The cards below show the queue before any request starts.'}</p></noscript>
+    <noscript><p><a href="#decode-schedule">{ko ? '반복별 슬롯 배정표' : 'Slot assignments for every iteration'}</a>{ko ? '에서 11회차까지 볼 수 있습니다. 아래 카드는 시작 전 상태입니다.' : ' covers all 11 iterations. The cards below show the queue before admission.'}</p></noscript>
+    {invalidStep && <p role="status">{ko ? `링크에 지정된 회차를 열 수 없어 시작 전 상태를 표시합니다. 0부터 ${LAST_STEP} 사이의 회차를 선택하세요.` : `This link has no valid iteration. Showing the initial queue. Choose an iteration from 0 to ${LAST_STEP}.`}</p>}
     <fieldset className="cb-controls" disabled={!ready} aria-label={ko ? '반복 재생과 선택' : 'Iteration playback and selection'}>
       <button type="button" className="cb-btn" onClick={() => {
-        if (step === LAST_STEP) setStep(0);
+        setInvalidStep(false);
+        if (step === LAST_STEP) { setStep(0); showIterationInAddress(0); }
         setPlaying(value => !value);
       }}>{playing ? (ko ? '일시 정지' : 'Pause') : step === LAST_STEP ? (ko ? '다시 재생' : 'Replay') : (ko ? '재생' : 'Play')}</button>
       <button type="button" className="cb-btn" onClick={() => chooseStep(0)}>{ko ? '초기화' : 'Reset'}</button>
@@ -84,6 +116,7 @@ export default function ContinuousBatchingVisualizer({ lang = 'en' }: { lang?: '
       </label>
     </fieldset>
     <p className="cb-step-indicator" role="status">{step === 0 ? (ko ? '시작 전: 모든 요청 대기 중' : 'Before execution: all requests queued') : `${ko ? '반복' : 'Iteration'} ${step} / ${LAST_STEP}`}</p>
+    {ready && <p><a href={`?iteration=${step}#batching-simulator`}>{step === 0 ? (ko ? '시작 전 대기열 링크' : 'Link to the initial queue') : (ko ? `${step}회차 링크` : `Link to iteration ${step}`)}</a></p>}
     <div className="cb-boards">
       {([{ title: ko ? '정적 배칭' : 'Static batching', frames: STATIC }, { title: ko ? '연속 배칭' : 'Continuous batching', frames: CONTINUOUS }]).map(({ title, frames }) => {
         const frame = frames[step] ?? COMPLETE;

@@ -13,6 +13,8 @@ Three requests are generating tokens together. One finishes after two decode ite
 
 [Section 12.2](/chapter-12/paged-attention-vllm/#2-the-os-inspiration-paging-and-block-tables) explained where growing KV state is stored. This section explains which requests get to compute next. Reusable memory blocks help admission, but a memory allocator alone does not choose an execution schedule.
 
+<a id="decode-schedule"></a>
+
 ## 1. Follow Six Requests Through Three Slots
 
 Use the same authored workload throughout this section: requests A–F have **4, 2, 6, 3, 5 and 2 remaining decode tokens**. All six are queued before execution, three slots are available, and each scheduled request produces one token per iteration. Prefill has been excluded so that we can isolate the admission rule. These are iteration counts, not measured milliseconds.
@@ -39,7 +41,7 @@ B finishes at iteration 2. Continuous batching runs D in that slot at iteration 
 
 ### Explore the Completion Boundaries
 
-Move to iterations 2 and 3 to see B give way to D. Then compare the queues at iteration 5 and the completed workload at iteration 9. The cards show the end of each iteration, including requests that just finished. Step 0 is the state before admission.
+Open [iteration 3](?iteration=3#batching-simulator). Which policy has started D? At [iteration 7](?iteration=7#batching-simulator), D has just started in one schedule and already finished in the other. The cards show the end of each iteration, including requests that just finished. Step 0 shows the queue before admission.
 
 <ContinuousBatchingVisualizer client:load />
 
@@ -99,11 +101,13 @@ from collections import deque
 
 def schedule(requests, capacity=3, continuous=True):
     """Decode-only FIFO model; requests are (ID, remaining_decode_tokens)."""
-    if capacity <= 0 or any(length <= 0 for _, length in requests):
-        raise ValueError("capacity and decode lengths must be positive")
-    if len({name for name, _ in requests}) != len(requests):
-        raise ValueError("request IDs must be unique")
     waiting = deque(requests)
+    if type(capacity) is not int or capacity <= 0:
+        raise ValueError("capacity must be a positive integer")
+    if any(type(length) is not int or length <= 0 for _, length in waiting):
+        raise ValueError("decode lengths must be positive integers")
+    if len({name for name, _ in waiting}) != len(waiting):
+        raise ValueError("request IDs must be unique")
     active = [None] * capacity
     trace, finished = [], {}
     while waiting or any(request is not None for request in active):

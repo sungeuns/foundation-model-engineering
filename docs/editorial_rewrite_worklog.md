@@ -324,7 +324,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 11.6 | `/chapter-11/commercial-video-models` | Mechanical only | 12216aad67ffc900bcfe437f20a7fcf9be618ccc5d617f698f4466ef15ff33cb | 6ee6e17876daa24bd17b8d709b7f541276019da545887510035b916819ae13a3 |
 | 12.1 | `/chapter-12/kv-cache-management` | Mechanical only | ca43262bc1d043203ce027a791410789814b59f2e884674229b1592557de8513 | e24568059567b641d89c05e798e7b62d15cb7118b0d6c46288c0d281102b633e |
 | 12.2 | `/chapter-12/paged-attention-vllm` | Inspected 2026-11-25 | 52cf569f107eda54688b02ae4a5149d5191e4e56e3241ffe32a2b53ae8bc66d8 | 14402809f988d4e8b12edd29476af19ece120d3abe6c86ac16ca1a664496bb46 |
-| 12.3 | `/chapter-12/continuous-batching` | Inspected 2026-11-25 | 588de002d211758e1fbb83af67004497e5280cad3512efc790f73f9b3d2a24b3 | 3f9ff09b65675139196bd073123e28a306180a8ec7d07398d1e331351f5a7124 |
+| 12.3 | `/chapter-12/continuous-batching` | Inspected 2026-11-25 | d643af3aa9a4af97fe09ced211bc964c5fa814291a5acb033ea8fbbf77c68636 | 65238248455c98a661d66d08a26b06c21f7cc0a247cd45cb165c111b3785a1f9 |
 | 12.4 | `/chapter-12/speculative-decoding` | Inspected 2026-11-25 | a5f93ea8411bab0fe68bf277224f8f19f111ac0f0fd73f6b4eda75739a8990b5 | 61986787b62bf6d99f59ab08a66d2ea6312e472faea94ded13c4a7d627d03cc4 |
 | 12.5 | `/chapter-12/long-context-serving` | Inspected 2026-11-15 | 82f413a5a2e2731fe01603c7036b42dee434b010cc76410eba7e0807d73742e8 | 59933e962b9f0bef0f8b50e9889ec628fd92ade6d7d0fb91636981793bd83052 |
 | 12.6 | `/chapter-12/serving-policies-slos-and-fallbacks` | Mechanical only | 2cac4315bcb3c8ddcfa49d002bed038716ee2de270385476849ecc931d8a6e4b | 827aa4cb30a2c67d93cae2a10297d5435057a56c28d891a7ec483e0b185342f0 |

@@ -231,6 +231,21 @@ const copy = {
       absence: '두 목록에서 모두 빠진 C', note: '학습용 예제 · C는 404 장애 로그',
     },
   },
+  'continuous-batching': {
+    path: '/chapter-12/continuous-batching', render: continuousBatchingSvg,
+    en: {
+      title: 'When can request D start decoding?',
+      setup: 'Six requests are queued. Each row is a slot and each letter is one generated token.',
+      iteration: 'Iteration', policies: ['Static', 'Continuous'],
+      first: step => `D starts at ${step}`, finish: (steps, tokens) => `${tokens} tokens in both runs. Static finishes at ${steps[0]}, continuous at ${steps[1]}.`,
+    },
+    ko: {
+      title: '요청 D는 언제 디코딩을 시작할까?',
+      setup: '여섯 요청이 대기 중입니다. 각 줄은 슬롯 하나이고 글자 하나는 생성된 토큰 하나입니다.',
+      iteration: '반복 회차', policies: ['정적 배칭', '연속 배칭'],
+      first: step => `D는 ${step}회차에 시작`, finish: (steps, tokens) => `토큰 ${tokens}개를 생성하는 데 정적 배칭은 ${steps[0]}회, 연속 배칭은 ${steps[1]}회가 걸립니다.`,
+    },
+  },
   'streaming-latency': {
     path: '/chapter-12/serving-policies-slos-and-fallbacks', number: '12.6', render: streamingLatencySvg,
     figureDir: 'src/assets/images/chapter-12',
@@ -273,6 +288,47 @@ if (args.length && (args.length !== 2 || args[0] !== '--only' || !Object.hasOwn(
   throw new Error(`Usage: node scripts/generate-lab-social-cards.mjs [--only ${Object.keys(copy).join('|')}]`);
 }
 const selectedKind = args[1];
+
+async function continuousBatchingSvg(lesson, lang, card) {
+  const c = lesson[lang];
+  const page = path.join(root, 'src/pages', lang === 'ko' ? 'ko' : '', lesson.path.slice(1) + '.mdx');
+  const source = await fs.readFile(page, 'utf8');
+  // Each manuscript row contains the three slot assignments for both policies.
+  const rows = [...source.matchAll(/^\| (\d+) \| ([A-F—✓ /]+) \| ([^|\n]+) \|$/gm)];
+  if (rows.length === 0) throw new Error(`Missing scheduling trace in ${page}`);
+  const traces = [2, 3].map(column => rows.map(row => row[column])
+    .filter(state => state.includes('/'))
+    .map(state => state.replaceAll(' ✓', '').split(' / ')));
+  const dx = 880 / rows.length;
+  const x = step => 258 + step * dx;
+  const axis = rows.map((row, step) => text(row[1], x(step) + dx / 2, 205, 27,
+    'text-anchor="middle" font-weight="600"')).join('');
+  const panels = traces.map((trace, index) => {
+    const y = index === 0 ? 225 : 388;
+    const first = trace.findIndex(slots => slots.includes('D')) + 1;
+    const cells = trace.map((slots, step) => slots.map((id, slot) => {
+      const top = y + slot * 40;
+      const fill = id === 'D' ? teal : id === '—' ? '#eeeee8' : '#d9e4dc';
+      return `<rect x="${x(step)}" y="${top}" width="${dx - 3}" height="37" rx="4" fill="${fill}"/>`
+        + text(id, x(step) + (dx - 3) / 2, top + 28, 27,
+          `text-anchor="middle" font-weight="600" fill="${id === 'D' ? 'white' : id === '—' ? '#67736c' : ink}"`);
+    }).join('')).join('');
+    return text(c.policies[index], 56, y + 48, 30, 'font-weight="700"')
+      + text(c.first(first), 56, y + 88, 24, `fill="${teal}"`) + cells;
+  }).join('');
+  const tokens = traces[0].flat().filter(id => id !== '—').length;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" xml:lang="${lang}" role="img" aria-labelledby="card-title card-description">
+<title id="card-title">${escape(c.title)}</title><desc id="card-description">${escape(card.alt)}</desc>
+<rect width="1200" height="630" fill="#f5f2eb"/>
+<g font-family="${lang === 'ko' ? 'Noto Sans CJK KR, DejaVu Sans' : 'DejaVu Sans'}, sans-serif" fill="${ink}">
+${text(c.title, 54, 83, 51, 'font-weight="700"')}
+${text(c.setup, 56, 136, 26, `fill="${muted}"`)}
+${text(c.iteration, 56, 205, 26, `fill="${muted}"`)}${axis}
+${panels}
+<path d="M56 365H1138 M56 532H1138" stroke="#bac7bf" stroke-width="2"/>
+${text(c.finish(traces.map(trace => trace.length), tokens), 56, 585, 26, 'font-weight="600"')}
+</g></svg>\n`;
+}
 
 async function receiptGroundingSvg(lesson, lang, card) {
   const c = lesson[lang];

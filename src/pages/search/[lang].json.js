@@ -23,7 +23,7 @@ export async function GET({ params: { lang } }) {
     const page = lang === 'ko' ? `/ko${sub.path}` : sub.path;
     const getHeadings = await headingLoaders[lang][`..${page}.mdx`]();
     const candidates = getHeadings()
-      .filter(({ depth, text }) => (depth === 2 || depth === 3)
+      .filter(({ depth, text }) => depth >= 2 && depth <= 4
         && !/^(quizzes|references|퀴즈|참고\s*문헌)$/iu.test(text.trim()))
       .map(heading => [chapterHeadingLabel(sub.path, heading), heading.slug]);
 

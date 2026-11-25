@@ -398,7 +398,7 @@ if (currentIndex !== -1) {
       const content = document.querySelector<HTMLElement>('.content-wrapper')!;
       const skipLink = document.querySelector<HTMLAnchorElement>('.skip-link')!;
       const localeLink = document.querySelector<HTMLAnchorElement>('#localeLink');
-      const headings = document.querySelectorAll<HTMLElement>('main > h2[id], main > h3[id]');
+      const headings = document.querySelectorAll<HTMLElement>('main > :is(h2, h3, h4)[id]');
       const fragments: string[] = JSON.parse(localeLink?.dataset.sharedFragments || '[]');
       const aliases = sharedHeadingAliases(headings, fragments);
       if (localeLink) {
@@ -411,6 +411,7 @@ if (currentIndex !== -1) {
         window.addEventListener('popstate', updateLocaleLink);
         window.addEventListener('pageshow', updateLocaleLink);
         window.addEventListener('release-scenario-change', updateLocaleLink);
+        window.addEventListener('batching-iteration-change', updateLocaleLink);
       }
 
       const isKo = document.documentElement.lang === 'ko';

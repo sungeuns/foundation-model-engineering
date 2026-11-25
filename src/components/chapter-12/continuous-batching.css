@@ -7,6 +7,8 @@
 .cb-visualizer-container .cb-step-control { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; font-size: .85rem; }
 .cb-visualizer-container input[type=range] { min-width: 0; width: 150px; max-width: 100%; accent-color: #93c5fd; }
 .cb-visualizer-container .cb-step-indicator { color: #e2e8f0; font-size: .9rem; }
+.cb-visualizer-container a { color: #93c5fd; text-decoration: underline; }
+.cb-visualizer-container a:focus-visible { outline: 3px solid #fcd34d; outline-offset: 3px; }
 .cb-visualizer-container .cb-boards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem; margin-bottom: 1rem; }
 .cb-visualizer-container .cb-board { min-width: 0; padding: .8rem; background: #0f172a; border-radius: 7px; }
 .cb-visualizer-container .cb-board-title { color: #f1f5f9; margin: 0 0 .4rem; font-size: 1rem; }

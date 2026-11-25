@@ -103,6 +103,16 @@ export const socialCards = {
       alt: 'KV 캐시 예산은 24 GiB입니다. 8,192토큰 프롬프트 9개에는 22.5 GiB, 10개에는 25 GiB가 필요합니다. 9개가 각각 10,240토큰까지 늘어나면 28.125 GiB입니다.',
     },
   },
+  '/chapter-12/continuous-batching': {
+    en: {
+      image: '/social/continuous-batching-en.png',
+      alt: 'Six queued requests share three decode slots. Request B finishes in iteration 2. Continuous batching admits D at iteration 3, while static batching admits D at iteration 7. The same 22 decode tokens finish in 9 and 11 iterations respectively. Each letter represents one generated token.',
+    },
+    ko: {
+      image: '/social/continuous-batching-ko.png',
+      alt: '대기 중인 요청 여섯 개가 디코딩 슬롯 세 개를 씁니다. B는 2회차에 끝납니다. D는 연속 배칭에서 3회차, 정적 배칭에서 7회차에 시작합니다. 같은 토큰 22개를 생성하는 데 각각 9회와 11회가 걸립니다. 글자 하나는 생성된 토큰 하나에 해당합니다.',
+    },
+  },
   '/chapter-12/serving-policies-slos-and-fallbacks': {
     en: {
       image: '/social/streaming-latency-en.png',
