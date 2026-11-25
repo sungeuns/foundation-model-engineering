@@ -285,7 +285,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 4.5 | `/chapter-4/various-llm-architectures` | Mechanical only | e7133e6f49ee07717a39e05ab087a90e433bbe47b793a19f4c47026ca5b221f8 | bcd8acb486748aefb095a0ce9e49699c3ab4ac7dde1f8644bb6fd9d8214a0226 |
 | 5.1 | `/chapter-5/sparse-vs-dense-models` | Inspected 2026-11-25 | 01f8735ffcc52bb919dfea3402cb6fbdb0313849c20a83c447820f04e5bb6c08 | 7908d7d81bd30342d4223623ac332bf1d17f91a47e55e1deb8ba8d3ee2b88c37 |
 | 5.2 | `/chapter-5/routing-algorithms` | Inspected 2026-11-15 | 3b83671dec53a4a69ee8c357d810ac48b3b2b069f1b54fdb76a8e567ae6ed3e7 | 436d75fa19297b28084c3bf55cb2e92e341e86d33370e1843de1c263a8f9d356 |
-| 5.3 | `/chapter-5/expert-parallelism` | Inspected 2026-11-25 | 75beb517abd6e9d61832a0e3cdb79eac46c214026c2cbd86c6946965d07209d8 | a34266db4231c9ecb6970fbe47c569dce99129dbe3e82c2027c050b8fe1fb9dc |
+| 5.3 | `/chapter-5/expert-parallelism` | Inspected 2026-11-25 | df54ccd0e27298c0c41c0cd3ff6104c3a5577f92bef8de72f50201f3e41e050a | 20913a153b99ed266ca7853becfac6cd36e8cda7c1450eda46a451932ec2486b |
 | 5.4 | `/chapter-5/collapsing-load-balancing` | Inspected 2026-11-15 | 9eafbfd1e7b75ad8196d586895ed76c5c16b609fb3b6d7c3c6450331d3fbec83 | e882e33f29592a27d156efc7b998c7f7d1fa8a3f2e8f63179ad4319ef47ab56a |
 | 5.5 | `/chapter-5/case-study` | Mechanical only | 233d28301c04e7e23dcd0fcca92bd41c79d09a16fd2a33cf29cc3715df60c1de | a29bae4a04b6688590d092d63d11a3ba43d0a19c6de3f09508e7384eb4f54d1a |
 | 6.1 | `/chapter-6/data-engineering-at-scale` | Inspected 2026-11-15 | c962ed779370d70734cdc1d8dad26fd622732ab5add4b42eb33ca13d4e9e1978 | 196b5d2f730cb1450a5c68054444814151be61cda197d8cad6d5e761caf2e85e |
@@ -361,7 +361,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 18.2 | `/chapter-18/jailbreaking-and-defense` | Mechanical only | caff93966e1d1a925120d696bf37a09fa46cc63cd9378c818ac9f1d489348afd | 165303014a71dfa4ec8e28c0ac7f38712f5d97fbcd551510aa5539cb33c33ac1 |
 | 18.3 | `/chapter-18/hallucination-detection` | Mechanical only | d3a1ee8ab17c7b845363483dd7b3112556523b0df6d833116a334717d79bdea3 | e00f30c37d36caa4f654de8a6ac61a682be8526e6be2245f2d1235f53787be8c |
 | 18.4 | `/chapter-18/scalable-oversight` | Inspected 2026-11-15 | ddc4e57280940d9f2de2d5e5f551b035d60ae4feeb324a2a84256e798feb9c7f | 5536d313417dd89e9909d73ed8762c85d7450129338432d8a05ea21c7ee99f3b |
-| 19.1 | `/chapter-19/mechanistic-interpretability` | Mechanical only | e78ed254abbd08dcc580e5d937948f89757d22138640f21b47a48ef61b6769c4 | 146df874ff1cb000e3684a35ed34035a22b496a75e3fbe70e205b649ec302ee4 |
+| 19.1 | `/chapter-19/mechanistic-interpretability` | Inspected 2026-11-25 | e42495d4d3696efcc5f2c52180dfb6caaf0ad9f8390a32db72c0939c5b4c3a7d | 43634625dde236e89032025190a104c0631b000850f7b34eab0785469d85b0d6 |
 | 19.2 | `/chapter-19/logit-lens-and-attention-visualization` | Mechanical only | 8f6a64cbb90f5881b4fda6b927ecbdb6a9fe1fcf319cb3bdb5c873bce37a80e5 | e8c6c59743939cc2e865e2b40d86cfd76e6139a553fd10b7f5e46bcd71324f4b |
 | 19.3 | `/chapter-19/probing-classifiers` | Inspected 2026-11-25 | 6d7d4b08cae758a1f6f870ea72a84bad1349d927760d019854ccddfd4d192236 | 5b7ae21b8b7bf3ee95074cedf1d249fce089aeaf0aff5f288d649b0875fedff7 |
 | 19.4 | `/chapter-19/sparse-autoencoders-sae` | Mechanical only | 1c9eeb21d547629108ec41532289a1de144a79897f4e85d20b421ac6603187fd | 223a4aa84b4b0a99a418e04aae959b76c0b804a2ca4a1eb0fe600388a503b075 |
@@ -526,7 +526,7 @@ Each row passed EN/KO × 1280px/390px mount/range checks. This table records bro
 | `chapter-18/jailbreaking-and-defense` | `SmoothLLMVisualizer` | 918929cd65f562caac7d24988ff38a14be27f1aeba0859fd3ca02d771d4cba0f |
 | `chapter-18/red-teaming` | `AutomatedRedTeamingVisualizer` | 5fdb4a6a2cba38f034f72492f5f5610646e2b7ac579f8bf786b693f3c36a7225 |
 | `chapter-19/logit-lens-and-attention-visualization` | `LogitLensVisualizer` | 375b38b92e928542be1229502b08c4bd2b8bfcc901efbf9c3d42c78b288ee789 | 234c4c67ae2a9c992daaf3fac45fb4b7c55163cd3da54a3fcee37d9b79641ecc |
-| `chapter-19/mechanistic-interpretability` | `InductionHeadVisualizer` | 52b92c26d6a3e90d77d034121529941170350433154ddc9ae6348fed2200f584 |
+| `chapter-19/mechanistic-interpretability` | `InductionHeadVisualizer` | bdb0e6a0085ade13582aa9de9cbd5556caa37065d7623012c213bffd1898a1bf |
 | `chapter-19/probing-classifiers` | `LinearProbeVisualizer` | ea7eec5a2c60ef145627fed639558ba1d4583e17a0b63e213179e4e85e855ecf |
 | `chapter-19/sparse-autoencoders-sae` | `PolysemanticVisualizer` | fa9b9e1fbb8e71acb5af373421aaceb24370055fa3d15f52bf00072b357e621c |
 | `chapter-20/linear-attention` | `LinearAttentionVisualizer` | b5f004ec68fb2eab41361a24120bc2e7d505f555518ce9d219521b02f875a3ca | 855616db495c32f6d6686876915334dcba7b91187a3959988dc8052d230c42d3 |
@@ -784,3 +784,9 @@ For §4.5, checked the two translated examples against the pinned TML-d24-varloo
 For §11.2, checked the exit from the bilingual chapter to the short listening article. The article and the chapter use the same two synthesized WAVs. The 11-second speech example uses the separate upstream test recording.
 
 For §9.5, reviewed the Korean prose and four quizzes against the English lesson. The Magpie example in both editions now distinguishes the open user-turn prefix for generating a question from the assistant-turn prefix for answering it. The sketch identifies which model-specific functions the reader must supply. The Python structure, citations and experimental controls match across editions.
+
+### November 25, 2026 — Following a token and testing a head's contribution
+
+In §5.3 the expert dispatch trace now follows the same six tokens as the two-process CPU Gloo run. Checked all six stages for the main example, an empty source rank and an empty receiving rank. Each displayed source ID, expert and first coordinate matched the captured tensors in both languages at 320 and 1280 px. Sending a row back to its rank and restoring its original slot are separate stages.
+
+In §19.1, reviewed both manuscripts, their PyTorch hook example and the induction-head sources. The four interactive prompts distinguish an earlier successor, an absent predecessor and two competing successors. Keyboard control, zeroed output and the default JavaScript-free trace were checked at 320 and 1280 px. The separate FP32 CPU experiment on SmolLM2-135M selected L18H6 on 16 development sequences. The 32 held-out pairs gave a mean logit shift of 13.61 intact and 10.21 after zeroing this head at the final position. Two offline runs of the pinned script produced identical JSON.

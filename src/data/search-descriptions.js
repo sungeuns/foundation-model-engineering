@@ -91,8 +91,8 @@ export const searchDescriptions = {
     ko: '사람의 평가 역량이 갖는 한계를 출발점으로, 평가 보조·작업 분해·멀티 에이전트 비평을 활용한 확장 가능한 감독을 살펴봅니다.',
   },
   '/chapter-19/mechanistic-interpretability': {
-    en: 'Explore mechanistic interpretability through linear representations, circuits, induction heads, and PyTorch hooks for inspecting model activations.',
-    ko: '선형 표현, 회로, 유도 헤드와 모델 활성값을 관찰하는 PyTorch 훅을 통해 기계론적 해석 가능성의 방법을 살펴봅니다.',
+    en: 'Which earlier token does an induction head read? Trace a four-token example, then zero one SmolLM2 attention head and measure how its predictions change.',
+    ko: '귀납 헤드가 앞선 토큰 중 어느 자리를 읽는지 네 토큰으로 추적합니다. 실제 SmolLM2에서 헤드 하나의 출력을 껐을 때 예측이 얼마나 달라지는지 CPU 실험으로 확인하세요.',
   },
   '/chapter-19/logit-lens-and-attention-visualization': {
     en: 'Inspect residual-stream predictions with the logit lens, compare the tuned lens, and understand the limits of interpreting attention visualizations.',

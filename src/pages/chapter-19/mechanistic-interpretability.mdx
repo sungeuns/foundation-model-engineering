@@ -4,195 +4,159 @@ title: 19.1 Mechanistic Interpretability
 lang: en
 ---
 
+import { withBasePath } from '../../utils/paths.js';
 import InductionHeadVisualizer from '../../components/chapter-19/InductionHeadVisualizer.tsx';
 
 # 19.1 Mechanistic Interpretability
 
-Modern Large Language Models (LLMs) are often described as "black boxes." We feed them terabytes of data, optimize a simple objective function (next-token prediction) using gradient descent, and somehow, complex behaviors like logical reasoning, translation, and coding emerge. 
-
-**Mechanistic Interpretability (MechInterp)** is the ambitious scientific endeavor to reverse-engineer these black boxes. Instead of treating the model as an opaque statistical engine, MechInterp views it as a compiled computer program. The goal is to decompile the billions of continuous weights back into human-understandable algorithms, data structures, and logical circuits.
-
-Think of it as neuroscience for artificial brains, or reverse-engineering an alien spacecraft. We have the hardware (the weights), but we lack the source code.
-
----
+Give a model the tokens `A B X A`. Suppose its next prediction is `B`. Did it learn in training that `B` often follows `A`, or did it copy the pair it just saw? The prediction fits both stories. Change the prompt to `A C X A` and the stories start making different predictions. **Mechanistic interpretability** goes one step further. It asks which computation inside the model makes the answer change.
 
 ## 1. Motivation and History
 
-Historically, deep learning focused on *capability*—making models larger and more accurate. However, as models transition from research artifacts to critical infrastructure, understanding *how* they work can support debugging and safety research, alongside behavioral evaluation and execution controls.
+Olah and colleagues traced how earlier features in a vision network contributed to a later curve detector [[1]](#ref-1). A transformer poses a similar question with a useful extra clue. An attention head can read one token position and add information to the residual stream at another. We can record that path, change one part of it, and measure the effect on a particular output [[2]](#ref-2).
 
-### Why do we need Mechanistic Interpretability?
-1. **Alignment and Safety**: Internal evidence can help investigate undesired behavior. Partial circuit explanations do not certify safety or establish the absence of deception.
-2. **Debugging Hallucinations**: Interventions can test hypotheses about factual errors; knowledge edits may also disturb related capabilities.
-3. **Auditing**: Mechanistic evidence can support technical audits but does not replace validation of the deployed system or its action controls.
+<a id="why-do-we-need-mechanistic-interpretability"></a>
 
-The field traces its modern roots back to feature visualization in Convolutional Neural Networks (CNNs), spearheaded by researchers like Chris Olah (Distill, OpenAI, Anthropic). Early work visualized how early CNN layers detected edges, while deeper layers detected complex concepts like dog snouts or car wheels [[1]](#ref-1). 
-
-With the advent of the Transformer, the focus shifted from spatial feature maps to residual streams and attention matrices. Anthropic's foundational paper, *A Mathematical Framework for Transformer Circuits* [[2]](#ref-2), established the modern lexicon of MechInterp, viewing Transformers not as monolithic blocks, but as networks of interacting "heads" communicating via a shared memory bandwidth (the residual stream).
-
----
+Consider an assistant that quotes an old delivery date even though the retrieved document gives a newer one. Changing the date in the document tests whether the answer uses that evidence. Restoring a head's output from the original run into the changed run tests a narrower hypothesis about *how* the date gets carried forward. A diagnosis based on one such pair still needs to work on other dates and documents.
 
 ## 2. The Linear Representation Hypothesis
 
-Before we can find circuits, we must understand how a neural network stores concepts. One useful, empirically studied hypothesis is the **Linear Representation Hypothesis** [[4]](#ref-4). It is not a proof that every concept has one context-independent direction.
+Individual coordinates are easy to record. The feature relevant to a prediction may span many coordinates. The **linear representation hypothesis** motivates looking for a direction along which a distinction, such as singular versus plural, can be read out. Park and colleagues formalize distinct meanings of linear representation for reading and intervening on concepts [[4]](#ref-4).
 
-It posits that neural networks represent concepts (features) as **directions in the activation space**, rather than as individual neurons. 
-
-If the residual stream of a Transformer is a high-dimensional vector space $\mathbb{R}^d$, a feature like "gender", "plurality", or "the concept of a dog" is a specific unit vector $v \in \mathbb{R}^d$. The presence or absence of this feature is determined by the projection of the activation vector $h$ onto this direction:
-
-$$
-\text{Activation of Feature } i = h \cdot v_i
-$$
+For a simple linear readout in a chosen coordinate system, let $h \in \mathbb{R}^d$ be the residual state at one token, and $v$ a unit direction in the same $d$-dimensional space. The score $s=h^\top v$ measures the component of $h$ along $v$. Whether that score tracks number is an empirical question. Fit the direction on one set of nouns, then test on unseen nouns in different sentences.
 
 ### The Problem of Arbitrary Basis
-Because the residual stream is transformed by dense weight matrices (which can be rotated arbitrarily without changing the network's capacity), the individual basis dimensions (the literal neurons $h_1, h_2, \dots, h_d$) rarely correspond to clean, single concepts. 
 
-This leads to **Polysemanticity**—a single neuron firing for multiple, unrelated concepts (e.g., a neuron that fires for both "spiders" and "the French language"). We will explore how to disentangle this using Sparse Autoencoders (SAEs) in Chapter 19.4, but for now, understand that *features are directions, not neurons*.
-
----
+A change of coordinates makes this concrete. In two dimensions, a direction can be written as $(1,0)$ in one orthonormal basis and have two nonzero entries in another. Transform both $h$ and $v$ into the new basis and the dot product stays the same. A coordinate index alone tells us little about the feature it might encode. A successful readout also leaves open whether the model itself uses the distinction. [Section 19.3 tests these issues with a linear probe.](../probing-classifiers/)
 
 ## 3. Circuits and Induction Heads
 
-A **Circuit** is a subgraph of the neural network—a specific set of attention heads and MLP neurons—that implements a recognizable algorithm. 
-
-The most famous and fundamental circuit discovered in LLMs is the **Induction Head** [[3]](#ref-3). Induction heads provide evidence for one mechanism supporting **In-Context Learning (ICL)**—adapting to a pattern in the prompt without weight updates. They do not explain all ICL behavior.
+A **circuit** is a set of connected computations that performs a particular task. Elhage and colleagues studied small attention-only transformers where two heads in different layers cooperate to copy a continuation from the prompt [[2]](#ref-2). Olsson and colleagues connect this behavior to in-context learning. The causal evidence is strongest in the small models they could intervene on directly [[3]](#ref-3).
 
 ### The Algorithm of an Induction Head
-An induction head looks for a simple pattern: `[A] [B] ... [A] -> [B]`. 
-If it sees the token `[A]`, it searches the past context for previous instances of `[A]`, looks at the token that immediately followed it (`[B]`), and promotes `[B]` as the next predicted token.
 
-A classic attention-only implementation coordinates two heads across layers:
+Number the tokens in `A B X A` from 0 to 3. A previous-token head carries information about `A` at position 0 into the residual state at position 1. The token at position 1 is still `B`. Its state now also carries a clue about its predecessor.
 
-1. **Previous Token Head (Layer $L_1$)**: 
-   This head simply attends to the token immediately preceding the current one. It moves the information of `[A]` into the residual stream position of `[B]`. Now, the token `[B]` contains a feature saying "I am preceded by A".
-   
-2. **Induction Head (Layer $L_2$, where $L_2 > L_1$)**:
-   When the model processes the second instance of `[A]`, the Induction Head's Query ($Q$) searches for Keys ($K$) that contain the feature "I am preceded by A". It finds the earlier `[B]`, attends to it, and its Value ($V$) projection copies the "B-ness" into the final residual stream to predict `[B]`.
+| Position | Input token | Predecessor available to a later head |
+| --- | --- | --- |
+| 0 | A | No preceding token in this example |
+| 1 | B | A |
+| 2 | X | B |
+| 3 | A | X |
 
-![Illustration of a previous-token head and an induction head](../../assets/images/chapter-19/induction_head_circuit.png)
-
-*Repository teaching illustration of the mechanism described by Olsson et al. [[3]](#ref-3); not a measured attention map.*
+At position 3, a later **induction head** uses the current `A` as its query. The key at position **1** matches because the token there was preceded by `A`. Reading its value can favor `B` as the prediction for position **4**. There are three different positions to keep track of here: where the first `A` occurred (0), where the head reads (1), and where the model makes the prediction (3). [[3]](#ref-3)
 
 ### The QK and OV Circuits
-MechInterp mathematically decomposes Attention into two independent operations:
-* **The QK Circuit ($W_Q W_K^T$)**: Determines *where* to move information (the attention weights).
-* **The OV Circuit ($W_V W_O$)**: Determines *what* information to move once attention is paid.
 
-For an Induction Head, the QK circuit computes the match between "current token A" and "token preceded by A". The OV circuit acts as a copy operation, extracting the identity of `[B]` and writing it to the output logits.
+With row-vector notation, $W_QW_K^\top$ governs how a query matches a key. The weight matrices $W_Q$ and $W_K$ project residual states into queries and keys. In the basic attention-only setting, the resulting scores are scaled, masked and normalized across eligible positions. The product $W_VW_O$ describes how a source state is transformed on its way back into the residual stream. Here $W_V$ is the value projection and $W_O$ is this head's slice of the output projection. Later layers and the final vocabulary readout still affect the answer. A head can keep attending to position 1 even if we zero the vector it writes. [[2]](#ref-2)
 
----
+<a id="4-engineering-the-interception-pytorch-hooks"></a>
 
-## 4. Engineering the Interception: PyTorch Hooks
+## 4. Capture One Layer's Attention in PyTorch
 
-To perform Mechanistic Interpretability, we cannot just look at the final loss. We must extract the intermediate activations (the residual stream, attention matrices, and MLP hidden states) during the forward pass. 
+A forward hook sees the outputs its module returns. With PyTorch's `MultiheadAttention`, ask for weights and keep the heads separate. Otherwise the weights can be absent or averaged across heads. [[6]](#ref-6)
 
-A hook observes what a module actually returns. It cannot manufacture attention probabilities from a hidden-state tensor. Fused kernels may not materialize weights, and model-specific output tuples differ.
-
-> **Educational limitation:** This helper is specific to `torch.nn.MultiheadAttention` with `batch_first=True`, explicit unaveraged weights, no padding, and one causal sequence batch. It is not a smoke-tested pretrained-model integration. Adapt the model API, padding and cache semantics, device/dtype, and memory budget before use. Materializing all attention weights costs $O(BHT^2)$ storage for batch size $B$, heads $H$, and sequence length $T$.
+> **Scope of the example.** This CPU example checks the capture code on a randomly initialized layer, in evaluation mode, with one unpadded sequence and no KV cache. It uses eager attention with explicit weights. Saving a full matrix costs $O(BHT^2)$ entries for batch size $B$, head count $H$ and sequence length $T$. A pretrained model with a fused kernel may expose a different interface.
 
 ```python
 import torch
 from torch import nn
 
-@torch.no_grad()
-def capture_attention(module: nn.MultiheadAttention, x: torch.Tensor):
-    # x: [B, T, D]; caller supplies matching dtype/device and eval mode.
-    if not module.batch_first or x.ndim != 3:
-        raise ValueError("Requires batch_first=True and [B, T, D] input")
-    captured = []
+torch.manual_seed(7)
+attention = nn.MultiheadAttention(8, 2, batch_first=True).eval()
+x = torch.randn(1, 4, 8)  # batch, tokens, hidden width
+future = torch.ones(4, 4, dtype=torch.bool).triu(1)
+captured = []
 
-    def hook(_module, _inputs, output):
-        weights = output[1]
-        if weights is None or weights.ndim != 4:
-            raise RuntimeError("Expected unaveraged [B, H, T, T] weights")
-        captured.append(weights.detach().cpu())
+def capture(_module, _inputs, output):
+    captured.append(output[1].detach())
 
-    handle = module.register_forward_hook(hook)
-    try:
-        length = x.shape[1]
-        causal_mask = torch.ones(
-            length, length, dtype=torch.bool, device=x.device
-        ).triu(1)
-        module(x, x, x, attn_mask=causal_mask,
-               need_weights=True, average_attn_weights=False)
-        return captured[0]
-    finally:
-        handle.remove()
+handle = attention.register_forward_hook(capture)
+try:
+    with torch.no_grad():
+        attention(x, x, x, attn_mask=future,
+                  need_weights=True, average_attn_weights=False)
+finally:
+    handle.remove()
+
+weights, = captured
+assert weights.shape == (1, 2, 4, 4)
+assert torch.count_nonzero(weights[..., future]) == 0
+torch.testing.assert_close(weights.sum(-1), torch.ones(1, 2, 4))
+print(tuple(weights.shape))  # (1, 2, 4, 4)
 ```
 
-An induction-like pattern is a candidate explanation. Compare clean and corrupted prompts, then ablate or patch the proposed head and measure the predicted output change with controls. Attention inspection alone does not establish causal responsibility for ICL.
+The axes are batch, head, query position and key position. For the four-token example, `weights[0, head, 3, 1]` is the entry to inspect. The assertions check that the hook captured a valid causal matrix. The random layer has had no opportunity to learn the copying task.
 
----
+<a id="5-interactive-visualizing-an-induction-head"></a>
+<a id="induction-copy-trace"></a>
 
-## 5. Interactive: Visualizing an Induction Head
+## 5. Change the Earlier Pair
 
-To truly grasp how an induction head operates, interact with the attention matrix below. This visualization simulates the attention weights of an Induction Head processing a repeating sequence.
+The trace below implements one rule. Read every visible token immediately preceded by the final query token. Try changing the earlier `B` to `C`, then zero the head's output. Which part of the trace survives? The trace lists exact matches and candidate continuations. It has no learned weights or probability scale.
 
-Notice how the Query for the second occurrence of a token attends strongly to the token *following* its first occurrence.
+<InductionHeadVisualizer client:visible lang="en" />
 
+With two continuations, both `B` and `C` satisfy the rule. A trained model can favor one, distribute attention across both, or predict something else through another path.
 
-<InductionHeadVisualizer client:load lang="en" />
+<a id="induction-probe"></a>
 
-*(This is a normalized teaching matrix, not a measurement from a trained model. A similar pattern in real attention is a hypothesis to test through interventions.)*
+### What changes when one head stops writing?
 
----
+We ran the pretrained SmolLM2-135M on CPU with sequences of the form `[BOS] A B x y C z w A`. Each letter stands for a different vocabulary ID. The final `A` is the only repeat. If the model copies the earlier pair, it should favor `B` over `C`. Swap their earlier positions, leaving the final query and the set of tokens unchanged, and it should favor `C`. [[7]](#ref-7)
+
+We chose a head on 16 development sequences. For each of the model's 270 query heads, we measured attention from the final position to position 2, which holds the earlier successor. We replaced the final `A` with a fresh token `D` and measured again. Layer 18, head 6 (zero-based) had the largest mean difference. On **32 new sequences** with disjoint token IDs, the same head put **78.17%** of its attention on position 2 with the repeated cue, against **0.084%** with the fresh cue.
+
+Does that read change the prediction? At the final position we zeroed one head's output just before the attention output projection. The table shows the mean logit of `B` minus that of `C` on the held-out sequences. Positive values favor `B`. Subtracting the swapped column from the original measures how far the model's preference moved when the two tokens traded places.
+
+| Final-position intervention | Original order | B and C swapped | Shift |
+| --- | ---: | ---: | ---: |
+| All heads intact | 6.55 | −7.06 | 13.61 |
+| Zero layer 18, head 6 | 4.86 | −5.35 | 10.21 |
+| Zero the neighboring head 7 in layer 18 | 6.31 | −6.90 | 13.21 |
+
+Removing head 6 weakened the response to the swap. Yet the shift still pointed in the expected direction on 30 of the 32 sequences, down from 32 with all heads intact. Other paths can sustain this behavior. These are relative scores for two token IDs on a synthetic copy task. Finding each token's rank requires comparing the rest of the vocabulary. Tracing which earlier layers supply this head with information takes a separate experiment.
+
+<a href={withBasePath('/labs/induction_probe.py')} download>Run the CPU experiment (Python)</a> · <a href={withBasePath('/labs/2026-11/induction-probe.json')} download>Inspect all 32 paired shifts (JSON)</a>
 
 ## 6. From Features to Circuit Tracing
 
-**Research snapshot as of 2026-10-13.** Circuit tracing uses learned feature representations and attribution graphs to investigate how intermediate computations contribute to outputs. Anthropic's 2025 methods describe a replacement model and local attribution procedure, with explicit fidelity and coverage limitations [[5]](#ref-5). A readable graph is not a complete explanation of the original model.
+In their 2025 circuit-tracing study, Ameisen and colleagues trained a replacement for parts of a language model so they could trace contributions between interpretable features on a given prompt [[5]](#ref-5). The graph suggests interventions. Its usefulness depends on how well the replacement reproduces the behavior under study and how much of the computation the displayed paths cover.
 
-Finding a feature is only the first step. Ask which inputs activate it, which downstream computations it affects, and whether controlled interventions change the behavior predicted by the graph.
-
-Practical investigations include:
-
-1. **Repeated factual errors:** compare intermediate candidate predictions, then test a proposed cause through patching or ablation.
-2. **Over-refusal after tuning:** compare matched allowed and disallowed requests; measure behavioral changes rather than assigning a safety guarantee to a direction.
-3. **Prompt-template differences:** use attention patterns as hypotheses and hold task content constant in intervention tests.
-4. **RAG evidence use:** swap or remove evidence and test output sensitivity. Attention or attribution to a document alone does not prove that the answer depends on it.
-5. **Editing and steering:** evaluate related capabilities and counterexamples before deploying an intervention.
-
-These tools narrow hypotheses; they complement incident logs, controlled behavioral evaluations, and permission boundaries. Coverage, replacement-model fidelity, and generalization beyond the inspected prompt remain open limitations.
-
----
+For the delivery-date example, record the difference between the new-date and old-date logits. On prompts that differ only in the date, patch a candidate activation and compare the change in this difference with a control intervention. Repeat on held-out dates and document layouts. Report the cases where the intervention has no effect, too.
 
 ## 7. Summary and Open Questions
 
-Mechanistic Interpretability provides a rigorous, mathematical framework for understanding the internal machinery of Large Language Models. By decomposing the network into the Linear Representation Hypothesis, QK/OV circuits, and algorithmic subgraphs like Induction Heads, we transition from treating AI as alchemy to treating it as software engineering.
-
-However, as models scale to trillions of parameters, manual circuit discovery becomes computationally and cognitively intractable. 
-* How can we automate the discovery of circuits? 
-* How do we interpret the massive MLP layers that contain the bulk of the model's world knowledge?
-* What happens when multiple concepts are crammed into the same set of neurons?
-
-To answer these questions, we must look at advanced visualization techniques and the problem of Superposition, which we will explore next in **19.2 Logit Lens & Attention Visualization** and **19.4 Sparse Autoencoders (SAE)**.
+There are three results worth writing down separately: the behavior changes when the prompt changes, an internal signal tracks that change, and an intervention on the signal changes the behavior. Each answers a different question. [Section 19.2 compares attention maps with intermediate vocabulary readouts](../logit-lens-and-attention-visualization/), and [Section 19.4 examines features that share activation dimensions.](../sparse-autoencoders-sae/)
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: According to the Linear Representation Hypothesis, why are concepts represented as directions in the residual stream rather than by individual neurons?</summary>
-*Because the residual stream is a continuous vector space transformed by dense weight matrices. A neural network can represent more features than it has dimensions (superposition) by utilizing almost-orthogonal directions in high-dimensional space. Tying a concept to a single basis vector (neuron) is a highly inefficient use of the vector space capacity.*
+<summary>Quiz 1: In the prompt A C X A, which position should the induction head read, and for which position does the model predict a token?</summary>
+*With zero-based indices, the query is at 3. It reads position 1, where C follows the first A, and can favor C for position 4.*
 </details>
 
 <details>
-<summary>Quiz 2: Does an induction-like attention pattern prove that a head causes in-context learning?</summary>
-*No. Use controlled ablation or activation patching and test the predicted behavioral effect. Other heads and MLPs may contribute, and ICL includes mechanisms beyond the classic induction circuit.*
+<summary>Quiz 2: What does a large attention weight at position 1 establish if zeroing the head's output leaves the answer unchanged?</summary>
+*The head reads from that position. The intervention did not change the measured answer under these conditions. Its write may be small or other paths may support the same answer. Examine the logits as well as the top token.*
 </details>
 
 <details>
-<summary>Quiz 3: Why is Mechanistic Interpretability currently much more successful at reverse-engineering Attention Heads compared to MLP layers?</summary>
-*Attention heads have a natural, interpretable bottleneck: the attention matrix. The QK circuit explicitly tells us which tokens are communicating, and the OV circuit tells us what is being communicated. MLP layers, on the other hand, act as massive, dense key-value memories with highly polysemantic neurons, making their specific logical routing much harder to disentangle without advanced techniques like Sparse Autoencoders.*
+<summary>Quiz 3: A probe detects plural nouns in its training sentences. How would you test what it learned?</summary>
+*Use unseen nouns and sentence templates, including matched singular and plural forms. This tests generalization of the readout. Testing whether the model uses the signal requires an intervention and a behavioral measurement.*
 </details>
 
 <details>
-<summary>Quiz 4: Why is inspecting QK alone insufficient to establish token copying?</summary>
-*QK describes attention destinations. The value/output path and its composition with embeddings and unembeddings determine whether attended information promotes the copied token. A large attention weight alone does not prove the copy operation.*
+<summary>Quiz 4: For the sequence A B X A C X A, does the exact-match rule pick B or C?</summary>
+*Both earlier A tokens have visible successors. Positions 1 and 4 hold B and C. Choosing a winner requires information the rule does not specify, such as the learned attention weights and each source's contribution to the vocabulary logits.*
 </details>
-
----
 
 ## References
 
-1. <a id="ref-1"></a>Olah, C., et al. (2020). *Zoom In: An Introduction to Circuits*. Distill. [Link](https://distill.pub/2020/circuits/zoom-in/).
-2. <a id="ref-2"></a>Elhage, N., et al. (2021). *A Mathematical Framework for Transformer Circuits*. Anthropic. [Link](https://transformer-circuits.pub/2021/framework/index.html).
-3. <a id="ref-3"></a>Olsson, C., et al. (2022). *In-context Learning and Induction Heads*. [arXiv:2209.11895](https://arxiv.org/abs/2209.11895).
-4. <a id="ref-4"></a>Park, K., et al. (2023). *The Linear Representation Hypothesis and the Geometry of Large Language Models*. [arXiv:2311.03658](https://arxiv.org/abs/2311.03658).
-5. <a id="ref-5"></a>Ameisen, E., et al. (2025). *Circuit Tracing: Revealing Computational Graphs in Language Models*. Transformer Circuits Thread. [Link](https://transformer-circuits.pub/2025/attribution-graphs/methods.html).
+1. <a id="ref-1"></a>Olah, C., et al. (2020). [Zoom In: An Introduction to Circuits](https://distill.pub/2020/circuits/zoom-in/).
+2. <a id="ref-2"></a>Elhage, N., et al. (2021). [A Mathematical Framework for Transformer Circuits](https://transformer-circuits.pub/2021/framework/index.html).
+3. <a id="ref-3"></a>Olsson, C., et al. (2022). [In-context Learning and Induction Heads](https://transformer-circuits.pub/2022/in-context-learning-and-induction-heads/index.html).
+4. <a id="ref-4"></a>Park, K., Choe, Y. J., & Veitch, V. (2024). [The Linear Representation Hypothesis and the Geometry of Large Language Models](https://arxiv.org/abs/2311.03658).
+5. <a id="ref-5"></a>Ameisen, E., et al. (2025). [Circuit Tracing: Revealing Computational Graphs in Language Models](https://transformer-circuits.pub/2025/attribution-graphs/methods.html).
+6. <a id="ref-6"></a>PyTorch. [MultiheadAttention](https://docs.pytorch.org/docs/2.15/generated/torch.nn.MultiheadAttention.html).
+7. <a id="ref-7"></a>Hugging Face. [SmolLM2-135M base checkpoint and model card](https://huggingface.co/HuggingFaceTB/SmolLM2-135M/blob/93efa2f097d58c2a74874c7e644dbc9b0cee75a2/README.md).

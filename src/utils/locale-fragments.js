@@ -56,6 +56,7 @@ const lessonFragments = {
   '/chapter-17/production-evaluation-and-release-gates': ['release-gate-example'],
   '/chapter-17/llm-as-a-judge': ['translation-rubric-example'],
   '/chapter-17/experimental-design-and-uncertainty': ['release-lab'],
+  '/chapter-19/mechanistic-interpretability': ['induction-copy-trace', 'induction-probe'],
   '/chapter-19/probing-classifiers': ['probe-projection-coordinates'],
 };
 

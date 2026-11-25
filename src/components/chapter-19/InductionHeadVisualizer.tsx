@@ -1,85 +1,76 @@
-import React, { useState } from 'react';
-import './visualizers.css';
+import { useId, useState } from 'react';
+import './induction-head.css';
 
-const InductionHeadVisualizer: React.FC<{ lang?: 'en' | 'ko' }> = ({ lang = 'en' }) => {
-    const ko = lang === 'ko';
-    const tokens = ["<BOS>", "Harry", "Potter", "is", "a", "wizard.", "Harry", "Potter"];
-    const [hoveredRow, setHoveredRow] = useState<number | null>(null);
-    const [hoveredCol, setHoveredCol] = useState<number | null>(null);
+const examples = [
+  { en: 'Repeated A', ko: 'A가 반복될 때', tokens: ['A', 'B', 'X', 'A'] },
+  { en: 'Change B to C', ko: 'B를 C로 바꾸면', tokens: ['A', 'C', 'X', 'A'] },
+  { en: 'New final token', ko: '마지막에 D가 오면', tokens: ['A', 'B', 'X', 'D'] },
+  { en: 'Two continuations', ko: '뒤따른 토큰이 두 가지면', tokens: ['A', 'B', 'X', 'A', 'C', 'X', 'A'] },
+];
 
-    // Generate simulated attention matrix for an induction head
-    const getAttentionWeight = (row: number, col: number) => {
-        if (col > row) return 0; // Causal masking
-        
-        // Induction head pattern: Attend to the token *after* the previous occurrence of the current token
-        if (row === 6 && col === 2) return 0.85; // 'Harry' attends to 'Potter'
-        if (row === 7 && col === 3) return 0.90; // 'Potter' attends to 'is'
-        
-        // Local attention fallback
-        if (row === col) return 0.1;
-        if (row === col + 1) return 0.05;
-        
-        return 0.01; // Background noise
-    };
+export default function InductionHeadVisualizer({ lang = 'en' }: { lang?: 'en' | 'ko' }) {
+  const group = useId();
+  const ko = lang === 'ko';
+  const [example, setExample] = useState(0);
+  const [muted, setMuted] = useState(false);
+  const { tokens } = examples[example];
+  const query = tokens.length - 1;
+  const destinations = tokens.flatMap((_, position) =>
+    position > 0 && tokens[position - 1] === tokens[query] ? [position] : []
+  );
+  const candidates = [...new Set(destinations.map(position => tokens[position]))];
 
-    const matrix = Array.from({ length: tokens.length }, (_, r) => {
-        const row = Array.from({ length: tokens.length }, (_, c) => getAttentionWeight(r, c));
-        const total = row.reduce((sum, weight) => sum + weight, 0);
-        return row.map(weight => weight / total);
-    });
-
-    return (
-        <div className="induction-visualizer">
-            <h4 className="visualizer-title">{ko ? '귀납 헤드의 attention 행렬' : 'Induction Head Attention Matrix'}</h4>
-            <div className="matrix-container">
-                <div className="col-labels">
-                    <div className="empty-corner"></div>
-                    {tokens.map((token, i) => (
-                        <div key={`col-${i}`} className={`col-label ${hoveredCol === i ? 'highlight' : ''}`}>
-                            {token}
-                        </div>
-                    ))}
-                </div>
-                {tokens.map((rowToken, r) => (
-                    <div key={`row-${r}`} className="matrix-row">
-                        <div className={`row-label ${hoveredRow === r ? 'highlight' : ''}`}>
-                            {rowToken}
-                        </div>
-                        {tokens.map((_, c) => {
-                            const weight = matrix[r][c];
-                            const isCausalMasked = c > r;
-                            const isHighlighted = hoveredRow === r && hoveredCol === c;
-                            const isInductionPattern = (r === 6 && c === 2) || (r === 7 && c === 3);
-                            
-                            return (
-                                <button
-                                    key={`cell-${r}-${c}`}
-                                    type="button"
-                                    aria-label={ko ? `Query ${r}: ${rowToken}, Key ${c}: ${tokens[c]}, ${isCausalMasked ? '인과 마스킹' : `${(weight * 100).toFixed(1)}%`}` : `Query ${r}: ${rowToken}, Key ${c}: ${tokens[c]}, ${isCausalMasked ? 'causally masked' : `${(weight * 100).toFixed(1)}%`}`}
-                                    className={`matrix-cell ${isCausalMasked ? 'masked' : ''} ${isHighlighted ? 'active' : ''} ${isInductionPattern ? 'induction-hot' : ''}`}
-                                    style={{ 
-                                        backgroundColor: isCausalMasked ? '#f0f0f0' : `rgba(59, 130, 246, ${weight})`
-                                    }}
-                                    onMouseEnter={() => { setHoveredRow(r); setHoveredCol(c); }}
-                                    onMouseLeave={() => { setHoveredRow(null); setHoveredCol(null); }}
-                                    onFocus={() => { setHoveredRow(r); setHoveredCol(c); }}
-                                    onBlur={() => { setHoveredRow(null); setHoveredCol(null); }}
-                                    onClick={() => { setHoveredRow(r); setHoveredCol(c); }}
-                                >
-                                    {!isCausalMasked && <span className="tooltip">{(weight * 100).toFixed(1)}%</span>}
-                                </button>
-                            );
-                        })}
-                    </div>
-                ))}
-            </div>
-            <div className="visualizer-caption">
-                <p>{ko ? '행은 Query(현재 토큰), 열은 Key(참조 토큰)입니다. 두 번째 Harry(행 6)는 첫 번째 Potter(열 2)를 강하게 참조합니다.' : 'Rows are Query (current token); columns are Key (attended token). The second Harry (row 6) strongly attends to the first Potter (column 2).'}</p>
-                <p>{ko ? '생성 방식: 수작업으로 지정한 예시 값을 행별로 정규화했습니다. 각 행의 합은 100%이며 미래 토큰은 0%입니다. 실제 모델 측정값이 아닙니다. Tab으로 셀을 확인할 수 있습니다.' : 'Generation method: hand-specified illustrative weights, normalized per row. Each row sums to 100%; future tokens have 0%. These are not model measurements. Use Tab to inspect cells.'}</p>
-                {hoveredRow !== null && hoveredCol !== null && <p role="status">{ko ? '선택' : 'Selection'}: Query {hoveredRow}, Key {hoveredCol} — {(matrix[hoveredRow][hoveredCol] * 100).toFixed(1)}%</p>}
-            </div>
+  return (
+    <div className="induction-trace">
+      <noscript>
+        <style>{'.induction-trace fieldset, .induction-trace .induction-mute { display: none; }'}</style>
+        <p>{ko ? '기본 예시는 A B X A입니다. 다른 배열을 비교하려면 자바스크립트를 켜세요.' : 'Showing A B X A. Enable JavaScript to compare the other sequences.'}</p>
+      </noscript>
+      <fieldset>
+        <legend>{ko ? '토큰 배열 선택' : 'Choose a token sequence'}</legend>
+        <div className="induction-cases">
+          {examples.map((item, i) => (
+            <label key={item.en}>
+              <input type="radio" name={group} checked={i === example} onChange={() => setExample(i)} />
+              {item[lang]}
+            </label>
+          ))}
         </div>
-    );
-};
-
-export default InductionHeadVisualizer;
+      </fieldset>
+      <label className="induction-mute">
+        <input type="checkbox" checked={muted} onChange={event => setMuted(event.target.checked)} />
+        {ko ? '마지막 위치에서 이 헤드가 쓰는 값을 0으로 설정' : 'Zero this head’s output at the final position'}
+      </label>
+      <div aria-live="polite" aria-atomic="true">
+        <ol className="induction-tokens" start={0} aria-label={ko ? '입력 토큰과 위치' : 'Input tokens and their positions'}>
+          {tokens.map((token, position) => (
+            <li key={position} className={position === query ? 'is-query' : destinations.includes(position) ? 'is-source' : ''}>
+              <small>{position}</small><b>{token}</b>
+              {position === query && <span>{ko ? '질의' : 'query'}</span>}
+              {destinations.includes(position) && <span>{ko ? '참조' : 'read'}</span>}
+            </li>
+          ))}
+        </ol>
+        <dl>
+          <div>
+            <dt>{ko ? '어디를 읽나?' : 'Which positions match?'}</dt>
+            <dd>{destinations.length
+              ? destinations.map(position => <span key={position}>{ko
+                  ? `${position}번의 ${tokens[position]} (바로 앞 ${position - 1}번이 ${tokens[query]})`
+                  : `${position} · ${tokens[position]} (preceded by ${tokens[query]} at ${position - 1})`}</span>)
+              : ko ? `앞서 ${tokens[query]}가 나온 적이 없습니다.` : `No earlier occurrence of ${tokens[query]}.`}</dd>
+          </div>
+          <div>
+            <dt>{ko ? '어떤 토큰을 밀어 주나?' : 'Which token does the copy path favor?'}</dt>
+            <dd>{muted
+              ? ko ? '없습니다. 헤드의 출력을 0으로 설정했습니다.' : 'None. This head’s output is zero.'
+              : !candidates.length
+                ? ko ? '복사할 후보가 없습니다.' : 'There is no candidate to copy.'
+                : candidates.length === 1 ? candidates[0]
+                  : ko ? `${candidates.join(', ')} 둘 다 후보입니다. 이 규칙만으로는 순위를 정할 수 없습니다.` : `${candidates.join(' and ')} both qualify. The rule gives no ranking.`}</dd>
+          </div>
+        </dl>
+      </div>
+    </div>
+  );
+}

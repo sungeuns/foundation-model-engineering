@@ -171,7 +171,7 @@
 
 ### **Chapter 19: Interpretability & Science of LLMs**
 
-* **19.1 Mechanistic Interpretability:** 개별 뉴런과 어텐션 헤드가 어떤 역할을 하는지 분석.
+* **19.1 Mechanistic Interpretability:** 네 토큰으로 귀납 헤드의 읽기 위치를 추적하고, SmolLM2에서 헤드 하나의 출력을 끈 뒤 예측이 얼마나 달라지는지 CPU로 측정.
 * **19.2 Logit Lens & Attention Visualization:** 내부 상태가 어떻게 최종 토큰을 결정하는지 시각화.
 * **19.3 Probing Classifiers:** 모델 내부에 특정 지식이 저장되어 있는지 테스트하는 법.
 * **19.4 Sparse Autoencoders (SAE):** 겹쳐진 특징(Superposition)을 분리하여 해석하는 최신 기술.

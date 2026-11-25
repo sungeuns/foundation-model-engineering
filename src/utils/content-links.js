@@ -4,6 +4,11 @@ import { whisperArticlePath } from '../data/site.js';
 export const bookPageRoutes = new Set(['/', '/ko', '/labs', '/ko/labs', whisperArticlePath, `/ko${whisperArticlePath}`, ...chapters.flatMap(chapter =>
   chapter.subs.flatMap(sub => [sub.path, `/ko${sub.path}`]))]);
 
+export function articleRoutes(lang) {
+  const prefix = lang === 'ko' ? '/ko/articles/' : '/articles/';
+  return [...bookPageRoutes].filter(path => path.startsWith(prefix));
+}
+
 // Only rewrite known book pages. Preserve assets, external links, query strings,
 // fragments and unknown paths so a typo remains visible to the link audit.
 export function canonicalContentHref(href, base = '/') {

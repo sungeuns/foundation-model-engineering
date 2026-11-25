@@ -98,3 +98,19 @@ test('the optional labs index requires the catalog path rendered in this edition
   assert.deepEqual(readSectionIndex(index, 'en', paths, path), legacy);
   assert.deepEqual(readSectionIndex(updated, 'en', paths), legacy);
 });
+
+test('standalone articles use localized titles and descriptions and survive mixed index versions', () => {
+  const path = '/book/articles/clock/';
+  const article = { path, title: 'Whisper and the clock', description: 'Hear a sample-rate error.' };
+  const available = new Set([path]);
+  const lookup = data => readSectionIndex(data, 'en', paths, undefined, available);
+  const updated = { ...index, articles: [article] };
+  const matches = findSections(lookup(updated), 'Whisper sample rate').matches;
+  assert.deepEqual(matches.map(row => [row.label, row.chapter, row.href]),
+    [[article.title, 'Short article', path + '#main-content']]);
+  const legacy = readSectionIndex(index, 'en', paths);
+  assert.deepEqual(lookup(index), legacy);
+  assert.deepEqual(readSectionIndex(updated, 'en', paths), legacy);
+  const stale = { ...article, path: 'https://elsewhere.test/path/' };
+  assert.deepEqual(lookup({ ...index, articles: [stale, article, article] }), lookup(updated));
+});

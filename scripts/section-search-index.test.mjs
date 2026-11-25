@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import test from 'node:test';
 import { parse } from 'parse5';
@@ -74,7 +74,7 @@ for (const lang of ['en', 'ko']) {
     const base = normalizePathname(new URL(canonical[1]).pathname);
     const localized = inventory.map(sub => lang === 'en' ? sub.path : `/ko${sub.path}`);
     const index = JSON.parse(readFileSync(join(output, 'search', `${lang}.json`), 'utf8'));
-    assert.deepEqual(Object.keys(index).sort(), ['catalog', 'chapters', 'lang', 'version']);
+    assert.deepEqual(Object.keys(index).sort(), ['articles', 'catalog', 'chapters', 'lang', 'version']);
     assert.equal(index.version, 1);
     assert.equal(index.lang, lang);
     assert.deepEqual(index.chapters.map(chapter => chapter.path), localized.map(path => withPagePath(path, base)));
@@ -82,7 +82,28 @@ for (const lang of ['en', 'ko']) {
     const hub = lang === 'ko' ? '/ko/labs' : '/labs';
     const hubPath = withPagePath(hub, base);
     const { elementsById: labElements } = renderedTargets(readFileSync(join(output, hub, 'index.html'), 'utf8'));
-    const entries = readSectionIndex(index, lang, new Set(index.chapters.map(chapter => chapter.path)), hubPath);
+    const localizedArticles = lang === 'en' ? 'articles' : 'ko/articles';
+    const articlePages = readdirSync(join(output, localizedArticles), { withFileTypes: true })
+      .filter(item => item.isDirectory() && existsSync(join(output, localizedArticles, item.name, 'index.html')))
+      .map(item => '/' + localizedArticles + '/' + item.name);
+    const published = articlePages.map(page => withPagePath(page, base));
+    const localizedHome = readFileSync(join(output, lang === 'ko' ? 'ko' : '', 'index.html'), 'utf8');
+    const input = renderedTargets(localizedHome).elementsById.get('chapterSearch');
+    const allowed = JSON.parse(input.attrs.find(attr => attr.name === 'data-article-paths').value);
+    assert.deepEqual(allowed.toSorted(), published.toSorted());
+    assert.deepEqual(index.articles.map(item => item.path).toSorted(), published.toSorted());
+    const entries = readSectionIndex(index, lang, new Set(index.chapters.map(chapter => chapter.path)), hubPath, new Set(allowed));
+    for (const page of articlePages) {
+      const targets = renderedTargets(readFileSync(join(output, page, 'index.html'), 'utf8')).elementsById;
+      const main = targets.get('main-content');
+      const label = headingText(main.childNodes.find(node => node.tagName === 'h1'));
+      const [match] = findSections(entries, label).matches;
+      assert.equal(match.label, label);
+      assert.equal(match.href, withPagePath(page, base) + '#main-content');
+    }
+    const article = withPagePath('/' + localizedArticles + '/whisper-sample-rate', base) + '#main-content';
+    const query = lang === 'en' ? 'Whisper sample rate' : 'Whisper 샘플링 속도';
+    assert.ok(findSections(entries, query).matches.some(row => row.href === article), query);
     for (const [, id] of index.catalog.sections) assert.equal(labElements.get(id)?.tagName, 'li', id);
     for (const [query, id] of [
       [lang === 'en' ? 'worksheet' : '활동지', 'attention-weight-example'],

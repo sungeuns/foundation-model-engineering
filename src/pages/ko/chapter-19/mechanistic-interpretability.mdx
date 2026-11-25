@@ -4,197 +4,177 @@ title: 19.1 기계론적 해석 가능성
 lang: ko
 ---
 
+import { withBasePath } from '../../../utils/paths.js';
 import InductionHeadVisualizer from '../../../components/chapter-19/InductionHeadVisualizer.tsx';
 
 <a id="191-mechanistic-interpretability"></a>
 
 # 19.1 기계론적 해석 가능성
 
-현대의 대규모 언어 모델(LLM)은 종종 **블랙박스** (Black Box)로 묘사됩니다. 우리는 테라바이트 단위의 데이터를 주입하고, 경사하강법을 사용해 단순한 목적 함수(다음 토큰 예측)를 최적화합니다. 그리고 그 결과로 논리적 추론, 번역, 코딩과 같은 복잡한 행동이 창발(Emergence)합니다.
+`A B X A`를 입력했더니 모델이 다음 토큰으로 `B`를 골랐다고 해보겠습니다. 학습 데이터에서 `A` 다음에 `B`가 자주 나와서일까요? 아니면 방금 본 두 토큰을 따라 쓴 걸까요? 이 예측 하나로는 구분하기 어렵습니다. 앞부분을 `A C X A`로 바꿔 보면 두 설명을 구별할 단서가 생깁니다. **기계론적 해석 가능성** 은 여기서 한 걸음 더 들어가, 모델 내부의 어떤 계산 때문에 답이 달라졌는지 묻습니다.
 
-**Mechanistic Interpretability** (기계적 해석 가능성, 이하 MechInterp) 는 이 블랙박스를 역공학(Reverse-engineering)하려는 야심 찬 과학적 시도입니다. 모델을 불투명한 통계 엔진으로 취급하는 대신, 컴파일된 컴퓨터 프로그램으로 바라봅니다. 수십억 개의 연속적인 가중치(Weights)를 인간이 이해할 수 있는 알고리즘, 자료구조, 논리 회로로 디컴파일하는 것이 목표입니다.
+<a id="1-motivation-and-history"></a>
 
-이는 마치 인공 두뇌를 연구하는 뇌과학이나, 외계 우주선을 역공학하는 것과 같습니다. 우리에게 하드웨어(가중치)는 있지만, 소스 코드는 없는 상태입니다.
+## 1. 예측이 달라진 이유 찾기
 
----
+Olah 등은 이미지에서 곡선을 감지하는 회로를 조사하면서 앞선 층에서 어떤 특징을 전달받는지 추적했습니다 [[1]](#ref-1). 트랜스포머에서는 토큰 위치 사이의 정보 전달 경로를 살펴볼 수 있습니다. 어텐션 헤드는 한 위치에서 값을 읽고 다른 위치의 잔차 스트림에 더합니다. 이 경로에서 값을 기록하거나 바꾼 뒤 특정 출력이 얼마나 달라지는지 측정할 수 있습니다 [[2]](#ref-2).
 
-## 1. Motivation and History
+<a id="왜-mechanistic-interpretability-가-필요한가"></a>
 
-역사적으로 딥러닝은 모델을 더 크고 정확하게 만드는 **Capability** (성능) 에 집중해 왔습니다. 하지만 모델이 단순한 연구 결과물을 넘어 핵심 인프라로 전환됨에 따라, 모델이 *어떻게* 작동하는지 이해하는 것은 행동 평가·실행 통제와 함께 디버깅과 안전 연구를 지원할 수 있습니다.
+가령 검색된 문서에는 새 배송일이 적혀 있는데 챗봇은 계속 옛 날짜를 답한다고 해보겠습니다. 문서의 날짜를 바꿔 보면 답이 문서에 의존하는지 알 수 있습니다. 날짜를 바꾼 상태에서 특정 헤드의 출력만 원래 실행에서 기록한 값으로 되돌려 보면, 그 헤드가 날짜를 전달한다는 가설을 시험할 수 있습니다. 다른 날짜와 다른 문서에서도 같은 현상이 나타나는지 확인해야 원인을 좁힐 수 있습니다.
 
-### 왜 Mechanistic Interpretability 가 필요한가?
-1. **Alignment and Safety** (정렬과 안전): 내부 근거는 원치 않는 행동을 조사하는 데 도움이 됩니다. 일부 회로의 설명만으로 안전성을 인증하거나 기만이 없다고 입증할 수는 없습니다.
-2. **Debugging Hallucinations** (환각 디버깅): 개입 실험으로 사실 오류의 원인 가설을 검증할 수 있습니다. 지식 편집은 관련 능력을 훼손할 수도 있습니다.
-3. **Auditing** (감사): 메커니즘 근거는 기술 감사를 지원할 수 있지만 배포 시스템과 행동 통제의 검증을 대체하지는 않습니다.
+<a id="2-the-linear-representation-hypothesis"></a>
 
-이 분야의 현대적 뿌리는 Chris Olah (Distill, OpenAI, Anthropic) 와 같은 연구자들이 주도한 합성곱 신경망(CNN)의 Feature Visualization으로 거슬러 올라갑니다. 초기 연구는 CNN의 얕은 층이 어떻게 엣지(Edge)를 감지하고, 깊은 층이 개 코나 자동차 바퀴 같은 복잡한 개념을 감지하는지 시각화했습니다 [[1]](#ref-1).
+## 2. 선형 표현 가설
 
-Transformer 의 등장과 함께, 연구의 초점은 공간적 특징 맵(Spatial feature maps)에서 **Residual Stream** 과 **Attention Matrices** 로 이동했습니다. Anthropic의 기념비적인 논문인 *A Mathematical Framework for Transformer Circuits* [[2]](#ref-2) 는 현대 MechInterp 의 어휘를 정립하며, Transformer 를 거대한 단일 블록이 아니라 공유 메모리 대역폭(Residual Stream)을 통해 통신하는 'Head'들의 네트워크로 해석했습니다.
+모델의 상태를 기록하면 좌표별 숫자가 나옵니다. 예측에 쓰이는 정보는 여러 좌표에 걸쳐 있을 수 있습니다. **선형 표현 가설** 에 따르면 단수와 복수 같은 구별이 벡터 공간의 한 방향에 나타날 수 있습니다. Park 등은 개념을 읽어 내는 경우와 개념에 개입하는 경우를 나누어 선형 표현의 의미를 수식으로 정리했습니다 [[4]](#ref-4).
 
----
+토큰 하나의 잔차 상태를 $h \in \mathbb{R}^d$, 같은 $d$차원 공간에서 길이가 1인 방향 벡터를 $v$라고 합시다. 좌표계를 정하고 내적 $s=h^\top v$를 구하면 $h$에서 $v$ 방향의 성분을 읽을 수 있습니다. 이 점수로 단수와 복수가 구분되는지는 따로 시험해 봐야 합니다. 명사 몇 개로 방향을 구한 뒤, 다른 문장에 등장하는 새로운 명사에 적용해 보세요.
 
-## 2. The Linear Representation Hypothesis
+<a id="임의의-기저arbitrary-basis-문제"></a>
 
-회로를 찾기 전에, 신경망이 개념을 어떻게 저장하는지 이해해야 합니다. 유용하고 실증적으로 연구된 가설 중 하나가 **Linear Representation Hypothesis** (선형 표현 가설) 입니다 [[4]](#ref-4). 모든 개념에 맥락과 무관한 하나의 방향이 있다는 증명은 아닙니다.
+### 좌표가 달라져도 같은 방향일 수 있다
 
-이 가설은 신경망이 개념(Feature)을 개별 뉴런이 아닌 **활성화 공간(Activation space)의 방향** 으로 표현한다고 가정합니다.
+평면에서 좌표축 하나와 일치하는 방향은 $(1,0)$으로 적을 수 있습니다. 좌표축을 비스듬히 돌리면 같은 방향도 두 성분에 걸쳐 표현됩니다. 직교 좌표계에서 $h$와 $v$를 함께 변환하면 내적은 그대로입니다. 따라서 좌표 번호만 보고 그 좌표가 어떤 개념을 담당한다고 말하기는 어렵습니다. 방향 하나로 개념을 구분해 냈더라도 모델이 예측할 때 그 정보를 쓰는지는 또 다른 질문입니다. [19.3절에서 선형 프로브로 이 차이를 살펴봅니다.](../probing-classifiers/)
 
-Transformer의 Residual Stream이 고차원 벡터 공간 $\mathbb{R}^d$라면, "성별", "복수형", 또는 "개라는 개념"과 같은 특징은 특정 단위 벡터 $v \in \mathbb{R}^d$ 로 나타납니다. 이 특징의 존재 여부는 활성화 벡터 $h$ 가 이 방향으로 투영(Projection)된 값으로 결정됩니다:
+<a id="3-circuits-and-induction-heads"></a>
 
-$$
-\text{Activation of Feature } i = h \cdot v_i
-$$
+## 3. 귀납 헤드는 어디를 읽을까?
 
-### 임의의 기저(Arbitrary Basis) 문제
-Residual Stream 은 밀집 가중치 행렬(Dense weight matrices)에 의해 변환되기 때문에 (네트워크의 용량을 변경하지 않고도 임의로 회전할 수 있음), 개별 기저 차원(문자 그대로의 뉴런 $h_1, h_2, \dots, h_d$)이 깔끔한 단일 개념과 일치하는 경우는 드뭅니다.
+모델 안에서 여러 계산이 연결되어 특정 일을 수행할 때 그 경로를 **회로** 라고 부릅니다. Elhage 등은 어텐션 층만 있는 작은 트랜스포머에서 서로 다른 층의 두 헤드가 협력해 입력의 일부를 이어 쓰는 회로를 분석했습니다 [[2]](#ref-2). Olsson 등은 이 동작을 문맥 내 학습과 관련지었습니다. 두 현상의 인과관계에 대한 근거는 연구진이 직접 개입한 작은 모델에서 가장 분명했습니다 [[3]](#ref-3).
 
-이로 인해 **Polysemanticity** (다의성) 문제가 발생합니다. 즉, 단일 뉴런이 서로 관련 없는 여러 개념에 대해 활성화되는 현상입니다 (예: "거미"와 "프랑스어" 모두에 반응하는 뉴런). 이를 분리하기 위해 Sparse Autoencoders (SAE) 를 사용하는 방법은 19.4장에서 다루겠지만, 지금은 *특징(Feature)은 뉴런이 아니라 방향(Direction)이다* 라는 점만 이해하면 됩니다.
+<a id="induction-head-의-알고리즘"></a>
 
----
+### 토큰 한 칸 차이가 중요한 이유
 
-## 3. Circuits and Induction Heads
+`A B X A`의 위치를 0번부터 3번까지 매겨 보겠습니다. 이전 토큰을 읽는 헤드는 0번의 `A`에 관한 정보를 1번의 잔차 상태에 더합니다. 1번 토큰은 여전히 `B`입니다. 다만 이제 1번에는 바로 앞 토큰이 무엇이었는지에 관한 정보도 담겨 있습니다.
 
-**Circuit** (회로) 은 인식 가능한 알고리즘을 구현하는 신경망의 부분 그래프(특정 Attention Head와 MLP 뉴런의 집합)입니다.
+| 위치 | 입력 토큰 | 뒤쪽 층에서 알 수 있는 직전 토큰 |
+| --- | --- | --- |
+| 0 | A | 이 예시에는 앞 토큰이 없음 |
+| 1 | B | A |
+| 2 | X | B |
+| 3 | A | X |
 
-LLM 에서 발견된 가장 유명하고 근본적인 회로는 **Induction Head** (귀납 헤드) 입니다 [[3]](#ref-3). Induction Head는 가중치 업데이트 없이 프롬프트의 패턴에 적응하는 **In-Context Learning (ICL)** 을 지원하는 한 메커니즘의 근거입니다. 모든 ICL 행동을 설명하지는 않습니다.
+뒤쪽 층의 **귀납 헤드(induction head)** 는 3번의 `A`로 질의를 만듭니다. 바로 앞 토큰이 `A`였다는 단서가 붙은 곳은 **1번** 입니다. 여기서 값을 읽으면 **4번** 위치에 올 토큰을 예측할 때 `B` 쪽에 힘이 실릴 수 있습니다. 처음 `A`가 나온 곳은 0번, 그 뒤를 이어 쓰기 위해 값을 읽는 곳은 1번, 다음 토큰을 예측하는 계산이 일어나는 곳은 3번입니다. [[3]](#ref-3)
 
-### Induction Head 의 알고리즘
-Induction Head 는 `[A] [B] ... [A] -> [B]` 와 같은 단순한 패턴을 찾습니다.
-만약 `[A]` 라는 토큰을 보게 되면, 과거 컨텍스트에서 이전의 `[A]` 인스턴스를 검색하고, 그 바로 뒤에 온 토큰(`[B]`)을 확인한 후, `[B]` 를 다음 예측 토큰으로 승격시킵니다.
+<a id="qk-와-ov-회로"></a>
 
-고전적인 attention-only 구현에서는 서로 다른 층의 두 헤드가 협력합니다:
+### 어디를 읽는지와 무엇을 더하는지
 
-1. **Previous Token Head (Layer $L_1$)**:
-   이 헤드는 단순히 현재 토큰 바로 앞의 토큰에 Attention 을 줍니다. `[A]` 의 정보를 `[B]` 의 Residual Stream 위치로 이동시킵니다. 이제 토큰 `[B]` 에는 "내 앞에는 A가 있다"라는 특징(Feature)이 포함됩니다.
+행벡터 표기에서 $W_QW_K^\top$는 질의와 키가 얼마나 잘 맞는지를 결정합니다. $W_Q$와 $W_K$는 각각 잔차 상태를 질의와 키로 투영하는 가중치입니다. 기본적인 어텐션에서는 점수의 크기를 조정하고 미래 위치를 가린 뒤 읽을 수 있는 위치들 사이에서 가중치를 정규화합니다. 한편 $W_VW_O$는 읽어 온 상태가 어떤 값으로 바뀌어 잔차 스트림에 더해지는지를 나타냅니다. $W_V$는 값 투영, $W_O$는 출력 투영 중 이 헤드에 해당하는 부분입니다. 이후의 층과 최종 어휘 출력층도 답에 영향을 줍니다. 이 헤드가 더하는 벡터를 0으로 만들어도, 어텐션 가중치는 여전히 1번에 쏠릴 수 있습니다. [[2]](#ref-2)
 
-2. **Induction Head (Layer $L_2$, 단 $L_2 > L_1$)**:
-   모델이 두 번째 `[A]` 인스턴스를 처리할 때, Induction Head 의 Query ($Q$) 는 "내 앞에는 A가 있다"라는 특징을 포함하는 Key ($K$) 를 검색합니다. 이전의 `[B]` 를 찾아 Attention 을 주고, Value ($V$) 투영을 통해 "B-ness(B의 정체성)"를 최종 Residual Stream 에 복사하여 `[B]` 를 예측합니다.
+<a id="4-engineering-the-interception-pytorch-hooks"></a>
 
-![이전 토큰 헤드와 귀납 헤드의 작동 예시](../../../assets/images/chapter-19/induction_head_circuit.png)
+## 4. PyTorch에서 한 층의 어텐션 기록하기
 
-*Olsson et al. [[3]](#ref-3)의 메커니즘을 설명하는 저장소의 교육용 도식입니다. Attention 측정값이 아닙니다.*
+순전파 훅으로 기록할 수 있는 것은 모듈이 반환한 값입니다. PyTorch의 `MultiheadAttention`에서는 가중치를 반환하고 헤드별 값을 유지하도록 지정합니다. 설정에 따라 가중치가 생략되거나 여러 헤드의 평균이 반환될 수 있습니다. [[6]](#ref-6)
 
-### QK 와 OV 회로
-MechInterp 는 Attention 을 두 개의 독립적인 연산으로 수학적으로 분해합니다:
-* **The QK Circuit ($W_Q W_K^T$)**: 정보를 *어디로* 이동시킬지 결정합니다 (Attention 가중치).
-* **The OV Circuit ($W_V W_O$)**: Attention 이 주어졌을 때 *어떤* 정보를 이동시킬지 결정합니다.
-
-Induction Head 의 경우, QK 회로는 "현재 토큰 A"와 "A가 선행된 토큰" 사이의 일치도를 계산합니다. OV 회로는 복사(Copy) 연산으로 작동하여 `[B]` 의 정체성을 추출하고 출력 Logit 에 씁니다.
-
----
-
-## 4. Engineering the Interception: PyTorch Hooks
-
-Mechanistic Interpretability 를 수행하려면 단순히 최종 Loss 만 봐서는 안 됩니다. 순전파(Forward pass) 중에 중간 활성화 값(Residual Stream, Attention 행렬, MLP 은닉 상태)을 추출해야 합니다.
-
-Hook은 모듈이 실제로 반환한 값을 관찰합니다. 은닉 상태 텐서에서 attention 확률을 만들어낼 수는 없습니다. 융합 커널은 가중치를 명시적으로 생성하지 않을 수 있고, 출력 튜플의 의미도 모델마다 다릅니다.
-
-> **교육용 예제의 한계:** 아래 함수는 `batch_first=True`인 `torch.nn.MultiheadAttention`에서 헤드별 가중치를 명시적으로 요청하고, 패딩 없이 인과적 배치를 처리하는 예제입니다. 사전 학습 모델 통합을 smoke test한 코드가 아닙니다. 실제 모델 API, 패딩·캐시 의미, device/dtype, 메모리 예산에 맞게 수정해야 합니다. 배치 크기 $B$, 헤드 수 $H$, 시퀀스 길이 $T$일 때 전체 attention 저장 공간은 $O(BHT^2)$입니다.
+> **예제가 다루는 범위.** 가중치를 무작위로 초기화한 어텐션 층을 CPU에서 평가 모드로 실행합니다. 입력은 패딩 없는 시퀀스 하나이며 KV 캐시는 사용하지 않습니다. 가중치 행렬을 명시적으로 반환하는 방식으로 실행합니다. 전체 행렬을 저장하려면 배치 크기 $B$, 헤드 수 $H$, 시퀀스 길이 $T$에 대해 $O(BHT^2)$개의 원소가 필요합니다. 융합 커널을 쓰는 사전 학습 모델은 가중치를 다른 방식으로 노출할 수 있습니다.
 
 ```python
 import torch
 from torch import nn
 
-@torch.no_grad()
-def capture_attention(module: nn.MultiheadAttention, x: torch.Tensor):
-    # x: [B, T, D]; caller supplies matching dtype/device and eval mode.
-    if not module.batch_first or x.ndim != 3:
-        raise ValueError("Requires batch_first=True and [B, T, D] input")
-    captured = []
+torch.manual_seed(7)
+attention = nn.MultiheadAttention(8, 2, batch_first=True).eval()
+x = torch.randn(1, 4, 8)  # 배치, 토큰 수, 은닉 차원
+future = torch.ones(4, 4, dtype=torch.bool).triu(1)
+captured = []
 
-    def hook(_module, _inputs, output):
-        weights = output[1]
-        if weights is None or weights.ndim != 4:
-            raise RuntimeError("Expected unaveraged [B, H, T, T] weights")
-        captured.append(weights.detach().cpu())
+def capture(_module, _inputs, output):
+    captured.append(output[1].detach())
 
-    handle = module.register_forward_hook(hook)
-    try:
-        length = x.shape[1]
-        causal_mask = torch.ones(
-            length, length, dtype=torch.bool, device=x.device
-        ).triu(1)
-        module(x, x, x, attn_mask=causal_mask,
-               need_weights=True, average_attn_weights=False)
-        return captured[0]
-    finally:
-        handle.remove()
+handle = attention.register_forward_hook(capture)
+try:
+    with torch.no_grad():
+        attention(x, x, x, attn_mask=future,
+                  need_weights=True, average_attn_weights=False)
+finally:
+    handle.remove()
+
+weights, = captured
+assert weights.shape == (1, 2, 4, 4)
+assert torch.count_nonzero(weights[..., future]) == 0
+torch.testing.assert_close(weights.sum(-1), torch.ones(1, 2, 4))
+print(tuple(weights.shape))  # (1, 2, 4, 4)
 ```
 
-귀납 패턴은 설명의 후보입니다. 원본·교란 프롬프트를 비교하고, 제안된 헤드를 제거하거나 활성화를 패치한 뒤 예측한 출력 변화가 생기는지 대조 실험으로 확인해야 합니다. Attention 관찰만으로 ICL의 인과적 책임을 입증할 수는 없습니다.
+축 순서는 배치, 헤드, 질의 위치, 키 위치입니다. 위의 네 토큰 예시에서 확인할 항목은 `weights[0, head, 3, 1]`입니다. 코드의 검증문은 미래 위치가 가려지고 행마다 합이 1인 행렬을 올바르게 기록했는지 확인합니다. 이 층은 토큰을 이어 쓰도록 학습한 적이 없습니다.
 
----
+<a id="5-interactive-visualizing-an-induction-head"></a>
+<a id="induction-copy-trace"></a>
 
-## 5. Interactive: Visualizing an Induction Head
+## 5. 앞서 나온 토큰 쌍을 바꿔 보기
 
-Induction Head 가 어떻게 작동하는지 확실히 이해하기 위해 아래의 Attention 행렬과 상호작용해 보세요. 이 시각화 도구는 반복되는 시퀀스를 처리하는 Induction Head 의 Attention 가중치를 시뮬레이션합니다.
+아래 도구가 따르는 규칙은 하나입니다. 마지막 토큰과 같은 토큰이 앞에서 등장한 곳을 찾고, 그 바로 뒤 토큰을 읽습니다. 앞쪽 `B`를 `C`로 바꿔 본 다음 헤드의 출력을 0으로 설정해 보세요. 그때도 그대로인 것은 무엇인가요? 이 도구는 조건에 맞는 위치와 복사 후보를 표시합니다. 학습된 가중치나 예측 확률은 사용하지 않습니다.
 
-토큰의 두 번째 등장에 대한 Query 가 첫 번째 등장 *다음* 에 오는 토큰에 어떻게 강하게 Attention 을 주는지 주목하십시오.
+<InductionHeadVisualizer client:visible lang="ko" />
 
+`A` 뒤에 한 번은 `B`, 한 번은 `C`가 왔다면 둘 다 후보입니다. 학습된 모델에서는 한쪽을 더 강하게 참조할 수도, 두 곳에 가중치를 나눌 수도 있습니다. 다른 경로의 영향으로 전혀 다른 토큰을 예측할 수도 있습니다.
 
-<InductionHeadVisualizer client:load lang="ko" />
+<a id="induction-probe"></a>
 
-*(이 행렬은 정규화한 교육용 예시이며 학습된 모델의 측정값이 아닙니다. 실제 attention에서 비슷한 패턴을 찾으면 개입 실험으로 가설을 검증해야 합니다.)*
+### 헤드 하나의 출력을 끄면 예측은 얼마나 달라질까?
 
----
+사전 학습한 SmolLM2-135M에 `[BOS] A B x y C z w A` 순서로 토큰을 넣고 CPU에서 실행했습니다. 각 글자는 서로 다른 어휘 ID이고, 마지막 `A`만 앞에서 한 번 나온 토큰입니다. 모델이 앞선 짝을 보고 다음 토큰을 예측한다면 `C`보다 `B`에 높은 점수를 줄 겁니다. 그럼 앞쪽의 `B`와 `C` 자리만 맞바꾸면 어떨까요? 입력에 쓰인 토큰도, 마지막 쿼리 `A`도 그대로지만 이번에는 `C`가 유리해야 합니다. [[7]](#ref-7)
 
-## 6. Feature에서 Circuit Tracing으로
+먼저 입력 16개로 살펴볼 헤드를 골랐습니다. 쿼리 헤드 270개 각각에 대해 마지막 위치에서 2번 위치(첫 `A` 바로 다음 자리)에 주는 어텐션 가중치를 쟀습니다. 마지막 `A`를 처음 등장하는 토큰 `D`로 바꾼 뒤 다시 쟀더니, 두 값의 평균 차이가 가장 큰 곳은 18번 층의 6번 헤드였습니다(번호는 0부터 시작). 헤드를 고르는 데 쓴 어휘 ID와 겹치지 않는 **새 입력 32개** 로 시험했습니다. 마지막에 `A`를 되풀이했을 때 이 헤드가 2번 위치에 준 가중치는 평균 **78.17%**, 새 토큰 `D`를 넣었을 때는 **0.084%** 였습니다.
 
-**2026-10-13 기준 연구 정리.** Circuit tracing은 학습한 feature 표현과 attribution graph를 이용해 중간 계산이 출력에 어떻게 기여하는지 조사합니다. Anthropic의 2025년 방법은 replacement model과 국소 기여도 분석 절차를 설명하며, 충실도와 설명 범위의 한계를 명시합니다 [[5]](#ref-5). 읽기 쉬운 그래프가 원본 모델 전체의 설명인 것은 아닙니다.
+이 헤드가 읽은 정보가 실제 예측에 얼마나 기여했을까요? 마지막 위치에서 어텐션 출력 투영을 적용하기 직전에 헤드 하나의 출력 벡터를 0으로 만들었습니다. 표는 새 입력 32개에서 `B`의 로짓에서 `C`의 로짓을 뺀 평균값입니다. 양수이면 모델이 `B`를 더 유력하게 본다는 뜻입니다. 원래 순서에서 측정한 값에서 두 자리를 맞바꿨을 때의 값을 빼면, 토큰 순서가 모델의 선호를 얼마나 움직였는지 알 수 있습니다.
 
-Feature 발견은 첫 단계입니다. 어떤 입력에서 활성화되는지, 어떤 후속 계산에 영향을 주는지, 통제된 개입이 그래프가 예측한 행동 변화를 만드는지 물어야 합니다.
+| 마지막 위치에서 바꾼 조건 | 원래 순서 | B와 C의 자리를 바꾼 뒤 | 두 순서의 차이 |
+| --- | ---: | ---: | ---: |
+| 모든 헤드를 그대로 둠 | 6.55 | −7.06 | 13.61 |
+| 18번 층 6번 헤드의 출력 제거 | 4.86 | −5.35 | 10.21 |
+| 같은 층의 이웃인 7번 헤드의 출력 제거 | 6.31 | −6.90 | 13.21 |
 
-실무 조사에는 다음과 같은 접근이 유용합니다.
+6번 헤드의 출력을 끄자 순서를 바꾼 효과가 줄었습니다. 그래도 예상한 방향으로 점수가 움직인 입력은 32개 중 30개였습니다. 모든 헤드를 그대로 뒀을 때는 32개였습니다. 이 예측을 뒷받침하는 경로가 더 있다는 뜻입니다. 여기서 비교한 것은 합성 입력에 대한 후보 토큰 두 개의 상대 점수입니다. 전체 어휘에서 각각 몇 등을 했는지 알려면 다른 후보들의 로짓도 봐야 하고, 어느 앞쪽 층이 이 헤드에 정보를 전달했는지는 별도 실험이 필요합니다.
 
-1. **반복되는 사실 오류:** 중간 후보 예측을 비교하고, 제안한 원인을 patching이나 ablation으로 검증합니다.
-2. **튜닝 후 과잉 거부:** 대응되는 정상·금지 요청을 비교하고 행동 변화를 측정합니다. 특정 방향에 안전 보장을 부여하지 않습니다.
-3. **Prompt template 차이:** attention 패턴을 가설로 삼고 과제 내용은 고정한 채 개입 실험을 합니다.
-4. **RAG 근거 사용:** 근거를 교체하거나 제거하고 출력 민감도를 확인합니다. 문서에 대한 attention·attribution만으로 답이 그 문서에 의존한다고 입증할 수는 없습니다.
-5. **편집과 steering:** 개입을 배포하기 전에 관련 능력과 반례를 평가합니다.
+<a href={withBasePath('/labs/induction_probe.py')} download>CPU 실험 재현 코드 (Python)</a> · <a href={withBasePath('/labs/2026-11/induction-probe.json')} download>입력 32개 각각의 측정값 (JSON)</a>
 
-이 도구들은 가설을 좁히고, 사고 로그·통제된 행동 평가·권한 경계를 보완합니다. 설명 범위, replacement model의 충실도, 관찰한 프롬프트 밖으로의 일반화는 여전히 한계입니다.
+<a id="6-feature에서-circuit-tracing으로"></a>
 
----
+## 6. 특징에서 회로까지 추적하기
 
-## 7. Summary and Open Questions
+Ameisen 등은 2025년 회로 추적 연구에서 언어 모델의 일부 층을 근사하는 모델을 학습했습니다. 이를 이용해 특정 입력에서 해석 가능한 특징 사이에 어떤 기여가 오가는지 그래프로 나타냈습니다 [[5]](#ref-5). 그래프는 어디에 개입해 볼지 알려 줍니다. 결론의 범위는 근사 모델이 원래 동작을 얼마나 충실하게 재현하고, 표시한 경로들이 전체 계산의 얼마를 설명하는지에 달려 있습니다.
 
-**Mechanistic Interpretability** 는 대규모 언어 모델의 내부 메커니즘을 이해하기 위한 엄밀하고 수학적인 프레임워크를 제공합니다. 네트워크를 Linear Representation Hypothesis, QK/OV 회로, 그리고 Induction Head 와 같은 알고리즘적 부분 그래프로 분해함으로써, 우리는 AI 를 연금술로 취급하던 것에서 벗어나 소프트웨어 공학으로 다룰 수 있게 됩니다.
+배송일 예시로 돌아가 보겠습니다. 새 날짜와 옛 날짜의 로짓 차이를 기록합니다. 날짜만 다른 두 프롬프트 사이에서 원인으로 추정되는 활성값을 바꾸고, 대조군의 다른 활성값을 바꿨을 때와 비교합니다. 처음 분석에 쓰지 않은 날짜와 문서 양식으로도 반복합니다. 개입해도 변화가 없었던 경우까지 기록해야 가설이 어디까지 맞는지 알 수 있습니다.
 
-하지만 모델이 수조 개의 파라미터로 확장됨에 따라, 수동적인 회로 발견은 계산적으로나 인지적으로 불가능해지고 있습니다.
-* 회로 발견을 어떻게 자동화할 수 있을까요?
-* 모델의 세계 지식 대부분을 포함하고 있는 거대한 MLP 레이어는 어떻게 해석해야 할까요?
-* 여러 개념이 동일한 뉴런 세트에 쑤셔 넣어질 때(Superposition) 어떤 일이 발생할까요?
+<a id="7-summary-and-open-questions"></a>
 
-이러한 질문에 답하기 위해, 우리는 다음 장인 **19.2 Logit Lens & Attention Visualization** 과 **19.4 Sparse Autoencoders (SAE)** 에서 고급 시각화 기법과 Superposition 문제에 대해 탐구할 것입니다.
+## 7. 조사 결과에 무엇을 남길까?
+
+세 가지를 나누어 기록하면 좋습니다. 입력을 바꿨을 때 행동이 달라졌는지, 내부에서 그 변화를 따라가는 신호를 찾았는지, 그 신호에 개입했을 때 행동도 달라졌는지입니다. [19.2절에서는 어텐션 지도와 중간층의 어휘 예측을 비교하고](../logit-lens-and-attention-visualization/), [19.4절에서는 여러 특징이 활성 공간의 차원을 공유하는 경우를 살펴봅니다.](../sparse-autoencoders-sae/)
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: Linear Representation Hypothesis 에 따르면, 왜 개념들이 개별 뉴런이 아니라 Residual Stream 의 방향으로 표현될까요?</summary>
-*Residual Stream 은 밀집 가중치 행렬에 의해 변환되는 연속적인 벡터 공간입니다. 신경망은 고차원 공간에서 거의 직교(Almost-orthogonal)하는 방향들을 활용함으로써, 자신이 가진 차원 수보다 더 많은 특징을 표현(Superposition)할 수 있습니다. 하나의 개념을 단일 기저 벡터(뉴런)에 묶어두는 것은 벡터 공간의 용량을 매우 비효율적으로 사용하는 것입니다.*
+<summary>Quiz 1: A C X A에서 귀납 헤드는 어느 위치를 읽을까요? 모델은 몇 번 위치에 올 토큰을 예측하고 있나요?</summary>
+*0번부터 세면 질의 위치는 3번입니다. 처음 A 다음에 C가 있는 1번을 읽고, 4번 위치의 후보로 C를 밀어 줄 수 있습니다.*
 </details>
 
 <details>
-<summary>Quiz 2: 귀납형 attention 패턴만으로 해당 헤드가 ICL의 원인임을 입증할 수 있을까요?</summary>
-*아닙니다. 통제된 ablation이나 activation patching으로 예측한 행동 변화가 생기는지 확인해야 합니다. 다른 헤드와 MLP도 기여할 수 있고, ICL에는 고전적인 귀납 회로 이외의 메커니즘도 있습니다.*
+<summary>Quiz 2: 1번 위치에 어텐션 가중치가 쏠리는데도 헤드의 출력을 0으로 바꾼 뒤 같은 답이 나왔습니다. 무엇을 알 수 있을까요?</summary>
+*헤드가 그 위치를 읽었고, 이번 조건에서 개입해도 관찰한 답은 달라지지 않았습니다. 헤드가 더한 값이 작았거나 다른 경로가 같은 답을 뒷받침했을 수 있습니다. 최상위 토큰이 그대로여도 로짓은 달라졌을 수 있으니 함께 확인합니다.*
 </details>
 
 <details>
-<summary>Quiz 3: 현재 Mechanistic Interpretability 가 MLP 레이어에 비해 Attention Head 를 역공학하는 데 훨씬 더 성공적인 이유는 무엇일까요?</summary>
-*Attention Head 에는 해석하기 쉬운 자연스러운 병목(Bottleneck)인 Attention 행렬이 있습니다. QK 회로는 어떤 토큰들이 통신하고 있는지 명시적으로 알려주고, OV 회로는 무엇이 통신되고 있는지 알려줍니다. 반면, MLP 레이어는 고도로 다의적인(Polysemantic) 뉴런을 가진 거대하고 밀집된 Key-Value 메모리로 작동하기 때문에, Sparse Autoencoders 와 같은 고급 기술 없이는 특정 논리적 라우팅을 분리해내기가 훨씬 더 어렵습니다.*
+<summary>Quiz 3: 선형 프로브가 학습에 사용한 문장에서 복수 명사를 잘 구별합니다. 무엇을 추가로 확인해야 할까요?</summary>
+*새로운 명사와 문장 틀에서 서로 대응하는 단수형과 복수형을 검사합니다. 이렇게 하면 프로브가 읽은 정보가 새 사례에도 적용되는지 알 수 있습니다. 모델도 예측에 그 정보를 쓰는지 알아보려면 개입 후 행동 변화를 측정해야 합니다.*
 </details>
 
 <details>
-<summary>Quiz 4: QK 관찰만으로 토큰 복사를 입증할 수 없는 이유는 무엇일까요?</summary>
-*QK는 attention의 목적지를 설명합니다. Value/output 경로와 embedding·unembedding의 합성이 참조한 정보를 복사 대상 토큰의 예측으로 바꾸는지 결정합니다. 큰 attention 값만으로 복사 연산을 입증할 수는 없습니다.*
+<summary>Quiz 4: A B X A C X A에서 정확히 일치하는 토큰만 찾는 규칙은 B와 C 중 어느 쪽을 고를까요?</summary>
+*앞서 나온 두 A의 다음 토큰이 모두 보입니다. 1번에는 B, 4번에는 C가 있어 둘 다 후보입니다. 어느 쪽이 실제 예측에서 앞설지 알려면 학습된 어텐션 가중치와 각 위치에서 읽은 값이 어휘 로짓에 미치는 영향까지 알아야 합니다.*
 </details>
-
----
 
 ## References
 
-1. <a id="ref-1"></a>Olah, C., et al. (2020). *Zoom In: An Introduction to Circuits*. Distill. [Link](https://distill.pub/2020/circuits/zoom-in/).
-2. <a id="ref-2"></a>Elhage, N., et al. (2021). *A Mathematical Framework for Transformer Circuits*. Anthropic. [Link](https://transformer-circuits.pub/2021/framework/index.html).
-3. <a id="ref-3"></a>Olsson, C., et al. (2022). *In-context Learning and Induction Heads*. [arXiv:2209.11895](https://arxiv.org/abs/2209.11895).
-4. <a id="ref-4"></a>Park, K., et al. (2023). *The Linear Representation Hypothesis and the Geometry of Large Language Models*. [arXiv:2311.03658](https://arxiv.org/abs/2311.03658).
-5. <a id="ref-5"></a>Ameisen, E., et al. (2025). *Circuit Tracing: Revealing Computational Graphs in Language Models*. Transformer Circuits Thread. [Link](https://transformer-circuits.pub/2025/attribution-graphs/methods.html).
+1. <a id="ref-1"></a>Olah, C., et al. (2020). [Zoom In: An Introduction to Circuits](https://distill.pub/2020/circuits/zoom-in/).
+2. <a id="ref-2"></a>Elhage, N., et al. (2021). [A Mathematical Framework for Transformer Circuits](https://transformer-circuits.pub/2021/framework/index.html).
+3. <a id="ref-3"></a>Olsson, C., et al. (2022). [In-context Learning and Induction Heads](https://transformer-circuits.pub/2022/in-context-learning-and-induction-heads/index.html).
+4. <a id="ref-4"></a>Park, K., Choe, Y. J., & Veitch, V. (2024). [The Linear Representation Hypothesis and the Geometry of Large Language Models](https://arxiv.org/abs/2311.03658).
+5. <a id="ref-5"></a>Ameisen, E., et al. (2025). [Circuit Tracing: Revealing Computational Graphs in Language Models](https://transformer-circuits.pub/2025/attribution-graphs/methods.html).
+6. <a id="ref-6"></a>PyTorch. [MultiheadAttention](https://docs.pytorch.org/docs/2.15/generated/torch.nn.MultiheadAttention.html).
+7. <a id="ref-7"></a>Hugging Face. [SmolLM2-135M 기본 체크포인트와 모델 카드](https://huggingface.co/HuggingFaceTB/SmolLM2-135M/blob/93efa2f097d58c2a74874c7e644dbc9b0cee75a2/README.md).

@@ -1,110 +1,110 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import './visualizers.css';
 
-export const ExpertParallelismVisualizer = ({ lang = "en" }: { lang?: "en" | "ko" }) => {
-  const translations: Record<string, string> = {"All-to-All Token Routing Simulator": "All-to-All 토큰 전송 예시", "Observe how tokens move across the network to their target experts.": "목적지 전문가를 따라 토큰이 이동하는 과정을 살펴보세요.", "0. Init": "0. 초기화", "1. Sort": "1. 정렬", "2. Dispatch": "2. 전송", "3. Compute": "3. 연산", "4. Combine": "4. 결합", "Local": "로컬", "Sorted": "정렬됨", "Routed": "전송됨", "Done": "연산 완료", "Returned": "복귀", "Step Description": "단계 설명", "Every GPU starts with a local batch of tokens destined for different experts across the cluster.": "각 GPU의 로컬 토큰들은 서로 다른 전문가를 목적지로 가집니다.", "Tokens are sorted locally by their target GPU rank to prepare for contiguous network transmission.": "연속된 버퍼로 전송할 수 있도록 목적지 GPU 순서로 정렬합니다.", "The All-to-All collective operation executes. Tokens are physically moved to the GPUs that own their target experts.": "All-to-All 통신으로 토큰을 해당 전문가를 가진 GPU로 보냅니다.", "Each GPU processes received tokens with local experts. Expert IDs must travel in the same order.": "각 GPU가 받은 토큰을 로컬 전문가로 처리합니다. 전문가 ID도 같은 순서로 전달해야 합니다.", "Computed tokens are transmitted back to their origin GPUs (another All-to-All) to continue the dense layers.": "두 번째 All-to-All로 결과를 원래 GPU에 돌려보내고 토큰 순서를 복원합니다."};
-  const t = (text: string) => lang === "ko" ? translations[text] ?? text : text;
-  const [step, setStep] = useState(0); // 0: Init, 1: Sorted, 2: Dispatched, 3: Computed, 4: Combined
+// These are the three fixtures in the downloadable expert_dispatch.py.
+const assignments = [
+  [[2, 0, 3, 2], [1, 3]],
+  [[], [0, 3]],
+  [[0, 1], [0, 1]],
+];
 
-  // 4 GPUs, each with 4 initial tokens.
-  // Number represents the Target Expert ID (0-3).
-  const initialTokens = [
-    [1, 3, 0, 2], // GPU 0's local tokens
-    [0, 0, 1, 3], // GPU 1's local tokens
-    [2, 2, 3, 1], // GPU 2's local tokens
-    [3, 1, 0, 2]  // GPU 3's local tokens
-  ];
+type Row = { token: number; expert: number; source: number; slot: number; value: number };
 
-  const tokenColors = ['ep-token-0', 'ep-token-1', 'ep-token-2', 'ep-token-3'];
-  const labelColors = ['ep-label-0', 'ep-label-1', 'ep-label-2', 'ep-label-3'];
-  const gpuLabels = [0,1,2,3].map(i => `GPU ${i} (${lang === 'ko' ? '전문가' : 'Expert'} ${i})`);
+function expertOwner(row: Row) {
+  return Math.floor(row.expert / 2);
+}
 
-  const getTokensForStep = (gpuIndex: number) => {
-    if (step === 0) return initialTokens[gpuIndex];
+// Each receiver concatenates its slices in sender-rank order.
+function exchange(buffers: Row[][], destination: (row: Row) => number) {
+  return buffers.map((_, rank) => buffers.flatMap(rows => rows.filter(row => destination(row) === rank)));
+}
 
-    if (step === 1) {
-      // Sort tokens locally by target expert
-      return [...initialTokens[gpuIndex]].sort((a, b) => a - b);
-    }
+function trace(expertsByRank: number[][]) {
+  const inputs = expertsByRank.map((experts, source) => experts.map((expert, slot) => {
+    const token = 100 * source + slot + 1;
+    return { token, expert, source, slot, value: token };
+  }));
+  const packed = inputs.map(rows => [...rows].sort((a, b) => expertOwner(a) - expertOwner(b)));
+  const received = exchange(packed, expertOwner);
+  const outputs = received.map(rows => rows.map(row => ({ ...row, value: row.value + 1000 * row.expert })));
+  const returned = exchange(outputs, row => row.source);
+  const restored = returned.map(rows => [...rows].sort((a, b) => a.slot - b.slot));
+  return [inputs, packed, received, outputs, returned, restored];
+}
 
-    if (step === 2 || step === 3) {
-      // Dispatched: GPU i only holds tokens destined for Expert i
-      let received: number[] = [];
-      initialTokens.forEach(gpuTokens => {
-        received.push(...gpuTokens.filter(t => t === gpuIndex));
-      });
-      return received;
-    }
+const copy = {
+  en: {
+    input: 'Inputs', cases: ['Six tokens', 'Rank 0 starts empty', 'Rank 1 receives no rows'],
+    stage: 'Stage', steps: ['Input', 'Pack', 'Dispatch', 'Compute', 'Send back', 'Restore order'],
+    descriptions: [
+      'Read down each buffer in source order. Each row carries its token ID and the expert selected for it.',
+      'Pack rows for rank 0 first, then rank 1. Keep rows for the same destination in their original order.',
+      'Each expert owner receives its rows from rank 0 first, then rank 1. A rank with an empty buffer still takes part.',
+      'Expert e adds 1000 × e to the first coordinate shown here. The token ID stays the same.',
+      'The reverse exchange delivers results to their source ranks. They arrive grouped by expert owner.',
+      'Place each result in its original slot using the permutation saved at packing time.',
+    ],
+    rank: 'Rank', experts: 'Experts', token: 'Token ID', expert: 'Expert', value: 'First coordinate', empty: 'No rows at this stage.',
+  },
+  ko: {
+    input: '입력 사례', cases: ['토큰 여섯 개', '랭크 0의 입력이 비어 있음', '랭크 1로 가는 토큰이 없음'],
+    stage: '단계', steps: ['입력', '목적지별 정렬', '전송', '전문가 연산', '결과 반환', '순서 복원'],
+    descriptions: [
+      '각 버퍼에 담긴 행을 위에서부터 읽어 보세요. 행마다 토큰 번호와 라우터가 선택한 전문가 번호가 있습니다.',
+      '랭크 0으로 보낼 행을 앞에, 랭크 1로 보낼 행을 뒤에 모읍니다. 목적지가 같은 행끼리는 원래 순서를 유지합니다.',
+      '각 랭크는 자신이 맡은 전문가에게 갈 행을 받습니다. 랭크 0에서 출발한 행이 먼저 옵니다. 버퍼가 빈 랭크도 통신에 참여합니다.',
+      'e번 전문가는 표에 보이는 첫 번째 좌표에 1000 × e를 더합니다. 토큰 번호는 그대로입니다.',
+      '각 결과를 토큰이 출발한 랭크로 돌려보냅니다. 이때 결과는 전문가를 실행한 랭크별로 묶여 있습니다.',
+      '처음에 목적지별로 정렬하면서 기록해 둔 위치를 이용해 결과를 각각 원래 자리에 놓습니다.',
+    ],
+    rank: '랭크', experts: '전문가', token: '토큰 번호', expert: '전문가', value: '첫 번째 좌표', empty: '이 단계에는 행이 없습니다.',
+  },
+};
 
-    if (step === 4) {
-      // Combined: Tokens return to original GPUs
-      return initialTokens[gpuIndex];
-    }
-    return [];
-  };
+export function ExpertParallelismVisualizer({ lang = 'en' }: { lang?: 'en' | 'ko' }) {
+  const [example, setExample] = useState(0);
+  const [stage, setStage] = useState(0);
+  const t = copy[lang];
+  const buffers = trace(assignments[example])[stage];
 
   return (
     <div className="ep-container">
-      <h3 className="ep-title">{t("All-to-All Token Routing Simulator")}</h3>
-      <p className="ep-description">{t("Observe how tokens move across the network to their target experts.")}</p>
-
-      <div className="ep-button-group">
-        {[
-          { label: t("0. Init"), val: 0 },
-          { label: t("1. Sort"), val: 1 },
-          { label: t("2. Dispatch"), val: 2 },
-          { label: t("3. Compute"), val: 3 },
-          { label: t("4. Combine"), val: 4 }
-        ].map((btn) => (
-          <button
-            key={btn.val}
-            aria-pressed={step === btn.val} onClick={() => setStep(btn.val)}
-            className={`ep-button ${step === btn.val ? 'ep-button-active' : 'ep-button-inactive'}`}
-          >
-            {btn.label}
+      <label className="ep-case">
+        {t.input}
+        <select value={example} onChange={event => setExample(Number(event.target.value))}>
+          {t.cases.map((name, index) => <option key={name} value={index}>{name}</option>)}
+        </select>
+      </label>
+      <fieldset className="ep-stages">
+        <legend>{t.stage}</legend>
+        {t.steps.map((name, index) => (
+          <button key={name} type="button" aria-pressed={stage === index} onClick={() => setStage(index)}>
+            {index + 1}. {name}
           </button>
         ))}
-      </div>
-
+      </fieldset>
+      <p className="ep-instruction" aria-live="polite">{t.descriptions[stage]}</p>
       <div className="ep-grid">
-        {[0, 1, 2, 3].map(gpuIdx => (
-          <div key={gpuIdx} className="ep-card">
-            <div className={`ep-label ${labelColors[gpuIdx]}`}>
-              {gpuLabels[gpuIdx]}
-            </div>
-
-            <div className="ep-token-container">
-              {getTokensForStep(gpuIdx).map((targetExpert, idx) => (
-                <div
-                  key={idx}
-                  className={`ep-token ${tokenColors[targetExpert]} ${step === 3 ? 'ep-token-pulse' : ''}`}
-                >
-                  {step >= 3 && step < 4 ? '✓' : `E${targetExpert}`}
-                </div>
+        {buffers.map((rows, rank) => (
+          <table key={rank}>
+            <caption>
+              <strong>{t.rank} {rank}</strong>
+              <span>{t.experts} {rank * 2}–{rank * 2 + 1}</span>
+            </caption>
+            <thead><tr>
+              <th scope="col">{t.token}</th><th scope="col">{t.expert}</th><th scope="col">{t.value}</th>
+            </tr></thead>
+            <tbody>
+              {rows.map(row => (
+                <tr key={row.token}>
+                  <th scope="row">{row.token}</th><td>{row.expert}</td><td>{row.value}</td>
+                </tr>
               ))}
-            </div>
-
-            <div className="ep-status">
-              {step === 0 && t("Local")}
-              {step === 1 && t("Sorted")}
-              {step === 2 && t("Routed")}
-              {step === 3 && t("Done")}
-              {step === 4 && t("Returned")}
-            </div>
-          </div>
+              {rows.length === 0 && <tr><td className="ep-empty" colSpan={3}>{t.empty}</td></tr>}
+            </tbody>
+          </table>
         ))}
-      </div>
-
-      <div className="ep-step-box">
-        <h4 className="ep-step-title">{t("Step Description")}</h4>
-        <p className="ep-step-text">
-          {step === 0 && t("Every GPU starts with a local batch of tokens destined for different experts across the cluster.")}
-          {step === 1 && t("Tokens are sorted locally by their target GPU rank to prepare for contiguous network transmission.")}
-          {step === 2 && t("The All-to-All collective operation executes. Tokens are physically moved to the GPUs that own their target experts.")}
-          {step === 3 && t("Each GPU processes received tokens with local experts. Expert IDs must travel in the same order.")}
-          {step === 4 && t("Computed tokens are transmitted back to their origin GPUs (another All-to-All) to continue the dense layers.")}
-        </p>
       </div>
     </div>
   );
-};
+}

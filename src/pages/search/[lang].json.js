@@ -1,4 +1,5 @@
 import { chapterHeadingLabel } from '../../utils/chapter-heading-label.js';
+import { articleRoutes } from '../../utils/content-links.js';
 import { chapters } from '../../data/chapters.js';
 import { labsTitle } from '../../data/site.js';
 import { labFileLabels, teachingLabGroups } from '../../data/teaching-labs.js';
@@ -10,6 +11,7 @@ const headingLoaders = {
   en: import.meta.glob('../chapter-*/*.mdx', { import: 'getHeadings' }),
   ko: import.meta.glob('../ko/chapter-*/*.mdx', { import: 'getHeadings' }),
 };
+const articleFrontmatter = import.meta.glob('../../data/articles/*.md', { import: 'frontmatter' });
 
 export function getStaticPaths() {
   return [{ params: { lang: 'en' } }, { params: { lang: 'ko' } }];
@@ -50,5 +52,11 @@ export async function GET({ params: { lang } }) {
       return [`${task.title[lang]} · ${formats.join(', ')}`, task.id];
     })),
   };
-  return Response.json({ version: 1, lang, chapters: index, catalog });
+  const articles = await Promise.all(articleRoutes(lang).map(async route => {
+    const slug = route.split('/').at(-1);
+    const suffix = lang === 'ko' ? '.ko.md' : '.md';
+    const { title, description } = await articleFrontmatter[`../../data/articles/${slug}${suffix}`]();
+    return { path: withPagePath(route, basePath), title, description };
+  }));
+  return Response.json({ version: 1, lang, chapters: index, catalog, articles });
 }

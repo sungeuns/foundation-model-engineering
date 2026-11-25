@@ -1,5 +1,5 @@
 // The sidebar supplies the canonical URLs of the current translation.
-export function readSectionIndex(data, lang, paths, catalogPath) {
+export function readSectionIndex(data, lang, paths, catalogPath, articlePaths = new Set()) {
   if (data?.version !== 1 || data.lang !== lang || !Array.isArray(data.chapters)
       || data.chapters.length !== paths.size) throw new Error('Unexpected section index');
   const remaining = new Set(paths);
@@ -28,6 +28,28 @@ export function readSectionIndex(data, lang, paths, catalogPath) {
         // Use the shortened form for ranking only; always search the full label.
         unnumberedText: headingText.replace(/^(?:\d+(?:\.\d+)*[.)]|\d+(?:\.\d+)+)\s+/, ''),
         chapterText: normalizeSearchText(chapter.title),
+      });
+    }
+  }
+  // A previously cached index may not contain articles. Likewise, an older
+  // page can receive a newer index; only offer article URLs that its HTML knows.
+  if (data.articles !== undefined && articlePaths.size) {
+    if (!Array.isArray(data.articles)) throw new Error('Invalid articles');
+    const seen = new Set();
+    for (const article of data.articles) {
+      if (!article || ![article.title, article.description, article.path].every(
+        value => typeof value === 'string' && value.trim())) throw new Error('Invalid article');
+      if (!articlePaths.has(article.path) || seen.has(article.path)) continue;
+      seen.add(article.path);
+      const title = normalizeSearchText(article.title);
+      entries.push({
+        label: article.title,
+        chapter: lang === 'ko' ? '짧은 글' : 'Short article',
+        href: article.path + '#main-content',
+        headingText: title,
+        unnumberedText: title,
+        chapterText: '',
+        descriptionText: normalizeSearchText(article.description),
       });
     }
   }
@@ -61,8 +83,9 @@ export function findSections(entries, query, limit = 10) {
   const matches = [];
   for (const entry of entries) {
     const heading = entry.headingText;
-    if (!termSets.some(terms => terms.some(term => heading.includes(term)) &&
-        terms.every(term => heading.includes(term) || entry.chapterText.includes(term)))) continue;
+    const topic = entry.descriptionText ? heading + ' ' + entry.descriptionText : heading;
+    if (!termSets.some(terms => terms.some(term => topic.includes(term)) &&
+        terms.every(term => topic.includes(term) || entry.chapterText.includes(term)))) continue;
     let rank = 3;
     if (phrases.includes(heading) || phrases.includes(entry.unnumberedText)) rank = 0;
     else if (phrases.some(phrase => heading.startsWith(phrase) || entry.unnumberedText.startsWith(phrase))) rank = 1;

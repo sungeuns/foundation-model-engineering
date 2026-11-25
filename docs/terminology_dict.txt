@@ -29,3 +29,4 @@ probabilistic coherence = 확률 정합성
 estimand = 추정 대상
 noninferiority = 비열등성
 cluster bootstrap = 집단 단위 부트스트랩
+induction head = 귀납 헤드

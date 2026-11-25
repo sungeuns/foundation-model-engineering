@@ -23,11 +23,11 @@ In a standard Transformer block within an MoE model, the self-attention mechanis
 
 At the MoE feed-forward layer, a token may need an expert on another rank. The expert ownership map determines its destination.
 
-The data path has two network transfers around expert computation:
+For this top-1 dispatcher, each token takes three steps. Rows whose expert is on the same rank stay local.
 
-1.  **The Dispatch Phase (All-to-All):** Every GPU looks at its local tokens, groups them by their target expert, and transmits them across the network to the GPU that owns that expert.
+1.  **The Dispatch Phase (All-to-All):** Each rank groups its token rows by the rank that owns the chosen expert and sends each group to its owner.
 2.  **The Compute Phase:** Each rank receives the tokens routed to its local experts. Token counts can differ across ranks and across experts on the same rank.
-3.  **The Combine Phase (All-to-All):** The computed token representations are transmitted *back* across the network to the original GPUs that generated them, allowing the next dense attention layer to proceed.
+3.  **The Combine Phase (All-to-All):** Each expert sends its outputs back to the source ranks. Each source restores its original token order before the next layer.
 
 > **Read the timeline, not just the arrows.** In a simplified window with 4 ms of communication and 3 ms of independent local computation, perfect scheduling can hide at most 3 ms of that communication. At least 1 ms remains exposed even before resource contention. Expert computation that needs the received tokens cannot start before those tokens arrive.
 
@@ -73,13 +73,21 @@ In the six-token case, the first coordinate of each input row identifies its tok
 
 The script also runs a case where rank 0 starts empty and one where rank 1 receives nothing. Both processes still enter the collectives in the same order. The checks compare both coordinates with the expected output for every source token.
 
+<a id="interactive-visualization-the-ep-network-simulator"></a>
+
+### Does sending a result back put it in the right slot?
+
+Use the same three inputs as the CPU lab. Pick **Six tokens**, then **Send back**. Rank 0 already has all four of its results, yet the first row belongs to token 2. Select **Restore order** to see which value the next layer should read for token 1. The browser calculates the first coordinate of each row using the lab’s expert rule.
+
+<ExpertParallelismVisualizer lang="en" client:load />
+
+If rank 0 skips the final permutation, its first token gets 2 instead of 2001. The shape is still four rows by two coordinates. A shape check passes even though two tokens have each other's results.
+
 ---
 
 ## 3. Advanced Optimizations: Overlapping and GroupGEMM
 
-The example covers transport only. Expert computation dependent on received data must wait, but independent work need not stop. Overlap depends on streams, dependencies and contention for network and SM resources.
-
-Two opportunities are to overlap independent work with communication and to group small expert matrix multiplications. Neither changes the need to preserve routing identity.
+The CPU exercise checks row order. On a GPU, two other questions matter. How much of the transfer can run alongside independent computation? When an expert receives only a handful of tokens, how much time does its matrix product spend waiting for a kernel launch?
 
 ### Shared-expert work and overlap
 
@@ -92,17 +100,6 @@ Locally available shared-expert work can overlap routed-token transport when its
 Experts may receive very different numbers of tokens. Launching a separate small matrix multiplication for every nonempty expert can spend much of its time on launch and scheduling overhead. A grouped GEMM kernel schedules work from several matrix products together. It does not turn them into one mathematical matrix product or guarantee full GPU occupancy. Tile shapes, problem sizes, ordering, and scheduling overhead affect the result. The CUTLASS grouped scheduler documentation describes these mechanics; its current interface was checked **as of 2026-11-18**. [[5]](#ref-5)
 
 Before optimizing, compare per-expert token counts, useful work, and dispatch/compute/combine durations under the same routing assignments. An average step time can hide a rank that determines the whole step's completion time.
-
----
-
-## Interactive Visualization: The EP Network Simulator
-
-To build an intuition for how tokens physically move across a cluster during Expert Parallelism, use the interactive simulator below. It models a 4-GPU cluster where each GPU holds one specific expert.
-
-<ExpertParallelismVisualizer client:load />
-
-This is a step-through diagram with authored routing assignments. It does not execute collectives or measure network speed. The check marks denote a conceptual compute stage, not a calculated expert output.
-
 
 ---
 
@@ -140,7 +137,7 @@ Next, **5.4 Collapsing & Load Balancing** examines the trade-offs among capacity
 
 <details>
 <summary>Quiz 5: Does a correct forward dispatch establish a working MoE trainer?</summary>
-*No. Training also needs weighted top-k combination, inverse permutations, gradients across communication, padding/capacity semantics, optimizer/checkpoint state and collective failure handling. A small transport test cannot establish those properties or GPU throughput.*
+*No. The example restores source order for top-1. Training also needs gradients across communication, a capacity policy, optimizer and checkpoint state, and collective failure handling. A top-k router must additionally combine multiple weighted outputs per token. A small transport test cannot establish those properties or GPU throughput.*
 </details>
 
 ---

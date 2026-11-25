@@ -15,6 +15,7 @@ export function setupContentsSearch(sidebar: HTMLElement, closeDrawer: () => voi
   }));
   const paths = new Set(groups.flatMap(({ links }) => links.map(({ link }) => link.pathname)));
   const catalogPath = sidebar.querySelector<HTMLAnchorElement>('#labsLink')?.pathname;
+  const articlePaths: Set<string> = new Set(JSON.parse(input.dataset.articlePaths || '[]'));
   const lang = document.documentElement.lang;
   const ko = lang === 'ko';
   let index: ReturnType<typeof readSectionIndex> | undefined;
@@ -50,11 +51,11 @@ export function setupContentsSearch(sidebar: HTMLElement, closeDrawer: () => voi
     }
 
     const chapters = ko ? `장 ${chapterCount}개` : `${chapterCount} chapter${chapterCount === 1 ? '' : 's'}`;
-    if (loading) status.textContent = ko ? `${chapters} · 절 검색 중…` : `${chapters} · Searching sections…`;
-    else if (failed) status.textContent = ko ? `${chapters} · 절 목록을 불러오지 못했습니다. 다시 시도하려면 검색어를 수정하세요.` : `${chapters} · Sections unavailable. Edit the query to retry.`;
-    else if (!chapterCount && !total) status.textContent = ko ? '일치하는 장이나 절이 없습니다.' : 'No matching chapters or sections.';
+    if (loading) status.textContent = ko ? `${chapters} · 절과 글 검색 중…` : `${chapters} · Searching sections and articles…`;
+    else if (failed) status.textContent = ko ? `${chapters} · 절과 글 목록을 불러오지 못했습니다. 다시 시도하려면 검색어를 수정하세요.` : `${chapters} · Sections and articles unavailable. Edit the query to retry.`;
+    else if (!chapterCount && !total) status.textContent = ko ? '검색 결과가 없습니다.' : 'No matches.';
     else {
-      const sections = ko ? `절 ${total}개` : `${total} section${total === 1 ? '' : 's'}`;
+      const sections = ko ? `관련 절·글 ${total}개` : `${total} matching ${total === 1 ? 'section or article' : 'sections or articles'}`;
       const capped = total > matches.length ? (ko ? ` (상위 ${matches.length}개 표시)` : ` (showing ${matches.length})`) : '';
       status.textContent = `${chapters} · ${sections}${capped}`;
     }
@@ -66,7 +67,7 @@ export function setupContentsSearch(sidebar: HTMLElement, closeDrawer: () => voi
     try {
       const response = await fetch(input.dataset.indexUrl!);
       if (!response.ok) throw new Error('Index unavailable');
-      index = readSectionIndex(await response.json(), lang, paths, catalogPath);
+      index = readSectionIndex(await response.json(), lang, paths, catalogPath, articlePaths);
     } catch {
       failed = true;
     } finally {
