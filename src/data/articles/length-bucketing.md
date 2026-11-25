@@ -3,7 +3,7 @@ title: "Why length bucketing cut padding by two-thirds and left peak KV memory u
 published: false
 description: "Pair six prompts two ways, count the padding and reproduce the peak key/value cache size with a few lines of Python."
 tags: python, machinelearning
-canonical_url: https://sungeuns.github.io/foundation-model-engineering/chapter-12/length-bucketing-lab/
+canonical_url: https://sungeuns.github.io/foundation-model-engineering/articles/length-bucketing/
 ai_disclosure_level: fully_autonomous
 chapter: /chapter-12/length-bucketing-lab
 firstPublished: "2026-11-25T00:27:23Z"
@@ -48,7 +48,7 @@ for order in (lengths, sorted(lengths)):
 
 ## What to measure on your worker
 
-The [CPU experiment](https://sungeuns.github.io/foundation-model-engineering/labs/kv_batch_bucketing.py) counts bytes in the actual tensors. The [recorded run](https://sungeuns.github.io/foundation-model-engineering/labs/2026-11/kv-batch-bucketing.json) includes every pair and each prompt's greedy next-token ID. All six prompts kept the same next-token ID when run alone and under both batching policies.
+The [CPU experiment](https://sungeuns.github.io/foundation-model-engineering/labs/kv_batch_bucketing.py) counts bytes in the actual tensors. The [recorded run](https://sungeuns.github.io/foundation-model-engineering/labs/2026-11/kv-batch-bucketing.json) includes every pair and each prompt's greedy next-token ID. All six prompts kept the same next-token ID when run alone and under both batching policies. For each prompt the script also checked the full vector of next-token logits against its solo run, with absolute and relative tolerances of `1e-4`. [Inspect the comparison on GitHub](https://github.com/sungeuns/foundation-model-engineering/blob/d4d45703a0941543c63afc406bcaf21e0b99a036/public/labs/kv_batch_bucketing.py#L100-L109)
 
 For a service that waits to find similar-length partners, measure the time spent in the queue as well as peak cache size. For a paged engine, count the live blocks it actually allocates. This experiment used dense batches and measured the KV tensor payload. Process memory, allocator reservations and request latency require their own measurements.
 

@@ -1,6 +1,11 @@
 export const authorName = { given: 'Seongeun', family: 'So' };
 
-export const whisperArticlePath = '/articles/whisper-sample-rate';
+export const shortArticlePaths = {
+  whisper: '/articles/whisper-sample-rate',
+  loop: '/articles/loop-cache-storage',
+  bucketing: '/articles/length-bucketing',
+};
+export const whisperArticlePath = shortArticlePaths.whisper;
 
 export const labsTitle = { en: 'Hands-on labs and teaching materials', ko: '실습과 수업 자료' };
 

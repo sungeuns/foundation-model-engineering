@@ -6,7 +6,7 @@ import { site } from '../src/data/site.js';
 import { chapterFeedHub } from '../src/utils/chapter-feed.js';
 
 const base = new URL('/foundation-model-engineering/', site.url);
-const feeds = ['feed.xml', 'ko/feed.xml', 'articles.xml'];
+const feeds = ['feed.xml', 'ko/feed.xml', 'articles.xml', 'ko/articles.xml'];
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 
 function entries(hashes) {

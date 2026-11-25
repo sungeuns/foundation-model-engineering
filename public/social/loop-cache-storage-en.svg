@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" xml:lang="en" role="img" aria-labelledby="card-title card-description">
+<title id="card-title">One more token, a smaller KV buffer</title><desc id="card-description">Measured KV storage after a single pass through 24 layers on CPU. From six to seven tokens, the logical tensor sizes rise from 10.5 to 11 KiB. Their backing allocations fall from 18 to 13.5 KiB. One sliding-window layer’s key tensor retains 192 B while its allocation shrinks from 384 B to 256 B.</desc>
+<rect width="1200" height="630" fill="#f5f2eb"/>
+<g font-family="DejaVu Sans, sans-serif" fill="#192a30">
+<text x="64" y="83" font-size="53" font-weight="700">One more token, a smaller KV buffer</text>
+<text x="66" y="136" font-size="27" fill="#4e5d61">One pass through a 24-layer decoder with random FP32 weights on CPU.</text>
+<text x="466" y="209" font-size="29" font-weight="600">After 6 tokens</text><text x="828" y="209" font-size="29" font-weight="600">After 7 tokens</text>
+<path d="M64 230H1136 M64 362H1136 M64 498H1136" stroke="#bcc7c0" stroke-width="2"/>
+<text x="68" y="298" font-size="36" font-weight="600">Logical KV size</text><text x="466" y="298" font-size="46" font-weight="700">10.5 KiB</text>
+<rect x="466" y="317" width="290" height="18" rx="4" fill="#dce3de"/>
+<rect x="466" y="317" width="169.16666666666666" height="18" rx="4" fill="#385c72"/><text x="828" y="298" font-size="46" font-weight="700">11 KiB</text>
+<rect x="828" y="317" width="290" height="18" rx="4" fill="#dce3de"/>
+<rect x="828" y="317" width="177.22222222222223" height="18" rx="4" fill="#385c72"/><text x="68" y="428" font-size="36" font-weight="600">Backing storage</text><text x="466" y="428" font-size="46" font-weight="700">18 KiB</text>
+<rect x="466" y="447" width="290" height="18" rx="4" fill="#dce3de"/>
+<rect x="466" y="447" width="290" height="18" rx="4" fill="#256257"/><text x="828" y="428" font-size="46" font-weight="700">13.5 KiB</text>
+<rect x="828" y="447" width="290" height="18" rx="4" fill="#dce3de"/>
+<rect x="828" y="447" width="217.5" height="18" rx="4" fill="#256257"/>
+<text x="66" y="568" font-size="25" fill="#4e5d61">One layer’s key tensor stays at 192 B. Its buffer shrinks from 384 B to 256 B.</text>
+</g></svg>

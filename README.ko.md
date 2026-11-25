@@ -54,7 +54,7 @@ python public/labs/paired_release.py --scenario missing
 ## 업데이트와 기여
 
 - 강의계획서나 논문에 책 전체를 인용할 때는 [서지 정보](CITATION.cff)를 참고하세요. GitHub의 **Cite this repository** 에서 APA 또는 BibTeX로 복사할 수 있습니다. 각 절의 **이 절 인용하기 (RIS)** 에는 언어와 수정일, 해당 판의 원고 링크가 담겨 있습니다. 실험 결과를 보고할 때는 실행한 코드 버전과 환경도 함께 적어 주세요.
-- [한국어 RSS 구독](https://sungeuns.github.io/foundation-model-engineering/ko/feed.xml)으로 최근 수정한 절을 확인할 수 있습니다. [영문 RSS](https://sungeuns.github.io/foundation-model-engineering/feed.xml)도 제공합니다.
+- RSS 리더에서 [한국어로 쓴 짧은 기술 글 전문](https://sungeuns.github.io/foundation-model-engineering/ko/articles.xml)을 읽거나 [최근 수정된 절](https://sungeuns.github.io/foundation-model-engineering/ko/feed.xml)을 구독할 수 있습니다. [영문판 수정 내역](https://sungeuns.github.io/foundation-model-engineering/feed.xml)도 제공합니다.
 - 설명이나 코드가 잘못됐다면 [수정 제안](https://github.com/sungeuns/foundation-model-engineering/issues/new/choose)에 페이지, 문제 지점, 출처나 재현 예제를 남겨주세요. 어색한 한국어도 좋은 수정 대상입니다.
 - [기여 안내](CONTRIBUTING.md)를 참고해 영문·한국어 설명, 실행 예제, 접근성을 개선할 수 있습니다.
 - 도움이 된 설명이 있었다면 [GitHub Star](https://github.com/sungeuns/foundation-model-engineering)로 책을 저장하거나, 같은 문제를 겪는 동료에게 해당 절을 공유해주세요.

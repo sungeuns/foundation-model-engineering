@@ -5,7 +5,7 @@ import BookLayout from '../../layouts/BookLayout.astro';
 
 import modelSnapshot from '../../data/commercial-model-snapshot.json';
 import { chapters } from '../../data/chapters.js';
-import { servingGuide, whisperArticlePath } from '../../data/site.js';
+import { servingGuide, shortArticlePaths } from '../../data/site.js';
 import { withBasePath, withPagePath } from '../../utils/paths.js';
 
 const getPath = (p) => `/ko${p}`;
@@ -13,7 +13,16 @@ const getPath = (p) => `/ko${p}`;
 
 <BookLayout title="홈" lang="ko">
   <h1>파운데이션 모델 엔지니어링</h1>
-  <p>CPU에서 실행하는 PyTorch 예제와 브라우저 실습으로 모델의 학습·서빙·평가를 익히는 무료 한영 교재입니다. <a href={withPagePath(getPath(whisperArticlePath))}>Whisper가 11초짜리 녹음을 30초로 받아들인 이유를 직접 들어 보세요.</a></p>
+  <p>CPU에서 실행하는 PyTorch 예제와 브라우저 실습으로 모델의 학습·서빙·평가를 익히는 무료 한영 교재입니다.</p>
+
+  <section aria-labelledby="short-reads">
+    <h2 id="short-reads">짧은 글</h2>
+    <ul>
+      <li><a href={withPagePath(getPath(shortArticlePaths.bucketing))}>패딩을 3분의 1로 줄여도 최대 KV 메모리가 그대로였던 이유</a></li>
+      <li><a href={withPagePath(getPath(shortArticlePaths.loop))}>토큰 하나를 더 넣었는데 KV 버퍼가 작아진 이유</a></li>
+      <li><a href={withPagePath(getPath(shortArticlePaths.whisper))}>Whisper에서 11초짜리 녹음이 30초가 된 이유</a></li>
+    </ul>
+  </section>
 
   <FeaturedLessons lang="ko" />
 

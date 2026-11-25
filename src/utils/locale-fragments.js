@@ -54,7 +54,7 @@ const lessonFragments = {
   '/chapter-16/decision-models-and-selective-prediction': ['calibration-drift-example'],
   '/chapter-17/elo-rating-and-leaderboards': ['elo-vote-order'],
   '/chapter-17/academic-benchmarks': ['pass-at-k-example'],
-  '/chapter-17/commercial-model-benchmarks': ['long-context-cost', 'background-completion-cost', 'ling-32-air-context'],
+  '/chapter-17/commercial-model-benchmarks': ['long-context-cost', 'background-completion-cost', 'prompt-cache-cost', 'ling-32-air-context'],
   '/chapter-17/production-evaluation-and-release-gates': ['release-gate-example'],
   '/chapter-17/llm-as-a-judge': ['translation-rubric-example'],
   '/chapter-17/experimental-design-and-uncertainty': ['release-lab'],

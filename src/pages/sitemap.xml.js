@@ -1,5 +1,6 @@
 import { chapters } from '../data/chapters.js';
-import { site, whisperArticlePath } from '../data/site.js';
+import { site } from '../data/site.js';
+import { articleRoutes } from '../utils/content-links.js';
 import { getBasePath, withBasePath } from '../utils/paths.js';
 import { getContentDates } from '../utils/content-dates.js';
 
@@ -10,8 +11,7 @@ const pages = [
   // alone cannot establish when the reader-facing content last changed.
   { path: '/labs' },
   { path: '/ko/labs' },
-  { path: whisperArticlePath },
-  { path: `/ko${whisperArticlePath}` },
+  ...['en', 'ko'].flatMap(lang => articleRoutes(lang).map(path => ({ path }))),
   ...chapters.flatMap((chapter) =>
     chapter.subs.flatMap((sub) => [
       { path: sub.path, source: `src/pages${sub.path}.mdx` },

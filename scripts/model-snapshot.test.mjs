@@ -1,8 +1,29 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 const snapshot = JSON.parse(readFileSync('src/data/commercial-model-snapshot.json', 'utf8'));
+
+test('the cache cost example prices each input token once and uses total input for the long rate', () => {
+  const check = `
+from decimal import Decimal
+from request_cost import text_request_usd
+
+model = "gpt-6.2-sol"
+cache = dict(cached_tokens=200_000, write_30m_tokens=50_000, write_12h_tokens=20_000)
+# 2,000 ordinary and 270,000 cached or written tokens, plus 2,000 output tokens.
+assert text_request_usd(model, 272_000, 2_000, **cache) == Decimal("0.269")
+assert text_request_usd(model, 272_001, 2_000, **cache) == Decimal("0.528004")
+try:
+    text_request_usd(model, 269_999, 2_000, **cache)
+except ValueError:
+    pass
+else:
+    raise AssertionError("Cache counts cannot exceed total input")
+`;
+  execFileSync('python3', ['-B', '-c', check], { cwd: 'public/labs' });
+});
 
 test('model profiles preserve dates, provenance, and finite optional measurements', () => {
   assert.match(snapshot.asOf, /^\d{4}-\d{2}-\d{2}$/);

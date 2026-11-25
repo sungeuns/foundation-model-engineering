@@ -53,7 +53,7 @@ Then try `uncertain` and `missing`. The [evaluation guide](https://sungeuns.gith
 
 - For a syllabus or paper, use [the book citation](CITATION.cff) or GitHub’s **Cite this repository** for APA or BibTeX. Each chapter’s **Cite this chapter (RIS)** download records its language, revision date and exact manuscript. When reporting an experiment, also record the code revision and runtime you used.
 - Bookmark the project with a GitHub star if it is useful. Share a specific lesson with someone facing the same engineering problem.
-- Subscribe to chapter updates: [English RSS](https://sungeuns.github.io/foundation-model-engineering/feed.xml) · [한국어 RSS](https://sungeuns.github.io/foundation-model-engineering/ko/feed.xml).
+- Subscribe to the [full text of selected articles](https://sungeuns.github.io/foundation-model-engineering/articles.xml) or follow chapter updates in [English](https://sungeuns.github.io/foundation-model-engineering/feed.xml) or [한국어](https://sungeuns.github.io/foundation-model-engineering/ko/feed.xml).
 - [Report a correction](https://github.com/sungeuns/foundation-model-engineering/issues/new/choose): include the page, the claim or behavior, and a source or reproducible example.
 - [Contribute](CONTRIBUTING.md): technical corrections, clearer examples, Korean phrasing, and accessible interactions are welcome.
 

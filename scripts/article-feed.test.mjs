@@ -10,6 +10,7 @@ import { chapterFeedHub } from '../src/utils/chapter-feed.js';
 const dist = process.env.SEARCH_DIST_DIR || 'dist';
 const base = 'https://sungeuns.github.io/foundation-model-engineering/';
 const original = base + 'chapter-12/length-bucketing-lab/';
+const bucketingArticle = base + 'articles/length-bucketing/';
 
 test('the article source can be pasted whole into the DEV Basic Markdown editor', () => {
   const source = readFileSync(new URL('../src/data/articles/length-bucketing.md', import.meta.url), 'utf8');
@@ -17,7 +18,7 @@ test('the article source can be pasted whole into the DEV Basic Markdown editor'
   const [, yaml, body] = source.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
   const fields = load(yaml);
   assert.equal(fields.published, false);
-  assert.equal(fields.canonical_url, original);
+  assert.equal(fields.canonical_url, bucketingArticle);
   assert.equal(fields.ai_disclosure_level, 'fully_autonomous');
   assert.deepEqual(fields.tags.split(',').map(tag => tag.trim()), ['python', 'machinelearning']);
   assert.match(fields.title, /length bucketing/i);
@@ -28,25 +29,25 @@ test('the article source can be pasted whole into the DEV Basic Markdown editor'
   assert.match(body.trimEnd(), /An AI coding assistant wrote this adaptation[^\n]+\*$/);
 });
 
-function readSelectedFeed() {
+function readSelectedFeed(prefix = '') {
   const xml = execFileSync('python3', ['-c', `
 import json, sys, xml.etree.ElementTree as ET
 channel = ET.parse(sys.argv[1]).find('channel')
 items = [{child.tag: child.text for child in item} for item in channel.findall('item')]
 self_link = channel.find('{http://www.w3.org/2005/Atom}link[@rel="self"]')
 hubs = channel.findall('{http://www.w3.org/2005/Atom}link[@rel="hub"]')
-print(json.dumps([self_link.attrib['href'], [hub.attrib['href'] for hub in hubs], items]))
-`, join(dist, 'articles.xml')], { encoding: 'utf8' });
+print(json.dumps([self_link.attrib['href'], [hub.attrib['href'] for hub in hubs], items, channel.findtext('language'), channel.findtext('link')]))
+`, join(dist, prefix, 'articles.xml')], { encoding: 'utf8' });
   return JSON.parse(xml);
 }
 
-test('the selected feed imports a complete, runnable article under its original canonical URL', () => {
+test('the selected feed imports a complete, runnable article under its new permalink and keeps the original GUID', () => {
   const [self, hubs, items] = readSelectedFeed();
   assert.equal(self, base + 'articles.xml');
   assert.deepEqual(hubs, [chapterFeedHub]);
-  const item = items.find(post => post.link === original);
+  const item = items.find(post => post.link === bucketingArticle);
   assert.ok(item);
-  assert.equal(items.filter(post => post.link === original).length, 1);
+  assert.equal(items.filter(post => post.link === bucketingArticle).length, 1);
   assert.equal(item.guid, original);
   assert.equal(item.pubDate, 'Wed, 25 Nov 2026 00:27:23 GMT');
   const body = item['{http://purl.org/rss/1.0/modules/content/}encoded'];
@@ -145,7 +146,7 @@ test('readers can discover each edition’s feeds from the homepage or an articl
       const feeds = [...head.matchAll(/<link\b[^>]*>/g)]
         .map(([tag]) => Object.fromEntries(parseFragment(tag).childNodes[0].attrs.map(a => [a.name, a.value])))
         .filter(link => link.rel === 'alternate' && link.type === 'application/rss+xml');
-      const paths = prefix ? ['ko/feed.xml'] : ['feed.xml', 'articles.xml'];
+      const paths = [prefix + 'feed.xml', prefix + 'articles.xml'];
       assert.deepEqual(feeds.map(link => new URL(link.href, base).href), paths.map(path => base + path));
       assert.equal(new Set(feeds.map(link => link.title)).size, feeds.length);
       const footer = html.match(/<footer\b[\s\S]*?<\/footer>/)[0];
@@ -159,11 +160,11 @@ test('the loop-cache article preserves the measured bytes and points to the bili
   const record = JSON.parse(readFileSync(join(dist, 'labs/2026-11/loop-cache.json'), 'utf8'));
   const source = readFileSync('src/data/articles/loop-cache-storage.md', 'utf8');
   const [, snippet] = source.match(/^```python\n([\s\S]+?)\n```/m);
-  const articleUrl = base + chapter + '#loop-cache-storage';
+  const articleUrl = base + 'articles/loop-cache-storage/';
   const [, , items] = readSelectedFeed();
   const matches = items.filter(item => item.link === articleUrl);
   assert.equal(matches.length, 1);
-  assert.equal(matches[0].guid, articleUrl);
+  assert.equal(matches[0].guid, base + chapter + '#loop-cache-storage');
   const body = matches[0]['{http://purl.org/rss/1.0/modules/content/}encoded'];
   const first = record.runs.find(row => row.passes === 1);
   const savings = first.prefill.backing_bytes - first.after_one_token.backing_bytes;
@@ -182,5 +183,41 @@ test('the loop-cache article preserves the measured bytes and points to the bili
       assert.ok(lesson.includes('| ' + cells.join(' | ') + ' |'));
     }
     assert.ok(readFileSync(join(dist, prefix, chapter, 'index.html'), 'utf8').includes('id="loop-cache-storage"'));
+  }
+});
+
+test('Korean subscribers receive three complete articles with local permalinks, code and measurements', () => {
+  const [self, hubs, items, language, home] = readSelectedFeed('ko/');
+  assert.equal(language, 'ko');
+  assert.equal(home, base + 'ko/');
+  assert.equal(self, base + 'ko/articles.xml');
+  assert.deepEqual(hubs, [chapterFeedHub]);
+  assert.equal(items.length, 3);
+  const allItems = [...readSelectedFeed()[2], ...items];
+  assert.equal(new Set(allItems.map(item => item.guid)).size, 6);
+  const sources = [
+    ['loop-cache-storage', 'loop_cache.py', 'loop-cache.json', '4,608'],
+    ['length-bucketing', 'kv_batch_bucketing.py', 'kv-batch-bucketing.json', '990 KiB'],
+    ['whisper-sample-rate', 'whisper_sample_rate.py', 'whisper-sample-rate.json', '30.31875'],
+  ];
+  for (const [slug, script, record, measurement] of sources) {
+    const route = 'ko/articles/' + slug + '/';
+    const item = items.find(post => post.link === base + route);
+    assert.ok(item, slug);
+    assert.equal(item.guid, item.link);
+    const original = readFileSync('src/data/articles/' + slug + '.ko.md', 'utf8');
+    const meta = load(original.match(/^---\n([\s\S]*?)\n---\n/)[1]);
+    assert.equal(item.title, meta.title);
+    assert.equal(item.pubDate, new Date(meta.firstPublished).toUTCString());
+    assert.match(item.description, /[가-힣]/u);
+    const body = item['{http://purl.org/rss/1.0/modules/content/}encoded'];
+    assert.ok(body.includes(measurement));
+    for (const file of [script, '2026-11/' + record]) {
+      assert.ok(body.includes(base + 'labs/' + file), file);
+    }
+    assert.ok(body.includes('https://github.com/sungeuns/foundation-model-engineering/blob/'));
+    assert.ok(body.includes('<pre'));
+    const html = readFileSync(join(dist, route, 'index.html'), 'utf8');
+    assert.ok(html.includes(item.title) && html.includes(measurement), route);
   }
 });

@@ -23,6 +23,12 @@ test('a short article translation announces its own URL and the player reaches b
   assert.deepEqual(changedRoutes(['src/components/chapter-11/SampleRateListening.astro']), [article, 'ko/' + article, chapter, 'ko/' + chapter]);
 });
 
+test('new short reads notify only their changed language and keep their own canonical URLs', () => {
+  const files = ['src/data/articles/loop-cache-storage.ko.md', 'src/pages/articles/length-bucketing.astro',
+    'src/data/articles/length-bucketing.md', 'src/pages/ko/articles/loop-cache-storage.astro'];
+  assert.deepEqual(changedRoutes(files), ['ko/articles/loop-cache-storage/', 'articles/length-bucketing/']);
+});
+
 test('edition-specific catalog edits select one URL and shared inputs select both', () => {
   assert.deepEqual(changedRoutes(['src/pages/labs/index.astro']), ['labs/']);
   assert.deepEqual(changedRoutes(['src/pages/ko/labs/index.astro']), ['ko/labs/']);

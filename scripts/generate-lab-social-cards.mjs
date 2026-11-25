@@ -16,6 +16,7 @@ import { attentionTokens, calculateAttention } from '../src/components/chapter-3
 import { compareTitles, examples } from '../src/components/chapter-14/lexical-dense.mjs';
 import { denseResults, bm25Results, fuseRanks } from '../src/components/chapter-14/rank-fusion.mjs';
 import { GiB, kvCapacity } from '../src/components/chapter-12/kv-capacity.mjs';
+import loopCacheRun from '../public/labs/2026-11/loop-cache.json' with { type: 'json' };
 import bucketingRun from '../public/labs/2026-11/kv-batch-bucketing.json' with { type: 'json' };
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -24,6 +25,21 @@ const text = (value, x, y, size, opts = '') => `<text x="${x}" y="${y}" font-siz
 const ink = '#192a30', teal = '#256257', muted = '#4e5d61';
 
 const copy = {
+  'loop-cache-storage': {
+    path: '/articles/loop-cache-storage', render: loopCacheStorageSvg,
+    en: {
+      title: 'One more token, a smaller KV buffer',
+      setup: 'One pass through a 24-layer decoder with random FP32 weights on CPU.',
+      states: ['After 6 tokens', 'After 7 tokens'], logical: 'Logical KV size', backing: 'Backing storage',
+      detail: (before, after) => `One layer’s key tensor stays at ${before[0]} B. Its buffer shrinks from ${before[1]} B to ${after[1]} B.`,
+    },
+    ko: {
+      title: '토큰이 하나 늘었는데 KV 버퍼는 줄었다',
+      setup: '가중치를 무작위로 초기화한 24개 층을 CPU에서 FP32로 한 번 통과시켰습니다.',
+      states: ['토큰 6개 처리 후', '토큰 7개 처리 후'], logical: 'KV 텐서의 논리적 크기', backing: '실제 버퍼 크기',
+      detail: (before, after) => `한 층의 키 텐서는 ${before[0]} B로 그대로입니다. 버퍼는 ${before[1]} B에서 ${after[1]} B로 줄었습니다.`,
+    },
+  },
   'whisper-sample-rate': {
     path: '/articles/whisper-sample-rate', render: sampleRateSvg,
     en: {
@@ -243,6 +259,39 @@ if (args.length && (args.length !== 2 || args[0] !== '--only' || !Object.hasOwn(
   throw new Error(`Usage: node scripts/generate-lab-social-cards.mjs [--only ${Object.keys(copy).join('|')}]`);
 }
 const selectedKind = args[1];
+
+function loopCacheStorageSvg(lesson, lang, card) {
+  const c = lesson[lang];
+  const run = loopCacheRun.runs.find(row => row.passes === 1);
+  const states = [run.prefill, run.after_one_token];
+  const maxBytes = Math.max(...states.map(state => state.backing_bytes));
+  const plot = [
+    { label: c.logical, field: 'logical_bytes', color: '#385c72' },
+    { label: c.backing, field: 'backing_bytes', color: teal },
+  ].map(({ label, field, color }, row) => {
+    const y = 298 + row * 130;
+    const values = states.map((state, i) => {
+      const x = 466 + 362 * i;
+      const width = 290 * state[field] / maxBytes;
+      return `${text(state[field] / 1024 + ' KiB', x, y, 46, 'font-weight="700"')}
+<rect x="${x}" y="${y + 19}" width="290" height="18" rx="4" fill="#dce3de"/>
+<rect x="${x}" y="${y + 19}" width="${width}" height="18" rx="4" fill="${color}"/>`;
+    }).join('');
+    return text(label, 68, y, lang === 'ko' ? 32 : 36, 'font-weight="600"') + values;
+  }).join('');
+  const note = c.detail(run.prefill.first_sliding_key_bytes, run.after_one_token.first_sliding_key_bytes);
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" xml:lang="${lang}" role="img" aria-labelledby="card-title card-description">
+<title id="card-title">${escape(c.title)}</title><desc id="card-description">${escape(card.alt)}</desc>
+<rect width="1200" height="630" fill="#f5f2eb"/>
+<g font-family="${lang === 'ko' ? 'Noto Sans CJK KR, DejaVu Sans' : 'DejaVu Sans'}, sans-serif" fill="${ink}">
+${text(c.title, 64, 83, 53, 'font-weight="700"')}
+${text(c.setup, 66, 136, 27, `fill="${muted}"`)}
+${c.states.map((label, i) => text(label, 466 + 362 * i, 209, 29, 'font-weight="600"')).join('')}
+<path d="M64 230H1136 M64 362H1136 M64 498H1136" stroke="#bcc7c0" stroke-width="2"/>
+${plot}
+${text(note, 66, 568, lang === 'ko' ? 29 : 25, `fill="${muted}"`)}
+</g></svg>\n`;
+}
 
 async function sampleRateSvg(lesson, lang, card) {
   const labels = lesson[lang];

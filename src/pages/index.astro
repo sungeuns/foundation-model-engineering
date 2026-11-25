@@ -5,13 +5,22 @@ import BookLayout from '../layouts/BookLayout.astro';
 
 import modelSnapshot from '../data/commercial-model-snapshot.json';
 import { chapters } from '../data/chapters.js';
-import { servingGuide, whisperArticlePath } from '../data/site.js';
+import { servingGuide, shortArticlePaths } from '../data/site.js';
 import { withBasePath, withPagePath } from '../utils/paths.js';
 ---
 
 <BookLayout title="Home" lang="en">
   <h1>Foundation Model Engineering</h1>
-  <p>A free English and Korean textbook on training, serving, and evaluating foundation models, with browser experiments and CPU PyTorch labs. <a href={withPagePath(whisperArticlePath)}>Hear why an 11-second recording can look 30 seconds long to Whisper.</a></p>
+  <p>A free English and Korean textbook on training, serving, and evaluating foundation models, with browser experiments and CPU PyTorch labs.</p>
+
+  <section aria-labelledby="short-reads">
+    <h2 id="short-reads">Short reads</h2>
+    <ul>
+      <li><a href={withPagePath(shortArticlePaths.bucketing)}>Why length bucketing cut padding but left peak KV memory unchanged</a></li>
+      <li><a href={withPagePath(shortArticlePaths.loop)}>Why one more token shrank a KV cache buffer</a></li>
+      <li><a href={withPagePath(shortArticlePaths.whisper)}>How an 11-second recording became 30 seconds for Whisper</a></li>
+    </ul>
+  </section>
 
   <FeaturedLessons lang="en" />
 

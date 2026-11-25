@@ -89,6 +89,8 @@ The disclosed design reuses a 28-layer block twice in a 750B-scale model, with g
 
 **Pricing follow-up, as of 2026-11-25.** Suppose one text request uses 10,000 uncached input tokens and 2,000 billed output tokens, with no tools. Z.ai lists GLM-5.3 at USD 1.40 per million input tokens and 4.40 per million output tokens. That request costs USD 0.0228. GLM-5.3 Flash lists 0.15 and 0.50 respectively, giving USD 0.0025. The same public price sheet has no token rate for GLM-5.4. Budget a 5.4 Coding Plan workload against the plan's quota until a pay-as-you-go rate is published. [[7]](#ref-7)
 
+Suppose you run 20 coding tickets twice on GLM Coding Plan, once at `reasoning_effort: medium` and once at `high`. As of 2026-11-25, Z.ai maps both settings to **high** on GLM-5.4. The 40 responses sample a single effort level. A difference in pass counts cannot estimate the effect of raising effort. Compare `low` with `high` on the same tickets and record both the requested and the mapped level. With no explicit effort, turning thinking off selects `low`, which still performs lightweight reasoning. [[6]](#ref-6)
+
 ### GPT-6.2 Astra and Sol: measure the operating point
 
 On November 17, OpenAI released **GPT-6.2 Astra and Sol** through the API and made both available in ChatGPT Work and Codex on eligible paid plans. OpenAI hosts both models and has not published their weights or detailed architecture. [[94]](#ref-94) In the API, both accept text and images and return text. The 1,050,000-token context window has separate limits of 922,000 input and 128,000 output tokens. Tool calling requires Responses, and neither model accepts reasoning effort `none`. [[8]](#ref-8) [[9]](#ref-9) [[10]](#ref-10)
@@ -141,7 +143,7 @@ As of 2026-11-25, Baidu publishes default, FP8 and BF16 weights. A serving bench
 
 **Rates checked 2026-11-25.** At Standard short-context rates, GPT-6.2 Astra costs \$8 input/\$40 output per million tokens and Sol costs \$2/\$10. Above **272,000 input tokens**, the input rate doubles and the output rate becomes 1.5 times the base rate **for the whole request** [[9]](#ref-9) [[10]](#ref-10).
 
-Imagine a repository review with 300,000 uncached input tokens and 10,000 billed output tokens. Using Sol's base rates gives \$0.70. Applying the long-context rule gives **\$1.35**. Astra's corresponding amount is **\$5.40**. Reducing the input can affect both token count and the applicable rate; whether it preserves quality needs a separate evaluation.
+For the long-context and background examples, assume zero cache reads and zero cache writes. Imagine a repository review with 300,000 uncached input tokens and 10,000 billed output tokens. Using Sol's base rates gives \$0.70. Applying the long-context rule gives **\$1.35**. Astra's corresponding amount is **\$5.40**. Reducing the input can affect both token count and the applicable rate; whether it preserves quality needs a separate evaluation.
 
 Now compare two pairs of Sol requests. Each pair sends 544,000 input tokens and produces 20,000 billed output tokens in total. Split the input evenly and both calls qualify for the short rate: the pair costs **\$1.288000**. Move just one input token from the first call to the second, keeping output fixed at 10,000 each, and the pair costs **\$1.882002**. Applying the rate to the average request hides the extra \$0.594002. Price individual requests before you aggregate.
 
@@ -153,7 +155,23 @@ Suppose a daytime report and an overnight report each use 50,000 uncached input 
 
 The discounted requests use Standard processing with `background: true`, streaming off, and the selected `background_options.completion_window`. The clock starts when the API accepts the request and targets its initial response. If a tool call requires another round trip, the first window does not set a deadline for that whole workflow [[132]](#ref-132).
 
-Run `python request_cost.py` to reproduce both the 272K boundary and the background-window example with the standard library. The calculation includes billed reasoning tokens in output and excludes cache reads, tools, images and taxes. [[9]](#ref-9) [[10]](#ref-10) [[133]](#ref-133)
+<a id="prompt-cache-cost"></a>
+
+### How many tickets pay for a 12-hour cache write?
+
+Suppose a support desk sends GPT-6.2 Sol the same 40,000-token policy at the start of every ticket. Each ticket adds 1,000 ordinary input tokens and generates 500 billed output tokens. At Standard rates on 2026-11-25, those last two items cost \$0.007 per ticket. For the policy alone, ordinary input costs \$0.080, a 12-hour cache write costs \$0.200, and a full cache read costs \$0.004. The write rate covers the input itself. [[10]](#ref-10) [[133]](#ref-133) [[136]](#ref-136)
+
+| Tickets processed | All input at ordinary rates | Write the policy once, then read it on every later ticket |
+| ---: | ---: | ---: |
+| 1 | \$0.087 | \$0.207 |
+| 2 | \$0.174 | \$0.218 |
+| 3 | \$0.261 | \$0.229 |
+
+The first cache hit still leaves the desk paying 4.4 cents more across two tickets. The second hit puts it 3.2 cents ahead across three. These estimates assume the full prefix matches. On GPT-6.2, a policy supplied through top-level `instructions` is billed as ordinary input each time. To make it eligible for reuse, put the policy in the first developer message in `input`. For a comparison with caching turned off, use explicit caching mode with no breakpoints. [[136]](#ref-136)
+
+Check `usage.input_tokens_details.cached_tokens` and `cache_write_tokens` in each response. Subtract both from total input to obtain the ordinary token count. For writes, apply the rate for the recorded lifetime. A 30-minute write for the same policy would cost \$0.100. [[133]](#ref-133) [[136]](#ref-136)
+
+Run `python request_cost.py` to reproduce the long-context, background-window and support-ticket estimates with the standard library. The examples include billed reasoning tokens in output. They exclude tools, images and taxes.
 
 <RequestCostExample lang="en" />
 
@@ -342,3 +360,4 @@ Keep weights or API revision, tokenizer/template, quantization, runtime, generat
 133. <a id="ref-133"></a>[OpenAI, API pricing and eligible background requests](https://developers.openai.com/api/docs/pricing).
 134. <a id="ref-134"></a>[Alibaba Cloud Model Studio, Qwen4-Max Token Plan preview schedule and endpoint](https://www.alibabacloud.com/help/en/model-studio/qwen4-max-preview).
 135. <a id="ref-135"></a>[Alibaba Cloud Model Studio, Qwen4-Max production model ID and capabilities by region](https://www.alibabacloud.com/help/en/model-studio/qwen4-max).
+136. <a id="ref-136"></a>[OpenAI, prompt-cache boundaries, usage fields and write lifetimes](https://developers.openai.com/api/docs/guides/prompt-caching).

@@ -10,6 +10,7 @@ const content = {
   'feed.xml': 'English revision',
   'ko/feed.xml': '한국어 수정',
   'articles.xml': 'Selected article',
+  'ko/articles.xml': '짧은 글',
 };
 const built = Object.fromEntries(Object.entries(content).map(([path, text]) => [path, hash(text)]));
 const current = url => new Response(content[url.slice(base.length)]);
@@ -28,7 +29,7 @@ test('compare actual feed bytes so one-language edits, new feeds and unchanged r
   await assert.rejects(changedFeeds(built, () => new Response(null, { status: 503 }), noWait), /503/);
 });
 
-test('announce all three verified canonical feed URLs in one form POST, then skip an unchanged rerun', async () => {
+test('announce all four verified canonical feed URLs in one form POST, then skip an unchanged rerun', async () => {
   const posts = [];
   const waits = [];
   let englishReads = 0;
@@ -48,7 +49,7 @@ test('announce all three verified canonical feed URLs in one form POST, then ski
   assert.match(posts[0].headers.get('content-type'), /^application\/x-www-form-urlencoded/);
   const body = await posts[0].formData();
   assert.equal(body.get('hub.mode'), 'publish');
-  assert.deepEqual(body.getAll('hub.url'), [base + 'feed.xml', base + 'ko/feed.xml', base + 'articles.xml']);
+  assert.deepEqual(body.getAll('hub.url'), [base + 'feed.xml', base + 'ko/feed.xml', base + 'articles.xml', base + 'ko/articles.xml']);
   await publishFeeds(await changedFeeds(built, request), base, request);
   assert.equal(posts.length, 1);
 });

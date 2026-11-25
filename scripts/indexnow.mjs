@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { pathToFileURL } from 'node:url';
 import { chapters } from '../src/data/chapters.js';
-import { servingGuide, site, whisperArticlePath } from '../src/data/site.js';
+import { servingGuide, shortArticlePaths, site, whisperArticlePath } from '../src/data/site.js';
 
 const base = new URL('/foundation-model-engineering/', site.url);
 const endpoint = 'https://api.indexnow.org/indexnow';
@@ -19,8 +19,6 @@ const sharedRoutes = new Map([
   ['src/components/chapter-12/SchedulingVisualizer.tsx', [
     ...batchingRoutes, 'chapter-12/long-context-serving/', 'ko/chapter-12/long-context-serving/',
   ]],
-  ['src/data/articles/whisper-sample-rate.md', [article]],
-  ['src/data/articles/whisper-sample-rate.ko.md', [koArticle]],
   ['src/components/chapter-11/SampleRateListening.astro', [article, koArticle, speechChapter, 'ko/' + speechChapter]],
   ['src/components/FeaturedLessons.astro', ['', 'ko/']],
   ['src/components/TeachingLabs.astro', catalogRoutes],
@@ -33,13 +31,20 @@ const sharedRoutes = new Map([
   ['scripts/verify-dp-ddp-gradients.py', catalogRoutes],
 ]);
 const sourceRoutes = new Map([
-  [`src/pages${whisperArticlePath}.astro`, article],
-  [`src/pages/ko${whisperArticlePath}.astro`, koArticle],
   ['src/pages/index.astro', ''],
   ['src/pages/ko/index.astro', 'ko/'],
   ['src/pages/labs/index.astro', catalogRoutes[0]],
   ['src/pages/ko/labs/index.astro', catalogRoutes[1]],
 ]);
+for (const path of Object.values(shortArticlePaths)) {
+  const slug = path.split('/').at(-1);
+  for (const prefix of ['', '/ko']) {
+    const url = `${prefix}${path}/`.slice(1);
+    const suffix = prefix ? '.ko.md' : '.md';
+    sharedRoutes.set(`src/data/articles/${slug}${suffix}`, [url]);
+    sourceRoutes.set(`src/pages${prefix}${path}.astro`, url);
+  }
+}
 for (const chapter of chapters) {
   for (const { path } of chapter.subs) {
     for (const prefix of ['', '/ko']) {

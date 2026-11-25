@@ -43,6 +43,8 @@ After commit `ec58791` was deployed, the default-branch metadata served by GitHu
 
 The English and Korean self-attention worksheets subsequently brought the repository’s declarations to twelve. Each resource opens the corresponding worked example and identifies its two-page PDF as the downloadable format. The public search still returned ten records in the check preceding this change. [English worksheet](https://sungeuns.github.io/foundation-model-engineering/chapter-3/self-attention-mathematics/#attention-weight-example) · [Korean worksheet](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-3/self-attention-mathematics/#attention-weight-example)
 
+After the two PDFs were deployed at commit `bbdcde9`, the OERSI importer accepted one refresh and public search returned all twelve resource IDs. Each worksheet’s public search card and detail page opened the relevant edition, where the PDF download returned the correct file. [Korean worksheet in OERSI](https://oersi.org/resources/aHR0cHM6Ly9zdW5nZXVucy5naXRodWIuaW8vZm91bmRhdGlvbi1tb2RlbC1lbmdpbmVlcmluZy9rby9jaGFwdGVyLTMvc2VsZi1hdHRlbnRpb24tbWF0aGVtYXRpY3MvI2F0dGVudGlvbi13ZWlnaHQtZXhhbXBsZQ==)
+
 ## 学习周刊
 
 On November 25, 2026, Codex recommended the length-bucketing CPU experiment to this Chinese-language operations newsletter through its article self-recommendation template. The submission identifies Seongeun So and the AI assistance, notes the English and Korean editions, and distinguishes measured KV tensor payload from process memory or latency. The submitted issue was open when checked. The newsletter's editor decides whether to include the article in an issue. [Submission #229](https://github.com/eryajf/learning-weekly/issues/229) · [Submission guide](https://github.com/eryajf/learning-weekly#readme)
@@ -56,3 +58,11 @@ Whisper’s **Show and tell** has a public example using the 11-second recording
 ## RSSAmp
 
 On November 25, 2026, RSSAmp accepted the book’s selected-articles feed. Its public listing showed three articles on looped KV caches, Whisper sample rates and length bucketing. Each article’s reader page opened and linked to the corresponding original. The directory reported the feed as active. [Reader listing](https://rssamp.com/foundation-model-engineering-selected-articles) · [Original feed](https://sungeuns.github.io/foundation-model-engineering/articles.xml)
+
+An isolated mobile browser was subsequently served an RSSAmp pass offer when opening the listing and reader URLs. For direct sharing, use the book’s free article URLs. The English feed keeps each item’s original GUID when its reader URL changes.
+
+## Published Korean coverage and the old Hacker News link
+
+On November 25, 2026, the BrainDetox article about the Korean edition linked to the Korean and English homepages, the GitHub repository and the original Show GN submission. All four links were present in the published HTML. [Korean coverage](https://braindetox.kr/posts/foundation_model_engineering_textbook_korean.html) · [Show GN](https://news.hada.io/topic?id=33697)
+
+The author's April Hacker News submission links to `/founation-model-engineering/`, which returned HTTP 404. This path belongs to the separate GitHub Pages host repository. A draft PR adds a single redirect page there. [Original Hacker News submission](https://news.ycombinator.com/item?id=47850576) · [Host repository PR](https://github.com/sungeuns/sungeuns.github.com/pull/1)

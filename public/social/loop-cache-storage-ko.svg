@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" xml:lang="ko" role="img" aria-labelledby="card-title card-description">
+<title id="card-title">토큰이 하나 늘었는데 KV 버퍼는 줄었다</title><desc id="card-description">24개 층을 한 번 통과하는 CPU 실험에서 토큰이 6개에서 7개로 늘자 KV 텐서의 논리적 크기는 10.5 KiB에서 11 KiB로 늘고, 실제 저장 공간은 18 KiB에서 13.5 KiB로 줄었습니다. 슬라이딩 윈도 층 하나에서 키 텐서는 192 B로 같고 그 버퍼는 384 B에서 256 B로 줄었습니다.</desc>
+<rect width="1200" height="630" fill="#f5f2eb"/>
+<g font-family="Noto Sans CJK KR, DejaVu Sans, sans-serif" fill="#192a30">
+<text x="64" y="83" font-size="53" font-weight="700">토큰이 하나 늘었는데 KV 버퍼는 줄었다</text>
+<text x="66" y="136" font-size="27" fill="#4e5d61">가중치를 무작위로 초기화한 24개 층을 CPU에서 FP32로 한 번 통과시켰습니다.</text>
+<text x="466" y="209" font-size="29" font-weight="600">토큰 6개 처리 후</text><text x="828" y="209" font-size="29" font-weight="600">토큰 7개 처리 후</text>
+<path d="M64 230H1136 M64 362H1136 M64 498H1136" stroke="#bcc7c0" stroke-width="2"/>
+<text x="68" y="298" font-size="32" font-weight="600">KV 텐서의 논리적 크기</text><text x="466" y="298" font-size="46" font-weight="700">10.5 KiB</text>
+<rect x="466" y="317" width="290" height="18" rx="4" fill="#dce3de"/>
+<rect x="466" y="317" width="169.16666666666666" height="18" rx="4" fill="#385c72"/><text x="828" y="298" font-size="46" font-weight="700">11 KiB</text>
+<rect x="828" y="317" width="290" height="18" rx="4" fill="#dce3de"/>
+<rect x="828" y="317" width="177.22222222222223" height="18" rx="4" fill="#385c72"/><text x="68" y="428" font-size="32" font-weight="600">실제 버퍼 크기</text><text x="466" y="428" font-size="46" font-weight="700">18 KiB</text>
+<rect x="466" y="447" width="290" height="18" rx="4" fill="#dce3de"/>
+<rect x="466" y="447" width="290" height="18" rx="4" fill="#256257"/><text x="828" y="428" font-size="46" font-weight="700">13.5 KiB</text>
+<rect x="828" y="447" width="290" height="18" rx="4" fill="#dce3de"/>
+<rect x="828" y="447" width="217.5" height="18" rx="4" fill="#256257"/>
+<text x="66" y="568" font-size="29" fill="#4e5d61">한 층의 키 텐서는 192 B로 그대로입니다. 버퍼는 384 B에서 256 B로 줄었습니다.</text>
+</g></svg>

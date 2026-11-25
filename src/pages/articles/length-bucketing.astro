@@ -1,0 +1,8 @@
+---
+import BookLayout from '../../layouts/BookLayout.astro';
+import { Content, frontmatter } from '../../data/articles/length-bucketing.md';
+---
+<BookLayout lang="en" title={frontmatter.title} description={frontmatter.description}>
+  <h1>{frontmatter.title}</h1>
+  <Content />
+</BookLayout>

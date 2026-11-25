@@ -99,6 +99,7 @@ test('shared exercise IDs belong to the same authored content in both translatio
     ['/chapter-17/llm-as-a-judge', 'translation-rubric-example'],
     ['/chapter-17/commercial-model-benchmarks', 'long-context-cost'],
     ['/chapter-17/commercial-model-benchmarks', 'background-completion-cost'],
+    ['/chapter-17/commercial-model-benchmarks', 'prompt-cache-cost'],
     ['/chapter-17/commercial-model-benchmarks', 'ling-32-air-context'],
     ['/chapter-2/dawn-of-attention', 'translation-alignment-example'],
     ['/chapter-3/self-attention-mathematics', 'context-projection'],

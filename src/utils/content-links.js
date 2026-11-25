@@ -1,13 +1,12 @@
 import { chapters } from '../data/chapters.js';
-import { whisperArticlePath } from '../data/site.js';
-
-export const bookPageRoutes = new Set(['/', '/ko', '/labs', '/ko/labs', whisperArticlePath, `/ko${whisperArticlePath}`, ...chapters.flatMap(chapter =>
-  chapter.subs.flatMap(sub => [sub.path, `/ko${sub.path}`]))]);
+import { shortArticlePaths } from '../data/site.js';
 
 export function articleRoutes(lang) {
-  const prefix = lang === 'ko' ? '/ko/articles/' : '/articles/';
-  return [...bookPageRoutes].filter(path => path.startsWith(prefix));
+  return Object.values(shortArticlePaths).map(route => lang === 'ko' ? '/ko' + route : route);
 }
+
+export const bookPageRoutes = new Set(['/', '/ko', '/labs', '/ko/labs', ...articleRoutes('en'), ...articleRoutes('ko'), ...chapters.flatMap(chapter =>
+  chapter.subs.flatMap(sub => [sub.path, `/ko${sub.path}`]))]);
 
 // Only rewrite known book pages. Preserve assets, external links, query strings,
 // fragments and unknown paths so a typo remains visible to the link audit.
