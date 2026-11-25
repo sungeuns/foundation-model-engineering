@@ -258,6 +258,22 @@ test('the two homepages and the six collected lessons link to their serving EPUB
   }
 });
 
+test('each OER catalogue entry previews the localized lesson or its EPUB cover', () => {
+  for (const record of load(readFileSync('metadata.yml', 'utf8'))) {
+    const [lang] = record.inLanguage;
+    const landing = new URL(record.id);
+    const route = landing.pathname.slice(new URL(base).pathname.length);
+    const html = readFileSync(`${outputDir}${route}index.html`, 'utf8');
+    const pageImage = html.match(/<meta property="og:image" content="([^"]+)"/)?.[1];
+    const expected = landing.hash === '#serving-guide' ? `${base}/social/serving-field-guide-${lang}.png` : pageImage;
+    assert.ok(expected, record.id);
+    assert.equal(record.image, expected, record.id);
+    assert.ok(record.image.startsWith(`${base}/social/`) && record.image.endsWith(`-${lang}.png`), record.id);
+    const image = readFileSync(`${outputDir}${record.image.slice(base.length)}`);
+    assert.equal(image.subarray(0, 8).toString('hex'), '89504e470d0a1a0a', record.image);
+  }
+});
+
 test('the OER catalogue opens the localized guide and points to its current EPUB', () => {
   const records = load(readFileSync('metadata.yml', 'utf8'));
   const guides = records.filter(record => record.encoding?.some(file => file.encodingFormat === 'application/epub+zip'));

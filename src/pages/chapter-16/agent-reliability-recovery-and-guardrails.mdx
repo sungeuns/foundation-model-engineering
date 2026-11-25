@@ -6,101 +6,122 @@ lang: en
 
 # 16.6 Agent Reliability, Recovery, and Guardrails
 
-The difficult part of agent reliability is not producing one impressive run. It is ensuring that repeated runs continue to behave sensibly when tools are slow, permissions change, or the environment is partially broken. That is the point at which an "agent" becomes either a production system or a source of operational debt.
+A customer asks an agent to open one support ticket. The ticket service saves it, but the response times out. The customer still sees a spinner. The agent sees a failed tool call. What should it do on the next turn?
 
-Most real incidents are operationally mundane: duplicate writes, retries against non-idempotent tools, partial state updates, or endless loops after a validator fails. Reliability work is what prevents those failures from turning into expensive ones.
-
-Recent benchmarks such as $τ$-bench reinforce the point. Even strong function-calling agents are inconsistent across repeated trials and often struggle to follow domain rules reliably [[4]](#ref-4). Runtime guardrails exist because model capability alone is not enough.
+This is the gap between a tool's **effect** and the agent's **observation**. A timeout tells us when the caller stopped waiting. To learn whether the ticket exists, the caller needs a receipt or a way to look up the original request. Even steady performance on single runs can hide failures across repeated attempts, as the $τ$-bench experiments illustrate [[4]](#ref-4).
 
 ---
 
 ## 1. Bound the Loop
 
-The first guardrail is simple: do not let the agent run indefinitely.
+Give each run a deadline and a tool-call budget. Keep a separate budget for retries so that one slow service cannot consume the whole run.
 
 ### Minimum Execution Limits
 
-- maximum step count
-- wall-clock timeout
-- tool-call budget
-- retry budget per tool
-- a clear abort state when confidence collapses
+- Count model turns and tool calls separately.
+- Set a deadline for the whole job as well as for each tool call.
+- Record why the runtime stopped and which operations still have an unknown outcome.
 
-These limits are not signs of weakness. They are how the surrounding system prevents one bad trajectory from becoming an expensive one.
+If a ticket call times out on the last permitted step, return the request identifier with a pending status. The next worker can reconcile that request before deciding whether to retry.
 
 ---
 
 ## 2. Checkpoint Before Risky Actions
 
-Agents interact with mutable state: files, tickets, databases, cloud resources. That means recovery matters as much as reasoning.
+Before sending a write, save the intended operation, its arguments, and a stable request key. After the tool responds, save its receipt. A worker recovering between those two writes has a known request with an unknown outcome.
 
 ### Recommended Pattern
 
-1. checkpoint state
-2. execute the risky action
-3. validate the result
-4. rollback or ask for help if validation fails
+1. Read the pending request from the checkpoint after a restart.
+2. Look it up in the receiving service or replay it with the same key if the service supports idempotent creation.
+3. Save the confirmed receipt. If the service offers neither lookup nor safe replay, leave the outcome pending for reconciliation.
 
-This is especially important for destructive or hard-to-reverse actions. Human approval should be required for operations like deleting data, merging code, or sending irreversible messages.
+<a id="lost-ticket-receipt"></a>
+
+### The ticket that survived the timeout
+
+The following Python 3 example represents the ticket service with one SQLite file and one caller. Each call opens a fresh connection. The first call commits and its return value is deliberately ignored, simulating a lost response. The next two calls try two recovery choices.
+
+```python
+from contextlib import closing
+from pathlib import Path
+import sqlite3
+from tempfile import TemporaryDirectory
+
+def create_ticket(path, key, subject):
+    with closing(sqlite3.connect(path)) as db, db:
+        db.execute("""CREATE TABLE IF NOT EXISTS ticket (
+            id INTEGER PRIMARY KEY, request_key TEXT UNIQUE NOT NULL,
+            subject TEXT NOT NULL)""")
+        db.execute("""INSERT INTO ticket(request_key, subject) VALUES (?, ?)
+                      ON CONFLICT(request_key) DO NOTHING""", (key, subject))
+        ticket_id, saved_subject = db.execute(
+            "SELECT id, subject FROM ticket WHERE request_key = ?", (key,)
+        ).fetchone()
+        if subject != saved_subject:
+            raise ValueError("request key already used for another subject")
+        return ticket_id
+
+with TemporaryDirectory() as folder:
+    path = Path(folder) / "support.db"
+    subject = "Missing receipt for order 41"
+    create_ticket(path, "action-41", subject)
+    print(create_ticket(path, "action-41", subject))  # 1
+    print(create_ticket(path, "action-42", subject))  # 2
+```
+
+The second call recovers ticket 1. The third call creates ticket 2 because the caller supplied a fresh key, even though the subject was identical. Try changing the subject on the second call. The service rejects the conflicting intent and keeps the first ticket. The unique constraint and the write share a transaction, so a worker cannot commit a ticket without recording its key [[9]](#ref-9).
+
+A real service must define the key's scope and how long it remembers it. In a multi-tenant system the lookup needs the authenticated account as well as the key. If the service has forgotten an old key, automatic replay can create another ticket.
+
+**Where model history fits (as of 2026-11-25).** OpenAI documents that editing an earlier message or tool call in a GPT-6.2 Responses API conversation can cause the model to lose access to subsequent reasoning items. Repeating that work may consume more tokens [[10]](#ref-10). Editing the conversation leaves ticket 1 in the support database. On recovery the agent can read the saved request key and use it to recover the receipt from the ticket service, even if it has to reason about the next step again.
 
 ---
 
 ## 3. Tool Execution Policy
 
-A tool interface is not a guarantee of safe behavior. The runtime still needs policy.
+A support agent can look up a ticket, add an internal note, or email the customer. Each call can time out. What happens on replay depends on the operation the service exposes.
 
 ### Useful Defaults
 
-- validate arguments against schema
-- set timeouts for every tool call
-- retry only idempotent operations automatically
-- require confirmation for destructive actions
-- treat tool output as untrusted input
+Bind the call to the authenticated account, validate the arguments, and set a deadline. On timeout, the runtime should have a written rule for that operation. The tool's description alone cannot tell the runtime how long the receiver keeps an idempotency key.
 
 ### Classify Tools by Blast Radius
 
-One practical pattern is to classify tools before the agent ever sees them:
+| Operation | What a second call can do | Recovery rule |
+| --- | --- | --- |
+| Read ticket 1 | Return a more recent status | Read again within the deadline. |
+| Add a note | Append the same note twice | Reuse the saved key if the API supports it, then verify the note ID. |
+| Email the customer | Deliver a second copy to the inbox | Check the mail service's delivery record. Hold the request if acceptance is unknown. |
 
-- **read-only tools:** search, inspect, fetch status
-- **reversible writes:** draft changes, create checkpoints, stage updates
-- **irreversible side effects:** payments, deletes, merges, external messages
-
-The broader the blast radius, the more validation and human approval you want between model intent and execution.
-
-Idempotency matters here. Retrying `fetch_status()` is very different from retrying `charge_credit_card()`.
+A draft can usually be edited after a mistake. A delivered email can already have been read. That difference affects both approval before the action and recovery afterward.
 
 ---
 
 ## 4. Human-in-the-Loop Does Not Mean Human-in-the-Way
 
-In practice, human oversight works best when inserted at decision points rather than after every step.
+Suppose the user authorized opening one ticket. That instruction covers the initial create. If a service timeout obscures the outcome, sending a new key asks the service to create a second ticket. That exceeds the user’s original approval.
 
 ### Good Approval Boundaries
 
-- privilege escalation
-- external side effects
-- low-confidence plans with large blast radius
-- repeated recovery failures
-
-The goal is not to micromanage the agent. It is to interrupt the specific parts of the workflow where the downside risk is concentrated.
+A worker can carry out an authorized status lookup on its own. Ask the user when the decision changes what happens outside the system. For example, if the service cannot confirm the original write, show the order number, the time of the first request, and the possible duplicate before offering to open another ticket. If the original request later appears, link it to the pending case.
 
 ---
 
 ## 5. What the Research Actually Shows
 
-The literature on agent reliability is useful precisely because it shows that different techniques solve different slices of the problem.
+Read an agent paper with a concrete question in mind. What did the researchers observe after the action?
 
-- **ReAct** improves action grounding by interleaving reasoning and tool use, but it does not by itself solve recovery after bad actions [[1]](#ref-1).
-- **Reflexion** shows that linguistic feedback can improve subsequent attempts, but this is still local adaptation rather than a full reliability guarantee [[2]](#ref-2).
-- **AgentBench** shows that long-horizon decision-making and instruction following remain weak points for many agents even when single-step tool use looks strong [[5]](#ref-5).
-- **SWE-bench** shows the same pattern in software engineering: realistic tasks require environment interaction, coordinated edits, and verification across files, not just code generation [[6]](#ref-6).
-- **$τ$-bench** adds an especially important production lesson: reliability across repeated trials is often much worse than best-case single-run performance [[4]](#ref-4).
+- **ReAct** alternates reasoning and actions. A returned search result can change the next action [[1]](#ref-1). **Toolformer** studies how a model learns where to call a tool and how to use its response [[3]](#ref-3).
+- **Reflexion** carries textual feedback from one attempt to the next [[2]](#ref-2). For the ticket case, that could help a model remember to look up the request. The receiving service still determines whether a duplicate exists.
+- **AgentBench** evaluates multi-step decisions across interactive environments [[5]](#ref-5). **SWE-bench** tests whether proposed changes resolve real repository issues [[6]](#ref-6). The task and its grader determine what counts as success.
+- **$τ$-bench** repeats tool-agent-user tasks under domain rules [[4]](#ref-4). If the goal is one new ticket, the final database count is a better check than a fluent confirmation to the customer.
 
 ---
 
 ## 6. Practical Takeaway
 
-Agent reliability is mostly about system design, not model heroics. Step budgets, checkpoints, rollback rules, and approval boundaries are mundane compared to planning algorithms, but they are usually what determine whether an agent is safe to operate.
+For a recovery drill, drop the response after the ticket has been committed and restart the worker. Check the number of tickets created for that user request, the ID returned to the customer, and whether a second worker can reconstruct the outcome. Run it again with the service unavailable and verify that the case stays pending.
 
 ---
 
@@ -122,23 +143,23 @@ A bounded decision model can supply a routing or review signal, but it cannot gr
 ## Quizzes
 
 <details>
-<summary>Quiz 1: Why is a maximum step count a core reliability control for agents?</summary>
-*Because it prevents an agent from turning a bad trajectory into an unbounded loop of tool calls, cost, and side effects.*
+<summary>Quiz 1: A status lookup is still pending when the last tool call times out. What belongs in the checkpoint?</summary>
+*Save the original request key, the arguments, the outstanding status and why the run stopped. A later worker can reconcile the same operation within a new budget.*
 </details>
 
 <details>
-<summary>Quiz 2: Why should risky actions be paired with checkpoints and validation?</summary>
-*Because reasoning alone does not guarantee the action had the intended effect. Checkpoints and validation make rollback possible when execution goes wrong.*
+<summary>Quiz 2: The first response times out. Why do the next two calls return different ticket IDs?</summary>
+*The first call committed ticket 1. Reusing action-41 with the same subject returns that ticket. The service treats action-42 as a new request and creates ticket 2.*
 </details>
 
 <details>
-<summary>Quiz 3: Why is idempotency important in tool retry policy?</summary>
-*Because safe automatic retries depend on whether repeating the same operation changes the world again. Re-fetching status is usually safe; repeating payment or deletion is not.*
+<summary>Quiz 3: The service's key retention window has expired and the checkpoint has no receipt. How should the agent recover?</summary>
+*Look up the ticket in the receiving system using the original request or another reliable business record. If its status is still unknown, hold it for reconciliation. Replaying an expired key can create a second ticket.*
 </details>
 
 <details>
-<summary>Quiz 4: What does effective human-in-the-loop design optimize for?</summary>
-*It places human approval at high-risk decision boundaries rather than forcing a human to approve every minor step, which would destroy the value of automation.*
+<summary>Quiz 4: The user approved opening one ticket. Which recovery decision needs their attention?</summary>
+*An authorized lookup can proceed. If the original outcome cannot be established, ask before creating another ticket and explain the possibility of a duplicate.*
 </details>
 
 ---
@@ -154,3 +175,6 @@ A bounded decision model can supply a routing or review signal, but it cannot gr
 7. <a id="ref-7"></a>Anthropic. (2026-10-09). Investigating unintended model actions in our evaluations and internal use. [Source](https://www.anthropic.com/research/investigating-unintended-model-actions).
 
 8. <a id="ref-8"></a>Lizzo, T., & Heck, L. (2026). *Behavioral Forgetting Is Not Privacy in Machine Unlearning*. PriLOM workshop poster. [Source](https://arxiv.org/abs/2610.21799).
+
+9. <a id="ref-9"></a>Malcolm Featonby. *Making retries safe with idempotent APIs.* [Amazon Builders’ Library](https://aws.amazon.com/builders-library/making-retries-safe-with-idempotent-APIs/).
+10. <a id="ref-10"></a>OpenAI. *Using GPT-6.2*. [Responses API guide](https://developers.openai.com/api/docs/guides/latest-model?model=gpt-6.2-astra).

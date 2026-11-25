@@ -352,7 +352,10 @@ if (currentIndex !== -1) {
                 {isKo ? '수식과 코드를 복사할 수 있는 이 절의 원고' : 'Chapter source with copyable LaTeX and code'}
               </a></p></noscript>
             )}
-            <p><a href={feedPath}>{isKo ? '최근 수정한 장 구독하기 (RSS)' : 'Subscribe to chapter edits (RSS)'}</a></p>
+            <p>
+              <a href={feedPath}>{isKo ? '최근 수정한 장 구독하기 (RSS)' : 'Subscribe to chapter edits (RSS)'}</a>
+              {!isKo && <> · <a href={withBasePath('/articles.xml', basePath)}>Selected articles in full (RSS)</a></>}
+            </p>
             <p>{isKo ? '저자: ' : 'Created by '}<strong><a href="https://www.linkedin.com/in/sungeuns2" target="_blank" rel="noopener noreferrer">Seongeun So</a></strong></p>
             <small>{isKo ? 'AI의 도움을 받아 제작했습니다.' : 'Developed with AI assistance'}</small>
           </div>

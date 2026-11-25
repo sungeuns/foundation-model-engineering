@@ -5,6 +5,7 @@ lang: en
 ---
 
 import SearchComparisonVisualizer from '../../components/chapter-14/SearchComparisonVisualizer.tsx';
+import { withBasePath } from '../../utils/paths.js';
 
 # 14.1 From Lexical to Semantic Search
 
@@ -69,6 +70,27 @@ assert cosine([0, 0, 0], [0, 1, 0]) is None
 
 A held-out set for a support search should include paraphrases and exact codes with labeled answer-bearing passages. Count how often each retriever includes that passage within the same candidate budget. [Section 14.3 combines the two ranked lists](../advanced-retrieval/#rrf-candidate-cutoff) and shows why a passage discarded by both retrievers cannot be rescued by a reranker.
 
+<a id="multilingual-retrieval-check"></a>
+
+### Can a Korean question find the right English manual?
+
+Consider four new English support passages written for this experiment. A tells owners of the fictional `XJ-992-B` to send the device in for a battery replacement. B tells owners of the `XJ-992-D` to open the cover themselves. C explains how to patch a bicycle inner tube. D explains how to download a receipt. Which passage should a search return for a Korean customer asking if they can replace the battery? The model number determines which instructions apply.
+
+We wrote four requests in English and Korean and labeled the applicable passage before running either search. The table shows the Korean queries, glossed in English. BM25 scores the passage text with the settings above and keeps hyphenated codes intact. It uses no translation, stemming, stopword removal or Korean morphological analysis. “No match” means every passage scored zero.
+
+| Korean request (English gloss) | Relevant passage | BM25 first | Multilingual E5 first (cosine) |
+| --- | --- | --- | --- |
+| My bicycle tire keeps losing air. How do I fix it? | C | No match | C (0.773619) |
+| I want another copy of the receipt for a purchase last month. | D | No match | A (0.776618) |
+| Can I replace the battery in my XJ-992-B myself? | A | A | B (0.862082) |
+| Can I replace the battery in my XJ-992-Q myself? | No passage | No match | B (0.859964) |
+
+E5 found the tire repair across languages. For the receipt it put the battery manual just ahead of D (0.776510). The English receipt request retrieved D first (0.850531). With only four passages, even a top result can be a near tie. These paired examples show failure modes and give no estimate of how often customers encounter them.
+
+For a product-specific request, try requiring an exact catalog code before ranking. This leaves only A for `XJ-992-B` and an empty set for `XJ-992-Q`. A support tool can ask the customer to verify the unknown code before giving instructions. A cosine cutoff alone cannot both keep the correct Korean tire result and reject the higher-scoring result for the missing model.
+
+**Reproduce the CPU run (2026-11-25).** The script pins the MIT-licensed `intfloat/multilingual-e5-small` checkpoint. It adds `query: ` and `passage: ` in both languages, averages the non-padding token vectors, L2-normalizes each 384-dimensional vector and ranks all four passages by dot product before rounding [[5]](#ref-5). <a href={withBasePath('/labs/multilingual_retrieval.py')} download>Download the Python script and setup commands</a> or <a href={withBasePath('/labs/2026-11/multilingual-retrieval.json')}>inspect all eight queries, labels and scores</a>.
+
 ## 3. Advanced Chunking Strategies
 
 ### A. Naive (Fixed-Size) Chunking
@@ -125,9 +147,15 @@ Matryoshka training puts an objective on several prefixes of a representation [[
 *There is no such guarantee. Nested training gives the prefix its own learning objective. Evaluate rankings at the chosen dimension with the model's required normalization.*
 </details>
 
+<details>
+<summary>Quiz 5: What happens if the support tool accepts every top cosine of 0.80 or higher?</summary>
+*It rejects the correct Korean tire result (0.773619) and accepts a battery procedure for an absent model (0.859964). An exact catalog check can detect the missing model independently of the similarity score.*
+</details>
+
 ## References
 
 1. <a id="ref-1"></a>Kusupati, A., et al. (2022). *Matryoshka Representation Learning.* [Paper](https://arxiv.org/abs/2205.13147).
 2. <a id="ref-2"></a>Google (2026-10-06). [EmbeddingGemma 2 release](https://blog.google/innovation-and-ai/technology/developers-tools/embeddinggemma-2/).
 3. <a id="ref-3"></a>Karpukhin, V., et al. (2020). *Dense Passage Retrieval for Open-Domain Question Answering.* [EMNLP paper](https://aclanthology.org/2020.emnlp-main.550/).
 4. <a id="ref-4"></a>Apache Lucene. [BM25Similarity, inverse document frequency and parameter definitions](https://lucene.apache.org/core/9_12_2/core/org/apache/lucene/search/similarities/BM25Similarity.html).
+5. <a id="ref-5"></a>Wang, L., et al. [Multilingual E5 Small model card, checkpoint and retrieval instructions](https://huggingface.co/intfloat/multilingual-e5-small/blob/614241f622f53c4eeff9890bdc4f31cfecc418b3/README.md).

@@ -30,6 +30,8 @@
 
 어텐션 마스크를 씌워도 미래 토큰의 값이 새어 들어갈까요? 토큰 일곱 개 중 다섯 번째 값만 바꾸고 네 번째 출력을 확인해 보세요. 입력이 고정된 CPU용 PyTorch 예제입니다. [마스크 실험](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-4/hybrid-prefix-lm/#prefix-mask-test) · [Python 코드](public/labs/prefix_mask.py)
 
+배터리를 직접 갈아도 되느냐는 한국어 문의에 다국어 검색기는 다른 모델의 뒷덮개를 여는 영문 안내문을 1위로 골랐습니다. [검색 실험](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-14/lexical-to-semantic-search/#multilingual-retrieval-check)과 [문의 여덟 건의 점수](public/labs/2026-11/multilingual-retrieval.json)를 읽거나, [BM25와 다국어 E5를 CPU에서 실행](public/labs/multilingual_retrieval.py)할 수 있습니다.
+
 [![작은 디코더 CPU 실습: 인과 마스크, 과거 문맥 제거, 체크포인트 재개를 검증합니다.](public/social/tiny-decoder-ko.png)](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-7/tiny-decoder-lab/)
 
 디코더에 기호 네 개를 보여 준 뒤 앞 문맥을 가려 보세요. 모델은 여전히 그 수열을 복사할 수 있을까요? [Binder에서 한국어 노트북을 실행하거나](https://mybinder.org/v2/gh/sungeuns/foundation-model-engineering/b6a54ff80e80cbf10d68b15d4419bbae2269ef7e?urlpath=lab%2Ftree%2Fpublic%2Flabs%2Ftiny-decoder-lab-ko.ipynb) [앞 기호를 볼 때와 가릴 때의 테스트 손실](https://nbviewer.org/urls/sungeuns.github.io/foundation-model-engineering/labs/2026-11/tiny-decoder-worked-ko.ipynb#cell-id=compare-results)을 비교해 보세요. 둘 다 로그인 없이 열 수 있습니다. 노트북이 합성 데이터를 직접 만들고 CPU에서 학습합니다. [실습 안내](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-7/tiny-decoder-lab/)에는 로컬 설치와 Colab 사용법이 있습니다. 오프라인에서는 [11월 노트북](https://github.com/sungeuns/foundation-model-engineering/releases/tag/2026-11-labs)을 내려받아 실행할 수 있습니다.

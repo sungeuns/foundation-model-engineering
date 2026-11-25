@@ -3,6 +3,7 @@
   type: LearningResource
   creativeWorkStatus: Published
   id: https://sungeuns.github.io/foundation-model-engineering/
+  image: https://sungeuns.github.io/foundation-model-engineering/social/cover-en.png
   name: Foundation Model Engineering
   description: >-
     An English textbook for readers with Python, linear algebra and probability.
@@ -29,6 +30,7 @@
   type: LearningResource
   creativeWorkStatus: Published
   id: https://sungeuns.github.io/foundation-model-engineering/ko/
+  image: https://sungeuns.github.io/foundation-model-engineering/social/cover-ko.png
   name: 파운데이션 모델 엔지니어링
   description: >-
     Python과 선형대수, 확률의 기초를 아는 독자를 위한 한국어 교재입니다.
@@ -54,6 +56,7 @@
   type: LearningResource
   creativeWorkStatus: Published
   id: https://sungeuns.github.io/foundation-model-engineering/chapter-7/tiny-decoder-lab/
+  image: https://sungeuns.github.io/foundation-model-engineering/social/tiny-decoder-en.png
   name: Build, Break, and Resume a Tiny Decoder
   description: >-
     Train a one-layer decoder on a synthetic copying task in CPU PyTorch.
@@ -83,6 +86,7 @@
   type: LearningResource
   creativeWorkStatus: Published
   id: https://sungeuns.github.io/foundation-model-engineering/ko/chapter-7/tiny-decoder-lab/
+  image: https://sungeuns.github.io/foundation-model-engineering/social/tiny-decoder-ko.png
   name: 작은 디코더를 학습하고 검증하고 재개하기
   description: >-
     CPU용 PyTorch로 한 층짜리 디코더를 학습시켜 기호 복사 과제를 풀어 봅니다.
@@ -112,6 +116,7 @@
   type: LearningResource
   creativeWorkStatus: Published
   id: https://sungeuns.github.io/foundation-model-engineering/#serving-guide
+  image: https://sungeuns.github.io/foundation-model-engineering/social/serving-field-guide-en.png
   name: LLM Serving in Practice
   description: >-
     Three lessons from Foundation Model Engineering in a reflowable English EPUB.
@@ -156,6 +161,7 @@
   type: LearningResource
   creativeWorkStatus: Published
   id: https://sungeuns.github.io/foundation-model-engineering/ko/#serving-guide
+  image: https://sungeuns.github.io/foundation-model-engineering/social/serving-field-guide-ko.png
   name: LLM 서빙 실전
   description: >-
     파운데이션 모델 엔지니어링에서 서빙을 다루는 세 절을 모은 한국어 EPUB입니다.
@@ -199,6 +205,7 @@
   type: LearningResource
   creativeWorkStatus: Published
   id: https://sungeuns.github.io/foundation-model-engineering/chapter-12/kv-cache-management/#kv-payload-notebook
+  image: https://sungeuns.github.io/foundation-model-engineering/social/kv-budget-en.png
   name: Measure the memory used by a decoder’s KV cache
   description: >-
     Measure key and value tensor bytes for two padded prompts in a CPU Jupyter
@@ -232,6 +239,7 @@
   type: LearningResource
   creativeWorkStatus: Published
   id: https://sungeuns.github.io/foundation-model-engineering/ko/chapter-12/kv-cache-management/#kv-payload-notebook
+  image: https://sungeuns.github.io/foundation-model-engineering/social/kv-budget-ko.png
   name: 두 프롬프트로 KV 캐시의 메모리 사용량 재기
   description: >-
     CPU에서 SmolLM2-135M에 길이가 다른 두 프롬프트를 넣고 패딩을 포함한 키·값
@@ -265,6 +273,7 @@
   type: LearningResource
   creativeWorkStatus: Published
   id: https://sungeuns.github.io/foundation-model-engineering/chapter-12/length-bucketing-lab/
+  image: https://sungeuns.github.io/foundation-model-engineering/social/length-bucketing-en.png
   name: Length Bucketing and Peak KV Memory
   description: >-
     Measure the key and value tensors of six prompts on a CPU. Pair them by
@@ -290,6 +299,7 @@
   type: LearningResource
   creativeWorkStatus: Published
   id: https://sungeuns.github.io/foundation-model-engineering/ko/chapter-12/length-bucketing-lab/
+  image: https://sungeuns.github.io/foundation-model-engineering/social/length-bucketing-ko.png
   name: 길이별 배칭과 KV 캐시 최대 사용량
   description: >-
     프롬프트 여섯 건을 도착순과 길이순으로 묶어 CPU에서 키와 값 텐서를 측정합니다.

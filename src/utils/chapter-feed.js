@@ -6,7 +6,7 @@ import { withBasePath, withPagePath } from './paths.js';
 // The public hub documents RSS discovery and its publisher POST at this URL.
 export const chapterFeedHub = 'https://pubsubhubbub.appspot.com/';
 
-const escapeXml = value => String(value)
+export const escapeXml = value => String(value)
   .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
   .replaceAll('"', '&quot;').replaceAll("'", '&apos;');
 

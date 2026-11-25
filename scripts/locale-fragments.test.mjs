@@ -89,6 +89,8 @@ test('shared exercise IDs belong to the same authored content in both translatio
     ['/chapter-3/position-encoding-strategy', 'positional-encoding-grid'],
     ['/chapter-17/academic-benchmarks', 'pass-at-k-example'],
     ['/chapter-14/lexical-to-semantic-search', 'lexical-dense-example'],
+    ['/chapter-14/lexical-to-semantic-search', 'multilingual-retrieval-check'],
+    ['/chapter-16/agent-reliability-recovery-and-guardrails', 'lost-ticket-receipt'],
     ['/chapter-14/rag-failure-modes-and-operational-design', 'trace-a-rag-answer'],
   ]) {
     assert.ok(sharedLocaleFragments(route, modelIds).includes(id), route);

@@ -332,7 +332,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 13.3 | `/chapter-13/weight-sparsification` | Mechanical only | cef7eea23f21faf8a4719bc13b2f3e28a8743ba0230c67b01438dbac642a6530 | 4d1291c234050b189b7f5c66be305966e3fadd57ef521d171ca9283131987aed |
 | 13.4 | `/chapter-13/knowledge-distillation` | Mechanical only | f184dcb71820a852dee1c7b2d640412cec7cad8a6f765ee912da00daf6b337f0 | 7c19030da7fe737ad78f41f6d09a1aa1107040bbb7cedcf7176b24e5db8dfccb |
 | 13.5 | `/chapter-13/advanced-quantization` | Inspected 2026-11-15 | 27a364583a8df29cdea48119e65184594a4c27ab9f8f22437778a330596d4a3b | b55fe9860d8cf44911a1bf6508787d6c865bfbdf548adff861878ccdf10fd691 |
-| 14.1 | `/chapter-14/lexical-to-semantic-search` | Inspected 2026-11-25 | d3cacb52c528e8eb26f4c42e59d97fbe35f837e46c3f7e9937f840ab40af16c5 | 63fb0c225f7f29746b8eae4bd9267edbf0ca9e1101a4191f4d8df07fc911e9b6 |
+| 14.1 | `/chapter-14/lexical-to-semantic-search` | Mechanical only | 0f021924fa9f3aae95553d882253fc4ac052d26a3e321dccb117fa5b84f0f552 | 588f661682070c3a7c3fbb9a5c4ae8959fa3b2371fab403241a19278f050fcd0 |
 | 14.2 | `/chapter-14/vector-indexing-and-db-solutions` | Inspected 2026-11-15 | 9cd80b8fa316923b8db209981294ea15b991ef55851416fb72455a0f12d92783 | 7f9a5d85dde7cb1d91679e64a99760562b8640003062593ded9483faf4af35c4 |
 | 14.3 | `/chapter-14/advanced-retrieval` | Inspected 2026-11-25 | 9d36c4745fed765a1bc1d313e25a34dcff6d3a98454117ed3f068b5011014de5 | 3fd737ee0f924360584f111037eb2eea565eb57df15498251914528cae92396a |
 | 14.4 | `/chapter-14/rag-orchestration` | Inspected 2026-11-15 | c0415652280790508493840235e671903d660547416bc0bf3a73aba796039dd8 | 71eb996863fcf49fa62bc979e9167173c39fec0312811f89ac3095eca414b283 |
@@ -348,7 +348,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 16.3 | `/chapter-16/self-improving-agents` | Inspected 2026-11-15 | cdbdde227c5a7dc74ca2bdfc2c54f0b62d8d659b72ff06e7832e2cf0b4566719 | 82c98f13a708cfe27d97f74869cad8cfae0c7b7ce490e24447cdf38b8c21a282 |
 | 16.4 | `/chapter-16/multi-agent-collaboration` | Mechanical only | a155d11e7c31a3c47f3b5a6ecbc02c54c5a3d638c70aac59e5fa0a48af1953df | 2dca3cc2d271f458117b44c0110ea8762a1416ab4f1554e10a4a87253e7a983a |
 | 16.5 | `/chapter-16/long-term-memory-for-agents` | Mechanical only | 282f35343780e2c45555ff63e389a1335a91ec8c00f22085e8f8bbd8b97d3f0e | 121d1cb19357df979ff3139d6022f6041bc711842a38f62a81ecf5d87c592fcd |
-| 16.6 | `/chapter-16/agent-reliability-recovery-and-guardrails` | Mechanical only | cd83fc417cb7950d6d24116d1492925a16694aa596d897d0cb4cc7be3f18ca7e | 16b6b0641b20d49d6fd5de7a7568d32d4889fe2fa1f88289396ea078b4874895 |
+| 16.6 | `/chapter-16/agent-reliability-recovery-and-guardrails` | Mechanical only | 16412b0f1581a89cd2eb103ba780be942b2a559749ae8412f06670198df29aff | d58ef5cbfc7e2338ba6f5af44dcd1cda7c38919ca26eb188e3c2da8845911d6a |
 | 16.7 | `/chapter-16/decision-models-and-selective-prediction` | Inspected 2026-11-25 | 968048e13fae199978a109f4fef886dcc261832fbbfdd62899e96967209cca9f | 07b1f8a70ee24b852c35c5ee40502166c5d9c9cf63e984d30013442d89da1bc2 |
 | 17.1 | `/chapter-17/academic-benchmarks` | Inspected 2026-11-25 | 2bb8eb0b33d4bc24dcae8ae506f5ca0f23f4025551732b56eb2a87c1ea1b776b | 74665b79d10ce15471f22bffafee43cd28ef36d230c23b59c76e37bf4139ee19 |
 | 17.2 | `/chapter-17/llm-as-a-judge` | Inspected 2026-11-25 | c57401335205ae3dc187e512d28443027ed79d13a6858df675662fe7dbe97ce4 | fed0a9a3459a3eb9683eb1576383f225b0943f807dfd1b3564bdb8603f8986d7 |
@@ -740,3 +740,9 @@ In §4.5, checked the two stored parts of the DeepSeek-V3 MLA cache against the 
 In §17.6, checked Alibaba Cloud's Singapore Token Plan notice for the Qwen4-Max preview retirement and the regular model's regional batch-inference documentation. The 45 evaluation profiles retain their November 24 snapshot. For the serving guide, matched the two catalogue download records to the revised EPUBs and their language-specific landing links.
 
 Read both §12.7 manuscripts and checked each batch against the recorded SmolLM2-135M tensor measurements. Three independent CPU runs produced the same JSON. Both editions' short Python example reproduced 18 and 6 padding slots, with the same 990 KiB largest prefill. Verified both diagrams, download bytes, quiz controls, alternate languages, and both share images at 320px and 1280px. The chapter compares three separate prefill snapshots. It does not infer a throughput or latency improvement.
+
+### November 25, 2026 — Multilingual retrieval and a lost tool receipt
+
+The §14.1 lab uses four original English passages and four paired English/Korean requests. Checked the Korean tire hit, receipt near-tie, exact model-code mismatch and absent model against the JSON from the pinned multilingual E5 checkpoint. Both editions link to the script, all eight rankings and the frozen model card. This pass focused on the new experiment.
+
+For §16.6, executed both published SQLite examples and the conflicting-key case. Matched the receipt semantics to the AWS idempotency article and the GPT-6.2 prefix-edit note to OpenAI's Responses API guide. The recovery case separates a committed ticket, a lost response and a caller still waiting for a receipt. Previous Korean heading links remain available.

@@ -47,8 +47,8 @@ export const searchDescriptions = {
     ko: '벡터 저장소를 넘어 쓰기·관리·읽기 정책, 저장 방식, 출처와 오래된 정보·개인정보 처리를 포함한 에이전트 장기 기억을 설계합니다.',
   },
   '/chapter-16/agent-reliability-recovery-and-guardrails': {
-    en: 'Improve agent reliability with bounded loops, checkpoints before risky actions, tool-execution policies, human approval, and recovery procedures.',
-    ko: '루프 제한, 위험한 작업 전 체크포인트, 도구 실행 정책과 사람의 승인 및 복구 절차를 통해 에이전트의 신뢰성을 높입니다.',
+    en: 'Recover a lost tool response with an idempotency key, replay a support-ticket example in SQLite, and decide what an agent can safely retry.',
+    ko: '응답이 끊긴 뒤에도 티켓은 남습니다. Python과 SQLite로 멱등 키를 재사용해 원래 티켓을 찾고, 에이전트가 재시도해도 되는 조건을 확인합니다.',
   },
   '/chapter-16/decision-models-and-selective-prediction': {
     en: 'Compare Jev and OpenAI Decisions, then test a policy that accepts the same 40 cases even as their error rate rises from 10% to 30%.',
@@ -223,8 +223,8 @@ export const searchDescriptions = {
     ko: '활성값 이상치, 회전 변환과 BitNet b1.58 같은 삼진 가중치 접근법을 통해 저비트 양자화의 어려움과 설계 선택을 이해합니다.',
   },
   '/chapter-14/lexical-to-semantic-search': {
-    en: 'Search four support titles with BM25 and cosine similarity. Try a synonym or an exact activation code, inspect the scores and see which evidence reaches your RAG system.',
-    ko: '지원 문서 제목 네 개를 BM25와 코사인 유사도로 검색합니다. 동의어와 활성화 코드를 입력해 점수를 비교하고 RAG에 어떤 근거가 전달되는지 확인합니다.',
+    en: 'Try BM25 and cosine similarity on four titles, then run multilingual E5 on Korean support queries. See why a single letter in a product code can change the answer.',
+    ko: 'BM25와 코사인 유사도로 제목을 비교한 뒤, 다국어 E5로 한국어 문의에 맞는 영어 설명서를 찾습니다. 제품 번호 끝 글자 하나가 검색 결과에 미치는 영향을 실측값으로 확인합니다.',
   },
   '/chapter-14/vector-indexing-and-db-solutions': {
     en: 'Compare exact search and approximate nearest-neighbor indexing, including HNSW, ScaNN, metadata filtering, and vector-database access control.',

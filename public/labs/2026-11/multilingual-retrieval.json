@@ -1,0 +1,261 @@
+{
+  "model": "intfloat/multilingual-e5-small",
+  "revision": "614241f622f53c4eeff9890bdc4f31cfecc418b3",
+  "python": "3.12.14",
+  "torch": "2.15.0+cpu",
+  "transformers": "5.24.1",
+  "threads": 1,
+  "embedding_dimension": 384,
+  "bm25_k1": 1.2,
+  "bm25_b": 0.75,
+  "documents": {
+    "A": {
+      "model_code": "XJ-992-B",
+      "text": "The battery in model XJ-992-B is sealed inside the housing. Send the device to a service center for replacement."
+    },
+    "B": {
+      "model_code": "XJ-992-D",
+      "text": "To replace the battery in model XJ-992-D, slide the rear cover open and insert a new battery."
+    },
+    "C": {
+      "model_code": null,
+      "text": "To repair a punctured bicycle inner tube, find the hole, dry the area, and apply a patch before reinflating."
+    },
+    "D": {
+      "model_code": null,
+      "text": "To download a receipt for an old purchase, open order history, select the order, and save the PDF."
+    }
+  },
+  "results": [
+    {
+      "case": "bicycle",
+      "language": "en",
+      "query": "My bike tire keeps losing air. How do I fix the leak?",
+      "relevant": "C",
+      "bm25": {
+        "A": 0.164121,
+        "B": 0.147716,
+        "C": 0.143215,
+        "D": 0.145431
+      },
+      "bm25_top": [
+        "A"
+      ],
+      "cosine": {
+        "A": 0.84103,
+        "B": 0.839287,
+        "C": 0.862254,
+        "D": 0.797895
+      },
+      "dense_order": [
+        "C",
+        "A",
+        "B",
+        "D"
+      ],
+      "code_filtered_top": [
+        "C"
+      ]
+    },
+    {
+      "case": "bicycle",
+      "language": "ko",
+      "query": "자전거 타이어에서 자꾸 바람이 빠져요. 어떻게 고치죠?",
+      "relevant": "C",
+      "bm25": {
+        "A": 0.0,
+        "B": 0.0,
+        "C": 0.0,
+        "D": 0.0
+      },
+      "bm25_top": [],
+      "cosine": {
+        "A": 0.743437,
+        "B": 0.750814,
+        "C": 0.773619,
+        "D": 0.711651
+      },
+      "dense_order": [
+        "C",
+        "B",
+        "A",
+        "D"
+      ],
+      "code_filtered_top": [
+        "C"
+      ]
+    },
+    {
+      "case": "receipt",
+      "language": "en",
+      "query": "Where can I get a copy of the bill for something I bought last month?",
+      "relevant": "D",
+      "bm25": {
+        "A": 0.949426,
+        "B": 0.256114,
+        "C": 0.286431,
+        "D": 0.948439
+      },
+      "bm25_top": [
+        "A"
+      ],
+      "cosine": {
+        "A": 0.812055,
+        "B": 0.778447,
+        "C": 0.780288,
+        "D": 0.850531
+      },
+      "dense_order": [
+        "D",
+        "A",
+        "C",
+        "B"
+      ],
+      "code_filtered_top": [
+        "D"
+      ]
+    },
+    {
+      "case": "receipt",
+      "language": "ko",
+      "query": "지난달에 산 물건의 영수증을 다시 받고 싶어요.",
+      "relevant": "D",
+      "bm25": {
+        "A": 0.0,
+        "B": 0.0,
+        "C": 0.0,
+        "D": 0.0
+      },
+      "bm25_top": [],
+      "cosine": {
+        "A": 0.776618,
+        "B": 0.759029,
+        "C": 0.75302,
+        "D": 0.77651
+      },
+      "dense_order": [
+        "A",
+        "D",
+        "B",
+        "C"
+      ],
+      "code_filtered_top": [
+        "A"
+      ]
+    },
+    {
+      "case": "known-model",
+      "language": "en",
+      "query": "How do I replace the battery in XJ-992-B?",
+      "relevant": "A",
+      "bm25": {
+        "A": 2.711561,
+        "B": 3.071324,
+        "C": 0.143215,
+        "D": 0.145431
+      },
+      "bm25_top": [
+        "B"
+      ],
+      "cosine": {
+        "A": 0.934619,
+        "B": 0.941402,
+        "C": 0.808286,
+        "D": 0.792464
+      },
+      "dense_order": [
+        "B",
+        "A",
+        "C",
+        "D"
+      ],
+      "code_filtered_top": [
+        "A"
+      ]
+    },
+    {
+      "case": "known-model",
+      "language": "ko",
+      "query": "XJ-992-B 배터리를 직접 교체해도 되나요?",
+      "relevant": "A",
+      "bm25": {
+        "A": 1.184066,
+        "B": 0.0,
+        "C": 0.0,
+        "D": 0.0
+      },
+      "bm25_top": [
+        "A"
+      ],
+      "cosine": {
+        "A": 0.861944,
+        "B": 0.862082,
+        "C": 0.738283,
+        "D": 0.710532
+      },
+      "dense_order": [
+        "B",
+        "A",
+        "C",
+        "D"
+      ],
+      "code_filtered_top": [
+        "A"
+      ]
+    },
+    {
+      "case": "absent-model",
+      "language": "en",
+      "query": "How do I replace the battery in XJ-992-Q?",
+      "relevant": null,
+      "bm25": {
+        "A": 1.527495,
+        "B": 3.071324,
+        "C": 0.143215,
+        "D": 0.145431
+      },
+      "bm25_top": [
+        "B"
+      ],
+      "cosine": {
+        "A": 0.923877,
+        "B": 0.937993,
+        "C": 0.806746,
+        "D": 0.788684
+      },
+      "dense_order": [
+        "B",
+        "A",
+        "C",
+        "D"
+      ],
+      "code_filtered_top": []
+    },
+    {
+      "case": "absent-model",
+      "language": "ko",
+      "query": "XJ-992-Q 배터리를 직접 교체해도 되나요?",
+      "relevant": null,
+      "bm25": {
+        "A": 0.0,
+        "B": 0.0,
+        "C": 0.0,
+        "D": 0.0
+      },
+      "bm25_top": [],
+      "cosine": {
+        "A": 0.852493,
+        "B": 0.859964,
+        "C": 0.73763,
+        "D": 0.708362
+      },
+      "dense_order": [
+        "B",
+        "A",
+        "C",
+        "D"
+      ],
+      "code_filtered_top": []
+    }
+  ]
+}
