@@ -66,3 +66,7 @@ An isolated mobile browser was subsequently served an RSSAmp pass offer when ope
 On November 25, 2026, the BrainDetox article about the Korean edition linked to the Korean and English homepages, the GitHub repository and the original Show GN submission. All four links were present in the published HTML. [Korean coverage](https://braindetox.kr/posts/foundation_model_engineering_textbook_korean.html) · [Show GN](https://news.hada.io/topic?id=33697)
 
 The author's April Hacker News submission links to `/founation-model-engineering/`, which returned HTTP 404. This path belongs to the separate GitHub Pages host repository. A draft PR adds a single redirect page there. [Original Hacker News submission](https://news.ycombinator.com/item?id=47850576) · [Host repository PR](https://github.com/sungeuns/sungeuns.github.com/pull/1)
+
+## DevLog Korean RSS suggestion
+
+On November 25, 2026, the DevLog directory listed 25 sources. The book was absent. Once the Korean article feed and its three original reading pages were live, Codex suggested the feed once through the feedback form linked on DevLog’s About page. The message identified the author and the AI assistant, linked the Korean feed and gave the length-bucketing article as a sample. The form displayed its thank-you confirmation. Inclusion in DevLog’s directory is an editorial decision. [DevLog’s collection policy](https://devlogs.co.kr/about) · [Directory](https://devlogs.co.kr/directory) · [Korean article feed](https://sungeuns.github.io/foundation-model-engineering/ko/articles.xml)
