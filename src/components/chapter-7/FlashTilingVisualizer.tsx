@@ -1,91 +1,72 @@
-import React, { useState, useEffect } from 'react';
-import './visualizers.css';
+import { useEffect, useId, useState } from 'react';
+import './flash-tiling.css';
 
-const FlashTilingVisualizer = () => {
-  const [step, setStep] = useState(0);
-  const totalSteps = 6;
+const values = [2, 2, 10, 10];
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setStep((prev) => (prev + 1) % totalSteps);
-    }, 2500);
-    return () => clearInterval(timer);
-  }, []);
+function traceTiles(ratio: number, width: number) {
+  const scores = [0, 0, Math.log(ratio), Math.log(ratio)];
+  let maximum = -Infinity;
+  let denominator = 0;
+  let numerator = 0;
+  let sumOfTileOutputs = 0;
+  const rows = [];
+  for (let start = 0; start < scores.length; start += width) {
+    const tile = scores.slice(start, start + width);
+    const tileMaximum = Math.max(...tile);
+    const newMaximum = Math.max(maximum, tileMaximum);
+    const correction = Math.exp(maximum - newMaximum);
+    const weights = tile.map(score => Math.exp(score - newMaximum));
+    const tileDenominator = weights.reduce((sum, weight) => sum + weight, 0);
+    const tileNumerator = weights.reduce((sum, weight, i) => sum + weight * values[start + i], 0);
+    denominator = correction * denominator + tileDenominator;
+    numerator = correction * numerator + tileNumerator;
+    maximum = newMaximum;
+    sumOfTileOutputs += tileNumerator / tileDenominator;
+    rows.push({ first: start + 1, last: start + tile.length, correction, denominator, numerator });
+  }
+  return { rows, output: numerator / denominator, tileMean: sumOfTileOutputs / rows.length };
+}
 
-  const getStepDescription = () => {
-    switch (step) {
-      case 0: return "Initial State: Q, K, V matrices reside in slow HBM.";
-      case 1: return "Step 1: Load a block of Query (Q_block) into fast SRAM.";
-      case 2: return "Step 2: Load a block of Key (K_block) and Value (V_block) into SRAM.";
-      case 3: return "Step 3: Compute localized Attention Scores (S_block = Q_block * K_block^T).";
-      case 4: return "Step 4: Update Online Softmax statistics and compute P_block.";
-      case 5: return "Step 5: Multiply by V_block, accumulate to Output (O_block), and write to HBM.";
-      default: return "";
-    }
-  };
-
-  return (
-    <div className="tiling-container">
-      <div className="visualizer-header">
-        <h3>FlashAttention Tiling Process (IO-Awareness)</h3>
-        <p className="step-description">{getStepDescription()}</p>
-      </div>
-      
-      <div className="memory-architecture">
-        {/* HBM Section */}
-        <div className="memory-zone hbm">
-          <h4>HBM (High Bandwidth Memory) - Slow & Large</h4>
-          <div className="matrix-row">
-            <div className={`block ${step === 0 || step === 1 ? 'active-q' : 'idle'}`}>Q Matrix</div>
-            <div className={`block ${step === 0 || step === 2 ? 'active-k' : 'idle'}`}>K Matrix</div>
-            <div className={`block ${step === 0 || step === 2 ? 'active-v' : 'idle'}`}>V Matrix</div>
-          </div>
-          <div className="matrix-row">
-            <div className={`block ${step === 5 ? 'active-o' : 'idle'}`}>Output Matrix (O)</div>
-          </div>
-        </div>
-
-        {/* Bandwidth Bottleneck Indicator */}
-        <div className="bandwidth-arrow">
-          {step > 0 && step < 6 ? '↕ Asynchronous Transfer ↕' : ' '}
-        </div>
-
-        {/* SRAM Section */}
-        <div className="memory-zone sram">
-          <h4>SRAM (On-Chip Memory) - Fast & Tiny</h4>
-          <div className="sram-grid">
-            <div className={`sram-block ${step >= 1 ? 'loaded-q' : 'empty'}`}>
-              {step >= 1 ? 'Q_block' : 'Empty'}
-            </div>
-            <div className={`sram-block ${step >= 2 && step <= 5 ? 'loaded-k' : 'empty'}`}>
-              {step >= 2 && step <= 5 ? 'K_block' : 'Empty'}
-            </div>
-            <div className={`sram-block ${step >= 2 && step <= 5 ? 'loaded-v' : 'empty'}`}>
-              {step >= 2 && step <= 5 ? 'V_block' : 'Empty'}
-            </div>
-          </div>
-          
-          <div className="compute-zone">
-            <h4>Tensor Cores (Compute)</h4>
-            <div className={`compute-op ${step === 3 ? 'active-compute' : ''}`}>
-              {step === 3 ? 'MatMul: Q * K^T' : 'Idle'}
-            </div>
-            <div className={`compute-op ${step === 4 ? 'active-compute' : ''}`}>
-              {step === 4 ? 'Online Softmax' : 'Idle'}
-            </div>
-            <div className={`compute-op ${step === 5 ? 'active-compute' : ''}`}>
-              {step === 5 ? 'MatMul: P * V' : 'Idle'}
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <div className="controls">
-        <button onClick={() => setStep((prev) => (prev - 1 + totalSteps) % totalSteps)}>Previous</button>
-        <button onClick={() => setStep((prev) => (prev + 1) % totalSteps)}>Next</button>
-      </div>
-    </div>
-  );
-};
-
-export default FlashTilingVisualizer;
+export default function FlashTilingVisualizer({ lang = 'en' }: { lang?: 'en' | 'ko' }) {
+  const ko = lang === 'ko';
+  const id = useId();
+  const [ready, setReady] = useState(false);
+  const [width, setWidth] = useState(2);
+  const [ratio, setRatio] = useState(3);
+  useEffect(() => setReady(true), []);
+  const { rows, output, tileMean } = traceTiles(ratio, width);
+  const format = new Intl.NumberFormat(ko ? 'ko-KR' : 'en-US', { maximumFractionDigits: 3 });
+  return <div className="flash-tiles">
+    <fieldset disabled={!ready}>
+      <legend>{ko ? '네 키를 타일로 나누어 계산하기' : 'Partition the four keys'}</legend>
+      <label htmlFor={id + '-width'}>{ko ? '타일당 키 수' : 'Keys per tile'}
+        <select id={id + '-width'} value={width} onChange={e => setWidth(Number(e.target.value))}>
+          {[1, 2, 3, 4].map(n => <option value={n} key={n}>{n}</option>)}
+        </select>
+      </label>
+      <label htmlFor={id + '-weight'}>{ko ? '3·4번 키의 상대 가중치' : 'Relative weight of keys 3 and 4'}
+        <select id={id + '-weight'} value={ratio} onChange={e => setRatio(Number(e.target.value))}>
+          <option value={1 / 3}>⅓×</option><option value={1}>1×</option><option value={3}>3×</option>
+        </select>
+      </label>
+    </fieldset>
+    <noscript><p>{ko ? '아래는 타일당 키 2개, 상대 가중치 3배의 결과입니다.' : 'The trace below uses two keys per tile and a relative weight of three.'}</p></noscript>
+    <table>
+      <caption>{ko ? '타일을 반영한 뒤의 누적값 (소수 셋째 자리까지 표시)' : 'State after each tile (rounded to three decimal places)'}</caption>
+      <thead><tr>
+        <th scope="col">{ko ? '키 번호' : 'Keys'}</th>
+        <th scope="col">{ko ? '보정 계수 a' : 'Rescale a'}</th>
+        <th scope="col">{ko ? '분모 ℓ' : 'Sum ℓ'}</th>
+        <th scope="col">{ko ? '분자 u' : 'Sum u'}</th>
+      </tr></thead>
+      <tbody>{rows.map(row => <tr key={row.first}>
+        <th scope="row">{row.first === row.last ? row.first : `${row.first}–${row.last}`}</th>
+        <td>{format.format(row.correction)}</td><td>{format.format(row.denominator)}</td><td>{format.format(row.numerator)}</td>
+      </tr>)}</tbody>
+    </table>
+    <dl aria-live="polite" aria-atomic="true">
+      <div><dt>{ko ? '어텐션 출력 u / ℓ' : 'Attention output u / ℓ'}</dt><dd>{format.format(output)}</dd></div>
+      <div><dt>{ko ? '타일별 출력의 단순 평균' : 'Unweighted mean of tile outputs'}</dt><dd>{format.format(tileMean)}</dd></div>
+    </dl>
+  </div>;
+}

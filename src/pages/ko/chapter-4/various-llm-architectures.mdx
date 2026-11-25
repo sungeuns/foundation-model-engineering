@@ -43,7 +43,7 @@ Chapter 3에서 본 표준 Transformer는 출발점입니다. 실제 시스템�
 ### 2. KV Cache 압축과 메모리 친화적 어텐션
 자기회귀 모델의 서빙 비용은 계산량만으로 설명되지 않습니다. 생성이 길어질수록 KV cache가 커지고, 이 캐시를 계속 읽고 쓰는 메모리 이동 비용이 매우 중요해집니다.
 
-그래서 **Multi-head Latent Attention (MLA)** 같은 설계가 중요합니다. 큰 key/value 텐서를 그대로 저장하는 대신, 더 작은 latent representation으로 저장했다가 attention 계산 시 필요한 형태로 복원하는 방식입니다 [[1]](#ref-1). 여기에 sparse 또는 local attention 패턴을 결합하면 메모리 사용량과 attention 연산량을 동시에 줄일 수 있습니다.
+DeepSeek-V3의 **Multi-head Latent Attention(MLA)** 은 토큰마다 압축된 내용과 위치 정보를 담은 키를 따로 보관합니다. 각 헤드는 같은 캐시에 자신만의 투영을 적용합니다. [4,096토큰 요청의 용량을 계산하고, 캐시를 두 가지 방식으로 읽어 같은 결과가 나오는지 확인해 봅시다](#mla-cache-example) [[1]](#ref-1).
 
 ### 3. 피드포워드 스택의 MoE
 또 다른 큰 레버는 feed-forward block입니다. dense FFN은 전체 파라미터를 항상 활성화하지만, **Mixture of Experts (MoE)** 는 토큰마다 일부 expert만 활성화합니다.
@@ -164,79 +164,59 @@ Engram은 토큰 조건의 lookup을 MoE 연산과 함께 사용하는 방향을
 
 이 관점에서 보면 “최고의 현대 아키텍처 하나”를 찾기보다, 어떤 서비스 조건에 어떤 타협이 맞는지를 보는 편이 현실적입니다.
 
-### 병목이 바뀌면 설계도 바뀐다
-초기 Transformer 논의는 주로 파라미터 수와 benchmark 점수에 초점이 맞춰져 있었습니다. 하지만 production 환경은 다른 질문을 던졌습니다. “모델이 얼마나 똑똑한가?”만큼이나 “이 모델을 메모리 압박 없이, 지연 시간 안에, 예측 가능한 비용으로 돌릴 수 있는가?”가 중요해진 것입니다.
+<a id="병목이-바뀌면-설계도-바뀐다"></a>
+<a id="pytorch-구현-간략화된-mla"></a>
+<a id="mla-cache-example"></a>
 
-그래서 최신 아키텍처 연구는 보편적 승자를 찾는 경쟁이라기보다, 어떤 병목을 어떤 방식으로 우회할지에 대한 설계 탐색에 가깝습니다.
+## DeepSeek-V3의 어텐션 층은 다음 토큰을 위해 무엇을 보관할까요?
 
----
+한 요청에서 이미 4,096토큰을 처리했다고 합시다. DeepSeek-V3는 토큰마다 키와 값의 내용을 압축한 512차원 벡터와, 회전 위치 임베딩(RoPE)을 적용한 64차원 키를 보관합니다. 한 층의 헤드 128개가 이 두 벡터를 공유합니다. 각 원소를 2바이트로 저장한다고 가정하면 **요청 하나, 층 하나** 에서 캐시에 필요한 용량은 $4096 \times (512+64) \times 2 = 4{,}718{,}592$바이트, 즉 **4.5 MiB** 입니다. 압축된 내용만 세면 위치 키가 차지하는 0.5 MiB가 빠집니다. 두 벡터의 정의와 차원은 DeepSeek-V3 기술 보고서 2.1.1절과 4.2절에서 확인할 수 있습니다 [[1]](#ref-1).
 
-## PyTorch 구현: 간략화된 MLA
+같은 벡터를 읽어도 헤드마다 다른 결과가 나오는 이유는 무엇일까요? 행렬 $C$의 각 행에는 토큰 하나의 압축된 내용이 들어 있습니다. 한 헤드가 사용하는 키·값 투영 행렬을 $U_K$, $U_V$, 내용 쿼리를 $q$라고 합시다. 모든 키를 먼저 복원해 $(CU_K)q$를 계산해도 되고, 쿼리를 먼저 투영해 $C(U_Kq)$를 계산해도 내용 점수는 같습니다. 여기에 위치 점수를 더한 뒤 스케일링과 소프트맥스를 적용합니다. 이렇게 얻은 가중치가 $a$라면, 값을 복원해 가중합을 구한 $a^T(CU_V)$와 압축 벡터의 가중합을 먼저 구한 $(a^T C)U_V$도 같습니다.
 
-하이브리드 어텐션이 주목받고 있어도, **Multi-head Latent Attention (MLA)** 는 서빙 병목을 아주 직관적으로 보여주는 예시입니다. 아래 간략화된 구현은 “저장할 것은 압축하고, 계산할 때만 복원한다”는 핵심 아이디어를 드러냅니다.
-
-> **의도적으로 단순화한 예제.** 이 교육용 저차원 어텐션은 K/V를 복원하며 운영 MLA의 캐시 projection 흡수·분리된 RoPE·점진 서빙·양자화·분산 커널은 구현하지 않습니다.
+> **CPU 예제의 범위.** 패딩이 없는 시퀀스 하나에 토큰을 한 자리씩 추가합니다. FP32 텐서로 학습된 투영과 RoPE를 거친 값을 대신하고, 헤드마다 두 계산 순서의 출력을 대조합니다. 실제 모델의 가중치, 최종 출력 투영, 메모리 할당 비용과 최적화 커널은 생략했습니다. `torch.cat`으로 행을 추가할 때는 텐서 복사가 일어납니다.
 
 ```python
+import math
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
 
-class SimpleLatentAttention(nn.Module):
-    def __init__(self, d_model, n_heads, d_head, d_latent):
-        super().__init__()
-        self.d_model = d_model
-        self.n_heads = n_heads
-        self.d_head = d_head
-        self.d_latent = d_latent # 압축된 KV의 차원
+rng = torch.Generator().manual_seed(7)
 
-        # 표준 Query 투영
-        self.q_proj = nn.Linear(d_model, n_heads * d_head)
+def sample(*shape):
+    return torch.randn(*shape, generator=rng, dtype=torch.float32, device="cpu")
 
-        # KV 압축: 입력을 더 작은 잠재 공간으로 투영
-        self.kv_compress = nn.Linear(d_model, d_latent)
+# Two heads, each projecting a 3-coordinate latent to 4 content coordinates.
+key_up = sample(2, 3, 4)
+value_up = sample(2, 3, 4)
+latent = sample(0, 3)
+position_keys = sample(0, 2)
+scale = math.sqrt(4 + 2)
 
-        # KV 복원: 잠재 공간에서 K와 V를 재구성
-        self.kv_decompress = nn.Linear(d_latent, n_heads * d_head * 2)
+for _ in range(4):
+    latent = torch.cat((latent, sample(1, 3)))
+    position_keys = torch.cat((position_keys, sample(1, 2)))
+    for wk, wv in zip(key_up, value_up):
+        query = sample(4)
+        position_scores = position_keys @ sample(2)
+        keys, values = latent @ wk, latent @ wv
+        weights = (((keys @ query) + position_scores) / scale).softmax(dim=0)
+        reference = weights @ values
 
-        self.o_proj = nn.Linear(n_heads * d_head, d_model)
+        latent_query = wk @ query
+        weights = ((latent @ latent_query + position_scores) / scale).softmax(dim=0)
+        result = (weights @ latent) @ wv
+        torch.testing.assert_close(result, reference, atol=1e-5, rtol=1e-5)
 
-    def forward(self, x):
-        batch_size, seq_len, _ = x.size()
-
-        # 1. Query 투영
-        q = self.q_proj(x).view(batch_size, seq_len, self.n_heads, self.d_head)
-        q = q.transpose(1, 2) # (B, H, S, d_head)
-
-        # 2. KV 압축
-        # 이 'latent' 벡터가 바로 KV Cache에 저장되는 대상입니다!
-        latent = self.kv_compress(x) # (B, S, d_latent)
-
-        # 3. 어텐션 연산을 위한 KV 복원
-        kv = self.kv_decompress(latent).view(batch_size, seq_len, self.n_heads, self.d_head, 2)
-        k = kv[..., 0].transpose(1, 2) # (B, H, S, d_head)
-        v = kv[..., 1].transpose(1, 2) # (B, H, S, d_head)
-
-        # 4. Scaled Dot-Product Attention
-        scores = torch.matmul(q, k.transpose(-2, -1)) / (self.d_head ** 0.5)
-
-        # 인과적 마스크 적용 (간략화)
-        mask = torch.tril(torch.ones(seq_len, seq_len, device=x.device))
-        scores = scores.masked_fill(mask == 0, float('-inf'))
-
-        attn = F.softmax(scores, dim=-1)
-
-        context = torch.matmul(attn, v) # (B, H, S, d_head)
-        context = context.transpose(1, 2).contiguous().view(batch_size, seq_len, -1)
-
-        return self.o_proj(context)
+print(tuple(latent.shape), tuple(position_keys.shape), latent.nbytes + position_keys.nbytes)
 ```
+
+출력은 `(4, 3) (4, 2) 80`입니다. 네 위치에 각각 압축된 내용 세 값과 위치 키 두 값을 FP32로 저장해서 총 80바이트가 됩니다. 비교를 위해 복원한 키와 값은 임시로 사용합니다. 토큰 네 개를 차례로 추가하면서 두 헤드의 출력을 매번 대조하므로, 여덟 번의 검사를 모두 통과해야 이 숫자가 출력됩니다.
 
 ---
 
 ## 인터랙티브 시각화: 어텐션 마스크
 
-이러한 다양한 아키텍처가 정보 흐름을 어떻게 제어하는지 더 잘 이해하기 위해 어텐션 마스크를 시각화해 보겠습니다. AI 전문가들은 마스크가 모델이 인코더(양방향), 디코더(인과적) 또는 Prefix-LM으로 작동하는지를 진정으로 정의하는 요소임을 알고 있습니다.
+두 번째 토큰 ‘러닝’은 몇 개의 위치를 참조할 수 있을까요? 양방향, 인과적, Prefix-LM 순서로 마스크를 바꾸면서 ‘러닝’ 행에 표시된 1을 세어 보세요. 다섯 개에서 두 개로 줄었다가 세 개가 됩니다. Prefix-LM에서 ‘러닝’이 뒤에 오는 ‘은’을 볼 수 있는 이유는 두 토큰이 모두 처음 세 토큰으로 이루어진 접두사에 속하기 때문입니다. 1은 참조가 가능하다는 뜻입니다. 실제로 각 위치에 주는 가중치는 학습된 쿼리와 키로 결정합니다.
 
 <AttentionMaskVisualizer client:load lang="ko" />
 
@@ -336,8 +316,8 @@ $D$는 별도로 저장하는 레이어 가중치 수가 아니라 실행 횟수
 </details>
 
 <details>
-<summary>Quiz 2: KV cache 압축과 sparse/local attention을 함께 쓰면 어떤 이점이 있나요?</summary>
-*두 기법이 줄이는 비용이 다르기 때문입니다. KV cache 압축은 메모리 사용량과 대역폭 압박을 낮추고, sparse/local attention은 긴 시퀀스에서 실제 attention 연산량을 줄입니다. 함께 쓰면 장문 컨텍스트 서빙에서 더 큰 효과를 얻을 수 있습니다.*
+<summary>Quiz 2: 원소 하나를 2바이트로 저장하면 DeepSeek-V3에서 4,096토큰을 처리한 한 층의 MLA 캐시가 왜 4 MiB를 넘을까요?</summary>
+*압축된 내용의 512개 원소가 총 4 MiB를 차지합니다. 같은 토큰에 대해 보관하는 64차원 위치 키가 0.5 MiB를 더 차지하므로, 이 정밀도에서 캐시 텐서의 합계는 4.5 MiB입니다.*
 </details>
 
 <details>

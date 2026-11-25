@@ -4,11 +4,13 @@ title: "7.4 Flash Attention 1, 2, 3"
 lang: "en"
 ---
 
+import FlashTilingVisualizer from '../../components/chapter-7/FlashTilingVisualizer';
+
 # 7.4 Flash Attention 1, 2, 3
 
 A 4,096-token attention head produces $4,096^2$ pairwise scores. Stored in FP32, that single matrix occupies **64 MiB**. With a batch of two and eight heads, the score matrices alone occupy **1 GiB**. Computing the scores is useful work; repeatedly writing and reading a full matrix that will soon be discarded is a separate cost.
 
-FlashAttention changes the execution schedule of attention to reduce that memory traffic [[1]](#ref-1). It processes tiles in fast on-chip memory and accumulates the output without storing the full score or probability matrix in GPU high-bandwidth memory (HBM). The dense computation still has quadratic arithmetic cost in sequence length. The practical question is how much movement, storage and idle compute the implementation can avoid.
+FlashAttention changes the execution schedule of attention to reduce that memory traffic [[1]](#ref-1). It processes tiles in fast on-chip memory and accumulates the output without storing the full score or probability matrix in GPU high-bandwidth memory (HBM). The dense computation still has quadratic arithmetic cost in sequence length. [Try the four-key example](#online-softmax-tiles) to see which running sums let a tile go out of scope.
 
 ## 1. Count the Intermediate, Then the Whole Workload
 
@@ -36,11 +38,24 @@ u'&=au+\sum_{j\in T}p_jv_j. &&
 \end{aligned}
 $$
 
-Start with $m=-\infty$, $\ell=0$ and $u=0$; the final output is $u/\ell$. When a later tile raises the maximum, $a$ rescales **both** old sums into the new reference frame. Normalizing each tile independently and averaging its output would give the wrong weights when tile denominators differ.
+Start with $m=-\infty$, $\ell=0$ and $u=0$; the final output is $u/\ell$. When a later tile raises the maximum, $a$ rescales **both** old sums into the new reference frame. Even tiles with equal denominators at their own maxima can carry different weight once they use a common reference point.
+
+<a id="online-softmax-tiles"></a>
+
+### Can two tile outputs be averaged?
+
+One query reads four scalar values, $[2,2,10,10]$. The first two keys have score 1000 and the last two have score $1000+\ln 3$. Each later key therefore gets three times the weight of an earlier key. The full-row output is $(2+2+3\times10+3\times10)/(1+1+3+3)=8$.
+
+Put two keys in each tile. Within either tile the scores tie, so each tile has local denominator 2 if measured at its own maximum. Their local outputs are 2 and 10. An equal vote for each tile gives 6. The second tile actually carries three times the mass of the first. When it arrives, its higher score changes the reference point. Multiply the old denominator 2 **and** the old numerator 4 by $1/3$ before adding the new contributions.
+
+<FlashTilingVisualizer lang="en" client:load />
+
+Keep the relative weight at 3× and set the tile width to three keys. The first tile's local output becomes 6.8 and the last tile's is 10. Their mean rises to 8.4. The full-row output stays at 8 across both partitions.
 
 > **Deliberately simplified recurrence.** This CPU FP64 example handles one query and finite, unmasked scores. It already stores that one score row so that the recurrence is easy to inspect. It is not a FlashAttention GPU implementation: it omits Q/K tiling, causal/padding masks, dropout, backward recomputation, scheduling and performance measurement. A fully masked tile/row needs explicit handling and is rejected here.
 
 ```python
+import math
 import torch
 
 @torch.no_grad()
@@ -63,22 +78,22 @@ def online_attention_row(scores, values, tile_size=2):
         block = scores[start:start + tile_size]
         new_maximum = torch.maximum(maximum, block.max())
         correction = torch.exp(maximum - new_maximum)
-        probabilities = torch.exp(block - new_maximum)
-        denominator = correction * denominator + probabilities.sum()
-        numerator = correction * numerator + probabilities @ values[start:start + tile_size]
+        weights = torch.exp(block - new_maximum)
+        denominator = correction * denominator + weights.sum()
+        numerator = correction * numerator + weights @ values[start:start + tile_size]
         maximum = new_maximum
     return numerator / denominator
 
-scores = torch.tensor([1000., 1001., 999., 1002., 998.], dtype=torch.float64)
-values = torch.arange(10, dtype=torch.float64).reshape(5, 2)
+scores = torch.tensor([1000., 1000., 1000. + math.log(3), 1000. + math.log(3)], dtype=torch.float64)
+values = torch.tensor([[2.], [2.], [10.], [10.]], dtype=torch.float64)
 expected = torch.softmax(scores, dim=0) @ values
-for tile_size in (1, 2, 3, 5):
+for tile_size in (1, 2, 3, 4):
     actual = online_attention_row(scores, values, tile_size)
     torch.testing.assert_close(actual, expected, rtol=1e-12, atol=1e-12)
-print(expected)  # approximately tensor([4.5067, 5.5067])
+print(expected.item())  # approximately 8.0
 ```
 
-The large score offset makes direct exponentiation overflow, yet subtracting a running maximum keeps the calculation finite. The uneven two-key tiles also test the final partial tile. The example uses several tile widths because the mathematical output should not depend on the partition.
+The common offset 1000 makes direct exponentiation overflow in FP64. Subtracting the running maximum keeps all four tile widths finite. Width three exercises a final tile containing just one key.
 
 ### Recomputation and the Meaning of “Exact”
 
@@ -155,7 +170,7 @@ For timing, warm up, synchronize correctly, and compare the same input/mask and 
 
 <details>
 <summary>Quiz 2: Why must a new running maximum rescale both the denominator and numerator?</summary>
-*Both old sums used the previous exponential reference point. Multiplying them by $e^{m-m'}$ puts their contributions on the new scale. Rescaling just one changes the output ratio; averaging independently normalized tiles also loses their relative weights.*
+*In the four-key example the first tile has denominator 2 and numerator 4. After the maximum rises by $\ln 3$, its contributions are $2/3$ and $4/3$. Rescaling only the denominator would give $(4+20)/(2/3+2)=9$ instead of 8.*
 </details>
 
 <details>

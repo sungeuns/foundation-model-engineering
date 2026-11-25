@@ -5,6 +5,7 @@ import { readReleaseScenario } from '../components/chapter-17/release-scenario.j
 // These IDs name the same authored exercise in both translations. Do not infer
 // counterparts from heading order, translated slugs, or reference numbers.
 const lessonFragments = {
+  '/chapter-1/deep-learning-paradigms': ['next-token-loss-example'],
   '/chapter-1/bitter-lesson': ['chinchilla-budget-example'],
   '/chapter-1/symbolism-vs-connectionism': ['logic-gate-lab'],
   '/chapter-2/dawn-of-attention': ['translation-alignment-example'],
@@ -17,13 +18,14 @@ const lessonFragments = {
   '/chapter-4/encoder-only': ['mlm-target-example'],
   '/chapter-4/decoder-only': ['shifted-target-example'],
   '/chapter-4/encoder-decoder': ['cross-attention-example'],
-  '/chapter-4/various-llm-architectures': ['glm-54-layer-reuse', 'glm-54-cache-positions'],
+  '/chapter-4/various-llm-architectures': ['glm-54-layer-reuse', 'glm-54-cache-positions', 'mla-cache-example'],
   '/chapter-4/hybrid-prefix-lm': ['prefix-mask-test'],
   '/chapter-5/sparse-vs-dense-models': ['moe-routing-lab'],
   '/chapter-5/expert-parallelism': ['expert-dispatch-lab'],
   '/chapter-5/case-study': ['dropless-routing-example'],
   '/chapter-6/tokenization-science': ['tokenizer-acceptance-probes'],
   '/chapter-7/zero-redundancy-optimizer': ['zero-shard-ownership'],
+  '/chapter-7/flash-attention': ['online-softmax-tiles'],
   '/chapter-7/tiny-decoder-lab': ['decoder-copy-trace', 'local-decoder-setup'],
   '/chapter-8/power-law': ['scaling-loss-floor'],
   '/chapter-8/continued-pretraining-and-domain-adaptation': ['token-mixture-example', 'tokenizer-perplexity-example'],

@@ -13,7 +13,7 @@
 | 궁금한 문제 | 읽을 곳 | 직접 확인할 내용 |
 | --- | --- | --- |
 | 가중치는 GPU에 들어가는데, 왜 다음 요청에서 메모리가 부족할까? | [KV 캐시 관리](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-12/kv-cache-management/#kv-cache-capacity) | [SmolLM2에서 실측한 990 KiB](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-12/kv-cache-management/#kv-batch-padding)를 [같은 배치 설정의 계산기](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-12/kv-cache-management/?kv=1&batch=2&sequence=11&generated=4&layers=30&heads=3&dimension=64&precision=4&budget=24#kv-calculator)로 확인합니다. 직접 측정하려면 [CPU 노트북](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-12/kv-cache-management/#kv-payload-notebook)을, 길이가 다른 요청을 계산하려면 [계산 시트(XLSX)](https://sungeuns.github.io/foundation-model-engineering/labs/kv-queue-ko.xlsx)를 사용하세요. |
-| 어텐션 가중치는 실제 출력에 어떻게 쓰일까? | [셀프 어텐션의 수학](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-3/self-attention-mathematics/#attention-weight-example) | [두 쪽짜리 활동지와 풀이](https://sungeuns.github.io/foundation-model-engineering/labs/attention-worksheet-ko.pdf)로 직접 계산하고 브라우저에서 같은 입력으로 확인합니다. |
+| 어텐션 가중치는 실제 출력에 어떻게 쓰일까? | [셀프 어텐션의 수학](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-3/self-attention-mathematics/#attention-weight-example) | [두 쪽짜리 활동지와 풀이](https://sungeuns.github.io/foundation-model-engineering/labs/attention-worksheet-ko.pdf)로 직접 계산한 뒤, [FlashAttention에서 타일별 출력을 단순 평균하면 왜 8 대신 6이 나오는지](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-7/flash-attention/#online-softmax-tiles) 확인합니다. |
 | BERT는 일부러 그대로 둔 단어도 채점할까? | [다섯 토큰 예제](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-4/encoder-only/#mlm-target-example) | 두 손실값을 계산합니다. 이어서 [교차 어텐션의 패딩 값](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-4/encoder-decoder/#cross-attention-example)을 바꾸면 어떤 출력이 달라질지 확인합니다. |
 | 이미지 한 장은 문맥을 몇 자리 차지할까? | [시각 토큰 계산](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-11/vision-language-bridges/#visual-token-budget) | 이미지 크기와 장수를 바꿔 보고, [영수증의 합계 줄을 지웠을 때 모델이 실제로 읽은 값](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-11/vision-language-bridges/#receipt-grounding)을 확인합니다. |
 | RAG 답변이 틀렸다. 어디서 근거가 사라졌을까? | [청크 ID 추적 예제](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-14/rag-failure-modes-and-operational-design/#trace-a-rag-answer) | 여섯 사례에서 잃어버린 근거를 추적한 뒤 [재순위화에 넘기는 후보 수](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-14/advanced-retrieval/#rrf-candidate-cutoff)를 바꿔 봅니다. |
@@ -55,7 +55,9 @@ python public/labs/paired_release.py --scenario missing
 - [기여 안내](CONTRIBUTING.md)를 참고해 영문·한국어 설명, 실행 예제, 접근성을 개선할 수 있습니다.
 - 도움이 된 설명이 있었다면 [GitHub Star](https://github.com/sungeuns/foundation-model-engineering)로 책을 저장하거나, 같은 문제를 겪는 동료에게 해당 절을 공유해주세요.
 
-Seongeun So가 AI의 도움을 받아 집필·편집하는 독립 프로젝트입니다.
+Seongeun So가 AI의 도움을 받아 집필·편집하는 독립 교재입니다. 처음 공개한 한국어판은 Gemini의 도움을 받아 번역했습니다. [초기 한국어판 번역 안내](https://github.com/sungeuns/foundation-model-engineering/blob/7c1f561b5992d92ce243f1b7239df77bdf81e23a/README.md#L17)
+
+지금은 한 절을 개정할 때 영문을 먼저 고친 뒤, 수식과 코드, 예제 풀이를 포함한 수정 사항을 한국어판에도 함께 반영합니다. 각 절에서 어떤 내용을 확인했는지는 검토 기록에서 볼 수 있습니다. [편집 지침](CONTRIBUTING.md) · [절별 검토 기록](docs/editorial_rewrite_worklog.md)
 
 Data For Science는 2026년 9월 23일 발행한 [Data Science Briefing 337호](https://data4sci.com/newsletter/data-science-briefing-337)에서 이 책을 소개했습니다.
 

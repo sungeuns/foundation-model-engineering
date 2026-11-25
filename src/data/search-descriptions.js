@@ -247,8 +247,8 @@ export const searchDescriptions = {
     ko: '영화평에서 연기와 줄거리에 붙은 평가를 맞바꿔 평균이 어떤 정보를 잃는지 확인합니다. 단어 점수 학습과 2차원 오토인코더 병목도 다룹니다.',
   },
   '/chapter-1/deep-learning-paradigms': {
-    en: 'Compare supervised, self-supervised, and reinforcement learning, then connect these paradigms to foundation models and autoregressive training loss.',
-    ko: '지도·자기지도·강화 학습을 비교하고, 각 학습 패러다임이 파운데이션 모델과 자기회귀 학습 손실에 어떻게 연결되는지 살펴봅니다.',
+    en: 'Use eight film reviews to compute next-token loss in Python. Compare the training signal from the review itself, a written answer, and a grader’s reward.',
+    ko: '영화평 여덟 건으로 다음 토큰의 확률과 손실을 계산합니다. 같은 영화평에서 원문, 예시 답안, 채점기의 보상으로 각각 무엇을 학습할 수 있는지 살펴봅니다.',
   },
   '/chapter-1/bitter-lesson': {
     en: 'Read Sutton’s Bitter Lesson through Gopher and Chinchilla. Compare their training budgets and run a short Python example that trades model size for tokens.',
@@ -383,8 +383,8 @@ export const searchDescriptions = {
     ko: '가중치 여덟 개를 네 랭크에 나눠 ZeRO 1·2·3단계의 GPU당 메모리를 계산합니다. CPU에서 PyTorch로 그래디언트를 분할하고 갱신한 가중치를 다시 모아 보세요.',
   },
   '/chapter-7/flash-attention': {
-    en: 'Learn how FlashAttention uses tiling, recomputation, and parallelism to reduce memory traffic, and how to check PyTorch SDPA kernel selection.',
-    ko: 'FlashAttention의 타일링, 재계산, 병렬화가 메모리 접근을 줄이는 원리를 배우고 PyTorch SDPA의 커널 선택을 확인합니다.',
+    en: 'Work through a FlashAttention row where averaging tile outputs gives 6 and the correct result is 8. Trace online softmax, memory traffic, and PyTorch kernel selection.',
+    ko: 'FlashAttention에서 두 타일의 출력을 단순 평균하면 6인데 전체 출력은 왜 8일까요? 네 개의 키로 온라인 소프트맥스를 계산하고 메모리 접근과 PyTorch 커널 선택을 살펴봅니다.',
   },
   '/chapter-9/sft-fundamentals': {
     en: 'Build a mental model of supervised fine-tuning: assistant loss masks, native chat templates, packing, truncation, and evaluation gates.',

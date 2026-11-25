@@ -1,0 +1,42 @@
+.flash-tiles {
+  margin: 1.25rem 0;
+  padding: 1rem;
+  color: #1f3040;
+  border: 1px solid #bccbd3;
+  border-radius: .5rem;
+  background: #f5f8f8;
+  font-size: 1rem;
+}
+.flash-tiles fieldset {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem 1.5rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.flash-tiles legend { margin-bottom: .5rem; font-weight: 650; }
+.flash-tiles label { display: grid; gap: .2rem; }
+.flash-tiles select {
+  min-height: 2.5rem;
+  padding: .25rem .5rem;
+  color: inherit;
+  border: 1px solid #657b84;
+  border-radius: .25rem;
+  background: white;
+  font: inherit;
+}
+.flash-tiles table { width: 100%; margin: 1rem 0; font-variant-numeric: tabular-nums; }
+.flash-tiles caption { text-align: left; padding-bottom: .3rem; font-size: .9rem; }
+.flash-tiles :is(th, td) { padding: .35rem .4rem; text-align: right; }
+.flash-tiles :is(th, td):first-child { text-align: left; }
+.flash-tiles dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; margin: 0; }
+.flash-tiles dl div { border-top: 2px solid #66828b; padding-top: .4rem; }
+.flash-tiles dt { font-size: .9rem; }
+.flash-tiles dd { margin: 0; font-size: 1.45rem; font-weight: 650; font-variant-numeric: tabular-nums; }
+@media (max-width: 450px) {
+  .flash-tiles { padding: .75rem; }
+  .flash-tiles table { font-size: .84rem; }
+  .flash-tiles :is(th, td) { padding: .3rem; }
+}

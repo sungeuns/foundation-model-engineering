@@ -1,116 +1,60 @@
-import React, { useState } from 'react';
-import './visualizers.css';
+import { useEffect, useId, useState } from 'react';
+import './next-token.css';
 
-const data: Record<string, Record<string, { word: string; prob: number }[]>> = {
-  en: {
-    sky: [
-      { word: "blue", prob: 0.75 },
-      { word: "dark", prob: 0.15 },
-      { word: "cloudy", prob: 0.05 },
-      { word: "falling", prob: 0.01 }
-    ],
-    capital: [
-      { word: "Paris", prob: 0.98 },
-      { word: "London", prob: 0.01 },
-      { word: "huge", prob: 0.005 },
-      { word: "beautiful", prob: 0.002 }
-    ],
-    deep: [
-      { word: "neural", prob: 0.45 },
-      { word: "networks", prob: 0.35 },
-      { word: "data", prob: 0.10 },
-      { word: "learning", prob: 0.05 }
-    ]
-  },
-  ko: {
-    sky: [
-      { word: "파랗다", prob: 0.75 },
-      { word: "어둡다", prob: 0.15 },
-      { word: "흐리다", prob: 0.05 },
-      { word: "높다", prob: 0.01 }
-    ],
-    capital: [
-      { word: "파리", prob: 0.98 },
-      { word: "런던", prob: 0.01 },
-      { word: "크다", prob: 0.005 },
-      { word: "아름답다", prob: 0.002 }
-    ],
-    deep: [
-      { word: "신경망", prob: 0.45 },
-      { word: "데이터", prob: 0.35 },
-      { word: "학습", prob: 0.10 },
-      { word: "인공지능", prob: 0.05 }
-    ]
-  }
+const training = {
+  acting: ['good', 'good', 'good', 'weak'],
+  plot: ['good', 'weak', 'weak', 'weak'],
 };
+type Aspect = keyof typeof training;
+type Ending = 'good' | 'weak';
 
-interface Props {
-  lang?: 'en' | 'ko';
-}
+export const NextTokenVisualizer = ({ lang = 'en' }: { lang?: 'en' | 'ko' }) => {
+  const ko = lang === 'ko';
+  const id = useId();
+  const [ready, setReady] = useState(false);
+  const [aspect, setAspect] = useState<Aspect>('acting');
+  const [ending, setEnding] = useState<Ending>('good');
+  const [extra, setExtra] = useState(false);
+  useEffect(() => setReady(true), []);
 
-export const NextTokenVisualizer = ({ lang = 'en' }: Props) => {
-  const [prompt, setPrompt] = useState('sky');
+  const words = ko
+    ? { acting: '연기는', plot: '줄거리는', good: '좋았다', weak: '아쉬웠다' }
+    : { acting: 'acting', plot: 'plot', good: 'good', weak: 'weak' };
+  const observations = extra && aspect === 'acting' ? [...training.acting, 'weak'] : training[aspect];
+  const count = (word: Ending) => observations.filter(value => value === word).length;
+  const hits = count(ending);
+  const loss = -Math.log(hits / observations.length);
 
-  const sentences = data[lang] || data['en'];
-  const predictions = sentences[prompt];
-
-  const allLabels = {
-    en: {
-      title: "Next Token Prediction",
-      desc: "Select a prompt to see simulated probabilities for the next word.",
-      select: "Select a Prompt:",
-      subtitle: "Top Predicted Next Tokens:",
-      prompts: {
-        sky: "The sky is ...",
-        capital: "The capital of France is ...",
-        deep: "Deep learning is based on ..."
-      }
-    },
-    ko: {
-      title: "다음 토큰 예측",
-      desc: "프롬프트를 선택하여 다음 단어의 시뮬레이션된 확률을 확인하세요.",
-      select: "프롬프트 선택:",
-      subtitle: "가장 높은 확률의 다음 토큰들:",
-      prompts: {
-        sky: "하늘은 ...",
-        capital: "프랑스의 수도는 ...",
-        deep: "딥러닝은 ... 기반이다"
-      }
-    }
-  };
-
-  const labels = allLabels[lang] || allLabels['en'];
-
-  return (
-    <div className="viz-container glassmorphism">
-      <h3 className="viz-title">{labels.title}</h3>
-      <p className="viz-description">{labels.desc}</p>
-      
-      <div className="viz-controls centered">
-        <label style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>{labels.select}</label>
-        <select value={prompt} onChange={(e) => setPrompt(e.target.value)} className="viz-select">
-          <option value="sky">{labels.prompts.sky}</option>
-          <option value="capital">{labels.prompts.capital}</option>
-          <option value="deep">{labels.prompts.deep}</option>
+  return <section className="next-token-example" aria-labelledby={id}>
+    <h3 id={id}>{ko ? '연기와 줄거리 뒤에 어떤 말이 이어졌을까?' : 'Which word followed “acting” or “plot”?'}</h3>
+    <fieldset disabled={!ready}>
+      <legend>{ko ? '별도로 채점할 영화평' : 'Review to score separately'}</legend>
+      <label>{ko ? '첫 토큰' : 'First token'}
+        <select value={aspect} onChange={e => setAspect(e.currentTarget.value as Aspect)}>
+          <option value="acting">{words.acting}</option><option value="plot">{words.plot}</option>
         </select>
-      </div>
-
-      <div className="viz-display list-display">
-        <div className="viz-subtitle">{labels.subtitle}</div>
-        <div className="viz-list">
-          {predictions.map((p, index) => (
-            <div key={index} className="viz-list-item">
-              <div className="viz-list-item-content">
-                <span className="viz-word">"{p.word}"</span>
-                <div className="viz-bar-container">
-                  <div className="viz-bar" style={{ width: `${p.prob * 100}%` }}></div>
-                </div>
-              </div>
-              <span className="viz-prob">{(p.prob * 100).toFixed(1)}%</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
+      </label>
+      <label>{ko ? '실제로 이어진 토큰' : 'Observed next token'}
+        <select value={ending} onChange={e => setEnding(e.currentTarget.value as Ending)}>
+          <option value="good">{words.good}</option><option value="weak">{words.weak}</option>
+        </select>
+      </label>
+      <label className="next-token-extra">
+        <input type="checkbox" checked={extra} onChange={e => setExtra(e.currentTarget.checked)} />
+        {ko ? '학습 자료에 별개의 “연기는 아쉬웠다” 영화평 한 건 추가' : 'Add one separate “acting weak” review to the training set'}
+      </label>
+    </fieldset>
+    <table>
+      <thead><tr><th scope="col">{ko ? '다음 토큰' : 'Next token'}</th><th scope="col">{ko ? '학습에서 센 횟수' : 'Training count'}</th><th scope="col">{ko ? '예측 확률' : 'Probability'}</th></tr></thead>
+      <tbody>{(['good', 'weak'] as const).map(word => <tr key={word}>
+        <th scope="row">{words[word]}</th><td>{count(word)} / {observations.length}</td>
+        <td>{100 * count(word) / observations.length}%</td>
+      </tr>)}</tbody>
+    </table>
+    <p className="next-token-score" aria-live="polite" aria-atomic="true">
+      <strong>{words[aspect]} → {words[ending]}</strong><br />
+      {ko ? '이 토큰의 손실' : 'Loss for this token'} = −ln({hits}/{observations.length}) = <strong>{loss.toFixed(3)} {ko ? 'nat' : 'nats'}</strong>
+    </p>
+    <noscript><p>{ko ? '초기 예제의 계산값입니다. 선택을 바꾸려면 JavaScript를 켜세요.' : 'The initial calculation is shown. Enable JavaScript to change the review.'}</p></noscript>
+  </section>;
 };

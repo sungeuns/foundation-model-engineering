@@ -38,6 +38,9 @@ test('shared exercise IDs belong to the same authored content in both translatio
     }
   }
   for (const [route, id] of [
+    ['/chapter-1/deep-learning-paradigms', 'next-token-loss-example'],
+    ['/chapter-4/various-llm-architectures', 'mla-cache-example'],
+    ['/chapter-7/flash-attention', 'online-softmax-tiles'],
     ['/chapter-1/bitter-lesson', 'chinchilla-budget-example'],
     ['/chapter-19/probing-classifiers', 'probe-projection-coordinates'],
     ['/chapter-7/zero-redundancy-optimizer', 'zero-shard-ownership'],

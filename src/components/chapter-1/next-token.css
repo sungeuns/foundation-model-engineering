@@ -1,0 +1,17 @@
+.next-token-example { margin: 1.5rem 0; padding: 1rem 1.25rem; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: .65rem; }
+.next-token-example h3 { margin: 0 0 .8rem; font-size: 1.15rem; }
+.next-token-example fieldset { display: flex; gap: .65rem 1.25rem; flex-wrap: wrap; min-width: 0; margin: 0; padding: .65rem .8rem; border: 1px solid #aebcca; border-radius: .3rem; }
+.next-token-example legend { padding: 0 .25rem; font-size: .95rem; }
+.next-token-example label { display: grid; gap: .2rem; font-size: .95rem; }
+.next-token-example select { min-height: 2.5rem; padding: .3rem .6rem; font: inherit; }
+.next-token-example .next-token-extra { display: flex; align-items: center; gap: .5rem; width: 100%; min-height: 2.5rem; cursor: pointer; }
+.next-token-extra input { flex: none; width: 1rem; height: 1rem; }
+.next-token-example table { margin: .85rem 0; font-variant-numeric: tabular-nums; }
+.next-token-example :is(th, td) { padding: .4rem .65rem; text-align: left; }
+.next-token-example .next-token-score { margin: 0; color: #183952; font-variant-numeric: tabular-nums; }
+.next-token-score strong:last-child { white-space: nowrap; }
+.next-token-example:lang(ko) { word-break: keep-all; }
+@media (max-width: 480px) {
+  .next-token-example { padding: .85rem; }
+  .next-token-example :is(th, td) { padding: .35rem; font-size: .85rem; }
+}

@@ -266,7 +266,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 |---|---|---|---|---|
 | 1.1 | `/chapter-1/symbolism-vs-connectionism` | Inspected 2026-11-25 | 0716f9db3899f06858b670a0db1a2df64c2b7604cfd43271b47e8dc4fde62724 | 53beeda6131ee1bbdbdf19474ab6627888550515acee9b3805e2c6d330f14cd3 |
 | 1.2 | `/chapter-1/power-of-representation` | Inspected 2026-11-25 | 594cb7c0c43d5e5ed15a129a3d067bb6076a8a51c9a325fba642f5b85fcbb9d0 | 1d914327b1d0f84d6af190450901d013b3dee6ecc439156f61209203c220c6da |
-| 1.3 | `/chapter-1/deep-learning-paradigms` | Mechanical only | f373b59e6d5782c6150b3b363f1d61ba9d3a4ecab555ade160773d88a2489ff5 | 73265363881ee05ce8f60d1e80ab001c55ff58d7207f386e7f50a5b0b63353ac |
+| 1.3 | `/chapter-1/deep-learning-paradigms` | Inspected 2026-11-25 | 1aa8d28c79625d3e4be36b6e46ce2b2c86b63c9c53dd0db9ac608a41c59975cb | c4a90dc9fd17d0663a430eb4e665bbe961cfe618a1e17b74d6bf2b463aee5d67 |
 | 1.4 | `/chapter-1/bitter-lesson` | Inspected 2026-11-25 | a9734cd48043475a436dce8ac4bf6dcb9695e12adb0c518f95cc022c5b926370 | 8ef44e8465f5b8d8cb23f7e97b9192f976d086b6aee03d576c860691ca039c0e |
 | 1.5 | `/chapter-1/learning-path-and-mastery` | Inspected 2026-11-17 | 0f8f04bb12ad70521b3c701fae89e83133b936a5d28d74a07b17d6a0f9d55c12 | 7afd35142e5986833e81c484c1c3d7fe0b717d7d728be32693fb4ec93a0ff029 |
 | 2.1 | `/chapter-2/markov-chains-to-rnns` | Inspected 2026-11-15 | 0ce137827271786ce59fbb687ede850189b1842843a7e11d9420e8d51da672c8 | 0d4b5440f58a02205e9c981af00a3d028f6e7081b2923f0a609a0f0f9e581e2a |
@@ -282,7 +282,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 4.2 | `/chapter-4/decoder-only` | Inspected 2026-11-25 | 566f11bdb11a6760f26ac9639bd0922af4ad46077497b6332ca7d4647a090e8b | 7a42e67720a62c01c9801e20b6ef5523aa9f6fb0fe3b60cdb074afb20dc23897 |
 | 4.3 | `/chapter-4/encoder-decoder` | Inspected 2026-11-25 | a81d35a1f33c94b446e07b1a1c911d1288c7936c2231803a570350bdf7ff76ae | 124605867b0725c421d411857fa79b4d56f1a39a0f1c02d401f7c82686e5128a |
 | 4.4 | `/chapter-4/hybrid-prefix-lm` | Inspected 2026-11-25 | 6edb93ff3d69526c5abd2108193b487cc82eb60c9c9887033237a77e72052127 | 59715e846873b8af91b74291aa803ff3047a646a79042af60da4b04a3dccef60 |
-| 4.5 | `/chapter-4/various-llm-architectures` | Mechanical only | fc557244b4454602cfe157b3ea6ddf3d31c883ec9989bd02fa4ce21403de5be3 | 31f75a846fbd8f448d4bc353dffda6fb1cc65ab0426dd544c5789e22e756e972 |
+| 4.5 | `/chapter-4/various-llm-architectures` | Mechanical only | 6558280b248105bbb05a4b81c8836327d5a833973661a1c6924d29d53826f126 | 024ecec540a90f7d8ab77676ef076ea3537650b7fe24634981f32d3750e3ddfb |
 | 5.1 | `/chapter-5/sparse-vs-dense-models` | Inspected 2026-11-25 | 01f8735ffcc52bb919dfea3402cb6fbdb0313849c20a83c447820f04e5bb6c08 | 7908d7d81bd30342d4223623ac332bf1d17f91a47e55e1deb8ba8d3ee2b88c37 |
 | 5.2 | `/chapter-5/routing-algorithms` | Inspected 2026-11-15 | 3b83671dec53a4a69ee8c357d810ac48b3b2b069f1b54fdb76a8e567ae6ed3e7 | 436d75fa19297b28084c3bf55cb2e92e341e86d33370e1843de1c263a8f9d356 |
 | 5.3 | `/chapter-5/expert-parallelism` | Inspected 2026-11-25 | 75beb517abd6e9d61832a0e3cdb79eac46c214026c2cbd86c6946965d07209d8 | a34266db4231c9ecb6970fbe47c569dce99129dbe3e82c2027c050b8fe1fb9dc |
@@ -297,7 +297,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 7.1 | `/chapter-7/data-parallelism` | Mechanical only | 8c37d63a720ee64a8c4f37ac09c3062f12df4870500f1ee54d598637de7e8b8c | 7b3a07ce3c7c5ba3deb802af571117fcae1656b049e6b412614823b96c01b65d |
 | 7.2 | `/chapter-7/zero-redundancy-optimizer` | Inspected 2026-11-25 | 1d59bd55d74d312c61666b7a80158d28487d57ca3dbe4677029b7cbc03c85296 | 4992cea430e8dd37ecf27e13aa7158d27b9d43445b6cfe248a89dd9bf44558d1 |
 | 7.3 | `/chapter-7/model-and-pipeline-parallelism` | Inspected 2026-11-15 | 0832cffc306946b61c817850cb07cdbebf0d06aadfe607b6b7dfe75d14d010bf | b645ef818ecb8e33702468b9dcacf90a130b6c229ed8603d055736e2e62f5db4 |
-| 7.4 | `/chapter-7/flash-attention` | Mechanical only | f305f222c5d296652a665982d6148449b7cebebdd7073ee35ef221b39b750c4c | 7c296161f2a6d17d2c88531884e7a2ffb62021cfaf28828e9166c201a8df5184 |
+| 7.4 | `/chapter-7/flash-attention` | Mechanical only | 0087367d51afc79525d915f2ce52f5b6a7a61af166a1df98dc14224e1bf99bc0 | 99be786fef071e4d7cc5307302bac987c71c40ecdac3fdf506861049433e7098 |
 | 7.5 | `/chapter-7/tiny-decoder-lab` | Inspected 2026-11-25 | e855d8e90f0da026ba2b97b342f6b6feee3f264d0f46bf8a985ac077ed4eebfc | 9299aa74b6e4dabec77479c7b7525af56a827f90ba8795c58e4d103bc33093e8 |
 | 8.1 | `/chapter-8/power-law` | Inspected 2026-11-25 | d9ddae9989d61f9dec504a5b8a86c009fe5bb57658d489991f81c1d33d3c66f6 | 482270405ec30af6901da2b5baeffa4f2321c13de63203f3ea1861b0cc526e93 |
 | 8.2 | `/chapter-8/chinchilla-optimality` | Inspected 2026-11-15 | a5c303a07cd048a5700ec4cf86eeb44387cdcc43775eb4a2c5678f4aed6250d1 | 113d3edaa8047c8e5b5455f712a931429e550d22c1d260be5947dab80f4ef2a6 |
@@ -727,3 +727,9 @@ The §3.1 worksheet and the linked CPU program now apply the same change to the 
 ### November 25, 2026 — From a checkpoint's cache to its measured tensors
 
 Checked both §12.1 manuscripts against the pinned SmolLM2-135M configuration and the CPU experiment. The padded batch stores 22 positions for 14 real prompt tokens. After four more tokens per request it stores 30 positions. Both notebook editions use this batch and a separate four-request exercise with a 120 MiB payload budget. In §4.5 the two-pass GLM-5.4 example distinguishes four unique token positions from five KV entries available to a query. This was a focused review of the GLM passage, not another review of the entire model catalogue.
+
+### November 25, 2026 — Worked examples for three kinds of training signal and two attention mechanisms
+
+Revised §1.3 in both languages. Eight two-token film reviews supply the training pairs. A separate observation scores 1.386 nats before adding one independent training record and 0.916 afterward. The Python example and browser exercise use the same counts. The supervised and reward examples use the same review to teach a different task.
+
+In §4.5, checked the two stored parts of the DeepSeek-V3 MLA cache against the report and compared each incremental output with explicitly constructed keys and values on CPU. In §7.4, checked the new online-softmax trace with the CPU FP64 recurrence. The example row gives 8 at both tile widths. The unweighted mean of tile outputs changes from 6 to 8.4. These were focused reviews of the attention examples.

@@ -4,7 +4,7 @@
 
 * **1.1 Symbolism vs. Connectionism:** 규칙 기반 AI와 통계적 학습의 역사적 대립.
 * **1.2 The Power of Representation:** 왜 Feature Engineering에서 Deep Learning으로 전환되었는가.
-* **1.3 Deep Learning Paradigms:** Supervised, Unsupervised, Reinforcement Learning의 경계와 융합.
+* **1.3 Deep Learning Paradigms:** 영화평으로 자기지도 학습·지도 미세 조정·강화 학습을 비교하고, 토큰 횟수에서 예측 확률과 손실을 계산합니다.
 * **1.4 The Bitter Lesson:** 리처드 서튼의 '쓴 교훈'—연산량의 압도적 중요성 분석.
 * **1.5 Learning Paths and Evidence of Mastery:** 학습 경로와 숙련도 입증.
 * **Summary:** AI가 '사람이 가르친 규칙'에서 '데이터에서 스스로 찾는 패턴'으로 진화해 온 과정을 공학적 관점에서 정리합니다.
