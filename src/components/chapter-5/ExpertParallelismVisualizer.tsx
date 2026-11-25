@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import './visualizers.css';
 
 // These are the three fixtures in the downloadable expert_dispatch.py.
@@ -62,6 +62,8 @@ const copy = {
 };
 
 export function ExpertParallelismVisualizer({ lang = 'en' }: { lang?: 'en' | 'ko' }) {
+  const [ready, setReady] = useState(false);
+  useEffect(() => setReady(true), []);
   const [example, setExample] = useState(0);
   const [stage, setStage] = useState(0);
   const t = copy[lang];
@@ -69,13 +71,14 @@ export function ExpertParallelismVisualizer({ lang = 'en' }: { lang?: 'en' | 'ko
 
   return (
     <div className="ep-container">
+      <noscript><p>{lang === 'ko' ? '아래 표는 여섯 토큰의 초기 상태입니다. 본문의 Python 예제로 모든 단계를 실행할 수 있습니다.' : 'The tables show the six input tokens. Run the Python example in this lesson to follow them through every stage.'}</p></noscript>
       <label className="ep-case">
         {t.input}
-        <select value={example} onChange={event => setExample(Number(event.target.value))}>
+        <select disabled={!ready} value={example} onChange={event => setExample(Number(event.target.value))}>
           {t.cases.map((name, index) => <option key={name} value={index}>{name}</option>)}
         </select>
       </label>
-      <fieldset className="ep-stages">
+      <fieldset className="ep-stages" disabled={!ready}>
         <legend>{t.stage}</legend>
         {t.steps.map((name, index) => (
           <button key={name} type="button" aria-pressed={stage === index} onClick={() => setStage(index)}>

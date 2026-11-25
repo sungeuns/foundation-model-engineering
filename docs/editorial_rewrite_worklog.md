@@ -526,7 +526,7 @@ Each row passed EN/KO × 1280px/390px mount/range checks. This table records bro
 | `chapter-18/jailbreaking-and-defense` | `SmoothLLMVisualizer` | 918929cd65f562caac7d24988ff38a14be27f1aeba0859fd3ca02d771d4cba0f |
 | `chapter-18/red-teaming` | `AutomatedRedTeamingVisualizer` | 5fdb4a6a2cba38f034f72492f5f5610646e2b7ac579f8bf786b693f3c36a7225 |
 | `chapter-19/logit-lens-and-attention-visualization` | `LogitLensVisualizer` | 375b38b92e928542be1229502b08c4bd2b8bfcc901efbf9c3d42c78b288ee789 | 234c4c67ae2a9c992daaf3fac45fb4b7c55163cd3da54a3fcee37d9b79641ecc |
-| `chapter-19/mechanistic-interpretability` | `InductionHeadVisualizer` | bdb0e6a0085ade13582aa9de9cbd5556caa37065d7623012c213bffd1898a1bf |
+| `chapter-19/mechanistic-interpretability` | `InductionHeadVisualizer` | 202078a1c76f8012010ce9aa3f3bf8d2b1302ee5b2a4266451c5985a3b6a34b1 |
 | `chapter-19/probing-classifiers` | `LinearProbeVisualizer` | ea7eec5a2c60ef145627fed639558ba1d4583e17a0b63e213179e4e85e855ecf |
 | `chapter-19/sparse-autoencoders-sae` | `PolysemanticVisualizer` | fa9b9e1fbb8e71acb5af373421aaceb24370055fa3d15f52bf00072b357e621c |
 | `chapter-20/linear-attention` | `LinearAttentionVisualizer` | b5f004ec68fb2eab41361a24120bc2e7d505f555518ce9d219521b02f875a3ca | 855616db495c32f6d6686876915334dcba7b91187a3959988dc8052d230c42d3 |
@@ -790,3 +790,5 @@ For §9.5, reviewed the Korean prose and four quizzes against the English lesson
 In §5.3 the expert dispatch trace now follows the same six tokens as the two-process CPU Gloo run. Checked all six stages for the main example, an empty source rank and an empty receiving rank. Each displayed source ID, expert and first coordinate matched the captured tensors in both languages at 320 and 1280 px. Sending a row back to its rank and restoring its original slot are separate stages.
 
 In §19.1, reviewed both manuscripts, their PyTorch hook example and the induction-head sources. The four interactive prompts distinguish an earlier successor, an absent predecessor and two competing successors. Keyboard control, zeroed output and the default JavaScript-free trace were checked at 320 and 1280 px. The separate FP32 CPU experiment on SmolLM2-135M selected L18H6 on 16 development sequences. The 32 held-out pairs gave a mean logit shift of 13.61 intact and 10.21 after zeroing this head at the final position. Two offline runs of the pinned script produced identical JSON.
+
+On the first public build, a keyboard press in the expert trace could precede React initialization and leave the stage unchanged. Held back each trace's JavaScript in the English and Korean builds and verified that the controls stay disabled until the handlers are ready. The first enabled selection then changed the displayed results.

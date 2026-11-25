@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import './induction-head.css';
 
 const examples = [
@@ -11,6 +11,8 @@ const examples = [
 export default function InductionHeadVisualizer({ lang = 'en' }: { lang?: 'en' | 'ko' }) {
   const group = useId();
   const ko = lang === 'ko';
+  const [ready, setReady] = useState(false);
+  useEffect(() => setReady(true), []);
   const [example, setExample] = useState(0);
   const [muted, setMuted] = useState(false);
   const { tokens } = examples[example];
@@ -26,7 +28,7 @@ export default function InductionHeadVisualizer({ lang = 'en' }: { lang?: 'en' |
         <style>{'.induction-trace fieldset, .induction-trace .induction-mute { display: none; }'}</style>
         <p>{ko ? '기본 예시는 A B X A입니다. 다른 배열을 비교하려면 자바스크립트를 켜세요.' : 'Showing A B X A. Enable JavaScript to compare the other sequences.'}</p>
       </noscript>
-      <fieldset>
+      <fieldset disabled={!ready}>
         <legend>{ko ? '토큰 배열 선택' : 'Choose a token sequence'}</legend>
         <div className="induction-cases">
           {examples.map((item, i) => (
@@ -38,7 +40,7 @@ export default function InductionHeadVisualizer({ lang = 'en' }: { lang?: 'en' |
         </div>
       </fieldset>
       <label className="induction-mute">
-        <input type="checkbox" checked={muted} onChange={event => setMuted(event.target.checked)} />
+        <input type="checkbox" disabled={!ready} checked={muted} onChange={event => setMuted(event.target.checked)} />
         {ko ? '마지막 위치에서 이 헤드가 쓰는 값을 0으로 설정' : 'Zero this head’s output at the final position'}
       </label>
       <div aria-live="polite" aria-atomic="true">
