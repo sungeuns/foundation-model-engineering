@@ -28,7 +28,7 @@ test('the article source can be pasted whole into the DEV Basic Markdown editor'
   assert.match(body.trimEnd(), /An AI coding assistant wrote this adaptation[^\n]+\*$/);
 });
 
-test('the selected feed imports a complete, runnable article under its original canonical URL', () => {
+function readSelectedFeed() {
   const xml = execFileSync('python3', ['-c', `
 import json, sys, xml.etree.ElementTree as ET
 channel = ET.parse(sys.argv[1]).find('channel')
@@ -37,7 +37,11 @@ self_link = channel.find('{http://www.w3.org/2005/Atom}link[@rel="self"]')
 hubs = channel.findall('{http://www.w3.org/2005/Atom}link[@rel="hub"]')
 print(json.dumps([self_link.attrib['href'], [hub.attrib['href'] for hub in hubs], items]))
 `, join(dist, 'articles.xml')], { encoding: 'utf8' });
-  const [self, hubs, items] = JSON.parse(xml);
+  return JSON.parse(xml);
+}
+
+test('the selected feed imports a complete, runnable article under its original canonical URL', () => {
+  const [self, hubs, items] = readSelectedFeed();
   assert.equal(self, base + 'articles.xml');
   assert.deepEqual(hubs, [chapterFeedHub]);
   const item = items.find(post => post.link === original);
@@ -72,6 +76,31 @@ print(json.dumps([self_link.attrib['href'], [hub.attrib['href'] for hub in hubs]
   const expected = [receipt.arrival_order, receipt.length_order].map(run =>
     [run.padding_slots, run.sum_prefill_kv_bytes / 1024, run.largest_batch_prefill_kv_bytes / 1024].join(' '));
   assert.deepEqual(output.trim().split('\n'), expected);
+});
+
+test('the listening article opens the original section and plays both WAVs outside the book', () => {
+  const chapter = 'chapter-11/audio-and-speech-integration/';
+  const permalink = base + chapter + '#whisper-sample-rate';
+  const source = readFileSync('src/data/articles/whisper-sample-rate.md', 'utf8');
+  const meta = load(source.match(/^---\n([\s\S]*?)\n---\n/)[1]);
+  assert.equal(meta.canonical_url, base + chapter);
+  assert.equal(meta.published, false);
+  assert.equal(meta.ai_disclosure_level, 'fully_autonomous');
+  const [, , items] = readSelectedFeed();
+  const item = items.find(post => post.link === permalink);
+  assert.equal(item?.guid, permalink);
+  assert.equal(item.pubDate, new Date(meta.firstPublished).toUTCString());
+  assert.equal(new Set(items.map(post => post.guid)).size, items.length);
+  const chapterHtml = readFileSync(join(dist, chapter, 'index.html'), 'utf8');
+  assert.ok(chapterHtml.includes('id="whisper-sample-rate"'));
+  const body = item['{http://purl.org/rss/1.0/modules/content/}encoded'];
+  for (const rate of [44100, 16000]) {
+    const path = 'labs/audio/sample-clock-' + rate + '.wav';
+    assert.ok(body.includes('href="' + base + path + '"'));
+    assert.equal(readFileSync(join(dist, path)).readUInt32LE(24), rate);
+  }
+  const [, checkPcm] = source.match(/^```python\n([\s\S]*?)\n```$/m);
+  execFileSync('python3', ['-c', checkPcm], { cwd: join(dist, 'labs/audio') });
 });
 
 test('readers can discover each edition’s feeds from the homepage or an article', () => {

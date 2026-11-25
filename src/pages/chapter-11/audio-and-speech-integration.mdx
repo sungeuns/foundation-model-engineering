@@ -5,6 +5,7 @@ lang: en
 ---
 
 import { withBasePath } from '../../utils/paths.js';
+import SampleRateListening from '../../components/chapter-11/SampleRateListening.astro';
 
 # 11.2 Audio and Speech Integration
 
@@ -39,6 +40,22 @@ Both feature tensors have shape `[1, 80, 3000]`. The wrong rate stretches the ap
 When a transcription service accepts a new recording format, check the *unpadded* sample count immediately after resampling. For this file, `len(mono_16k) / 16000` should agree with the 11 seconds independently reported by `ffprobe`. The three phrase checks catch the effect on this recording. Measuring a speech recognizer’s word error rate requires reference transcripts across the target recordings.
 
 **Reproduce the CPU run (2026-11-25).** The script downloads and checksums the upstream recording and the English-only `openai/whisper-tiny.en` weights. Both passes use FP32, one CPU thread, the same attention mask convention and greedy decoding without timestamps, capped at 64 new tokens. The JSON records short excerpts and hashes of the full decodes. Pass `--show-transcripts` to inspect the full text locally. <a href={withBasePath('/labs/whisper_sample_rate.py')} download>Python script and setup commands</a> · <a href={withBasePath('/labs/2026-11/whisper-sample-rate.json')} download>Measured results (JSON)</a>.
+
+<SampleRateListening lang="en" />
+
+Save both WAVs in one directory and run this check there. It calculates each duration from the header and compares the audio samples byte for byte.
+
+```python
+import wave
+
+payloads = []
+for name in ("sample-clock-44100.wav", "sample-clock-16000.wav"):
+    with wave.open(name, "rb") as wav:
+        frames = wav.getnframes()
+        print(wav.getframerate(), frames, frames / wav.getframerate())
+        payloads.append(wav.readframes(frames))
+assert payloads[0] == payloads[1]
+```
 
 ## 2. Residual Vector Quantization
 

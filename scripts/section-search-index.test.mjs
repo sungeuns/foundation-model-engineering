@@ -13,6 +13,7 @@ const modelPage = '/chapter-17/commercial-model-benchmarks';
 const snapshot = JSON.parse(readFileSync(new URL('../src/data/commercial-model-snapshot.json', import.meta.url)));
 const modelIds = new Set(snapshot.models.map(({ id }) => `model-${id}`));
 const labs = {
+  '/chapter-11/audio-and-speech-integration': { id: 'sample-rate-listen', en: 'Hear what a sample-rate error sounds like', ko: '샘플링 속도를 잘못 지정하면 어떻게 들릴까?' },
   '/chapter-12/kv-cache-management': { id: 'kv-calculator', en: 'KV cache calculator', ko: 'KV 캐시 계산기' },
   '/chapter-17/experimental-design-and-uncertainty': { id: 'release-lab', en: 'Release decision lab', ko: '배포 판단 실습' },
 };

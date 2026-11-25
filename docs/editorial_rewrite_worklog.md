@@ -315,7 +315,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 10.4 | `/chapter-10/kto-and-ipo` | Mechanical only | 61ac741df320db7fb3031414fdacaf5770fa28200d3f91f8d69cec83c273c046 | 6a539344952c0246f5777ddf9e6a1be24babe58b085a53cc1752efa3ea2be7c5 |
 | 10.5 | `/chapter-10/alignment-tax` | Inspected 2026-11-15 | e630460ac1b1a8620d753362e400c3bea18d69cff7a6265b3820b6ce7230c6f6 | 5041f746d84764553aecee5b114599a703cc2206889aa57838d5b2719b0bec7e |
 | 11.1 | `/chapter-11/vision-language-bridges` | Inspected 2026-11-25 | a02bb8b31255a61b3ad4fac756f6c5547001063bcffb21c0f37af66636b14ab9 | 933896d72135ca1369709ff247a2a84db201193d056023234add80635ec16f29 |
-| 11.2 | `/chapter-11/audio-and-speech-integration` | Mechanical only | 1cd085241e225014babd38a6f1a865eaa5be7dfa0d0b4e12f90aeed3b39887e6 | 27ee36d6625ea8339f6a561c6d63e67dd5c1a7c956331425f284ab19321ae64e |
+| 11.2 | `/chapter-11/audio-and-speech-integration` | Mechanical only | 8e9503cd5199038f844e9c7a29e62c6537582b42c54b622d271e681f2591ef0b | 106ebe5a0730f2e5cc08f7f93522845889509226349eef8dba5bcc47eb3a345a |
 | 11.3 | `/chapter-11/unified-multimodal-any-to-any` | Inspected 2026-11-15 | 63b49653980ac69e7662b92d1423aad27976789545651d8f21bb97c04a0993a2 | 05b4775ea2e63d295a8def6928b0a7280187755f1e95669da1a9db2ad9134158 |
 | 11.4 | `/chapter-11/image-diffusion-models` | Inspected 2026-11-24 | 5bb8bc33ff8adf86105e24018b03423e9f19e0d29739f64b843c0cbeadea05e8 | 308de426fdbc7b1c845a4d63be36b83988abe2eb36026affba1dd101194816b7 |
 | 11.5 | `/chapter-11/video-generation-foundations` | Inspected 2026-11-15 | b34544d0352be5feafdfc0d30ac23092d50edf3a3af5f3e4d37cc62531230c20 | 55c0488a07c962041cdbb0cdb945d18c8e136b23dba2aed6f6970f1c33cb4b4b |
@@ -766,3 +766,7 @@ In §11.2, checked both editions of the 11-second speech experiment against the 
 ### November 25, 2026 — Reading a KV cache trace before starting a kernel
 
 For §12.1, checked the two notebook entry points and the four-step decode trace in both translations. Each worked notebook retains the six code cells of its local starter. Both executions grew the cache from 1,013,760 to 1,382,400 bytes and passed all four comparisons with recomputed logits. The source review covered the revised passage and its links.
+
+### November 25, 2026 — Hearing a sample-rate error
+
+In §11.2, checked both translations of the listening exercise and its Python byte comparison. The two original WAVs have identical mono PCM, including fades at the note boundaries. Changing the declared rate from 44,100 to 16,000 Hz changes the duration from 1 to 2.75625 seconds and the two pitches from 441/882 to 160/320 Hz. The Whisper measurements above the exercise still refer to the upstream speech recording.

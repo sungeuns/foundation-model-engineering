@@ -5,6 +5,7 @@ lang: ko
 ---
 
 import { withBasePath } from '../../../utils/paths.js';
+import SampleRateListening from '../../../components/chapter-11/SampleRateListening.astro';
 
 # 11.2 오디오와 음성 통합
 
@@ -39,6 +40,22 @@ OpenAI는 존 F. 케네디의 취임 연설 일부로 Whisper를 테스트합니
 전사 서비스에 새 녹음 형식을 연결할 때는 리샘플링 직후, 패딩하기 전에 샘플을 세어 보세요. 이 파일이라면 `len(mono_16k) / 16000`이 `ffprobe`로 원본에서 읽은 11초와 일치해야 합니다. 세 구절을 찾는 테스트만으로도 이 녹음에서 문제가 드러납니다. 서비스의 단어 오류율을 구하려면 실제 사용 환경을 대표하는 여러 녹음과 정답 전사문이 필요합니다.
 
 **CPU 실험 재현 (2026-11-25).** 스크립트는 OpenAI가 공개한 녹음과 영어 전용 `openai/whisper-tiny.en` 가중치를 내려받아 각각의 체크섬을 검증합니다. 두 입력 모두 CPU 스레드 하나에서 FP32로 처리하고 같은 기준으로 어텐션 마스크를 만듭니다. 디코더는 타임스탬프 없이 매 단계 가장 확률이 높은 토큰을 고르며 새 토큰은 최대 64개까지 생성합니다. 결과 JSON에는 전사문 일부와 전체 전사문의 해시가 들어 있습니다. `--show-transcripts`를 붙이면 전체 문장을 로컬에서 확인할 수 있습니다. <a href={withBasePath('/labs/whisper_sample_rate.py')} download>파이썬 스크립트와 설치 명령</a> · <a href={withBasePath('/labs/2026-11/whisper-sample-rate.json')} download>측정 결과 (JSON)</a>.
+
+<SampleRateListening lang="ko" />
+
+두 WAV 파일을 같은 폴더에 내려받고 거기서 아래 코드를 실행해 보세요. 파일 헤더로 각각의 재생 시간을 계산한 다음, 소리 데이터를 바이트 단위로 비교합니다.
+
+```python
+import wave
+
+payloads = []
+for name in ("sample-clock-44100.wav", "sample-clock-16000.wav"):
+    with wave.open(name, "rb") as wav:
+        frames = wav.getnframes()
+        print(wav.getframerate(), frames, frames / wav.getframerate())
+        payloads.append(wav.readframes(frames))
+assert payloads[0] == payloads[1]
+```
 
 ## 2. 잔차 벡터 양자화
 

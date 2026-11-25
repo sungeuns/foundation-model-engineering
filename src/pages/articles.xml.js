@@ -1,23 +1,26 @@
 import * as bucketing from '../data/articles/length-bucketing.md';
+import * as speech from '../data/articles/whisper-sample-rate.md';
 import { site as book } from '../data/site.js';
 import { chapterFeedHub, escapeXml } from '../utils/chapter-feed.js';
 import { getBasePath, withBasePath, withPagePath } from '../utils/paths.js';
 
 // Only full-length adaptations explicitly selected for syndication belong here.
-const articles = [bucketing];
+const articles = [speech, bucketing];
 
 export async function GET({ site = book.url }) {
   const base = getBasePath();
   const home = new URL(withPagePath('/', base), site);
   const self = new URL(withBasePath('/articles.xml', base), site);
   const items = await Promise.all(articles.map(async ({ frontmatter, compiledContent }) => {
-    const { title, chapter, firstPublished, description, tags } = frontmatter;
-    const canonical = escapeXml(new URL(withPagePath(chapter, base), site).href);
+    const { title, chapter, anchor, firstPublished, description, tags } = frontmatter;
+    const location = new URL(withPagePath(chapter, base), site);
+    if (anchor) location.hash = anchor;
+    const permalink = escapeXml(location.href);
     const html = await compiledContent();
     return `    <item>
       <title>${escapeXml(title)}</title>
-      <link>${canonical}</link>
-      <guid isPermaLink="true">${canonical}</guid>
+      <link>${permalink}</link>
+      <guid isPermaLink="true">${permalink}</guid>
       <pubDate>${new Date(firstPublished).toUTCString()}</pubDate>
       <description>${escapeXml(description)}</description>
       ${tags.split(',').map(tag => `<category>${escapeXml(tag.trim())}</category>`).join('\n      ')}

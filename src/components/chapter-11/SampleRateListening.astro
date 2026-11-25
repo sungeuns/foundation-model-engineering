@@ -1,0 +1,66 @@
+---
+import { withBasePath } from '../../utils/paths.js';
+import { sampleRateListeningTitle } from '../../data/lab-titles.js';
+
+interface Props { lang: 'en' | 'ko' }
+const { lang } = Astro.props;
+const ko = lang === 'ko';
+const samples = [
+  {
+    rate: '44100',
+    label: ko ? '원래 속도인 44,100 Hz로 재생' : 'Original rate of 44,100 Hz',
+    timing: ko ? '441 Hz에서 882 Hz로 · 총 1초' : '441 Hz then 882 Hz · 1 s total',
+  },
+  {
+    rate: '16000',
+    label: ko ? '16,000 Hz로 잘못 표기해 재생' : 'Mislabeled rate of 16,000 Hz',
+    timing: ko ? '160 Hz에서 320 Hz로 · 총 약 2.76초' : '160 Hz then 320 Hz · about 2.76 s total',
+  },
+];
+---
+
+<section id="sample-rate-listen" class="sample-rate-listening" aria-labelledby="sample-rate-listen-title">
+  <h4 id="sample-rate-listen-title">{sampleRateListeningTitle[lang]}</h4>
+  <p>{ko
+    ? '두 음을 합성해 만든 샘플 44,100개를 두 파일에 똑같이 담았습니다. 재생기는 WAV 헤더에 적힌 속도에 따라 1초에 읽을 샘플 수를 정합니다.'
+    : 'Both WAV files contain the same 44,100 samples from two synthesized notes. The rate in each file’s header tells the player how many samples to read per second.'}</p>
+  <ul role="list">
+    {samples.map(({ rate, label, timing }) => {
+      const url = withBasePath(`/labs/audio/sample-clock-${rate}.wav`);
+      const id = 'sample-clock-' + rate;
+      return <li>
+        <strong id={id}>{label}</strong>
+        <span id={id + '-timing'}>{timing}</span>
+        <audio controls preload="none" src={url} aria-labelledby={id} aria-describedby={id + '-timing'}></audio>
+        <a href={url} download aria-label={ko ? `${label} WAV 내려받기` : `Download WAV — ${label}`}>
+          {ko ? 'WAV 내려받기' : 'Download WAV'}
+        </a>
+      </li>;
+    })}
+  </ul>
+</section>
+
+<script>
+  for (const group of document.querySelectorAll('.sample-rate-listening')) {
+    const players = group.querySelectorAll('audio');
+    for (const player of players) {
+      player.addEventListener('play', () => {
+        for (const other of players) {
+          if (other !== player && !other.paused) other.pause();
+        }
+      });
+    }
+  }
+</script>
+
+<style>
+  .sample-rate-listening { margin-block: 1.5rem; scroll-margin-top: 4rem; }
+  h4 { margin: 0 0 .4rem; font-size: 1.08rem; }
+  p { margin: 0 0 .8rem; }
+  ul { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); gap: .8rem; margin: 0; padding: 0; list-style: none; }
+  li { display: grid; align-content: start; gap: .25rem; min-width: 0; margin: 0; padding: .75rem; border: 1px solid var(--border-color, #bdc3c7); border-radius: .4rem; }
+  span, a { font-size: .92rem; }
+  audio { display: block; width: 100%; min-width: 0; margin: .3rem 0; }
+  a { justify-self: start; }
+  :is(audio, a):focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+</style>

@@ -25,15 +25,17 @@ test('shared exercise IDs belong to the same authored content in both translatio
     ['/chapter-3/multi-head-attention', 'two-head-calculation', 'MhaVisualizer', 'chapter-3'],
     ['/chapter-5/sparse-vs-dense-models', 'moe-routing-lab', 'MoERouterVisualizer', 'chapter-5'],
     ['/chapter-11/vision-language-bridges', 'visual-token-budget', 'VisionLanguageBridgeVisualizer', 'chapter-11'],
+    ['/chapter-11/audio-and-speech-integration', 'sample-rate-listen', 'SampleRateListening', 'chapter-11', 'astro'],
     ['/chapter-12/kv-cache-management', 'kv-calculator', 'KVCacheCalculator', 'chapter-12'],
     ['/chapter-17/experimental-design-and-uncertainty', 'release-lab', 'PairedReleaseLab', 'chapter-17'],
   ];
-  for (const [route, id, component, chapter] of components) {
+  for (const [route, id, component, chapter, extension = 'tsx'] of components) {
     assert.ok(routes.includes(route), route);
     assert.ok(sharedLocaleFragments(route, modelIds).includes(id), route);
-    assert.ok(read(`src/components/${chapter}/${component}.tsx`).includes(`id="${id}"`), id);
+    const file = `components/${chapter}/${component}.${extension}`;
+    assert.ok(read(`src/${file}`).includes(`id="${id}"`), id);
     for (const source of pages(route)) {
-      assert.ok(source.includes(`components/${chapter}/${component}.tsx`), route);
+      assert.ok(source.includes(file), route);
       assert.ok(source.includes(`<${component}`), route);
     }
   }
@@ -44,6 +46,7 @@ test('shared exercise IDs belong to the same authored content in both translatio
     ['/chapter-12/length-bucketing-lab', 'prefill-measurements'],
     ['/chapter-7/data-parallelism', 'dp-ddp-gradient-trace'],
     ['/chapter-11/audio-and-speech-integration', 'scribe-speaker-events'],
+    ['/chapter-11/audio-and-speech-integration', 'whisper-sample-rate'],
     ['/chapter-12/serving-policies-slos-and-fallbacks', 'sarvam-ttft-load'],
     ['/chapter-17/elo-rating-and-leaderboards', 'elo-vote-order'],
     ['/chapter-1/deep-learning-paradigms', 'next-token-loss-example'],
