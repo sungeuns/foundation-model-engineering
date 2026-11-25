@@ -25,6 +25,10 @@
   about:
     - https://w3id.org/kim/hochschulfaechersystematik/n079
   keywords: [foundation models, inference, retrieval, PyTorch]
+  hasPart:
+    - type: LearningResource
+      id: https://sungeuns.github.io/foundation-model-engineering/labs/
+      name: Hands-on labs and teaching materials
 
 - "@context": https://schema.org/
   type: LearningResource
@@ -51,6 +55,10 @@
   about:
     - https://w3id.org/kim/hochschulfaechersystematik/n079
   keywords: [파운데이션 모델, 추론, 검색, PyTorch]
+  hasPart:
+    - type: LearningResource
+      id: https://sungeuns.github.io/foundation-model-engineering/ko/labs/
+      name: 실습과 수업 자료
 
 - "@context": https://schema.org/
   type: LearningResource

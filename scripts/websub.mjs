@@ -6,13 +6,13 @@ import { site } from '../src/data/site.js';
 import { chapterFeedHub } from '../src/utils/chapter-feed.js';
 
 const base = new URL('/foundation-model-engineering/', site.url);
-const feeds = ['feed.xml', 'ko/feed.xml'];
+const feeds = ['feed.xml', 'ko/feed.xml', 'articles.xml'];
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 
 function entries(hashes) {
   const items = Object.entries(hashes);
   for (const [path, hash] of items) {
-    if (!feeds.includes(path) || !/^[0-9a-f]{64}$/.test(hash)) throw new Error('Unexpected chapter feed or digest');
+    if (!feeds.includes(path) || !/^[0-9a-f]{64}$/.test(hash)) throw new Error('Unexpected feed or digest');
   }
   return items;
 }

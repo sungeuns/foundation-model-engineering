@@ -6,7 +6,7 @@ import { parse, parseFragment } from 'parse5';
 import { chapters } from '../src/data/chapters.js';
 import { searchDescriptions } from '../src/data/search-descriptions.js';
 import { socialCards } from '../src/data/social-cards.js';
-import { servingGuide } from '../src/data/site.js';
+import { labsTitle, servingGuide } from '../src/data/site.js';
 import { defaultBudget, defaultPool, nineRequestWorkload, readKvScenario } from '../src/components/chapter-12/kv-scenario.mjs';
 import { getContentDates, getContentRevisions } from '../src/utils/content-dates.js';
 
@@ -274,6 +274,23 @@ test('each OER catalogue entry previews the localized lesson or its EPUB cover',
     assert.ok(record.image.startsWith(`${base}/social/`) && record.image.endsWith(`-${lang}.png`), record.id);
     const image = readFileSync(`${outputDir}${record.image.slice(base.length)}`);
     assert.equal(image.subarray(0, 8).toString('hex'), '89504e470d0a1a0a', record.image);
+  }
+});
+
+test('the indexed OER textbook records link their own teaching material collections', () => {
+  const records = load(readFileSync('metadata.yml', 'utf8'));
+  const hubUrls = [`${base}/labs/`, `${base}/ko/labs/`];
+  for (const [lang, title] of Object.entries(labsTitle)) {
+    const edition = lang === 'ko' ? '/ko' : '';
+    const books = records.filter(record => record.id === `${base}${edition}/`);
+    assert.equal(books.length, 1, lang);
+    assert.deepEqual(books[0].inLanguage, [lang]);
+    const hub = `${base}${edition}/labs/`;
+    const parts = books[0].hasPart.filter(part => hubUrls.includes(part.id));
+    assert.deepEqual(parts, [{ type: 'LearningResource', id: hub, name: title }]);
+    const html = readFileSync(`${outputDir}${edition}/labs/index.html`, 'utf8');
+    assert.ok(html.includes(`rel="canonical" href="${hub}"`), hub);
+    assert.ok(html.includes(`<h1>${escape(title)}</h1>`), hub);
   }
 });
 

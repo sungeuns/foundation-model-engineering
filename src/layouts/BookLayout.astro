@@ -83,6 +83,7 @@ const toAbsoluteUrl = (pagePath) => {
 };
 const githubUrl = 'https://github.com/sungeuns/foundation-model-engineering';
 const feedPath = withBasePath(isKo ? '/ko/feed.xml' : '/feed.xml', basePath);
+const articlesPath = withBasePath('/articles.xml', basePath);
 const canonicalUrl = toAbsoluteUrl(currentPath);
 const revision = currentSub && getManuscriptRevision(currentPath);
 const manuscriptTimestamp = revision?.timestamp;
@@ -211,6 +212,7 @@ if (currentIndex !== -1) {
     <meta name="twitter:title" content={pageTitle} />
     <meta name="twitter:description" content={pageDescription} />
     <link rel="alternate" type="application/rss+xml" title={isKo ? '최근 수정한 장 (RSS)' : 'Recently edited chapters (RSS)'} href={feedPath} />
+    {!isKo && <link rel="alternate" type="application/rss+xml" title="Selected articles in full (RSS)" href={articlesPath} />}
     <script type="application/ld+json" set:html={JSON.stringify(structuredData)}></script>
     {!isHomePage && <script type="application/ld+json" set:html={JSON.stringify(breadcrumbData)}></script>}
     <link rel="icon" type="image/svg+xml" href={withBasePath('/favicon.svg', basePath)} />
@@ -358,7 +360,7 @@ if (currentIndex !== -1) {
             )}
             <p>
               <a href={feedPath}>{isKo ? '최근 수정한 장 구독하기 (RSS)' : 'Subscribe to chapter edits (RSS)'}</a>
-              {!isKo && <> · <a href={withBasePath('/articles.xml', basePath)}>Selected articles in full (RSS)</a></>}
+              {!isKo && <> · <a href={articlesPath}>Selected articles in full (RSS)</a></>}
             </p>
             <p>{isKo ? '저자: ' : 'Created by '}<strong><a href="https://www.linkedin.com/in/sungeuns2" target="_blank" rel="noopener noreferrer">Seongeun So</a></strong></p>
             <small>{isKo ? 'AI의 도움을 받아 제작했습니다.' : 'Developed with AI assistance'}</small>

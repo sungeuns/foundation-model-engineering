@@ -44,7 +44,7 @@ jobs:
       - name: Verify textbook and rendered-site tests
         run: node --test scripts/*.test.mjs
 
-      - name: Identify built chapter feeds
+      - name: Identify built RSS feeds
         id: feed_hashes
         if: github.event_name == 'push' && github.repository == 'sungeuns/foundation-model-engineering'
         continue-on-error: true
@@ -93,7 +93,7 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-      - name: Announce updated chapter feeds through WebSub
+      - name: Announce updated RSS feeds through WebSub
         if: steps.websub.outputs.changed != ''
         continue-on-error: true
         env:

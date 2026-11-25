@@ -1,6 +1,6 @@
 import * as bucketing from '../data/articles/length-bucketing.md';
 import { site as book } from '../data/site.js';
-import { escapeXml } from '../utils/chapter-feed.js';
+import { chapterFeedHub, escapeXml } from '../utils/chapter-feed.js';
 import { getBasePath, withBasePath, withPagePath } from '../utils/paths.js';
 
 // Only full-length adaptations explicitly selected for syndication belong here.
@@ -32,6 +32,7 @@ export async function GET({ site = book.url }) {
     <description>Standalone articles from Foundation Model Engineering, with worked examples and reproducible experiments.</description>
     <language>en</language>
     <atom:link href="${escapeXml(self.href)}" rel="self" type="application/rss+xml" />
+    <atom:link href="${escapeXml(chapterFeedHub)}" rel="hub" />
 ${items.join('\n')}
   </channel>
 </rss>

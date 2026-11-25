@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import test from 'node:test';
 import { load } from 'js-yaml';
 import { parseFragment } from 'parse5';
+import { chapterFeedHub } from '../src/utils/chapter-feed.js';
 
 const dist = process.env.SEARCH_DIST_DIR || 'dist';
 const base = 'https://sungeuns.github.io/foundation-model-engineering/';
@@ -33,10 +34,12 @@ import json, sys, xml.etree.ElementTree as ET
 channel = ET.parse(sys.argv[1]).find('channel')
 items = [{child.tag: child.text for child in item} for item in channel.findall('item')]
 self_link = channel.find('{http://www.w3.org/2005/Atom}link[@rel="self"]')
-print(json.dumps([self_link.attrib['href'], items]))
+hubs = channel.findall('{http://www.w3.org/2005/Atom}link[@rel="hub"]')
+print(json.dumps([self_link.attrib['href'], [hub.attrib['href'] for hub in hubs], items]))
 `, join(dist, 'articles.xml')], { encoding: 'utf8' });
-  const [self, items] = JSON.parse(xml);
+  const [self, hubs, items] = JSON.parse(xml);
   assert.equal(self, base + 'articles.xml');
+  assert.deepEqual(hubs, [chapterFeedHub]);
   const item = items.find(post => post.link === original);
   assert.ok(item);
   assert.equal(items.filter(post => post.link === original).length, 1);
@@ -71,10 +74,19 @@ print(json.dumps([self_link.attrib['href'], items]))
   assert.deepEqual(output.trim().split('\n'), expected);
 });
 
-test('the English subscription footer offers both the revision feed and the selected full articles', () => {
-  const html = readFileSync(join(dist, 'index.html'), 'utf8');
-  const footer = html.match(/<footer\b[\s\S]*?<\/footer>/)[0];
-  for (const path of ['feed.xml', 'articles.xml']) {
-    assert.ok(footer.includes(`href="${new URL(path, base).pathname}"`));
+test('readers can discover each edition’s feeds from the homepage or an article', () => {
+  for (const prefix of ['', 'ko/']) {
+    for (const page of ['index.html', 'chapter-12/length-bucketing-lab/index.html']) {
+      const html = readFileSync(join(dist, prefix, page), 'utf8');
+      const head = html.match(/<head\b[\s\S]*?<\/head>/)[0];
+      const feeds = [...head.matchAll(/<link\b[^>]*>/g)]
+        .map(([tag]) => Object.fromEntries(parseFragment(tag).childNodes[0].attrs.map(a => [a.name, a.value])))
+        .filter(link => link.rel === 'alternate' && link.type === 'application/rss+xml');
+      const paths = prefix ? ['ko/feed.xml'] : ['feed.xml', 'articles.xml'];
+      assert.deepEqual(feeds.map(link => new URL(link.href, base).href), paths.map(path => base + path));
+      assert.equal(new Set(feeds.map(link => link.title)).size, feeds.length);
+      const footer = html.match(/<footer\b[\s\S]*?<\/footer>/)[0];
+      for (const path of paths) assert.ok(footer.includes(`href="${new URL(path, base).pathname}"`));
+    }
   }
 });

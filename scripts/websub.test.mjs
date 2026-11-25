@@ -6,19 +6,29 @@ import { chapterFeedHub } from '../src/utils/chapter-feed.js';
 
 const base = 'https://sungeuns.github.io/foundation-model-engineering/';
 const hash = text => createHash('sha256').update(text).digest('hex');
-const built = { 'feed.xml': hash('English revision'), 'ko/feed.xml': hash('한국어 수정') };
+const content = {
+  'feed.xml': 'English revision',
+  'ko/feed.xml': '한국어 수정',
+  'articles.xml': 'Selected article',
+};
+const built = Object.fromEntries(Object.entries(content).map(([path, text]) => [path, hash(text)]));
+const current = url => new Response(content[url.slice(base.length)]);
 const noWait = async () => {};
 
 test('compare actual feed bytes so one-language edits, new feeds and unchanged rebuilds are distinguished', async () => {
-  const current = url => new Response(url.endsWith('/ko/feed.xml') ? '한국어 수정' : 'English revision');
   assert.deepEqual(await changedFeeds(built, current), {});
   const changedEnglish = { ...built, 'feed.xml': hash('Next English revision') };
   assert.deepEqual(await changedFeeds(changedEnglish, current), { 'feed.xml': changedEnglish['feed.xml'] });
+  const articleOnly = { 'articles.xml': built['articles.xml'] };
+  for (const previous of [new Response('Previous article'), new Response(null, { status: 404 })]) {
+    const read = url => url === base + 'articles.xml' ? previous : current(url);
+    assert.deepEqual(await changedFeeds(built, read), articleOnly);
+  }
   assert.deepEqual(await changedFeeds(built, () => new Response(null, { status: 404 })), built);
   await assert.rejects(changedFeeds(built, () => new Response(null, { status: 503 }), noWait), /503/);
 });
 
-test('announce both verified canonical feed URLs in one form POST, then skip an unchanged rerun', async () => {
+test('announce all three verified canonical feed URLs in one form POST, then skip an unchanged rerun', async () => {
   const posts = [];
   const waits = [];
   let englishReads = 0;
@@ -28,7 +38,7 @@ test('announce both verified canonical feed URLs in one form POST, then skip an 
       return new Response(null, { status: 204 });
     }
     if (url === base + 'feed.xml' && ++englishReads === 1) return new Response('old edge copy');
-    return new Response(url === base + 'ko/feed.xml' ? '한국어 수정' : 'English revision');
+    return current(url);
   };
   const receipt = await publishFeeds(built, base, request, async ms => waits.push(ms));
   assert.match(receipt, /WebSub HTTP 204/);
@@ -38,9 +48,22 @@ test('announce both verified canonical feed URLs in one form POST, then skip an 
   assert.match(posts[0].headers.get('content-type'), /^application\/x-www-form-urlencoded/);
   const body = await posts[0].formData();
   assert.equal(body.get('hub.mode'), 'publish');
-  assert.deepEqual(body.getAll('hub.url'), [base + 'feed.xml', base + 'ko/feed.xml']);
+  assert.deepEqual(body.getAll('hub.url'), [base + 'feed.xml', base + 'ko/feed.xml', base + 'articles.xml']);
   await publishFeeds(await changedFeeds(built, request), base, request);
   assert.equal(posts.length, 1);
+});
+
+test('an article-only edit announces just the selected article feed', async () => {
+  const older = url => url === base + 'articles.xml' ? new Response('Older article') : current(url);
+  const changed = await changedFeeds(built, older);
+  const topics = [];
+  await publishFeeds(changed, base, (url, options) => {
+    if (options.method !== 'POST') return current(url);
+    assert.equal(url, chapterFeedHub);
+    topics.push(...options.body.getAll('hub.url'));
+    return new Response(null, { status: 204 });
+  }, noWait);
+  assert.deepEqual(topics, [base + 'articles.xml']);
 });
 
 test('failed verification never publishes and a failed or ambiguous hub response is not sent twice', async () => {
@@ -61,5 +84,5 @@ test('failed verification never publishes and a failed or ambiguous hub response
   }
   assert.equal(posts, 2);
   await assert.rejects(publishFeeds(english, 'https://example.com/'), /Unexpected Pages/);
-  await assert.rejects(publishFeeds({ 'other.xml': built['feed.xml'] }, base), /Unexpected chapter feed/);
+  await assert.rejects(publishFeeds({ 'other.xml': built['feed.xml'] }, base), /Unexpected feed/);
 });
