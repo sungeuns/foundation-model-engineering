@@ -19,6 +19,7 @@ import { GiB, kvCapacity } from '../src/components/chapter-12/kv-capacity.mjs';
 import loopCacheRun from '../public/labs/2026-11/loop-cache.json' with { type: 'json' };
 import bucketingRun from '../public/labs/2026-11/kv-batch-bucketing.json' with { type: 'json' };
 import receiptRun from '../public/labs/2026-11/receipt-grounding-cpu.json' with { type: 'json' };
+import samplerAudit from '../public/labs/2026-11/ddp-sampler-audit.json' with { type: 'json' };
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const escape = value => String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
@@ -26,6 +27,23 @@ const text = (value, x, y, size, opts = '') => `<text x="${x}" y="${y}" font-siz
 const ink = '#192a30', teal = '#256257', muted = '#4e5d61';
 
 const copy = {
+  'ddp-sampler-audit': {
+    path: '/articles/ddp-sampler-audit', render: samplerAuditSvg,
+    en: {
+      title: 'Why did five predictions get six scores?',
+      setup: 'PyTorch DistributedSampler on CPU · fixed predictions · shuffling off',
+      rank: 'Rank', batch: 'Batch', visits: 'Score every visit', unique: 'Score each ID once',
+      legend: 'Sample ID     ✓ correct     × wrong',
+      note: id => `Only sample ${id} was predicted incorrectly. Both ranks receive it.`,
+    },
+    ko: {
+      title: '예측 다섯 개를 왜 여섯 번 채점했을까?',
+      setup: 'CPU에서 실행한 PyTorch DistributedSampler · 고정된 예측 · 셔플 끔',
+      rank: '랭크', batch: '배치', visits: '받은 대로 채점', unique: 'ID마다 한 번씩 채점',
+      legend: '샘플 ID     ✓ 정답     × 오답',
+      note: id => `유일한 오답인 ${id}번 샘플이 두 랭크에 모두 들어갔습니다.`,
+    },
+  },
   'receipt-grounding': {
     path: '/articles/receipt-grounding', render: receiptGroundingSvg,
     en: {
@@ -288,6 +306,46 @@ if (args.length && (args.length !== 2 || args[0] !== '--only' || !Object.hasOwn(
   throw new Error(`Usage: node scripts/generate-lab-social-cards.mjs [--only ${Object.keys(copy).join('|')}]`);
 }
 const selectedKind = args[1];
+
+function samplerAuditSvg(lesson, lang, card) {
+  const c = lesson[lang];
+  const run = samplerAudit.runs.padded;
+  const correctById = new Map(samplerAudit.sample_ids.map((id, i) =>
+    [id, samplerAudit.labels[i] === samplerAudit.predictions[i]]));
+  const wrong = [...correctById].filter(([, correct]) => !correct).map(([id]) => id);
+  if (wrong.length !== 1 || !run.ranks.every(row => row.batches.flat().includes(wrong[0]))) {
+    throw new Error('Expected a single incorrect prediction shared by both ranks');
+  }
+  const batchX = batch => 202 + batch * 315;
+  const columns = run.ranks[0].batches.map((_, i) =>
+    text(`${c.batch} ${i + 1}`, batchX(i), 224, 28, `fill="${muted}" font-weight="600"`)).join('');
+  const rows = run.ranks.map(({ rank, batches }, i) => {
+    const top = 253 + i * 94;
+    const cells = batches.map((ids, batch) => ids.map((id, position) => {
+      const x = batchX(batch) + position * 111;
+      const correct = correctById.get(id);
+      const color = correct ? teal : '#893c32';
+      return `<rect x="${x}" y="${top}" width="102" height="66" rx="10" fill="${correct ? '#e0ebe3' : '#f4dfd9'}" stroke="${color}" stroke-width="2"/>`
+        + text(`${id} ${correct ? '✓' : '×'}`, x + 51, top + 45, 34,
+          `fill="${color}" font-weight="700" text-anchor="middle"`);
+    }).join('')).join('');
+    return text(`${c.rank} ${rank}`, 64, top + 44, 31, 'font-weight="700"') + cells;
+  }).join('');
+  const scores = [[c.visits, run.visit_score], [c.unique, run.full_dataset_score]]
+    .map(([label, value], i) => text(label, 827, 232 + i * 125, 27, `fill="${muted}"`)
+      + text(`${value.correct} / ${value.total}`, 824, 299 + i * 125, 65, 'font-weight="700"')).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" xml:lang="${lang}" role="img" aria-labelledby="card-title card-description">
+<title id="card-title">${escape(c.title)}</title><desc id="card-description">${escape(card.alt)}</desc>
+<rect width="1200" height="630" fill="#f5f2eb"/>
+<g font-family="${lang === 'ko' ? 'Noto Sans CJK KR, DejaVu Sans' : 'DejaVu Sans'}, sans-serif" fill="${ink}">
+${text(c.title, 60, 87, lang === 'en' ? 45 : 53, 'font-weight="700"')}
+${text(c.setup, 64, 145, 27, `fill="${muted}"`)}
+<path d="M64 173H1136 M765 197V467 M64 510H1136" fill="none" stroke="#bac7bf" stroke-width="2"/>
+${columns}${rows}${scores}
+${text(c.legend, 202, 463, 24, `fill="${muted}" xml:space="preserve"`)}
+${text(c.note(wrong[0]), 64, 577, lang === 'en' ? 29 : 32, 'font-weight="600"')}
+</g></svg>\n`;
+}
 
 async function continuousBatchingSvg(lesson, lang, card) {
   const c = lesson[lang];

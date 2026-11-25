@@ -1,112 +1,88 @@
-import React, { useState, useEffect } from 'react';
+import { useEffect, useId, useState } from 'react';
 import './visualizers.css';
 
-const DDPBucketingTimeline = ({ lang = "en" }: { lang?: "en" | "ko" }) => {
-  const translations: Record<string, string> = {"Gradient Bucketing & Overlap Visualization": "그래디언트 버킷과 통신 겹침", "Pause": "일시 정지", "Replay": "다시 재생", "Play": "재생", "Reset": "초기화", "GPU Compute (Backward Pass)": "GPU 연산 (역전파)", "Network (NCCL All-Reduce)": "네트워크 (NCCL All-Reduce)", "Layer 4 Grad": "4층 그래디언트", "Layer 3 Grad": "3층 그래디언트", "Layer 2 Grad": "2층 그래디언트", "Layer 1 Grad": "1층 그래디언트", "Bucket 1 (L4 + L3)": "버킷 1 (4층 + 3층)", "Bucket 2 (L2 + L1)": "버킷 2 (2층 + 1층)"};
-  const t = (text: string) => lang === "ko" ? translations[text] ?? text : text;
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [progress, setProgress] = useState(0);
+// One authored backward pass. A bar occupies [start, end) on both tracks.
+const gradients = [
+  { label: 'L4', start: 0, end: 2 },
+  { label: 'L3', start: 2, end: 4 },
+  { label: 'L2', start: 4, end: 6 },
+  { label: 'L1', start: 6, end: 8 },
+];
+const buckets = [
+  { label: 'B1', members: 'L4 + L3', start: gradients[1].end, end: 7 },
+  { label: 'B2', members: 'L2 + L1', start: gradients[3].end, end: 10 },
+];
+const backwardEnd = gradients[gradients.length - 1].end;
+const endTime = buckets[buckets.length - 1].end;
+const exposed = endTime - backwardEnd;
 
+export default function DDPBucketingTimeline({ lang = 'en' }: { lang?: 'en' | 'ko' }) {
+  const ko = lang === 'ko';
+  const id = useId();
+  const [ready, setReady] = useState(false);
+  const [time, setTime] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  useEffect(() => setReady(true), []);
   useEffect(() => {
-    let interval: ReturnType<typeof setInterval>;
-    if (isPlaying) {
-      interval = setInterval(() => {
-        setProgress((prev) => {
-          if (prev >= 100) {
-            setIsPlaying(false);
-            return 100;
-          }
-          return prev + 0.5;
-        });
-      }, 50);
-    }
-    return () => clearInterval(interval);
-  }, [isPlaying]);
+    if (!playing) return;
+    const timer = window.setTimeout(() => {
+      const next = time + 1;
+      setTime(next);
+      if (next === endTime) setPlaying(false);
+    }, 700);
+    return () => window.clearTimeout(timer);
+  }, [playing, time]);
 
-  const handlePlayPause = () => {
-    if (progress >= 100) setProgress(0);
-    setIsPlaying(!isPlaying);
-  };
+  function seek(value: number) {
+    setPlaying(false);
+    setTime(value);
+  }
 
-  const handleReset = () => {
-    setIsPlaying(false);
-    setProgress(0);
-  };
+  const atTime = (bar: { start: number; end: number }) => bar.start <= time && time < bar.end;
+  const gradient = gradients.find(atTime);
+  const bucket = buckets.find(atTime);
+  const tracks = [
+    { name: ko ? '역전파 · 층별 그래디언트' : 'Backward pass · layer gradients', bars: gradients, active: gradient },
+    { name: ko ? '통신 · 버킷별 All-Reduce' : 'Network · bucket all-reduce', bars: buckets, active: bucket },
+  ];
+  const computeStatus = gradient
+    ? (ko ? `${gradient.label} 그래디언트 계산 중` : `Computing the ${gradient.label} gradient`)
+    : (ko ? '역전파 완료' : 'Backward pass complete');
+  const networkStatus = bucket
+    ? (ko ? `${bucket.label} All-Reduce 진행 중` : `Reducing ${bucket.label}`)
+    : time === endTime ? (ko ? '통신 완료' : 'Communication complete') : (ko ? '통신 대기' : 'Network idle');
 
-  // State calculations based on timeline progress (0 to 100)
-  const computeL4 = progress > 5;
-  const computeL3 = progress > 20;
-  const computeL2 = progress > 45;
-  const computeL1 = progress > 60;
-
-  const bucket1Filled = progress > 25;
-  const bucket1Syncing = progress > 25 && progress < 65;
-  const bucket1Done = progress >= 65;
-
-  const bucket2Filled = progress > 65;
-  const bucket2Syncing = progress > 65 && progress < 95;
-  const bucket2Done = progress >= 95;
-
-  return (
-    <div className="ddp-timeline-container">
-      <div className="ddp-header">
-        <h4>{t("Gradient Bucketing & Overlap Visualization")}</h4>
-        <div className="ddp-controls">
-          <button className="ddp-btn" onClick={handlePlayPause}>
-            {isPlaying ? t("Pause") : progress >= 100 ? t("Replay") : t("Play")}
-          </button>
-          <button className="ddp-btn secondary" onClick={handleReset}>{t("Reset")}</button>
-        </div>
+  return <figure className="ddp-timeline" aria-labelledby={id}>
+    <figcaption id={id}>{ko ? '그래디언트가 준비되면 언제 통신을 시작할까?' : 'When can each gradient bucket start communicating?'}</figcaption>
+    <p>{ko
+      ? '모든 랭크가 같은 속도로 역전파하는 예제입니다. 두 줄은 같은 시간축을 사용합니다. 숫자는 설명을 위해 정한 시간 단위입니다.'
+      : 'All ranks follow the same backward schedule in this example. Both rows use the same clock, in illustrative time units.'}</p>
+    <p className="ddp-members">{buckets.map(bucket => `${bucket.label} = ${bucket.members}`).join(' · ')}</p>
+    {tracks.map(track => <div className="ddp-lane" key={track.name}>
+      <b>{track.name}</b>
+      <div className="ddp-track-grid" style={{ gridTemplateColumns: `repeat(${endTime}, minmax(0, 1fr))` }}>
+        {track.bars.map(bar => <span key={bar.label} className="ddp-event" data-active={track.active === bar}
+          style={{ gridColumn: `${bar.start + 1} / ${bar.end + 1}` }}>
+          <strong>{bar.label}</strong><small>{bar.start}–{bar.end}</small>
+        </span>)}
+        <i className="ddp-clock" aria-hidden="true" style={{ left: `${100 * time / endTime}%` }} />
       </div>
-
-      <div className="ddp-visualization">
-        {/* Compute Stream */}
-        <div className="ddp-stream">
-          <div className="ddp-stream-label">{t("GPU Compute (Backward Pass)")}</div>
-          <div className="ddp-track">
-            <div className={`ddp-block compute ${computeL4 ? 'active' : ''}`}>
-              {t("Layer 4 Grad")}
-            </div>
-            <div className={`ddp-block compute ${computeL3 ? 'active' : ''}`}>
-              {t("Layer 3 Grad")}
-            </div>
-            <div className={`ddp-block compute ${computeL2 ? 'active' : ''}`}>
-              {t("Layer 2 Grad")}
-            </div>
-            <div className={`ddp-block compute ${computeL1 ? 'active' : ''}`}>
-              {t("Layer 1 Grad")}
-            </div>
-            {/* Progress indicator line */}
-            <div
-              className="ddp-progress-line"
-              style={{ left: `${Math.min(progress, 80)}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Network Stream */}
-        <div className="ddp-stream">
-          <div className="ddp-stream-label">{t("Network (NCCL All-Reduce)")}</div>
-          <div className="ddp-track network-track">
-            <div className={`ddp-bucket ${bucket1Filled ? 'filled' : ''} ${bucket1Syncing ? 'syncing' : ''} ${bucket1Done ? 'done' : ''}`} style={{ left: '25%' }}>
-              {t("Bucket 1 (L4 + L3)")}
-              {bucket1Syncing && <div className="sync-spinner"></div>}
-            </div>
-            <div className={`ddp-bucket ${bucket2Filled ? 'filled' : ''} ${bucket2Syncing ? 'syncing' : ''} ${bucket2Done ? 'done' : ''}`} style={{ left: '65%' }}>
-              {t("Bucket 2 (L2 + L1)")}
-              {bucket2Syncing && <div className="sync-spinner"></div>}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="ddp-explanation">
-        <p>
-          {lang === 'ko' ? '설명용 시간표입니다. 버킷 1이 준비되면 통신을 시작하고, GPU는 다른 층의 역전파를 계속할 수 있습니다. 실제 겹침과 노출되는 통신 시간은 워크로드와 하드웨어에 달려 있습니다.' : 'Illustrative timeline. Once bucket 1 is ready, communication can overlap the backward computation of other layers. Actual overlap and exposed communication depend on the workload and hardware.'}
-        </p>
-      </div>
-    </div>
-  );
-};
-
-export default DDPBucketingTimeline;
+    </div>)}
+    <fieldset className="ddp-controls" disabled={!ready}>
+      <label>{ko ? '시간' : 'Time'} <span>{time} / {endTime}</span>
+        <input type="range" min="0" max={endTime} step="1" value={time} onChange={e => seek(e.currentTarget.valueAsNumber)} />
+      </label>
+      <button type="button" onClick={() => {
+        if (time === endTime) setTime(0);
+        setPlaying(!playing);
+      }}>{playing ? (ko ? '일시 정지' : 'Pause') : time === endTime ? (ko ? '다시 재생' : 'Replay') : (ko ? '재생' : 'Play')}</button>
+      <button type="button" onClick={() => seek(0)}>{ko ? '초기화' : 'Reset'}</button>
+    </fieldset>
+    <output className="ddp-readout" aria-live={playing ? 'off' : 'polite'}>
+      {computeStatus} · {networkStatus}
+    </output>
+    <p>{ko
+      ? `시간 ${buckets[0].start}에 L3 계산이 끝나면 B1의 All-Reduce와 L2의 그래디언트 계산이 함께 시작됩니다. 시간 ${backwardEnd}에 L1이 끝나야 B2가 준비됩니다. 이후 B2가 끝나는 시간 ${endTime}까지 남은 통신은 ${exposed}단위입니다.`
+      : `At time ${buckets[0].start}, L3 finishes and the all-reduce for B1 starts alongside the gradient calculation for L2. B2 needs L1, the last gradient, at time ${backwardEnd}. Its reduction ends at ${endTime}, leaving ${exposed} units of communication after compute.`}</p>
+  </figure>;
+}

@@ -1,0 +1,244 @@
+{
+  "python": "3.12.14",
+  "torch": "2.15.0+cpu",
+  "torch_git_revision": "d0f2af8b66b20da4baa50644c0cd3f887a2eae2e",
+  "device": "cpu",
+  "processes": 1,
+  "num_workers": 0,
+  "batch_size_per_rank": 2,
+  "shuffle": false,
+  "sample_ids": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "labels": [
+    0,
+    1,
+    0,
+    1,
+    0
+  ],
+  "predictions": [
+    1,
+    1,
+    0,
+    1,
+    0
+  ],
+  "runs": {
+    "unsharded": {
+      "replicas": 1,
+      "sampler": "SequentialSampler",
+      "sampler_drop_last": null,
+      "loader_drop_last": false,
+      "ranks": [
+        {
+          "rank": 0,
+          "sampler_ids": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "batches": [
+            [
+              0,
+              1
+            ],
+            [
+              2,
+              3
+            ],
+            [
+              4
+            ]
+          ],
+          "visit_score": {
+            "correct": 4,
+            "total": 5
+          }
+        }
+      ],
+      "visit_score": {
+        "correct": 4,
+        "total": 5
+      },
+      "missing_ids": [],
+      "repeated_ids": [],
+      "full_dataset_score": {
+        "correct": 4,
+        "total": 5
+      }
+    },
+    "padded": {
+      "replicas": 2,
+      "sampler": "DistributedSampler",
+      "sampler_drop_last": false,
+      "loader_drop_last": false,
+      "ranks": [
+        {
+          "rank": 0,
+          "sampler_ids": [
+            0,
+            2,
+            4
+          ],
+          "batches": [
+            [
+              0,
+              2
+            ],
+            [
+              4
+            ]
+          ],
+          "visit_score": {
+            "correct": 2,
+            "total": 3
+          }
+        },
+        {
+          "rank": 1,
+          "sampler_ids": [
+            1,
+            3,
+            0
+          ],
+          "batches": [
+            [
+              1,
+              3
+            ],
+            [
+              0
+            ]
+          ],
+          "visit_score": {
+            "correct": 2,
+            "total": 3
+          }
+        }
+      ],
+      "visit_score": {
+        "correct": 4,
+        "total": 6
+      },
+      "missing_ids": [],
+      "repeated_ids": [
+        0
+      ],
+      "full_dataset_score": {
+        "correct": 4,
+        "total": 5
+      }
+    },
+    "sampler_drop_last": {
+      "replicas": 2,
+      "sampler": "DistributedSampler",
+      "sampler_drop_last": true,
+      "loader_drop_last": false,
+      "ranks": [
+        {
+          "rank": 0,
+          "sampler_ids": [
+            0,
+            2
+          ],
+          "batches": [
+            [
+              0,
+              2
+            ]
+          ],
+          "visit_score": {
+            "correct": 1,
+            "total": 2
+          }
+        },
+        {
+          "rank": 1,
+          "sampler_ids": [
+            1,
+            3
+          ],
+          "batches": [
+            [
+              1,
+              3
+            ]
+          ],
+          "visit_score": {
+            "correct": 2,
+            "total": 2
+          }
+        }
+      ],
+      "visit_score": {
+        "correct": 3,
+        "total": 4
+      },
+      "missing_ids": [
+        4
+      ],
+      "repeated_ids": [],
+      "full_dataset_score": null
+    },
+    "loader_drop_last": {
+      "replicas": 2,
+      "sampler": "DistributedSampler",
+      "sampler_drop_last": false,
+      "loader_drop_last": true,
+      "ranks": [
+        {
+          "rank": 0,
+          "sampler_ids": [
+            0,
+            2,
+            4
+          ],
+          "batches": [
+            [
+              0,
+              2
+            ]
+          ],
+          "visit_score": {
+            "correct": 1,
+            "total": 2
+          }
+        },
+        {
+          "rank": 1,
+          "sampler_ids": [
+            1,
+            3,
+            0
+          ],
+          "batches": [
+            [
+              1,
+              3
+            ]
+          ],
+          "visit_score": {
+            "correct": 2,
+            "total": 2
+          }
+        }
+      ],
+      "visit_score": {
+        "correct": 3,
+        "total": 4
+      },
+      "missing_ids": [
+        4
+      ],
+      "repeated_ids": [],
+      "full_dataset_score": null
+    }
+  }
+}

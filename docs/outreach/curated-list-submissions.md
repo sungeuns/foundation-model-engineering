@@ -61,7 +61,9 @@ Whisper’s **Show and tell** has a public example using the 11-second recording
 
 On November 25, 2026, RSSAmp accepted the book’s selected-articles feed. Its public listing showed three articles on looped KV caches, Whisper sample rates and length bucketing. Each article’s reader page opened and linked to the corresponding original. The directory reported the feed as active. [Reader listing](https://rssamp.com/foundation-model-engineering-selected-articles) · [Original feed](https://sungeuns.github.io/foundation-model-engineering/articles.xml)
 
-An isolated mobile browser was subsequently served an RSSAmp pass offer when opening the listing and reader URLs. For direct sharing, use the book’s free article URLs. The English feed keeps each item’s original GUID when its reader URL changes.
+On November 25, the directory subsequently picked up the fourth item, the receipt-grounding experiment. The reader entry linked to the original article. RSSAmp does not expose reader or referral counts on the listing. [Syndicated receipt experiment](https://rssamp.com/foundation-model-engineering-selected-articles/read?p=https%3A%2F%2Fsungeuns.github.io%2Ffoundation-model-engineering%2Farticles%2Freceipt-grounding%2F)
+
+An isolated mobile browser was previously served an RSSAmp pass offer when opening the listing and reader URLs. For direct sharing, use the book’s free article URLs. The English feed keeps each item’s original GUID when its reader URL changes.
 
 ## Published Korean coverage and the old Hacker News link
 

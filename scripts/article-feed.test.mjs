@@ -297,3 +297,41 @@ test('both bucketing articles keep the final singleton when a reader removes the
     assert.deepEqual(output.trim().split('\n'), ['14 2115 990', '6 1755 900']);
   }
 });
+
+test('the distributed evaluation articles carry the measured batches and the runnable alternate answer key into both feeds', () => {
+  const recordPath = 'labs/2026-11/ddp-sampler-audit.json';
+  const record = JSON.parse(readFileSync(join(dist, recordPath), 'utf8'));
+  const nodes = root => [root, ...(root.childNodes ?? []).flatMap(nodes)];
+  const text = node => node.value ?? (node.childNodes ?? []).map(text).join('');
+  const cases = ['unsharded', 'padded', 'sampler_drop_last', 'loader_drop_last'];
+  for (const prefix of ['', 'ko/']) {
+    const route = prefix + 'articles/ddp-sampler-audit/';
+    const [, , items] = readSelectedFeed(prefix);
+    const item = items.find(post => post.link === base + route);
+    assert.equal(item?.guid, base + route);
+    const published = readFileSync(join(dist, route, 'index.html'), 'utf8');
+    const home = readFileSync(join(dist, prefix, 'index.html'), 'utf8');
+    assert.ok(home.includes('href="' + new URL(route, base).pathname + '"'));
+    for (const html of [published, item['{http://purl.org/rss/1.0/modules/content/}encoded']]) {
+      const content = nodes(parseFragment(html));
+      const table = content.find(node => node.tagName === 'table');
+      const rows = nodes(table).filter(node => node.tagName === 'tr').slice(1);
+      assert.equal(rows.length, cases.length);
+      for (const [index, name] of cases.entries()) {
+        const { ranks, visit_score } = record.runs[name];
+        const cells = rows[index].childNodes.filter(node => node.tagName === 'td').map(text);
+        assert.deepEqual(cells.slice(1, 3), [0, 1].map(rank =>
+          ranks[rank]?.batches.map(batch => JSON.stringify(batch)).join(' ') ?? '—'));
+        assert.equal(cells[3], visit_score.correct + '/' + visit_score.total);
+      }
+      const links = content.filter(node => node.tagName === 'a')
+        .map(node => node.attrs.find(attr => attr.name === 'href')?.value);
+      for (const path of ['labs/ddp_sampler_audit.py', recordPath, prefix + 'chapter-7/data-parallelism/#ddp-sampler-audit']) {
+        assert.ok(links.includes(base + path), path);
+      }
+      const snippet = text(content.find(node => node.tagName === 'pre'));
+      const result = execFileSync('python3', ['-c', snippet], { cwd: join(dist, 'labs/2026-11'), encoding: 'utf8' });
+      assert.deepEqual(result.trim().split('\n'), ['unsharded 4/5', 'padded 5/6', 'sampler_drop_last 4/4', 'loader_drop_last 4/4']);
+    }
+  }
+});

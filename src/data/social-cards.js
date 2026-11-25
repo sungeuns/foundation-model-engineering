@@ -1,5 +1,16 @@
 // Focused previews for independently useful lessons. Other pages keep the book cover.
 // Paths are site-root-relative; the layout applies the deployment base.
+const ddpSamplerCard = {
+  en: {
+    image: '/social/ddp-sampler-audit-en.png',
+    alt: 'PyTorch sampler audit of five fixed predictions. Rank 0 gets batches [0, 2] and [4]. Rank 1 gets [1, 3] and [0]. Sample 0 is the only wrong prediction and both ranks count it. Accuracy is 4/6 over visits and 4/5 when each sample is scored once.',
+  },
+  ko: {
+    image: '/social/ddp-sampler-audit-ko.png',
+    alt: '예측 다섯 개를 고정하고 PyTorch 샘플러로 나눈 결과입니다. 랭크 0은 [0, 2]와 [4], 랭크 1은 [1, 3]과 [0]을 배치로 받습니다. 유일한 오답인 0번이 두 번 들어가 그대로 채점하면 4/6, 샘플마다 한 번씩 채점하면 4/5입니다.',
+  },
+};
+
 const lengthBucketingCard = {
   en: {
     image: '/social/length-bucketing-en.png',
@@ -12,6 +23,8 @@ const lengthBucketingCard = {
 };
 
 export const socialCards = {
+  '/articles/ddp-sampler-audit': ddpSamplerCard,
+  '/chapter-7/data-parallelism': ddpSamplerCard,
   '/articles/length-bucketing': lengthBucketingCard,
   '/articles/receipt-grounding': {
     en: {

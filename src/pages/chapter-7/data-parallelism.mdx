@@ -6,6 +6,7 @@ lang: en
 
 import GradientReductionTrace from '../../components/chapter-7/GradientReductionTrace.astro';
 import DDPBucketingTimeline from '../../components/chapter-7/DDPBucketingTimeline.tsx';
+import DDPTrainingExample from '../../components/chapter-7/DDPTrainingExample.astro';
 import gradientCheck from '../../../scripts/verify-dp-ddp-gradients.py?url&no-inline';
 
 # 7.1 Data Parallelism (DP/DDP)
@@ -54,6 +55,14 @@ The mean of an empty rank is undefined. In the third row, the rank-mean baseline
 
 An empty rank still runs forward and backward if its peer has data. In the script, `losses[valid].sum()` remains connected to the model even when the mask selects nothing. When both masks are empty, the shared count is zero and both ranks skip the forward pass and optimizer step. <a href={gradientCheck} download="verify-dp-ddp-gradients.py">Download the two-rank check</a> and run `python verify-dp-ddp-gradients.py` to reproduce all four rows.
 
+<a id="ddp-sampler-audit"></a>
+
+### Did every validation example get one vote?
+
+Five examples have permanent IDs 0 through 4. Only the prediction for ID 0 is wrong. With shuffling off, PyTorch’s default `DistributedSampler` assigns `[0, 2, 4]` to rank 0 and `[1, 3, 0]` to rank 1. Both ranks process three examples. Summing correct predictions and visits across them gives **4/6**, although the five distinct examples scored **4/5**. The extra visit pads the shorter shard. [[5]](#ref-5)
+
+The sampler’s `drop_last=True` drops ID 4 in this example. Leaving the sampler alone and setting `drop_last=True` on a loader with local batch size two also omits ID 4, this time when each rank drops its last partial batch. Either way, four observed IDs are too few to score this five-example set. [Run the CPU sampler audit and inspect every delivered batch](../../articles/ddp-sampler-audit/).
+
 ### The Mathematics of Ring All-Reduce
 An all-reduce specifies the result that each rank receives. The backend chooses how to move the data. Ring, tree and hierarchical implementations are possible. [[2]](#ref-2)
 
@@ -79,7 +88,7 @@ Topology, congestion and stragglers add costs; large-scale efficiency still requ
 Waiting until the final parameter gradient is ready leaves all communication on the critical path. DDP groups parameter gradients into buckets. Once a bucket is ready and its turn arrives in the reduction order, its collective can overlap computation of later gradients. Small buckets can start earlier but require more collective launches. Large buckets amortize launch overhead but take longer to fill. [[2]](#ref-2) [[4]](#ref-4)
 
 ### Interactive: Compute and Communication Overlap
-Start the timeline and watch the first bucket while layers 2 and 1 compute their gradients. The second bucket finishes after compute ends in this illustrative schedule. Measure the exposed tail on your workload when tuning `bucket_cap_mb`.
+Move the clock from 3 to 4. Layer 3 finishes its gradient, so the first bucket can start communicating while layer 2 computes. At time 8, all four gradients are ready. How much communication is left before the optimizer can use them? On a real workload, measure that exposed time when tuning `bucket_cap_mb`.
 
 <DDPBucketingTimeline client:load />
 
@@ -87,98 +96,13 @@ Start the timeline and watch the first bucket while layers 2 and 1 compute their
 
 ## 4. PyTorch Implementation
 
-> **Educational distributed-training skeleton.** Assumes NCCL and one process per GPU; actual GPU execution has not been verified. Inputs are fixed-seed synthetic token IDs and the objective is tokenwise classification, not language modeling. All ranks must construct the same global dataset. Default `DistributedSampler` padding can duplicate indices when the dataset size is not divisible by the rank count. Checkpointing, restart, evaluation, variable-length masking and communication recovery are omitted.
+> **CPU teaching example.** The inputs are 1,024 generated sequences of 32 integer IDs. The target at each position is the input ID plus one, modulo 256. The model has an embedding and two linear layers. Every position counts towards cross-entropy. The example omits checkpointing, variable-length masks and recovery from a failed rank. The optional CUDA/NCCL path has not been run here.
 
-```python
-import os
-import torch
-import torch.nn as nn
-import torch.optim as optim
-from torch.utils.data import DataLoader, Dataset
-from torch.utils.data.distributed import DistributedSampler
-from torch.nn.parallel import DistributedDataParallel as DDP
-from torch.distributed import init_process_group, destroy_process_group
+Save the linked file and run `torchrun --standalone --nproc-per-node=2 ddp_token_training.py` with PyTorch 2.15. Each CPU rank receives eight sequences per full batch. In this run 1,024 divides evenly across the two ranks, so the epoch total is $1{,}024 \times 32 = 32{,}768$ token visits. The script sums both loss and token visits across ranks before the global rank 0 prints their ratio. A different dataset size can add visits through sampler padding.
 
-# 1. Initialize the Distributed Process Group
-def setup():
-    # torchrun automatically sets these environment variables
-    init_process_group(backend="nccl")
-    local_rank = int(os.environ["LOCAL_RANK"])
-    torch.cuda.set_device(local_rank)
-    return local_rank
+<DDPTrainingExample lang="en" />
 
-def cleanup():
-    destroy_process_group()
-
-# Dummy Dataset for illustration
-class DummyCorpus(Dataset):
-    def __init__(self, size=1024, seq_len=32, vocab_size=256):
-        generator = torch.Generator().manual_seed(42)
-        self.data = torch.randint(0, vocab_size, (size, seq_len), generator=generator)
-        self.labels = torch.randint(0, vocab_size, (size, seq_len), generator=generator)
-
-    def __len__(self):
-        return len(self.data)
-
-    def __getitem__(self, idx):
-        return self.data[idx], self.labels[idx]
-
-def train():
-    local_rank = setup()
-
-    # 2. Instantiate Model and move to local GPU
-    # In reality, this would be a Transformer architecture
-    model = nn.Sequential(
-        nn.Embedding(256, 64),
-        nn.Linear(64, 128),
-        nn.GELU(),
-        nn.Linear(128, 256)
-    ).to(local_rank)
-
-    # 3. Wrap model in DDP
-    # gradient_as_bucket_view=True optimizes memory by avoiding extra copies
-    model = DDP(model, device_ids=[local_rank], gradient_as_bucket_view=True)
-
-    # 4. Setup Distributed Sampler
-    dataset = DummyCorpus()
-    # The sampler ensures each process gets a mutually exclusive slice of the dataset
-    sampler = DistributedSampler(dataset, shuffle=True)
-    dataloader = DataLoader(dataset, batch_size=8, sampler=sampler, num_workers=4)
-
-    optimizer = optim.AdamW(model.parameters(), lr=1e-4)
-    criterion = nn.CrossEntropyLoss()
-
-    # 5. Training Loop
-    epochs = 3
-    for epoch in range(epochs):
-        # CRITICAL: Set the epoch on the sampler to ensure different shuffles per epoch
-        sampler.set_epoch(epoch)
-
-        for step, (inputs, targets) in enumerate(dataloader):
-            inputs, targets = inputs.to(local_rank), targets.to(local_rank)
-
-            optimizer.zero_grad()
-
-            # Forward pass
-            outputs = model(inputs)
-            loss = criterion(outputs.view(-1, 256), targets.view(-1))
-
-            # Backward pass triggers the asynchronous All-Reduce buckets
-            loss.backward()
-
-            # Optimizer steps only after all gradients are fully synchronized
-            optimizer.step()
-
-            if local_rank == 0 and step % 10 == 0:
-                print(f"Epoch {epoch} | Step {step} | Loss {loss.item():.4f}")
-
-    cleanup()
-
-if __name__ == "__main__":
-    # To run this script on a single node with 8 GPUs:
-    # torchrun --standalone --nproc_per_node=8 train_ddp.py
-    train()
-```
+The two Gloo ranks reported mean losses of **5.447021**, **5.201997** and **4.933845** over the three epochs in PyTorch 2.15.0+cpu. A one-rank control with batch size 16 visited the same examples in each global step and matched to the six decimal places shown. These are training losses on the generated labels.
 
 In ordinary DDP, the required gradient synchronization completes with backward, so each local optimizer updates from the synchronized gradients. `optimizer.step()` is not itself a distributed barrier. A slow rank can delay peers at collectives; accumulation with `no_sync()` requires synchronization on the final backward.
 
@@ -227,9 +151,15 @@ Record token-normalized train/validation loss and domain slices, nonfinite/overf
 
 ---
 
+<details>
+<summary>Quiz 5: Two ranks report four correct predictions in six visits. What would you need to recover accuracy on five examples?</summary>
+*Match each visit to a stable example ID and check all five expected IDs are present. Repeated visits must agree on label and prediction in this fixed-output experiment. Counting each ID once gives 4/5. If an ID is missing, its prediction is still needed.*
+</details>
+
 ## References
 
 1. <a id="ref-1"></a>Gibiansky, A. (2017). "Bringing HPC Techniques to Deep Learning." Baidu Research. [Link](https://andrew.gibiansky.com/blog/machine-learning/baidu-allreduce/).
 2. <a id="ref-2"></a>Li, S., et al. (2020). *PyTorch Distributed: Experiences on Accelerating Data Parallel Training.* VLDB. [arXiv:2006.15704](https://arxiv.org/abs/2006.15704).
 3. <a id="ref-3"></a>PyTorch. [DataParallel, PyTorch 2.15](https://docs.pytorch.org/docs/2.15/generated/torch.nn.DataParallel.html).
 4. <a id="ref-4"></a>PyTorch. [DistributedDataParallel, PyTorch 2.15](https://docs.pytorch.org/docs/2.15/generated/torch.nn.parallel.DistributedDataParallel.html).
+5. <a id="ref-5"></a>PyTorch. [DistributedSampler and its padding and dropping rules, PyTorch 2.15](https://docs.pytorch.org/docs/2.15/data.html#torch.utils.data.distributed.DistributedSampler).

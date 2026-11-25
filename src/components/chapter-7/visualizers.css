@@ -141,187 +141,50 @@
   background: #45475a;
 }
 
-/* DDPBucketingTimeline Styles */
-.ddp-timeline-container {
-  background: #1e1e2e;
-  border-radius: 12px;
-  padding: 1.5rem;
-  color: #cdd6f4;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  margin: 2rem 0;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+/* Each column occupies one time unit on both DDP tracks. */
+.ddp-timeline {
+  margin: 1.5rem 0;
+  padding: clamp(.75rem, 3vw, 1.35rem);
+  border: 1px solid #bacaca;
+  border-radius: .65rem;
+  background: #f5f8f7;
+  color: #18312d;
 }
-
-.ddp-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-}
-
-.ddp-header h4 {
-  margin: 0;
-  color: #f8fafc;
-  font-size: 1.25rem;
-  font-weight: 600;
-}
-
-.ddp-controls {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.ddp-btn {
-  background: #313244;
-  color: #cdd6f4;
-  border: 1px solid #45475a;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.85rem;
-  font-weight: 600;
-  transition: all 0.2s ease;
-}
-
-.ddp-btn:hover {
-  background: #45475a;
-  color: #f8fafc;
-}
-
-.ddp-btn.secondary {
-  background: transparent;
-  border-color: transparent;
-}
-
-.ddp-btn.secondary:hover {
-  color: #f8fafc;
-}
-
-.ddp-visualization {
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
-  margin-bottom: 1.5rem;
-}
-
-.ddp-stream {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.ddp-stream-label {
-  font-size: 0.85rem;
-  color: #a6adc8;
-  font-weight: 600;
-}
-
-.ddp-track {
-  background: #181818; /* Wait, using dark background */
-  background: #181825;
-  border: 1px solid #313244;
-  border-radius: 8px;
-  height: 60px;
+.ddp-timeline figcaption { font-size: 1.15rem; font-weight: 700; color: inherit; }
+.ddp-timeline p { margin: .7rem 0; }
+.ddp-timeline .ddp-members { font-weight: 650; }
+.ddp-lane { margin: .85rem 0; }
+.ddp-lane > b { font-size: .88rem; }
+.ddp-track-grid {
+  display: grid;
   position: relative;
-  display: flex;
-  align-items: center;
-  padding: 0 1rem;
-  gap: 1rem;
+  margin-top: .3rem;
+  background: #e1e7e5;
+  border-block: 1px solid #b4c2be;
 }
-
-.ddp-block {
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  background: #313244;
-  color: #6c7086;
-  transition: all 0.3s ease;
-  flex: 1;
+.ddp-event {
   text-align: center;
+  color: #314c46;
+  background: #d0ded8;
+  border-inline-end: 1px solid white;
+  padding-block: .3rem;
+  line-height: 1.3;
 }
-
-.ddp-block.compute.active {
-  background: #89b4fa;
-  color: #11111b;
-  box-shadow: 0 0 10px rgba(137, 180, 250, 0.5);
+.ddp-event strong, .ddp-event small { display: block; }
+.ddp-event[data-active="true"] { background: #175e54; color: white; }
+.ddp-clock { position: absolute; inset-block: -3px; width: 2px; transform: translateX(-1px); background: #8d3b15; pointer-events: none; }
+.ddp-timeline .ddp-controls {
+  display: flex; align-items: center; flex-wrap: wrap; gap: .5rem;
+  margin: 1rem 0 .5rem; padding: 0; min-inline-size: 0; border: 0;
 }
-
-.ddp-progress-line {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  background: #f38ba8;
-  transition: left 0.05s linear;
+.ddp-controls label { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; }
+.ddp-controls input { width: min(8rem, 100%); accent-color: #175e54; }
+.ddp-controls button {
+  padding: .35rem .7rem; border: 1px solid #768e85; border-radius: .3rem;
+  background: white; color: #18312d; cursor: pointer; font: inherit;
 }
-
-.network-track {
-  justify-content: flex-start;
-}
-
-.ddp-bucket {
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  background: #313244;
-  color: #6c7086;
-  position: absolute;
-  transition: all 0.3s ease;
-}
-
-.ddp-bucket.filled {
-  background: #a6e3a1;
-  color: #11111b;
-}
-
-.ddp-bucket.syncing {
-  background: #f9e2af;
-  color: #11111b;
-  animation: pulse 1s infinite alternate;
-}
-
-.ddp-bucket.done {
-  background: #a6e3a1;
-  color: #11111b;
-  box-shadow: 0 0 10px rgba(166, 227, 161, 0.5);
-}
-
-@keyframes pulse {
-  from { opacity: 1; }
-  to { opacity: 0.7; }
-}
-
-.sync-spinner {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border: 2px solid #11111b;
-  border-top: 2px solid transparent;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-left: 0.5rem;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-.ddp-explanation {
-  background: #313244;
-  padding: 1rem;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  line-height: 1.6;
-  color: #cdd6f4;
-}
-
-.ddp-explanation strong {
-  color: #f9e2af;
-}
+.ddp-controls :focus-visible { outline: 2px solid #175e54; outline-offset: 2px; }
+.ddp-readout { display: block; font-weight: 650; }
 
 /* ZeROMemoryVisualizer Styles */
 .zero-visualizer-container {

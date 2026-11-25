@@ -296,7 +296,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 6.4 | `/chapter-6/infrastructure` | Mechanical only | b6d232e0decc655e38767ca986e99f77e30350ea24241c4bbf8e74737e3779b1 | b51344d034e91b490957311ea8525b46aa9ff09ae2f602ed8481a44513546c06 |
 | 6.5 | `/chapter-6/synthetic-data-for-pre-training` | Mechanical only | 3d2bab63db26c5456f88eab0f51e2e7e70ac49d93d868427783f625e4ae166ee | dd5381b0b44cb0223b04f689d010f40ea3349d668ebf9e79c98fe3d3204af54c |
 | 6.6 | `/chapter-6/optimization-mechanics` | Inspected 2026-11-17 | 942111c9629675b61e7af38dd1e0bb94a0dbe0aeff5c9d142fd7c7d0cc167b3e | 948f68b51e05f15a67755538714f595ff03ec214fe3c5d518eb6ebbff8000c22 |
-| 7.1 | `/chapter-7/data-parallelism` | Mechanical only | 4b236461b2806b76cc0943ae2761a9e4525fd1208d4cade147152d35da4359aa | c9e88a6bd767a74623cb68c84b32a01c011316fd5e6775822fb86604097510d7 |
+| 7.1 | `/chapter-7/data-parallelism` | Inspected 2026-11-25 | eecaa47ef2fc9ebce452537b2f33bcc85cb1f5e9e5402e344717910448d6db88 | 280bfc7f51b28ddb9fe913917ae9a0497f707ce9c5c9d3f38d5f953709f5f1d8 |
 | 7.2 | `/chapter-7/zero-redundancy-optimizer` | Inspected 2026-11-25 | 1d59bd55d74d312c61666b7a80158d28487d57ca3dbe4677029b7cbc03c85296 | 4992cea430e8dd37ecf27e13aa7158d27b9d43445b6cfe248a89dd9bf44558d1 |
 | 7.3 | `/chapter-7/model-and-pipeline-parallelism` | Inspected 2026-11-15 | 0832cffc306946b61c817850cb07cdbebf0d06aadfe607b6b7dfe75d14d010bf | b645ef818ecb8e33702468b9dcacf90a130b6c229ed8603d055736e2e62f5db4 |
 | 7.4 | `/chapter-7/flash-attention` | Mechanical only | 0087367d51afc79525d915f2ce52f5b6a7a61af166a1df98dc14224e1bf99bc0 | 99be786fef071e4d7cc5307302bac987c71c40ecdac3fdf506861049433e7098 |

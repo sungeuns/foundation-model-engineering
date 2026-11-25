@@ -1,0 +1,10 @@
+---
+import { Code } from 'astro:components';
+import { readFileSync } from 'node:fs';
+import { withBasePath } from '../../utils/paths.js';
+
+const script = '/labs/ddp_token_training.py';
+const code = readFileSync('public' + script, 'utf8').trimEnd();
+---
+<p><a href={withBasePath(script)} download="ddp_token_training.py">{Astro.props.lang === 'ko' ? '학습 예제 내려받기' : 'Download the training example'} (ddp_token_training.py)</a></p>
+<Code code={code} lang="python" theme="github-dark" />

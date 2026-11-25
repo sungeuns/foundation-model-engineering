@@ -18,6 +18,7 @@ const getPath = (p) => `/ko${p}`;
   <section aria-labelledby="short-reads">
     <h2 id="short-reads">짧은 글</h2>
     <ul>
+      <li><a href={withPagePath(getPath(shortArticlePaths.sampler))}>평가 예제 다섯 개를 두 랭크에서 여섯 번 채점한 이유</a></li>
       <li><a href={withPagePath(getPath(shortArticlePaths.receipt))}>가격이 없는 영수증에서 모델이 읽은 합계는 어디서 왔을까?</a></li>
       <li><a href={withPagePath(getPath(shortArticlePaths.bucketing))}>패딩을 3분의 1로 줄여도 최대 KV 메모리가 그대로였던 이유</a></li>
       <li><a href={withPagePath(getPath(shortArticlePaths.loop))}>토큰 하나를 더 넣었는데 KV 버퍼가 작아진 이유</a></li>

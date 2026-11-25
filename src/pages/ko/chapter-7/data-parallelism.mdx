@@ -6,6 +6,7 @@ lang: ko
 
 import GradientReductionTrace from '../../../components/chapter-7/GradientReductionTrace.astro';
 import DDPBucketingTimeline from '../../../components/chapter-7/DDPBucketingTimeline.tsx';
+import DDPTrainingExample from '../../../components/chapter-7/DDPTrainingExample.astro';
 import gradientCheck from '../../../../scripts/verify-dp-ddp-gradients.py?url&no-inline';
 
 <a id="71-data-parallelism-dpddp"></a>
@@ -56,6 +57,14 @@ PyTorch 2.15에서 CPU 프로세스 두 개를 Gloo로 연결하고 불리언 �
 
 다른 랭크에 유효 토큰이 하나라도 있으면 빈 랭크도 순전파와 역전파에 참여합니다. 실습 코드의 `losses[valid].sum()` 은 마스크가 아무것도 선택하지 않아도 모델과 연결된 계산 그래프를 유지합니다. 양쪽 모두 비었다면 두 랭크에서 확인한 전체 개수가 0이므로 순전파와 옵티마이저 갱신을 함께 건너뜁니다. <a href={gradientCheck} download="verify-dp-ddp-gradients.py">두 랭크 검산 코드</a>를 내려받고 `python verify-dp-ddp-gradients.py` 를 실행하면 네 행을 모두 재현할 수 있습니다.
 
+<a id="ddp-sampler-audit"></a>
+
+### 평가 사례마다 한 번씩 채점했을까요?
+
+평가 사례 다섯 개에 0부터 4까지 ID를 붙였습니다. 0번만 오답입니다. 입력 순서를 섞지 않으면 PyTorch의 기본 `DistributedSampler` 는 랭크 0에 `[0, 2, 4]`를, 랭크 1에 `[1, 3, 0]`을 배정합니다. 양쪽 모두 세 건씩 처리하도록 짧은 쪽에 0번을 한 번 더 넣었습니다. 두 랭크의 정답 수와 채점 횟수를 더하면 **4/6** 이 됩니다. 서로 다른 다섯 사례의 정답률은 **4/5** 입니다. [[5]](#ref-5)
+
+이 예제에서 샘플러에 `drop_last=True`를 주면 4번이 빠집니다. 샘플러를 그대로 두고 랭크별 배치 크기가 2인 로더에만 `drop_last=True`를 줘도 4번이 빠집니다. 이번에는 두 랭크가 각각 마지막 한 건짜리 배치를 버렸기 때문입니다. 어느 쪽이든 관측한 네 사례만으로는 다섯 사례 전체를 채점할 수 없습니다. [CPU 실험에서 실제로 전달된 배치 확인하기](../../articles/ddp-sampler-audit/).
+
 ### Ring All-Reduce의 수학적 원리
 All-Reduce는 각 랭크가 받아야 할 결과를 정합니다. 실제 데이터를 이동시키는 경로는 백엔드가 선택합니다. 링, 트리, 계층형 방식 등을 쓸 수 있습니다. [[2]](#ref-2)
 
@@ -81,7 +90,7 @@ $$ T_{ring}\approx 2(N-1)\alpha + \frac{2(N-1)M}{NB}. $$
 마지막 파라미터의 그래디언트까지 기다렸다가 통신을 시작하면 역전파가 끝난 뒤에 통신 시간이 그대로 더해집니다. DDP는 파라미터 그래디언트를 버킷으로 묶습니다. 한 버킷이 준비되고 정해진 집계 순서에서 차례가 오면, 그 버킷의 통신과 남은 그래디언트 계산을 겹칠 수 있습니다. 작은 버킷은 빨리 차지만 통신을 자주 시작해야 합니다. 큰 버킷은 시작 비용을 나눠 부담할 수 있지만 채우는 데 시간이 더 걸립니다. [[2]](#ref-2) [[4]](#ref-4)
 
 ### Interactive: 연산과 통신의 중첩 (Overlap) 시각화
-재생을 누르고 첫 버킷이 통신하는 동안 2층과 1층의 그래디언트 계산이 어떻게 진행되는지 살펴보세요. 이 예시에서 두 번째 버킷은 GPU 연산이 끝나고 나서야 통신을 마칩니다. 실제로 `bucket_cap_mb` 를 조정할 때도 연산 뒤에 남은 통신 시간을 측정하세요.
+시간을 3에서 4로 옮겨 보세요. 3층의 그래디언트 계산이 끝나면 첫 버킷의 통신과 2층의 계산을 함께 시작할 수 있습니다. 시간 8에는 네 층의 그래디언트가 모두 준비됩니다. 옵티마이저가 이 값을 쓰려면 통신을 얼마나 더 기다려야 할까요? 실제로 `bucket_cap_mb` 를 조정할 때는 이렇게 계산이 끝난 뒤 남는 통신 시간을 측정하세요.
 
 <DDPBucketingTimeline lang="ko" client:load />
 
@@ -89,98 +98,13 @@ $$ T_{ring}\approx 2(N-1)\alpha + \frac{2(N-1)M}{NB}. $$
 
 ## 4. PyTorch 교육용 구현
 
-> **교육용 분산 학습 골격.** NCCL과 GPU별 프로세스를 가정하며 실제 GPU 실행은 검증하지 않았습니다. 입력은 고정 seed의 합성 정수 ID이고 목적은 토큰별 분류입니다. 실제 언어 모델·데이터 파이프라인이 아닙니다. 전역 데이터셋은 모든 랭크에서 같아야 하며 `DistributedSampler`의 기본 패딩은 데이터 크기가 나누어떨어지지 않을 때 중복 인덱스를 추가할 수 있습니다. 체크포인트, 재시작, 평가, 가변 길이 마스크와 통신 장애 처리는 생략합니다.
+> **CPU 학습 예제입니다.** 입력은 정수 ID 32개로 된 합성 시퀀스 1,024개입니다. 각 자리의 정답은 입력 ID에 1을 더하고 256으로 나눈 나머지입니다. 임베딩과 선형층 두 개를 사용하며, 모든 자리의 교차 엔트로피를 계산합니다. 체크포인트, 가변 길이 마스크, 랭크 장애 복구는 생략합니다. 선택 사항인 CUDA/NCCL 경로는 여기서 실행을 검증하지 않았습니다.
 
-```python
-import os
-import torch
-import torch.nn as nn
-import torch.optim as optim
-from torch.utils.data import DataLoader, Dataset
-from torch.utils.data.distributed import DistributedSampler
-from torch.nn.parallel import DistributedDataParallel as DDP
-from torch.distributed import init_process_group, destroy_process_group
+아래 파일을 내려받아 PyTorch 2.15 환경에서 `torchrun --standalone --nproc-per-node=2 ddp_token_training.py`로 실행하세요. 각 CPU 랭크는 배치마다 시퀀스 여덟 개를 받습니다. 1,024개가 두 랭크에 고르게 나뉘므로 한 에폭에서 집계하는 토큰은 $1{,}024 \times 32 = 32{,}768$개입니다. 프로그램은 양쪽 랭크의 손실 합계와 토큰 수를 모은 뒤 전역 랭크 0에서 토큰당 평균 손실을 출력합니다. 데이터셋 크기가 달라지면 샘플러 패딩으로 같은 토큰을 두 번 셀 수 있습니다.
 
-# 1. 분산 프로세스 그룹 초기화
-def setup():
-    # torchrun이 아래의 환경 변수들을 자동으로 설정합니다.
-    init_process_group(backend="nccl")
-    local_rank = int(os.environ["LOCAL_RANK"])
-    torch.cuda.set_device(local_rank)
-    return local_rank
+<DDPTrainingExample lang="ko" />
 
-def cleanup():
-    destroy_process_group()
-
-# 설명을 위한 더미 데이터셋
-class DummyCorpus(Dataset):
-    def __init__(self, size=1024, seq_len=32, vocab_size=256):
-        generator = torch.Generator().manual_seed(42)
-        self.data = torch.randint(0, vocab_size, (size, seq_len), generator=generator)
-        self.labels = torch.randint(0, vocab_size, (size, seq_len), generator=generator)
-
-    def __len__(self):
-        return len(self.data)
-
-    def __getitem__(self, idx):
-        return self.data[idx], self.labels[idx]
-
-def train():
-    local_rank = setup()
-
-    # 2. 모델 인스턴스화 및 로컬 GPU로 이동
-    # 실제 환경에서는 복잡한 Transformer 아키텍처가 들어갑니다.
-    model = nn.Sequential(
-        nn.Embedding(256, 64),
-        nn.Linear(64, 128),
-        nn.GELU(),
-        nn.Linear(128, 256)
-    ).to(local_rank)
-
-    # 3. 모델을 DDP로 래핑
-    # gradient_as_bucket_view=True는 불필요한 메모리 복사를 방지하여 메모리를 최적화합니다.
-    model = DDP(model, device_ids=[local_rank], gradient_as_bucket_view=True)
-
-    # 4. Distributed Sampler 설정
-    dataset = DummyCorpus()
-    # Sampler는 각 프로세스가 데이터셋의 상호 배타적인 조각을 받도록 보장합니다.
-    sampler = DistributedSampler(dataset, shuffle=True)
-    dataloader = DataLoader(dataset, batch_size=8, sampler=sampler, num_workers=4)
-
-    optimizer = optim.AdamW(model.parameters(), lr=1e-4)
-    criterion = nn.CrossEntropyLoss()
-
-    # 5. Training Loop
-    epochs = 3
-    for epoch in range(epochs):
-        # 중요: 매 에폭마다 서로 다른 셔플링을 보장하기 위해 sampler에 에폭을 설정해야 합니다.
-        sampler.set_epoch(epoch)
-
-        for step, (inputs, targets) in enumerate(dataloader):
-            inputs, targets = inputs.to(local_rank), targets.to(local_rank)
-
-            optimizer.zero_grad()
-
-            # Forward pass
-            outputs = model(inputs)
-            loss = criterion(outputs.view(-1, 256), targets.view(-1))
-
-            # Backward pass가 비동기 All-Reduce 버킷 전송을 트리거합니다.
-            loss.backward()
-
-            # 모든 그래디언트가 완전히 동기화된 후에만 옵티마이저가 스텝을 진행합니다.
-            optimizer.step()
-
-            if local_rank == 0 and step % 10 == 0:
-                print(f"Epoch {epoch} | Step {step} | Loss {loss.item():.4f}")
-
-    cleanup()
-
-if __name__ == "__main__":
-    # 8개의 GPU가 있는 단일 노드에서 이 스크립트를 실행하려면:
-    # torchrun --standalone --nproc_per_node=8 train_ddp.py
-    train()
-```
+PyTorch 2.15.0+cpu에서 Gloo 랭크 두 개로 측정한 에폭별 평균 손실은 **5.447021**, **5.201997**, **4.933845** 였습니다. 랭크 하나와 배치 크기 16으로 같은 예제를 한 스텝에 모아 학습했을 때도 소수점 여섯 자리까지 같았습니다. 합성 입력의 정답으로 계산한 학습 손실입니다.
 
 일반적인 DDP 경로에서는 backward가 완료될 때 필요한 그래디언트 동기화도 완료되어 로컬 옵티마이저가 같은 그래디언트로 업데이트합니다. `optimizer.step()` 자체는 분산 barrier가 아닙니다. 느린 랭크는 collective에서 다른 랭크를 기다리게 만들 수 있으며, `no_sync()`를 쓰는 그래디언트 누적은 마지막 backward의 동기화까지 별도로 고려해야 합니다.
 
@@ -230,9 +154,15 @@ DDP는 모델 복제본을 유지하며 데이터 병렬 연산과 그래디언�
 
 ---
 
+<details>
+<summary>Quiz 5: 두 랭크에서 여섯 번 채점해 네 번 맞혔습니다. 평가 사례 다섯 개의 정답률을 구하려면 무엇을 확인해야 할까요?</summary>
+*채점 기록을 사례 ID에 연결해 다섯 ID가 모두 있는지 확인합니다. 예측값을 고정한 이 실험에서는 같은 ID의 정답과 예측도 매번 일치해야 합니다. ID마다 한 번씩 세면 4/5입니다. 빠진 ID가 있다면 그 사례의 예측이 추가로 필요합니다.*
+</details>
+
 ## References
 
 1. <a id="ref-1"></a>Gibiansky, A. (2017). "Bringing HPC Techniques to Deep Learning." Baidu Research. [Link](https://andrew.gibiansky.com/blog/machine-learning/baidu-allreduce/).
 2. <a id="ref-2"></a>Li, S., et al. (2020). *PyTorch Distributed: Experiences on Accelerating Data Parallel Training.* VLDB. [arXiv:2006.15704](https://arxiv.org/abs/2006.15704).
 3. <a id="ref-3"></a>PyTorch. [DataParallel, PyTorch 2.15](https://docs.pytorch.org/docs/2.15/generated/torch.nn.DataParallel.html).
 4. <a id="ref-4"></a>PyTorch. [DistributedDataParallel, PyTorch 2.15](https://docs.pytorch.org/docs/2.15/generated/torch.nn.parallel.DistributedDataParallel.html).
+5. <a id="ref-5"></a>PyTorch. [PyTorch 2.15의 DistributedSampler 패딩 및 마지막 사례 처리 규칙](https://docs.pytorch.org/docs/2.15/data.html#torch.utils.data.distributed.DistributedSampler).

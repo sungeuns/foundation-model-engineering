@@ -1,6 +1,7 @@
 export const authorName = { given: 'Seongeun', family: 'So' };
 
 export const shortArticlePaths = {
+  sampler: '/articles/ddp-sampler-audit',
   receipt: '/articles/receipt-grounding',
   whisper: '/articles/whisper-sample-rate',
   loop: '/articles/loop-cache-storage',

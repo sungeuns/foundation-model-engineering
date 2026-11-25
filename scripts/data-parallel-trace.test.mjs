@@ -65,3 +65,33 @@ test('both rendered gradient traces distinguish the gathered loss from the per-r
     }
   }
 });
+
+test('the two DDP chart tracks put both collectives after their last required gradient', () => {
+  const visibleText = node => node.value ?? (node.childNodes || []).map(visibleText).join('');
+  const expectedBars = [
+    ['L4', 0, 2], ['L3', 2, 4], ['L2', 4, 6], ['L1', 6, 8],
+    ['B1', 4, 7], ['B2', 8, 10],
+  ];
+  for (const locale of ['', 'ko']) {
+    const file = join(dist, locale, 'chapter-7/data-parallelism/index.html');
+    const page = parse(readFileSync(file, 'utf8'));
+    const attr = (node, key) => node.attrs.find(pair => pair.name === key)?.value;
+    const chart = elements(page, 'figure').find(node => attr(node, 'class') === 'ddp-timeline');
+    assert.ok(chart);
+    const tracks = elements(chart, 'div').filter(node => attr(node, 'class') === 'ddp-track-grid');
+    assert.equal(tracks.length, 2);
+    const frames = [];
+    for (const track of tracks) {
+      assert.match(attr(track, 'style'), /repeat\(10, minmax\(0, 1fr\)\)/);
+      for (const bar of elements(track, 'span')) {
+        const label = visibleText(elements(bar, 'strong')[0]);
+        const [start, end] = visibleText(elements(bar, 'small')[0]).split('–').map(Number);
+        assert.equal(attr(bar, 'style'), 'grid-column:' + (start + 1) + ' / ' + (end + 1));
+        frames.push([label, start, end]);
+      }
+    }
+    assert.deepEqual(frames, expectedBars);
+    assert.equal(attr(elements(chart, 'fieldset')[0], 'disabled'), '');
+    assert.match(visibleText(chart), locale ? /남은 통신은 2단위/ : /2 units of communication after compute/);
+  }
+});
