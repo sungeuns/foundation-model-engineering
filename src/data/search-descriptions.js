@@ -63,8 +63,8 @@ export const searchDescriptions = {
     ko: '유창하지만 원문의 뜻을 뒤집은 번역을 LLM 평가기로 어떻게 잡을까요? 두 답의 순서를 바꿔 판정을 비교하고, 놓친 오류를 유형별로 측정합니다.',
   },
   '/chapter-17/elo-rating-and-leaderboards': {
-    en: 'Understand Elo ratings for model comparisons, including crowdsourced pairwise results, rating updates, uncertainty, and leaderboard interpretation.',
-    ko: '크라우드소싱 쌍대 비교와 레이팅 갱신을 통해 모델 비교에 쓰이는 Elo를 이해하고, 불확실성과 리더보드 해석의 한계를 살펴봅니다.',
+    en: 'Replay two wins and two losses in opposite orders. Calculate why sequential Elo can reverse the model ranking and why the same Bradley–Terry fit gives a tie.',
+    ko: '두 번 이기고 두 번 진 모델의 네 표를 거꾸로 읽어 봅니다. 온라인 Elo 순위가 뒤집히는 이유와 Bradley–Terry에서는 동점이 되는 이유를 직접 계산합니다.',
   },
   '/chapter-17/contamination-issues': {
     en: 'Detect and prevent benchmark contamination with data lineage, multi-representation matching, decontamination pipelines, and private evaluation sets.',
@@ -163,8 +163,8 @@ export const searchDescriptions = {
     ko: '비전–언어 모델은 사진을 어떻게 읽을까요? CLIP 검색, 패치 투영, 교차 어텐션을 비교하고 영수증의 합계 줄을 지웠을 때 SmolVLM이 내놓은 답을 확인합니다.',
   },
   '/chapter-11/audio-and-speech-integration': {
-    en: 'Explore neural audio codecs, discrete speech tokens, AudioLM, VALL-E, and the trade-offs of integrating speech into language-model systems.',
-    ko: '신경망 오디오 코덱, 이산 음성 토큰, AudioLM과 VALL-E를 살펴보고 언어 모델 시스템에 음성을 통합할 때의 트레이드오프를 이해합니다.',
+    en: 'Follow neural audio codecs in AudioLM and VALL-E, then trace how Scribe v3 Live captions settle before their speaker labels do.',
+    ko: 'AudioLM과 VALL-E의 오디오 코덱을 살펴보고, Scribe v3 Live에서 확정된 자막에 화자 정보가 뒤늦게 붙고 정정되는 과정을 따라갑니다.',
   },
   '/chapter-11/unified-multimodal-any-to-any': {
     en: 'Explore any-to-any multimodal models through shared token spaces, diffusion and flow, cross-modal transfer, and disaggregated serving.',
@@ -195,8 +195,8 @@ export const searchDescriptions = {
     ko: '프리필·디코드 비용, StreamingLLM, YaRN, 청크 프리필과 분리형 추론 스케줄링을 통해 긴 문맥 서빙의 병목을 분석합니다.',
   },
   '/chapter-12/serving-policies-slos-and-fallbacks': {
-    en: 'Two LLM streams average 100 ms per token, yet one pauses for 370 ms. Compare TTFT, TPOT and token gaps, then count requests that meet a serving SLO in Python.',
-    ko: '두 응답 모두 평균 토큰 간격은 100ms인데 하나만 370ms 동안 멈춥니다. TTFT·TPOT와 개별 토큰 간격을 비교하고 지연 목표를 지킨 요청 수를 Python으로 계산합니다.',
+    en: 'Compare TTFT, TPOT and gaps in two token streams. Use measured Sarvam-105B throughput and latency to check a 500 ms first-token target.',
+    ko: '두 응답의 TTFT, TPOT, 토큰 사이 지연을 비교합니다. Sarvam-105B의 실측값으로 첫 토큰 500ms 목표를 충족하는 동시 사용자 수를 확인합니다.',
   },
   '/chapter-12/length-bucketing-lab': {
     en: 'Pair six prompts by arrival order, then by length. Compare padding across three batches and see why the largest prefill KV cache stays the same size.',
@@ -347,8 +347,8 @@ export const searchDescriptions = {
     ko: '모델 붕괴 위험, 교재형 말뭉치, 거절 샘플링과 데이터 품질 관리를 통해 합성 데이터를 사전 학습에 활용하는 방법을 살펴봅니다.',
   },
   '/chapter-7/data-parallelism': {
-    en: 'Compare PyTorch DataParallel and DistributedDataParallel, including gradient synchronization, bucketing, and communication-compute overlap.',
-    ko: 'PyTorch의 DataParallel과 DistributedDataParallel을 비교하며 그래디언트 동기화, 버킷 구성과 통신·연산 중첩을 이해합니다.',
+    en: 'Follow one PyTorch update across two devices. See where DataParallel sums gradients and why DistributedDataParallel needs the correct loss denominator.',
+    ko: '두 장치에서 PyTorch 가중치 하나를 갱신해 봅니다. DataParallel이 그래디언트를 더하는 위치와 DistributedDataParallel에서 손실의 분모가 중요한 이유를 확인합니다.',
   },
   '/chapter-7/model-and-pipeline-parallelism': {
     en: 'Compare pipeline, tensor, sequence, and context parallelism, and understand how their communication and scheduling costs combine in 3D parallelism.',

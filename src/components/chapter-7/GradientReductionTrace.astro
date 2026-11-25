@@ -1,0 +1,52 @@
+---
+import verificationScript from '../../../scripts/verify-dp-ddp-gradients.py?url&no-inline';
+const ko = Astro.props.lang === 'ko';
+const devices = [
+  {
+    title: 'DataParallel',
+    steps: ko ? [
+      ['손실', '두 예측의 오차를 출력 장치에 모아 평균을 한 번 냅니다.'],
+      ['역전파', '평균을 미분하면 각 예제의 몫은 절반입니다. 원본 파라미터에 더해지는 값은 +0.5와 −1.5입니다.'],
+      ['갱신', '원본의 그래디언트는 −1입니다. 옵티마이저가 원본 가중치를 1에서 1.5로 바꿉니다.'],
+    ] : [
+      ['Loss', 'Gather the predictions and take one mean over the two example losses on the output device.'],
+      ['Backward', 'The mean gives each example half the weight. The original parameter receives contributions of +0.5 and −1.5.'],
+      ['Update', 'The original gradient is −1. One optimizer changes the original weight from 1 to 1.5.'],
+    ],
+  },
+  {
+    title: 'DistributedDataParallel',
+    steps: ko ? [
+      ['손실', '랭크마다 예제가 하나이므로 각 랭크의 평균 손실은 그 예제의 손실과 같습니다.'],
+      ['역전파', '랭크 0의 로컬 그래디언트는 +1, 랭크 1은 −3입니다. 기본 리듀서가 두 값을 평균냅니다.'],
+      ['갱신', '두 랭크 모두 그래디언트 −1을 받습니다. 각 옵티마이저가 자기 가중치를 1에서 1.5로 바꿉니다.'],
+    ] : [
+      ['Loss', 'Each rank holds one example, so its local mean loss is just that example’s loss.'],
+      ['Backward', 'Rank 0 computes +1 and rank 1 computes −3. The default reducer averages the two local gradients.'],
+      ['Update', 'Both ranks receive −1. Each optimizer changes its own weight from 1 to 1.5.'],
+    ],
+  },
+];
+---
+<figure class="gradient-trace">
+  <figcaption>{ko ? '가중치 하나를 두 장치에서 한 번 갱신하는 과정' : 'One weight, two devices, one optimizer step'}</figcaption>
+  <div class="traces">
+    {devices.map(({ title, steps }) => <div>
+      <strong>{title}</strong>
+      <ol aria-label={title}>{steps.map(([phase, detail]) => <li><b>{phase}</b> — {detail}</li>)}</ol>
+    </div>)}
+  </div>
+  <p>{ko ? '일반 SGD에서 학습률은 0.5, 모멘텀과 가중치 감쇠는 0으로 두었습니다. PyTorch 2.15의 CPU 자동 미분으로 모은 손실의 그래디언트를, Gloo 랭크 두 개로 DDP 결과를 검산했습니다.' : 'The calculation uses plain SGD at a learning rate of 0.5 with zero momentum and weight decay. We checked the gathered loss with CPU autograd and the distributed update with two Gloo ranks in PyTorch 2.15.'}
+    {' '}<a href={verificationScript} download="verify-dp-ddp-gradients.py">{ko ? '검산용 Python 파일 내려받기' : 'Download the Python check'}</a>
+  </p>
+</figure>
+<style>
+  .gradient-trace { margin: 1.5rem 0; }
+  figcaption { margin-bottom: .65rem; font-weight: 700; }
+  .traces { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr)); gap: .8rem; }
+  .traces > div { padding: .8rem 1rem; border: 1px solid currentColor; border-radius: .35rem; }
+  .traces strong { overflow-wrap: anywhere; }
+  .traces ol { padding-inline-start: 1.5rem; margin: .45rem 0 0; }
+  .traces li { margin-bottom: .35rem; }
+  .gradient-trace p { font-size: .92rem; margin: .6rem 0 0; }
+</style>

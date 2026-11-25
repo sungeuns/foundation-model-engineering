@@ -134,6 +134,21 @@ CALM은 consistency 기반 다음 프레임 생성기와 자기회귀 연속 오
 
 ## 6. 스트리밍 평가와 핵심 정리
 
+<a id="scribe-speaker-events"></a>
+
+### 누가 한 말인지는 언제 알 수 있을까요?
+
+회의 자막에 문장은 정확하게 떴는데 누가 말했는지는 아직 모를 수 있습니다. **2026-11-25 기준**, ElevenLabs는 실시간 전사 모델 Scribe v3 Live를 API로 제공합니다. `diarize=true`로 화자 구분을 켜면 한 구간의 문장이 먼저 확정되고, 각 단어를 누가 말했는지는 뒤에 오는 이벤트로 알 수 있습니다. 다음은 공식 이벤트 정의에 따라 한 세션의 한 구간을 따라간 예입니다. [[16]](#ref-16) [[17]](#ref-17)
+
+| 받은 이벤트 | 회의 자막 앱이 할 일 |
+| --- | --- |
+| `partial_transcript` | “북쪽 문을”을 임시로 표시합니다. 다음 부분 전사가 오면 이전 내용을 바꿉니다. 단어에 붙은 임시 화자 ID는 `null`이거나 나중에 바뀔 수 있습니다. [[17]](#ref-17) |
+| `committed_transcript` | `segment_index=7`에 “북쪽 문을 이용하세요.”를 한 번 저장하고 확정된 문장을 바로 표시합니다. [[17]](#ref-17) |
+| `diarized_transcript` | 7번 구간을 찾아 각 단어에 화자 표시를 붙입니다. 예제에서는 모든 단어의 화자가 `speaker_2`입니다. 이 단계에서도 화자를 식별하지 못한 단어가 있을 수 있습니다. [[17]](#ref-17) |
+| `speakers_merged` | `speaker_2`가 `speaker_0`과 같은 사람이라는 이벤트를 받으면 이 세션에서 앞서 붙인 화자 표시도 갱신합니다. 병합이 이어지면 받은 순서대로 적용합니다. [[17]](#ref-17) |
+
+이벤트 네 개를 모두 처리한 뒤 회의록의 7번 구간에 남는 것은 `speaker_0`이 말한 **문장 하나** 입니다. 화자 정보가 왔을 때 전사 문장도 다시 추가하면 같은 말이 두 번 기록됩니다. 평가할 때에는 문장이 뜨기까지의 지연과 화자 표시가 붙기까지의 지연을 각각 재세요. [[17]](#ref-17)
+
 처음 들리는 출력까지의 시간, 청크 간 공백, 전체 응답 지연, 중단 감지·정지 시간, 전사 수정 안정성, 도구 행동 정확성, 완료한 대화당 비용을 측정합니다. 잡음·억양·언어 전환·겹치는 화자·무음·연결 해제와 재연결을 평가합니다. 단어 오류율뿐 아니라 명료도와 사람의 청취 검사도 사용합니다. 전사가 맞아도 음성 상호작용은 나쁠 수 있습니다.
 
 모델·endpoint 리비전, 공개된 코덱·전처리, 샘플링 주파수·채널 규약, voice ID, 템플릿, 생성 설정, 도구 스키마, 안전·행동 정책을 불변 묶음으로 유지합니다. 시험 오디오와 화자는 적응 학습 데이터에서 격리합니다. 새 목소리·스트리밍 설정은 같은 대화로 canary 평가하고, 중요 행동 오류와 지원 언어 slice를 출시 기준으로 삼으며, 세션 상태와 대기 중인 행동의 롤백을 연습합니다.
@@ -158,8 +173,8 @@ CALM은 consistency 기반 다음 프레임 생성기와 자기회귀 연속 오
 </details>
 
 <details>
-<summary>Quiz 4: 스트리밍 판단을 최종 도구 효과와 분리해야 하는 이유는 무엇인가요?</summary>
-*부분 발화는 요청과 권한이 확정되기 전에 수정·취소될 수 있습니다. 실행기가 최종 인자·권한·중복 억제를 검사해야 합니다.*
+<summary>Quiz 4: 7번 구간의 문장이 확정됐는데 뒤이어 받은 화자 정보에서 한 단어의 화자 ID가 null입니다. 회의록에는 무엇을 남길까요?</summary>
+*확정된 문장을 한 번만 저장하고 해당 단어의 화자는 비워 둡니다. 같은 구간에 도착한 화자 정보를 연결합니다. 화자 ID가 병합되면 앞서 표시한 화자도 수정하지만 회의록에 새 발화를 추가하지는 않습니다.*
 </details>
 
 <details>
@@ -189,3 +204,5 @@ CALM은 consistency 기반 다음 프레임 생성기와 자기회귀 연속 오
 13. <a id="ref-13"></a>QwenCloud. *qwen-audio-3.1-live*. Verified 2026-11-24. [Model](https://docs.qwencloud.com/models/qwen-audio-3-1-live).
 14. <a id="ref-14"></a>OpenAI. *Delegation and tools in GPT-Live*. Verified 2026-11-24. [Guide](https://developers.openai.com/api/docs/guides/live-delegation).
 15. <a id="ref-15"></a>QwenCloud. *Qwen-Audio-Live: task delegation and tools*. Verified 2026-11-24. [Guide](https://docs.qwencloud.com/developer-guides/speech/qwen-audio-live).
+16. <a id="ref-16"></a>ElevenLabs (2026-11-10). [Scribe v3와 Scribe v3 Live 발표](https://elevenlabs.io/blog/scribe-v3).
+17. <a id="ref-17"></a>ElevenLabs. [실시간 전사·화자 구분·화자 병합 이벤트 명세](https://elevenlabs.io/docs/eleven-api/guides/how-to/speech-to-text/realtime/event-reference).

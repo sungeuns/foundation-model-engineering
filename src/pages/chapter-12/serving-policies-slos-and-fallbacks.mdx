@@ -92,6 +92,21 @@ print(sum(passed) / window_s)  # 1.0 request/s
 
 **One request per second met this contract.** A passed, B paused for 370 ms, and C timed out. The SLO attainment fraction was 1/3 of offered requests. Substituting the mean gap for the longest gap admits B and changes the question. When comparing a system benchmark, check its definition too. DistServe seeks the highest per-GPU load that still meets a target fraction of requests’ TTFT and TPOT requirements. Estimating that capacity takes a load sweep, beyond this single trace window. [[5]](#ref-5)
 
+<a id="sarvam-ttft-load"></a>
+
+### How many users fit a 500 ms first-token budget?
+
+Suppose your chat service promises a p90 time to first token (TTFT) of at most 500 ms. Sarvam's model card supplies two load points to test that decision. **As of 2026-11-25**, the NVFP4 build of Sarvam-105B-1711 has downloadable Apache 2.0 weights. Sarvam also switched its hosted `sarvam-105b` endpoint to the 1711 weights on November 22. The figures below come from the checkpoint's one-GPU benchmark. The hosted endpoint has its own serving configuration. [[9]](#ref-9) [[10]](#ref-10)
+
+| Concurrent users | Total throughput (tokens/s) | Median TTFT (ms) | p90 TTFT (ms) |
+| ---: | ---: | ---: | ---: |
+| 32 | 4,311 | 131 | 471 [[9]](#ref-9) |
+| 64 | 5,354 | 156 | 841 [[9]](#ref-9) |
+
+Sarvam used one B200, reasoning prompts, thinking enabled, an FP8 KV cache and DSpark with five speculative tokens and temperature 1.0. It cleared the prefix cache before each load. TTFT measures the wait for the first output token. The card does not specify where it timestamps that token or whether reasoning output qualifies. Use the same observation point as your users when testing the promise. [[9]](#ref-9)
+
+Doubling concurrency raised total throughput by about 24%. Both medians fit the budget. Only **32 concurrent users** passed the p90 target among these two measurements. The table leaves loads between 32 and 64 untested. To compute the goodput defined above, you still need individual completion outcomes, token gaps and the observation window.
+
 ### SLOs Should Be Lane-Specific
 
 An IDE copilot, a batch summarizer, and a tool-calling agent should not share identical thresholds.
@@ -275,6 +290,11 @@ For production evaluation, count KV transfers, cache reuse, switching delay and 
 *No. The worked traces have equal means but longest token gaps of 100 and 370 ms. Inspect the individual gaps at the same observation boundary. A single chunk exposes no within-response arrival gaps; its timestamp cannot reveal the individual token generation cadence.*
 </details>
 
+<details>
+<summary>Quiz 6: The chat service also needs 5,000 tokens/s. Which of the two Sarvam load points meets both targets?</summary>
+*Neither one. At 32 users, p90 TTFT meets 500 ms but throughput is 4,311 tokens/s. At 64 users, throughput reaches 5,354 tokens/s but p90 TTFT rises to 841 ms. Measure intermediate loads on the intended workload to see whether both constraints can be met.*
+</details>
+
 ---
 
 ## References
@@ -287,3 +307,5 @@ For production evaluation, count KV transfers, cache reuse, switching delay and 
 6. <a id="ref-6"></a>Research preprint (2026). [Evolving Infra: Agent-Adaptive LLM Serving at Scale](https://arxiv.org/html/2611.12304v1). Version pinned; accessed 2026-11-15.
 7. <a id="ref-7"></a>Kubernetes SIGs. [Inference Performance Metrics Definition — Latency](https://github.com/kubernetes-sigs/inference-perf/blob/main/docs/metrics.md#latency). Official benchmark definitions; checked 2026-11-25.
 8. <a id="ref-8"></a>NVIDIA. [AIPerf v0.14.0 Metrics Reference](https://docs.nvidia.com/aiperf/v0.14.0/reference/ai-perf-metrics-reference). TTFT, ITL, and ICL definitions; checked 2026-11-25.
+9. <a id="ref-9"></a>Sarvam AI. [Sarvam-105B-1711 NVFP4 model card and B200 throughput measurements, revision e8a53d1](https://huggingface.co/sarvamai/sarvam-105b-1711/blob/e8a53d10330aa07c4ac007a9c3cb21524f0639e2/README.md).
+10. <a id="ref-10"></a>Sarvam AI (2026-11-22). [Hosted Sarvam-105B endpoints switch to the 1711 weights](https://docs.sarvam.ai/changelog/2026/11/22).

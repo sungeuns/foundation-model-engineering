@@ -4,25 +4,29 @@ title: 17.3 Elo Rating & Leaderboards
 lang: en
 ---
 
+import EloVoteOrder from '../../components/chapter-17/EloVoteOrder.astro';
+
 # 17.3 Elo Rating & Leaderboards
 
-Human preference evaluation complements answer-based benchmarks. It asks which of two responses a judge prefers; preference is distinct from factuality, safety and task success. This section explains how Elo and Bradley–Terry summarize pairwise comparisons.
+Four people compare anonymous answers from two models. Two prefer A and two prefer B. Someone processes the votes in the order they arrived. A colleague processes the same file in reverse. Can they end up naming different winners?
 
-The 2023 Chatbot Arena study used crowdsourced votes on anonymous responses. Blinding reduces name-based bias; it does not remove style effects, sampling bias, repeated votes or evaluation contamination [[2]](#ref-2).
+They can if they update an Elo rating after each vote. The two orders below move the same pair of ratings. Watch what happens to A when its first two wins make the next loss a surprise.
 
 ## The Mechanism: Crowdsourced Duels
 
-The process of building an LLM leaderboard using Elo ratings involves:
-1.  **Blind Duels**: A user enters a prompt. Two anonymous models (e.g., Model A and Model B) generate responses.
-2.  **Human Judgment**: The user votes for the better response (or declares a tie).
-3.  **Rating Update**: The system updates the Elo ratings of both models based on the outcome and their pre-existing ratings.
+A voter gives both anonymous models the same prompt, reads their responses, and selects A, B, or a tie. The observation is a preference on that prompt. A judge can prefer a well-written answer that contains an error. The early Chatbot Arena study collected blind comparisons this way [[2]](#ref-2).
 
-![Elo Rating System for LLMs](../../assets/images/chapter-17/elo_duel.png)
-*Source: AI-generated illustration*
+<a id="elo-vote-order"></a>
+
+### Two wins and two losses
+
+<EloVoteOrder lang="en" />
+
+With wins first, A climbs to 1530.5 and finishes at 1494.7, below B. With losses first, A finishes at 1505.3, above B. No voter changed their mind. Each update used a different estimate of what the next vote would look like.
 
 ## The Mathematics of Elo
 
-Originally designed for chess, the Elo rating system calculates the relative skill levels of players. In the context of LLMs, the "players" are the models.
+Elo expresses the expected score of one competitor against another as a function of their rating difference [[1]](#ref-1).
 
 ### 1. Expected Score
 
@@ -41,87 +45,65 @@ After a duel, the ratings are updated based on the actual score $S_A$ and the ex
 
 $$R'_A = R_A + K(S_A - E_A)$$
 
-Where:
--   $R'_A$ is the new rating.
--   $K$ is a constant (K-factor) that determines how much a single game affects the rating (e.g., $K=32$).
--   $S_A$ is the actual score: $1$ for a win, $0.5$ for a tie, and $0$ for a loss.
+Here $S_A$ is 1 for a win, 0.5 for a tie and 0 for a loss. The step size $K$ controls how strongly a single vote changes the rating. B receives the opposite update, so the sum of the two ratings stays constant.
 
-If a highly-rated model loses to a low-rated model, the rating change is large because $(S_A - E_A)$ is large.
+After A’s first two wins, its rating is 1530.53 and B’s is 1469.47. The expected score for A is about 0.587. A loss now costs $32(0-0.587)$, or about 18.8 points. Losing the opening vote would have cost only 16. Replay the four votes with Python’s standard library. Round only when displaying the results.
+
+```python
+def replay(votes, k=32):
+    a = b = 1500.0
+    path = [a]
+    for vote in votes:
+        expected = 1 / (1 + 10 ** ((b - a) / 400))
+        change = k * (vote - expected)
+        a += change
+        b -= change
+        path.append(a)
+    return path
+
+for votes in ([1, 1, 0, 0], [0, 0, 1, 1]):
+    print([round(rating, 1) for rating in replay(votes)])
+```
 
 ### Beyond Elo: The Bradley-Terry Model
 
-Elo depends on match order. Bradley–Terry estimates latent score differences from a set of comparisons. Its basic form models binary wins: declare whether ties receive half credit or use an explicit tie model. Relative scores across disconnected comparison groups are not identified by the data, and complete separation can prevent a finite MLE. Record the reference-score constraint and regularization policy.
+Suppose model versions are fixed and all four votes count equally. In a two-model Bradley–Terry fit with no ties, the estimated probability that A wins is $2/4=0.5$. The fitted **rating difference is zero** in either order. Both ratings can move together without changing that probability, so fix one reference rating or constrain their sum. With more models, groups that never play each other cannot be placed relative to one another from these votes alone. All wins and no losses for one side can also prevent a finite unregularized estimate.
+
+In December 2023, the Arena team described moving its leaderboard from online Elo to a Bradley–Terry fit. This historical change matters when reproducing a published score. Know whether the evaluator replayed individual votes or fitted the complete set [[3]](#ref-3).
 
 ### Reading a leaderboard
 
-Report uncertainty in the **score difference**, using a bootstrap or model that accounts for repeated users and prompts. Overlap of two marginal confidence intervals alone does not establish equivalence. Check prompt mix, style preference, model identity leakage, repeated voters and version changes. Public preference is a candidate-selection signal; private workflow, latency/cost and safety evaluations still gate deployment.
+Our sample contains four votes. A fitted difference of zero leaves considerable uncertainty about future voters. Report uncertainty on the difference itself. When one person or one prompt produces several votes, preserve those groups in your uncertainty estimate. Record how ties were handled and how prompts, model versions and judges were sampled [[4]](#ref-4).
 
 ## Implementing Batch Elo Updates in PyTorch
 
-For developers running internal model evaluations (e.g., comparing multiple fine-tuned versions), implementing a batch Elo update system in PyTorch can be highly efficient. Here is how to compute expected scores and updates for a batch of duels.
+Four votes for the same pair form a sequence. A vector operation can instead update several **independent** pairs at once. In this example each row has its own two models. In row one A wins. In row two the voter declares a tie.
 
-> **Educational example.** Each row updates an independent pair of ratings. This is not a shared rating registry or sequential Elo when a model appears in several rows. A real evaluator must manage model IDs, duplicate votes, update order, tie policy and uncertainty.
+This snippet updates one vote per pair. A leaderboard still needs persistent model IDs, a policy for repeated votes and a defined processing order.
 
 ```python
 import torch
 
 def compute_batch_elo_update(ratings_a, ratings_b, outcomes, k_factor=32.0):
-    """
-    Compute Elo rating updates for a batch of duels.
+    expected = 1 / (1 + 10 ** ((ratings_b - ratings_a) / 400))
+    change = k_factor * (outcomes - expected)
+    return ratings_a + change, ratings_b - change
 
-    Args:
-        ratings_a: Tensor of current ratings for Model A. Shape (batch_size,)
-        ratings_b: Tensor of current ratings for Model B. Shape (batch_size,)
-        outcomes: Tensor of outcomes for Model A (1.0 for win, 0.5 for tie, 0.0 for loss).
-                  Shape (batch_size,)
-        k_factor: The K-factor hyperparameter.
-
-    Returns:
-        new_ratings_a: Updated ratings for Model A.
-        new_ratings_b: Updated ratings for Model B.
-    """
-    # Compute expected scores
-    # We use torch.pow(10, ...) or exp with log(10)
-    exponent = (ratings_b - ratings_a) / 400.0
-    expected_a = 1.0 / (1.0 + torch.pow(10.0, exponent))
-    expected_b = 1.0 - expected_a
-
-    # Compute updates
-    # outcomes are scores for A. For B, score is (1.0 - outcomes)
-    update_a = k_factor * (outcomes - expected_a)
-    update_b = k_factor * ((1.0 - outcomes) - expected_b)
-
-    new_ratings_a = ratings_a + update_a
-    new_ratings_b = ratings_b + update_b
-
-    return new_ratings_a, new_ratings_b
-
-# Example Usage
-batch_size = 4
-# Initial ratings
-r_a = torch.tensor([1500.0, 1600.0, 1400.0, 1500.0])
-r_b = torch.tensor([1400.0, 1700.0, 1400.0, 1500.0])
-
-# Outcomes for A: Win, Loss, Tie, Win
-outcomes = torch.tensor([1.0, 0.0, 0.5, 1.0])
-
-new_a, new_b = compute_batch_elo_update(r_a, r_b, outcomes)
-
-print("Original A:", r_a)
-print("Updated A:", new_a)
-print("Original B:", r_b)
-print("Updated B:", new_b)
+a = torch.tensor([1500.0, 1500.0])
+b = torch.tensor([1500.0, 1500.0])
+print(compute_batch_elo_update(a, b, torch.tensor([1.0, 0.5])))
+# (tensor([1516., 1500.]), tensor([1484., 1500.]))
 ```
 
 ## A product leaderboard
 
-Stratify prompts by task; ensure useful pair coverage; calibrate automated judges against humans; permit ties; and report severe failure categories separately from style preferences. If you weight comparisons by severity, predeclare the weights and resulting estimand. Pin model/system-prompt versions and retain auditable votes. These controls lead into the next sections on contamination and release gates.
+Imagine choosing a model that drafts refund emails. Voters might prefer friendly prose even when the message quotes the wrong refund amount. Keep that factual check alongside the preference votes, and sample each candidate on the same case mix. Record model and prompt versions so that a change in refund policy or model deployment can be traced back to the affected comparisons.
 
 ## Quizzes
 
 <details>
-<summary>Quiz 1: Does blind preference evaluation replace correctness evaluation?</summary>
-*No. Blinding can reduce name-based bias, but style effects, sampling bias and judge errors remain. Evaluate correctness, safety and workflow success separately.*
+<summary>Quiz 1: How can A lead in one replay and B lead in the other when both have two wins?</summary>
+*Online Elo uses the current ratings to predict the next vote. After two wins, A loses more points for a defeat than it would from a tied start. Reversing the votes reverses this effect.*
 </details>
 
 <details>
@@ -148,3 +130,5 @@ Stratify prompts by task; ensure useful pair coverage; calibrate automated judge
 
 1. <a id="ref-1"></a>Elo, A. E. (1978). *The Rating of Chessplayers, Past and Present*. Arco.
 2. <a id="ref-2"></a>Zheng, L., et al. (2023). *Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena*. [arXiv:2306.05685](https://arxiv.org/abs/2306.05685).
+3. <a id="ref-3"></a>LMSYS Org. (2023). [Chatbot Arena: New models & Elo system update](https://www.lmsys.org/blog/2023-12-07-leaderboard/).
+4. <a id="ref-4"></a>Chiang, W.-L., et al. (2024). [Chatbot Arena: An Open Platform for Evaluating LLMs by Human Preference](https://arxiv.org/abs/2403.04132).

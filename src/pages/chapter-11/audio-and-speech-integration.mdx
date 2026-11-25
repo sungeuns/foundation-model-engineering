@@ -134,6 +134,21 @@ Standby is also different from ending a session or canceling a task. Record infe
 
 ## 6. Streaming Evaluation and Practical Takeaway
 
+<a id="scribe-speaker-events"></a>
+
+### When do you know who said it?
+
+A meeting caption can have the right words before it has the right speaker. **As of 2026-11-25**, ElevenLabs offers Scribe v3 Live through its hosted transcription API. With `diarize=true`, each commit fixes a segment's text while a later event supplies speaker labels for its words. The following example follows one segment in one session using the published event definitions. [[16]](#ref-16) [[17]](#ref-17)
+
+| Event | What the meeting app does |
+| --- | --- |
+| `partial_transcript` | Show “Use the north” as a draft. A later partial replaces it. A word's draft speaker ID can be `null` or change. [[17]](#ref-17) |
+| `committed_transcript` | Save “Use the north door.” once for `segment_index=7`. Display the settled text immediately. [[17]](#ref-17) |
+| `diarized_transcript` | Match index 7 and attach the supplied speaker labels. In this example the words are assigned to `speaker_2`. A word can still have an unresolved speaker. [[17]](#ref-17) |
+| `speakers_merged` | If the event maps `speaker_2` to `speaker_0`, update earlier uses of that label in the session. Apply chained merges in receive order. [[17]](#ref-17) |
+
+After those four messages, segment 7 contributes **one sentence** to the meeting notes, attributed to `speaker_0`. Appending the diarized text as another utterance would duplicate it. Measure how soon the words appear and how soon the speaker labels arrive as separate latencies. [[17]](#ref-17)
+
 Measure time to first audible output, inter-chunk gaps, end-to-end response latency, interruption detection and stop time, transcript revision stability, tool-action correctness, and cost per completed conversation. Evaluate noisy speech, accents, code-switching, overlapping speakers, silence, and disconnect/reconnect. Use intelligibility and human listening checks alongside word error rate; a correct transcript can still produce a poor spoken interaction.
 
 Retain an immutable bundle of model/endpoint revision, codec or audio preprocessing where exposed, sample rate/channel conventions, voice ID, template, generation settings, tool schema, and safety/action policy. Keep test audio and speakers isolated from adaptation data. Canary a new voice or streaming configuration against the same conversations, gate on critical action errors and supported-language slices, and rehearse rollback of both session state and pending actions.
@@ -158,8 +173,8 @@ Audio integration is a joint representation and state-management problem. The fo
 </details>
 
 <details>
-<summary>Quiz 4: Why must a streaming decision be separated from a final tool effect?</summary>
-*Partial speech may be revised or canceled before the request and permission are settled. An executor must enforce final arguments, authorization, and duplicate suppression.*
+<summary>Quiz 4: For segment 7 you have committed text, but a later word still has a null speaker ID. What belongs in the meeting notes?</summary>
+*Keep one copy of the committed text and leave the unresolved word unattributed. Attach speaker updates to that segment. A speaker merge can revise earlier attribution without adding another utterance.*
 </details>
 
 <details>
@@ -189,3 +204,5 @@ Audio integration is a joint representation and state-management problem. The fo
 13. <a id="ref-13"></a>QwenCloud. *qwen-audio-3.1-live*. Verified 2026-11-24. [Model](https://docs.qwencloud.com/models/qwen-audio-3-1-live).
 14. <a id="ref-14"></a>OpenAI. *Delegation and tools in GPT-Live*. Verified 2026-11-24. [Guide](https://developers.openai.com/api/docs/guides/live-delegation).
 15. <a id="ref-15"></a>QwenCloud. *Qwen-Audio-Live: task delegation and tools*. Verified 2026-11-24. [Guide](https://docs.qwencloud.com/developer-guides/speech/qwen-audio-live).
+16. <a id="ref-16"></a>ElevenLabs (2026-11-10). [Scribe v3 and Scribe v3 Live release](https://elevenlabs.io/blog/scribe-v3).
+17. <a id="ref-17"></a>ElevenLabs. [Realtime transcription event reference, including speaker attribution and merges](https://elevenlabs.io/docs/eleven-api/guides/how-to/speech-to-text/realtime/event-reference).

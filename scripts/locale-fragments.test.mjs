@@ -38,6 +38,10 @@ test('shared exercise IDs belong to the same authored content in both translatio
     }
   }
   for (const [route, id] of [
+    ['/chapter-7/data-parallelism', 'dp-ddp-gradient-trace'],
+    ['/chapter-11/audio-and-speech-integration', 'scribe-speaker-events'],
+    ['/chapter-12/serving-policies-slos-and-fallbacks', 'sarvam-ttft-load'],
+    ['/chapter-17/elo-rating-and-leaderboards', 'elo-vote-order'],
     ['/chapter-1/deep-learning-paradigms', 'next-token-loss-example'],
     ['/chapter-4/various-llm-architectures', 'mla-cache-example'],
     ['/chapter-7/flash-attention', 'online-softmax-tiles'],

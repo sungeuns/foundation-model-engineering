@@ -294,7 +294,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 6.4 | `/chapter-6/infrastructure` | Mechanical only | b6d232e0decc655e38767ca986e99f77e30350ea24241c4bbf8e74737e3779b1 | b51344d034e91b490957311ea8525b46aa9ff09ae2f602ed8481a44513546c06 |
 | 6.5 | `/chapter-6/synthetic-data-for-pre-training` | Mechanical only | 3d2bab63db26c5456f88eab0f51e2e7e70ac49d93d868427783f625e4ae166ee | dd5381b0b44cb0223b04f689d010f40ea3349d668ebf9e79c98fe3d3204af54c |
 | 6.6 | `/chapter-6/optimization-mechanics` | Inspected 2026-11-17 | 942111c9629675b61e7af38dd1e0bb94a0dbe0aeff5c9d142fd7c7d0cc167b3e | 948f68b51e05f15a67755538714f595ff03ec214fe3c5d518eb6ebbff8000c22 |
-| 7.1 | `/chapter-7/data-parallelism` | Mechanical only | 8c37d63a720ee64a8c4f37ac09c3062f12df4870500f1ee54d598637de7e8b8c | 7b3a07ce3c7c5ba3deb802af571117fcae1656b049e6b412614823b96c01b65d |
+| 7.1 | `/chapter-7/data-parallelism` | Mechanical only | 103952286e41dcecefd583adc654b910249e54a2c59f883138dba1dc59404fd1 | f361adddda5554dea7aa816dc3bf965736edf13b7fd3862bd193e6cec8597385 |
 | 7.2 | `/chapter-7/zero-redundancy-optimizer` | Inspected 2026-11-25 | 1d59bd55d74d312c61666b7a80158d28487d57ca3dbe4677029b7cbc03c85296 | 4992cea430e8dd37ecf27e13aa7158d27b9d43445b6cfe248a89dd9bf44558d1 |
 | 7.3 | `/chapter-7/model-and-pipeline-parallelism` | Inspected 2026-11-15 | 0832cffc306946b61c817850cb07cdbebf0d06aadfe607b6b7dfe75d14d010bf | b645ef818ecb8e33702468b9dcacf90a130b6c229ed8603d055736e2e62f5db4 |
 | 7.4 | `/chapter-7/flash-attention` | Mechanical only | 0087367d51afc79525d915f2ce52f5b6a7a61af166a1df98dc14224e1bf99bc0 | 99be786fef071e4d7cc5307302bac987c71c40ecdac3fdf506861049433e7098 |
@@ -315,7 +315,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 10.4 | `/chapter-10/kto-and-ipo` | Mechanical only | 61ac741df320db7fb3031414fdacaf5770fa28200d3f91f8d69cec83c273c046 | 6a539344952c0246f5777ddf9e6a1be24babe58b085a53cc1752efa3ea2be7c5 |
 | 10.5 | `/chapter-10/alignment-tax` | Inspected 2026-11-15 | e630460ac1b1a8620d753362e400c3bea18d69cff7a6265b3820b6ce7230c6f6 | 5041f746d84764553aecee5b114599a703cc2206889aa57838d5b2719b0bec7e |
 | 11.1 | `/chapter-11/vision-language-bridges` | Inspected 2026-11-25 | a02bb8b31255a61b3ad4fac756f6c5547001063bcffb21c0f37af66636b14ab9 | 933896d72135ca1369709ff247a2a84db201193d056023234add80635ec16f29 |
-| 11.2 | `/chapter-11/audio-and-speech-integration` | Mechanical only | 3c8de54d3316183f25505eea48298dc784a4b0a61b55390f944bbc0a60ffef91 | 22e94e2436f5521f61e09272972d1e6d45237c4bb02d987c49af7e99eb1e8df7 |
+| 11.2 | `/chapter-11/audio-and-speech-integration` | Mechanical only | 3e114b35e142236846e24819a3ba72224474efdd8a37cb30fda0efe9848835a9 | dbd1488a0474cc4721b910e4bc55f6004eca2fd402ab28324db55c25f08b0c62 |
 | 11.3 | `/chapter-11/unified-multimodal-any-to-any` | Inspected 2026-11-15 | 63b49653980ac69e7662b92d1423aad27976789545651d8f21bb97c04a0993a2 | 05b4775ea2e63d295a8def6928b0a7280187755f1e95669da1a9db2ad9134158 |
 | 11.4 | `/chapter-11/image-diffusion-models` | Inspected 2026-11-24 | 5bb8bc33ff8adf86105e24018b03423e9f19e0d29739f64b843c0cbeadea05e8 | 308de426fdbc7b1c845a4d63be36b83988abe2eb36026affba1dd101194816b7 |
 | 11.5 | `/chapter-11/video-generation-foundations` | Inspected 2026-11-15 | b34544d0352be5feafdfc0d30ac23092d50edf3a3af5f3e4d37cc62531230c20 | 55c0488a07c962041cdbb0cdb945d18c8e136b23dba2aed6f6970f1c33cb4b4b |
@@ -325,7 +325,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 12.3 | `/chapter-12/continuous-batching` | Inspected 2026-11-25 | 588de002d211758e1fbb83af67004497e5280cad3512efc790f73f9b3d2a24b3 | 3f9ff09b65675139196bd073123e28a306180a8ec7d07398d1e331351f5a7124 |
 | 12.4 | `/chapter-12/speculative-decoding` | Inspected 2026-11-25 | a5f93ea8411bab0fe68bf277224f8f19f111ac0f0fd73f6b4eda75739a8990b5 | 61986787b62bf6d99f59ab08a66d2ea6312e472faea94ded13c4a7d627d03cc4 |
 | 12.5 | `/chapter-12/long-context-serving` | Inspected 2026-11-15 | 82f413a5a2e2731fe01603c7036b42dee434b010cc76410eba7e0807d73742e8 | 59933e962b9f0bef0f8b50e9889ec628fd92ade6d7d0fb91636981793bd83052 |
-| 12.6 | `/chapter-12/serving-policies-slos-and-fallbacks` | Inspected 2026-11-25 | 8222c69fc753a073f358acef599ad825d1193693daa931acbd774081c82f2b46 | 35067207b0e514380e54bb373c7b545a075fc1999f3e039eb327edb1e13ba1a5 |
+| 12.6 | `/chapter-12/serving-policies-slos-and-fallbacks` | Mechanical only | 2cac4315bcb3c8ddcfa49d002bed038716ee2de270385476849ecc931d8a6e4b | 827aa4cb30a2c67d93cae2a10297d5435057a56c28d891a7ec483e0b185342f0 |
 | 12.7 | `/chapter-12/length-bucketing-lab` | Inspected 2026-11-25 | 4e9dfc6212c4de7350b847509baa66af85ed428aa492bf524eb10d9358ff46ec | 226d30aa75baf02db770ebada6ff941c5791dac23096079073d28599a61a9af1 |
 | 13.1 | `/chapter-13/ptq-vs-qat` | Inspected 2026-11-25 | eb93d493239246214375730e26db3328bc55104f01777c0ff0ebb9fc5bf7b5ae | 024687ff4956de8d9b50358821335b863bdc65e10edfdaf7f6a6ab5db3357bba |
 | 13.2 | `/chapter-13/quantization-methods` | Inspected 2026-11-25 | f128eb1a2a438226a64a9e9f82f4eea316a0ddf62f38c32553657fbd9dad6944 | d2ef6a2e7b3349d2fa4a93ef0d79356511c79d4939a24bd5913965064c16bdaf |
@@ -352,7 +352,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 16.7 | `/chapter-16/decision-models-and-selective-prediction` | Inspected 2026-11-25 | 968048e13fae199978a109f4fef886dcc261832fbbfdd62899e96967209cca9f | 07b1f8a70ee24b852c35c5ee40502166c5d9c9cf63e984d30013442d89da1bc2 |
 | 17.1 | `/chapter-17/academic-benchmarks` | Inspected 2026-11-25 | 2bb8eb0b33d4bc24dcae8ae506f5ca0f23f4025551732b56eb2a87c1ea1b776b | 74665b79d10ce15471f22bffafee43cd28ef36d230c23b59c76e37bf4139ee19 |
 | 17.2 | `/chapter-17/llm-as-a-judge` | Inspected 2026-11-25 | c57401335205ae3dc187e512d28443027ed79d13a6858df675662fe7dbe97ce4 | fed0a9a3459a3eb9683eb1576383f225b0943f807dfd1b3564bdb8603f8986d7 |
-| 17.3 | `/chapter-17/elo-rating-and-leaderboards` | Inspected 2026-11-15 | 14f931df5e4641c576c1763d446b2c663d1f282abf438767e5a330d49b31a9b9 | 1e78f5819e5452372109f72327dad0f7831b3b9ce66750000c9378a906744c30 |
+| 17.3 | `/chapter-17/elo-rating-and-leaderboards` | Inspected 2026-11-25 | 682ffbd445359a82ff596b99a004dfc2ebea6fe1a166e7a912c6b8c52be21afd | a7882a55e09b6529bd4355425f44b3f8a640dd32c01a1706e39756616a36d22b |
 | 17.4 | `/chapter-17/contamination-issues` | Mechanical only | 38a0cad52c7504804a57a8cc2deed94a3ac2fe68f7648809261abad1cf6b4fa5 | ad7b87426dcdde29f69a6921696a462359e7681d7d3b5ee5c11f3d80ec0a71c7 |
 | 17.5 | `/chapter-17/production-evaluation-and-release-gates` | Inspected 2026-11-25 | d2917516ef75c2ede2cd4db285a221090b09f181104e7112bd388f427ecc5298 | cb7d670ce7898fe43516e3cc8a38e295b6e24bba8e3a65c7579c61f3e03b9fb3 |
 | 17.6 | `/chapter-17/commercial-model-benchmarks` | Mechanical only | 4fb00ee63572693eb71b41525eaf0d358e2e3e9d45c8cff72dc913f867db0f98 | 3f1e3cae0d51694eabafcaefc17ad55b9098cb2da71c4ce18f18d9c16ca24793 |
@@ -746,3 +746,9 @@ Read both §12.7 manuscripts and checked each batch against the recorded SmolLM2
 The §14.1 lab uses four original English passages and four paired English/Korean requests. Checked the Korean tire hit, receipt near-tie, exact model-code mismatch and absent model against the JSON from the pinned multilingual E5 checkpoint. Both editions link to the script, all eight rankings and the frozen model card. This pass focused on the new experiment.
 
 For §16.6, executed both published SQLite examples and the conflicting-key case. Matched the receipt semantics to the AWS idempotency article and the GPT-6.2 prefix-edit note to OpenAI's Responses API guide. The recovery case separates a committed ticket, a lost response and a caller still waiting for a receipt. Previous Korean heading links remain available.
+
+### November 25, 2026 — Gradient reduction, speech events, serving load and rating order
+
+In §7.1, replaced the parameter-server and ring illustration with a worked update for DataParallel and DistributedDataParallel. In §11.2, checked the Scribe v3 Live transcript and speaker events against the speech API's event reference. In §12.6, checked two concurrency levels in the Sarvam-105B-1711 NVFP4 model card at revision e8a53d1 and distinguished total throughput from requests meeting a latency target. These were scoped reviews of the changed passages and exercises.
+
+Read both §17.3 manuscripts. Replayed the same four votes in opposite orders and compared the displayed Elo values with the Python recurrence. Verified the independent-pair calculation, the half-credit tie convention, and the interpretation of a two-model Bradley–Terry fit with two wins each. Checked the Arena team's historical account of adopting the batch fit in December 2023.

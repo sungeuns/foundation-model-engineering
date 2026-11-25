@@ -1,0 +1,73 @@
+---
+interface Props { lang: 'en' | 'ko' }
+const ko = Astro.props.lang === 'ko';
+
+function replay(votes: number[]) {
+  let a = 1500;
+  let b = 1500;
+  const ratings = [a];
+  for (const vote of votes) {
+    const expected = 1 / (1 + 10 ** ((b - a) / 400));
+    const change = 32 * (vote - expected);
+    a += change;
+    b -= change;
+    ratings.push(a);
+  }
+  return ratings;
+}
+
+const first = replay([1, 1, 0, 0]);
+const reverse = replay([0, 0, 1, 1]);
+const steps = [0, 1, 2, 3, 4];
+const x = (step: number) => 49 + 70 * step;
+const y = (rating: number) => 80 - 1.55 * (rating - 1500);
+const points = (ratings: number[]) => ratings.map((rating, i) => x(i) + ',' + y(rating)).join(' ');
+const firstLabel = ko ? 'A 승 · 승 · 패 · 패' : 'A wins, wins, loses, loses';
+const reverseLabel = ko ? 'A 패 · 패 · 승 · 승' : 'A loses, loses, wins, wins';
+---
+<figure class="vote-order">
+  <figcaption>{ko ? '같은 네 표를 한 표씩 반영한 모델 A의 Elo 평점' : 'Model A’s Elo rating after each of the same four votes'}</figcaption>
+  <p class="legend"><span><i></i>{firstLabel}</span><span><i class="reverse"></i>{reverseLabel}</span></p>
+  <svg viewBox="0 0 350 170" role="img" aria-labelledby="elo-trace-title">
+    <title id="elo-trace-title">{ko ? '처음 두 표에서 이긴 A는 마지막에 1494.7점, 마지막 두 표에서 이긴 A는 1505.3점입니다.' : 'A finishes at 1494.7 when its wins come first and 1505.3 when its wins come last.'}</title>
+    {[1470, 1500, 1530].map(tick =>
+      <g><line x1={x(0)} x2={x(4)} y1={y(tick)} y2={y(tick)} class:list={['grid', { baseline: tick === 1500 }]} />
+        <text x="40" y={y(tick) + 4} text-anchor="end">{tick}</text></g>)}
+    {steps.map(i => <text x={x(i)} y="148" text-anchor="middle">{i}</text>)}
+    <text x="189" y="168" text-anchor="middle">{ko ? '반영한 표 수' : 'Votes processed'}</text>
+    <polyline points={points(first)} class="wins-first" />
+    <polyline points={points(reverse)} class="wins-last" />
+    {steps.map(i => <circle cx={x(i)} cy={y(first[i])} r="3.5" />)}
+    {steps.slice(1).map(i => <rect x={x(i)-3} y={y(reverse[i])-3} width="6" height="6" />)}
+  </svg>
+  <details>
+    <summary>{ko ? '표별 평점 보기' : 'See the rating after each vote'}</summary>
+    <table>
+      <thead><tr><th scope="col">{ko ? '표 수' : 'Votes'}</th><th scope="col">{firstLabel}</th><th scope="col">{reverseLabel}</th></tr></thead>
+      <tbody>{steps.map(i => <tr><th scope="row">{i}</th><td>{first[i].toFixed(1)}</td><td>{reverse[i].toFixed(1)}</td></tr>)}</tbody>
+    </table>
+  </details>
+  <p class="source">{ko ? '가상 투표를 본문의 Elo 식으로 계산했습니다. 두 모델은 1500점에서 시작하고 매번 K = 32를 적용합니다.' : 'Calculated from the Elo formula below using illustrative votes. Both models start at 1500 and use K = 32 at every update.'}</p>
+</figure>
+<style>
+  .vote-order { max-width: 38rem; margin: 1.25rem auto; padding: 1rem; border: 1px solid var(--border-color); border-radius: .5rem; }
+  figcaption { color: var(--text-color); font-size: 1.02rem; font-weight: 650; text-align: left; }
+  .legend { display: flex; flex-wrap: wrap; gap: .1rem 1rem; margin: .5rem 0; font-size: .9rem; }
+  .legend span { display: inline-flex; align-items: center; gap: .4rem; }
+  .legend i { width: 1.3rem; border-top: 3px solid #00675d; }
+  .legend .reverse { border-top: 3px dashed #934918; }
+  svg { width: 100%; display: block; margin: .5rem auto 1rem; overflow: visible; }
+  svg text { font-size: 13px; fill: var(--text-color); }
+  .grid { stroke: #d5dcda; stroke-width: 1; }
+  .baseline { stroke: #798980; }
+  polyline { fill: none; stroke-width: 2.5; }
+  .wins-first { stroke: #00675d; }
+  .wins-last { stroke: #934918; stroke-dasharray: 5 4; }
+  circle { fill: #00675d; }
+  rect { fill: #934918; }
+  summary { cursor: pointer; }
+  table { width: 100%; font-variant-numeric: tabular-nums; font-size: .9rem; }
+  th, td { padding: .3rem; text-align: center; }
+  .source { font-size: .88rem; color: var(--secondary-color); margin: 1rem 0 0; }
+  @media (max-width: 420px) { .vote-order { padding: .6rem; } }
+</style>

@@ -36,3 +36,7 @@ On November 25, 2026 (Korea time), Codex suggested Seongeun So’s English editi
 ## OERSI educational resource index
 
 On November 25, 2026, the OERSI public search API returned the English and Korean textbook homepages for this repository. After commit `d4d4570` reached GitHub Pages, the maintainer's assistant submitted the repository URL once through the catalogue's official record updater. It returned HTTP 200 and `OK`. The repository now declares ten resources, including the length-bucketing lab in each language and both revised serving guides. The first public search following the update still returned the two book records. A successful refresh request does not establish that every declared resource is indexed. [Public catalogue](https://oersi.org/resources/?search=Foundation%20Model%20Engineering) · [OERSI update instructions](https://github.com/TIBHannover/oer-github-tutorial/blob/main/tutorial.md#immediate-update-in-oersi)
+
+## 学习周刊
+
+On November 25, 2026, Codex recommended the length-bucketing CPU experiment to this Chinese-language operations newsletter through its article self-recommendation template. The submission identifies Seongeun So and the AI assistance, notes the English and Korean editions, and distinguishes measured KV tensor payload from process memory or latency. The submitted issue was open when checked. The newsletter's editor decides whether to include the article in an issue. [Submission #229](https://github.com/eryajf/learning-weekly/issues/229) · [Submission guide](https://github.com/eryajf/learning-weekly#readme)

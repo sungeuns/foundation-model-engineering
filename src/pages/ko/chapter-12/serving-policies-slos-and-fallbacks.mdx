@@ -92,6 +92,21 @@ print(sum(passed) / window_s)  # 1.0 request/s
 
 **조건을 지킨 처리량은 초당 요청 한 건입니다.** A는 통과했고, B는 370ms 동안 멈췄으며, C는 응답을 마치지 못했습니다. 들어온 요청을 분모로 삼으면 목표 달성률은 1/3입니다. 개별 간격 대신 평균 간격을 쓰면 B도 통과하므로 어떤 지표를 골랐는지 밝혀야 합니다. 서빙 시스템을 비교할 때도 정의를 확인하세요. DistServe는 첫 토큰 지연과 토큰당 평균 지연을 지키는 요청의 비율이 목표치 이상일 때 GPU 한 대가 감당하는 최대 부하를 찾습니다. 그 값을 추정하려면 여러 부하에서 실험해야 합니다. [[5]](#ref-5)
 
+<a id="sarvam-ttft-load"></a>
+
+### 첫 토큰을 500ms 안에 보내려면 동시 사용자를 몇 명까지 받을 수 있을까요?
+
+채팅 서비스의 첫 토큰 지연(TTFT) 목표를 p90 기준 500ms 이하로 잡았다고 합시다. Sarvam 모델 카드에서 두 가지 부하의 실측값을 골라 이 기준을 적용해 봅시다. **2026-11-25 기준**, Sarvam-105B-1711의 NVFP4 가중치는 Apache 2.0 라이선스로 내려받을 수 있습니다. Sarvam은 11월 22일 자사 API의 `sarvam-105b`에도 1711 가중치를 적용했습니다. 아래 숫자는 공개 체크포인트를 GPU 한 대에서 실행해 얻은 값입니다. API 서비스의 서빙 구성은 별개입니다. [[9]](#ref-9) [[10]](#ref-10)
+
+| 동시 사용자 수 | 전체 처리량(토큰/초) | TTFT 중앙값(ms) | TTFT p90(ms) |
+| ---: | ---: | ---: | ---: |
+| 32 | 4,311 | 131 | 471 [[9]](#ref-9) |
+| 64 | 5,354 | 156 | 841 [[9]](#ref-9) |
+
+Sarvam은 B200 한 대에서 추론 문제를 입력하고 사고 모드를 켰습니다. FP8 KV 캐시를 썼고 DSpark의 제안 토큰 수는 5개, 온도는 1.0으로 설정했습니다. 동시 사용자 수를 바꿀 때마다 접두사 캐시를 비웠습니다. TTFT는 첫 출력 토큰까지 기다린 시간입니다. 모델 카드에는 어느 지점에서 토큰 도착 시각을 쟀는지, 사고 과정의 토큰도 첫 출력으로 셌는지가 명시돼 있지 않습니다. 실제 서비스의 목표를 검증할 때는 사용자가 출력을 받는 지점에서 측정하세요. [[9]](#ref-9)
+
+동시 사용자 수를 두 배로 늘리자 전체 처리량이 약 24% 증가했습니다. 첫 토큰 지연의 중앙값은 두 경우 모두 500ms 안에 들어옵니다. 하지만 이 두 측정값 가운데 p90 목표를 충족한 경우는 **동시 사용자 32명** 일 때뿐입니다. 32명과 64명 사이에서 어디까지 가능한지는 추가 측정이 필요합니다. 앞에서 정의한 goodput을 계산하려면 요청별 완료 여부와 토큰 사이의 간격, 관측 시간도 알아야 합니다.
+
 ### SLO는 lane별로 달라야 한다
 
 IDE copilot, 배치 요약기, 툴을 여러 번 호출하는 에이전트가 같은 임계값을 공유해서는 안 됩니다.
@@ -269,6 +284,11 @@ KV block pool이 부족해지면, OOM을 터뜨리기 전에 context budget을 �
 *그렇지 않습니다. 예제의 두 기록은 평균이 같지만 가장 긴 토큰 간격은 100 ms와 370 ms입니다. 같은 관측 지점에서 개별 간격을 확인해야 합니다. 청크 하나로 받은 응답에는 응답 내부의 도착 간격이 없으므로, 그 시각만으로 개별 토큰의 생성 속도를 알 수는 없습니다.*
 </details>
 
+<details>
+<summary>Quiz 6: 초당 5,000토큰도 처리해야 한다면 Sarvam의 두 측정값 중 어느 쪽이 두 조건을 모두 충족하나요?</summary>
+*둘 다 충족하지 못합니다. 32명일 때는 TTFT p90이 500ms 이하지만 처리량이 초당 4,311토큰입니다. 64명일 때는 초당 5,354토큰을 처리하지만 TTFT p90이 841ms입니다. 실제 서비스의 요청으로 중간 부하를 시험해야 두 조건을 함께 만족하는 지점이 있는지 알 수 있습니다.*
+</details>
+
 ---
 
 ## References
@@ -281,3 +301,5 @@ KV block pool이 부족해지면, OOM을 터뜨리기 전에 context budget을 �
 6. <a id="ref-6"></a>Research preprint (2026). [Evolving Infra: Agent-Adaptive LLM Serving at Scale](https://arxiv.org/html/2611.12304v1). Version pinned; accessed 2026-11-15.
 7. <a id="ref-7"></a>Kubernetes SIGs. [Inference Performance Metrics Definition — Latency](https://github.com/kubernetes-sigs/inference-perf/blob/main/docs/metrics.md#latency). 공식 벤치마크 지표 정의. 확인: 2026-11-25.
 8. <a id="ref-8"></a>NVIDIA. [AIPerf v0.14.0 Metrics Reference](https://docs.nvidia.com/aiperf/v0.14.0/reference/ai-perf-metrics-reference). TTFT·ITL·ICL 정의. 확인: 2026-11-25.
+9. <a id="ref-9"></a>Sarvam AI. [Sarvam-105B-1711 NVFP4 모델 카드와 B200 처리량 측정표, 리비전 e8a53d1](https://huggingface.co/sarvamai/sarvam-105b-1711/blob/e8a53d10330aa07c4ac007a9c3cb21524f0639e2/README.md).
+10. <a id="ref-10"></a>Sarvam AI (2026-11-22). [Sarvam-105B API의 1711 가중치 적용 공지](https://docs.sarvam.ai/changelog/2026/11/22).
