@@ -282,7 +282,7 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 4.2 | `/chapter-4/decoder-only` | Inspected 2026-11-25 | 566f11bdb11a6760f26ac9639bd0922af4ad46077497b6332ca7d4647a090e8b | 7a42e67720a62c01c9801e20b6ef5523aa9f6fb0fe3b60cdb074afb20dc23897 |
 | 4.3 | `/chapter-4/encoder-decoder` | Inspected 2026-11-25 | a81d35a1f33c94b446e07b1a1c911d1288c7936c2231803a570350bdf7ff76ae | 124605867b0725c421d411857fa79b4d56f1a39a0f1c02d401f7c82686e5128a |
 | 4.4 | `/chapter-4/hybrid-prefix-lm` | Inspected 2026-11-25 | 6edb93ff3d69526c5abd2108193b487cc82eb60c9c9887033237a77e72052127 | 59715e846873b8af91b74291aa803ff3047a646a79042af60da4b04a3dccef60 |
-| 4.5 | `/chapter-4/various-llm-architectures` | Mechanical only | 6558280b248105bbb05a4b81c8836327d5a833973661a1c6924d29d53826f126 | 024ecec540a90f7d8ab77676ef076ea3537650b7fe24634981f32d3750e3ddfb |
+| 4.5 | `/chapter-4/various-llm-architectures` | Mechanical only | e7133e6f49ee07717a39e05ab087a90e433bbe47b793a19f4c47026ca5b221f8 | bcd8acb486748aefb095a0ce9e49699c3ab4ac7dde1f8644bb6fd9d8214a0226 |
 | 5.1 | `/chapter-5/sparse-vs-dense-models` | Inspected 2026-11-25 | 01f8735ffcc52bb919dfea3402cb6fbdb0313849c20a83c447820f04e5bb6c08 | 7908d7d81bd30342d4223623ac332bf1d17f91a47e55e1deb8ba8d3ee2b88c37 |
 | 5.2 | `/chapter-5/routing-algorithms` | Inspected 2026-11-15 | 3b83671dec53a4a69ee8c357d810ac48b3b2b069f1b54fdb76a8e567ae6ed3e7 | 436d75fa19297b28084c3bf55cb2e92e341e86d33370e1843de1c263a8f9d356 |
 | 5.3 | `/chapter-5/expert-parallelism` | Inspected 2026-11-25 | 75beb517abd6e9d61832a0e3cdb79eac46c214026c2cbd86c6946965d07209d8 | a34266db4231c9ecb6970fbe47c569dce99129dbe3e82c2027c050b8fe1fb9dc |
@@ -308,14 +308,14 @@ This maintained table is in navigation order. Each inspected row binds its own i
 | 9.2 | `/chapter-9/dataset-quality-vs-quantity` | Mechanical only | c1fbbd7fb05803bfad44ce38dbb967c1be944c928bea80897aa0756dc4ac28d6 | 9818a5430db861e431fa0fc861105c64cd5749eb7661fa4b9bbd7891fc486b13 |
 | 9.3 | `/chapter-9/parameter-efficient-fine-tuning-peft` | Inspected 2026-11-25 | a0d3642dd64937bb1c238c59bad386af28be354f34bde124a103ecb3085253fa | f5fbe73bc76153d14da56a9a3cae5ed1014f3dfde883a37321fc21c3ef5276dd |
 | 9.4 | `/chapter-9/prompt-engineering-as-sft` | Inspected 2026-11-15 | a0d054e1053d08fb0459c941fc7b54a7935c42315c12fb0534d6adc5978c2f66 | a8eb98f41ea974270f2121a28d2e2478d1b6f34c5682172c52036eaf58e79a61 |
-| 9.5 | `/chapter-9/synthetic-instructions-and-self-instruct` | Mechanical only | ffbd735a54153fd69c5c1a0717da310c2cc58903b0a34fee751f67e9db76ba0e | e2ba9a38024cd3fcaab7c042fb6300bce232e0b4ff9f22ce7698ec3456a93cb3 |
+| 9.5 | `/chapter-9/synthetic-instructions-and-self-instruct` | Mechanical only | 820191efbe9c2e70dd2dde9b1b2ea66acae0f61f9492beb641a6b0a918159d4f | 10de527f0ba516de2efec74f5c6ae7bf81863e9c408e16e0ed57c7c3f044b064 |
 | 10.1 | `/chapter-10/human-feedback-loop` | Inspected 2026-11-25 | 2db3bc89aacdf83843f2ec8830cfc5aef17e84f2c80cfbc96c9035c159af14ab | a2cf730ae30d8e5653c01cf182359d9df11f09fae8ce9b2a1160398a00f41c9e |
 | 10.2 | `/chapter-10/ppo-proximal-policy-optimization` | Mechanical only | 731530d0c49a2d72aceb412ad7635b834d3c04341f5fe838a11788e92127896f | 2aa2a123b0740c73c99d7e1c5c495669e81eb1ca2b113335b2fd0fe90196da50 |
 | 10.3 | `/chapter-10/dpo` | Mechanical only | 61b39b4e59d60952d7a969476024a61f21223d09c62ae9e06e83559eaa04a855 | 5ea81a90b4a14be940d19dde889c28380e3b2198dcf6d9670a6adac402f21d2c |
 | 10.4 | `/chapter-10/kto-and-ipo` | Mechanical only | 61ac741df320db7fb3031414fdacaf5770fa28200d3f91f8d69cec83c273c046 | 6a539344952c0246f5777ddf9e6a1be24babe58b085a53cc1752efa3ea2be7c5 |
 | 10.5 | `/chapter-10/alignment-tax` | Inspected 2026-11-15 | e630460ac1b1a8620d753362e400c3bea18d69cff7a6265b3820b6ce7230c6f6 | 5041f746d84764553aecee5b114599a703cc2206889aa57838d5b2719b0bec7e |
 | 11.1 | `/chapter-11/vision-language-bridges` | Inspected 2026-11-25 | 04172661cfba605b5f8908fea9810fb67519d803f25adf725d7ef6ee3e4a0846 | 2a98c21e32781706a62018f5b8af22f3a6337df6caafacc611ad7f7b79fda9e7 |
-| 11.2 | `/chapter-11/audio-and-speech-integration` | Mechanical only | 8e9503cd5199038f844e9c7a29e62c6537582b42c54b622d271e681f2591ef0b | 106ebe5a0730f2e5cc08f7f93522845889509226349eef8dba5bcc47eb3a345a |
+| 11.2 | `/chapter-11/audio-and-speech-integration` | Mechanical only | 14fc692ea26272e4b4b6f1e171e26c355e0ea1d696160c7d8b3d5cb4479d531f | fb72d7f3462a8ea2dec885e8bfbd21927c3d245044ffba0fd70d91c64ca4a677 |
 | 11.3 | `/chapter-11/unified-multimodal-any-to-any` | Inspected 2026-11-15 | 63b49653980ac69e7662b92d1423aad27976789545651d8f21bb97c04a0993a2 | 05b4775ea2e63d295a8def6928b0a7280187755f1e95669da1a9db2ad9134158 |
 | 11.4 | `/chapter-11/image-diffusion-models` | Inspected 2026-11-24 | 5bb8bc33ff8adf86105e24018b03423e9f19e0d29739f64b843c0cbeadea05e8 | 308de426fdbc7b1c845a4d63be36b83988abe2eb36026affba1dd101194816b7 |
 | 11.5 | `/chapter-11/video-generation-foundations` | Inspected 2026-11-15 | b34544d0352be5feafdfc0d30ac23092d50edf3a3af5f3e4d37cc62531230c20 | 55c0488a07c962041cdbb0cdb945d18c8e136b23dba2aed6f6970f1c33cb4b4b |
@@ -776,3 +776,11 @@ In §11.2, checked both translations of the listening exercise and its Python by
 For §7.1, checked the two translated tables against a one-step, two-process CPU Gloo run. With one valid target on rank 0 and three on rank 1, the rank-mean update ended at 1.5 and the global-token update at 2.0. With no valid target on rank 0, the weights were 1.75 and 2.5. The global-token calculation matched the unsharded reference in all four cases. The review covered the revised example and its downloaded script.
 
 For §11.1, compared all three original PNGs with their localized in-page controls. With the total absent, changing the pencil count from 1 to 8 changed the answer from `1` to `8 box` at both tested paper counts. Re-running the downloadable probe from the reader’s files reproduced the published image hashes, generated token IDs and answers. The figure, data and two translated explanations distinguish a result on one receipt layout from a general claim about number reading.
+
+### November 25, 2026 — Repeated decoder layers and a standalone listening experiment
+
+For §4.5, checked the two translated examples against the pinned TML-d24-varloop-research configuration, model card and implementation. The Python example reads the configuration without loading weights. Its 24 distinct decoder layers execute 24, 48 or 72 times with one, three or five passes. This is a separate research checkpoint from GLM-5.4.
+
+For §11.2, checked the exit from the bilingual chapter to the short listening article. The article and the chapter use the same two synthesized WAVs. The 11-second speech example uses the separate upstream test recording.
+
+For §9.5, reviewed the Korean prose and four quizzes against the English lesson. The Magpie example in both editions now distinguishes the open user-turn prefix for generating a question from the assistant-turn prefix for answering it. The sketch identifies which model-specific functions the reader must supply. The Python structure, citations and experimental controls match across editions.

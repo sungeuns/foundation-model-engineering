@@ -2,9 +2,10 @@
 import { withBasePath } from '../../utils/paths.js';
 import { sampleRateListeningTitle } from '../../data/lab-titles.js';
 
-interface Props { lang: 'en' | 'ko' }
-const { lang } = Astro.props;
+interface Props { lang: 'en' | 'ko'; article?: boolean }
+const { lang, article = false } = Astro.props;
 const ko = lang === 'ko';
+const Heading = article ? 'h2' : 'h4';
 const samples = [
   {
     rate: '44100',
@@ -20,10 +21,10 @@ const samples = [
 ---
 
 <section id="sample-rate-listen" class="sample-rate-listening" aria-labelledby="sample-rate-listen-title">
-  <h4 id="sample-rate-listen-title">{sampleRateListeningTitle[lang]}</h4>
-  <p>{ko
+  <Heading id="sample-rate-listen-title">{sampleRateListeningTitle[lang]}</Heading>
+  {!article && <p>{ko
     ? '두 음을 합성해 만든 샘플 44,100개를 두 파일에 똑같이 담았습니다. 재생기는 WAV 헤더에 적힌 속도에 따라 1초에 읽을 샘플 수를 정합니다.'
-    : 'Both WAV files contain the same 44,100 samples from two synthesized notes. The rate in each file’s header tells the player how many samples to read per second.'}</p>
+    : 'Both WAV files contain the same 44,100 samples from two synthesized notes. The rate in each file’s header tells the player how many samples to read per second.'}</p>}
   <ul role="list">
     {samples.map(({ rate, label, timing }) => {
       const url = withBasePath(`/labs/audio/sample-clock-${rate}.wav`);
@@ -32,9 +33,9 @@ const samples = [
         <strong id={id}>{label}</strong>
         <span id={id + '-timing'}>{timing}</span>
         <audio controls preload="none" src={url} aria-labelledby={id} aria-describedby={id + '-timing'}></audio>
-        <a href={url} download aria-label={ko ? `${label} WAV 내려받기` : `Download WAV — ${label}`}>
+        {!article && <a href={url} download aria-label={ko ? `${label} WAV 내려받기` : `Download WAV — ${label}`}>
           {ko ? 'WAV 내려받기' : 'Download WAV'}
-        </a>
+        </a>}
       </li>;
     })}
   </ul>

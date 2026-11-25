@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" xml:lang="en" role="img" aria-labelledby="card-title card-description">
+<title id="card-title">How long do 44,100 samples last?</title><desc id="card-description">Both WAV files contain the same 44,100 samples. At 44,100 Hz the two notes play at 441 and 882 Hz for a total of 1 second. At 16,000 Hz they play at 160 and 320 Hz for a total of 2.75625 seconds.</desc>
+<rect width="1200" height="630" fill="#f5f2eb"/>
+<g font-family="DejaVu Sans, sans-serif" fill="#192a30">
+<text x="61" y="89" font-size="54" font-weight="700">How long do 44,100 samples last?</text>
+<text x="64" y="143" font-size="29" fill="#4e5d61">The WAV header sets the playback speed of the same two notes.</text>
+<text x="64" y="222" font-size="37" font-weight="700">44,100 Hz</text>
+      <text x="418" y="222" font-size="36" text-anchor="end" font-weight="700" fill="#256257">1.00 s</text>
+      <rect x="64" y="243" width="177" height="62" fill="#244e63"/>
+      <text x="152.5" y="286" font-size="32" text-anchor="middle" font-weight="700" fill="white">441 Hz</text>
+<rect x="241" y="243" width="177" height="62" fill="#276f61"/>
+      <text x="329.5" y="286" font-size="32" text-anchor="middle" font-weight="700" fill="white">882 Hz</text>
+<text x="64" y="374" font-size="37" font-weight="700">16,000 Hz</text>
+      <text x="1039.7125" y="374" font-size="36" text-anchor="end" font-weight="700" fill="#256257">2.75625 s</text>
+      <rect x="64" y="395" width="487.85625" height="62" fill="#244e63"/>
+      <text x="307.928125" y="438" font-size="32" text-anchor="middle" font-weight="700" fill="white">160 Hz</text>
+<rect x="551.85625" y="395" width="487.85625" height="62" fill="#276f61"/>
+      <text x="795.7843750000001" y="438" font-size="32" text-anchor="middle" font-weight="700" fill="white">320 Hz</text>
+<path d="M64 482H1126" stroke="#192a30" stroke-width="2"/>
+<path d="M64 478v16" stroke="#192a30" stroke-width="2"/>
+    <text x="64" y="533" font-size="29" text-anchor="middle">0 s</text>
+<path d="M418 478v16" stroke="#192a30" stroke-width="2"/>
+    <text x="418" y="533" font-size="29" text-anchor="middle">1 s</text>
+<path d="M772 478v16" stroke="#192a30" stroke-width="2"/>
+    <text x="772" y="533" font-size="29" text-anchor="middle">2 s</text>
+<path d="M1126 478v16" stroke="#192a30" stroke-width="2"/>
+    <text x="1126" y="533" font-size="29" text-anchor="middle">3 s</text>
+<text x="595" y="590" font-size="30" text-anchor="middle" fill="#4e5d61">Playback time</text>
+</g></svg>

@@ -6,13 +6,13 @@ import { parse, parseFragment } from 'parse5';
 import { chapters } from '../src/data/chapters.js';
 import { searchDescriptions } from '../src/data/search-descriptions.js';
 import { socialCards } from '../src/data/social-cards.js';
-import { labsTitle, servingGuide } from '../src/data/site.js';
+import { labsTitle, servingGuide, whisperArticlePath } from '../src/data/site.js';
 import { defaultBudget, defaultPool, nineRequestWorkload, readKvScenario } from '../src/components/chapter-12/kv-scenario.mjs';
 import { getContentDates, getContentRevisions } from '../src/utils/content-dates.js';
 
 const base = 'https://sungeuns.github.io/foundation-model-engineering';
 const outputDir = process.env.SEARCH_DIST_DIR || 'dist';
-const routes = ['/', '/ko', '/labs', '/ko/labs', ...chapters.flatMap(c => c.subs.flatMap(s => [s.path, `/ko${s.path}`]))];
+const routes = ['/', '/ko', '/labs', '/ko/labs', whisperArticlePath, `/ko${whisperArticlePath}`, ...chapters.flatMap(c => c.subs.flatMap(s => [s.path, `/ko${s.path}`]))];
 const escape = text => text.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 
 test('search descriptions have real routes and equivalent language coverage', () => {
@@ -96,7 +96,7 @@ test('every built page has canonical, reciprocal language links, and a local soc
       const { name, content } = Object.fromEntries(tag.attrs.map(attr => [attr.name, attr.value]));
       if (name?.startsWith('citation_')) citation[name] = content;
     }
-    if (pageType !== 'TechArticle') {
+    if (!en.startsWith('/chapter-')) {
       assert.deepEqual(citation, {}, `${route}: citations describe individual chapters`);
     } else {
       assert.ok(citation.citation_title, route);
@@ -356,8 +356,8 @@ test('sitemap preserves canonical route order and uses only available content da
   const dates = getContentDates();
   for (const [index, entry] of entries.entries()) {
     const route = routes[index];
-    if (route === '/labs' || route === '/ko/labs') {
-      assert.doesNotMatch(entry, /<lastmod>/, `${route}: the shared catalog has multiple content sources`);
+    if (['/labs', '/ko/labs', whisperArticlePath, `/ko${whisperArticlePath}`].includes(route)) {
+      assert.doesNotMatch(entry, /<lastmod>/, `${route}: a wrapper revision cannot date the whole page`);
       continue;
     }
     const source = route === '/' ? 'src/pages/index.astro' : route === '/ko' ? 'src/pages/ko/index.astro' : `src/pages${route}.mdx`;

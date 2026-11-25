@@ -300,6 +300,34 @@ $D$는 별도로 저장하는 레이어 가중치 수가 아니라 실행 횟수
 
 쿼리는 **네 위치에서 다섯 항목** 을 읽습니다. 7번 위치라는 이유로 최신 항목 하나만 남기면 첫 실행에서 만든 표현을 잃습니다. 여기서 센 것은 쿼리 한 번이 읽는 항목 수입니다. 상주 메모리까지 계산하려면 각 버퍼의 크기와 보관 기간도 알아야 합니다. [SmolLM2의 밀집 캐시 실측](/ko/chapter-12/kv-cache-management/#kv-batch-padding)에서는 이와 달리 모든 층이 배치에 할당된 자리마다 키 하나와 값 하나를 저장합니다.
 
+<a id="variable-loop-checkpoint"></a>
+
+### 디코더 레이어가 24개인데 어떻게 72번 실행할까?
+
+11월 20일 Thinking Machines Lab은 반복 횟수를 바꿀 수 있는 연구 모델의 가중치를 공개했습니다. 이 모델(`TML-d24-varloop-research`)은 추론할 때 디코더의 가운데 블록을 몇 번 실행할지 정할 수 있습니다. 2026-11-25 기준 공개 설정에는 텍스트 레이어가 24개이고 기본 반복 횟수는 세 번입니다. Python 표준 라이브러리로 설정 파일 하나만 받아 실행 순서를 확인해 봅시다. [[44]](#ref-44) [[45]](#ref-45)
+
+```python
+import json
+from urllib.request import urlopen
+
+repo = "thinkingmachines/TML-d24-varloop-research"
+revision = "91a57fe2b779bbd12c0f74d1f518cbd5b84e8d0d"
+url = f"https://huggingface.co/{repo}/resolve/{revision}/config.json"
+with urlopen(url, timeout=15) as response:
+    config = json.load(response)["text_config"]
+
+layers = list(range(config["num_hidden_layers"]))
+loop = config["loop_config"]
+start, end = loop["core_start"], loop["core_end"]
+for passes in (1, loop["num_passes"], 5):
+    schedule = layers[:start] + layers[start:end] * passes + layers[end:]
+    print(passes, len(schedule), len(set(schedule)))
+```
+
+세 열은 차례로 반복 횟수, 토큰 하나가 거치는 레이어 수, 서로 다른 디코더 레이어 수입니다. 출력은 `1 24 24`, `3 48 24`, `5 72 24`입니다. 0~5번 레이어를 한 번 거친 뒤 6~17번을 반복하고, 마지막으로 18~23번을 한 번 거칩니다. 다섯 번 반복하면 가운데 블록에서만 레이어를 60번 실행합니다. 가중치를 재사용해도 디코딩에 필요한 메모리는 늘어납니다. Transformers 구현에서는 반복이 한 번 늘 때마다 12개 레이어에 캐시 항목을 따로 배정합니다. [[46]](#ref-46)
+
+한 번 반복했을 때와 다섯 번 반복했을 때의 정답률을 비교하면 무엇을 알 수 있을까요? 가중치는 같지만 학습 때 가장 많이 접한 조건은 세 번 반복하는 경우입니다. 연구진은 중간 학습 후반에 한 번부터 다섯 번까지의 반복 횟수를 1:2:6:2:1 비율로 뽑았고, 사후 학습에서는 세 번으로 고정했습니다. 같은 문제를 풀게 하면 **이 체크포인트에서** 깊이를 바꿨을 때의 효과를 볼 수 있습니다. 처음부터 어느 깊이로 학습하는 편이 나을지는 별도의 실험이 필요합니다. [[44]](#ref-44)
+
 ## GPT-6.2: 공개된 인터페이스와 미공개 내부 구조
 
 **2026-11-25 기준.** OpenAI는 11월 17일 **GPT-6.2 Astra** 와 **GPT-6.2 Sol** 을 API, ChatGPT Work, Codex에 출시했습니다. 가중치는 공개하지 않았습니다. [[42]](#ref-42) 두 모델 모두 텍스트와 이미지를 입력받아 텍스트를 출력합니다. API에서는 Responses와 Chat Completions를 쓸 수 있고, 도구 호출은 Responses에서 지원합니다. 이 인터페이스만으로 내부 어텐션 구성, 전문가 라우팅, 파라미터 수나 학습 데이터 혼합을 알 수는 없습니다. [[39]](#ref-39) [[40]](#ref-40) [[41]](#ref-41)
@@ -408,3 +436,9 @@ $D$는 별도로 저장하는 레이어 가중치 수가 아니라 실행 횟수
 42. <a id="ref-42"></a>[OpenAI의 GPT-6.2 Astra·Sol 출시 및 이용 경로 안내](https://openai.com/index/introducing-gpt-6-2-astra-sol/).
 
 43. <a id="ref-43"></a>[Z.ai, GLM-5.4의 하이브리드 KV 캐시와 어텐션 인덱스 재사용](https://docs.z.ai/guides/llm/glm-5.4). 2026-11-25 확인.
+
+44. <a id="ref-44"></a>[Thinking Machines Lab, 연구 모델 카드와 학습 시 반복 횟수의 분포](https://thinkingmachines.ai/model-card/tml-d24-varloop-research/).
+
+45. <a id="ref-45"></a>[Thinking Machines Lab이 공개한 체크포인트 설정](https://huggingface.co/thinkingmachines/TML-d24-varloop-research/blob/91a57fe2b779bbd12c0f74d1f518cbd5b84e8d0d/config.json).
+
+46. <a id="ref-46"></a>[Hugging Face Transformers의 디코더 반복과 캐시 할당 구현](https://github.com/huggingface/transformers/blob/fa9c04ea60c5e1d2ecc38064442973fa1ddccc72/src/transformers/models/inkling2_loop/modeling_inkling2_loop.py#L1354-L1427).

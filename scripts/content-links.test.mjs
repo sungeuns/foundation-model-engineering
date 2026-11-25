@@ -15,7 +15,7 @@ test('navigation uses trailing slashes without changing asset URLs', () => {
 test('book links are base-aware, canonical, and idempotent', () => {
   for (const base of ['/', '/foundation-model-engineering/', '/preview']) {
     const prefix = base.replace(/\/+$/, '');
-    for (const route of ['/', '/ko', '/chapter-17/contamination-issues', '/ko/chapter-17/contamination-issues']) {
+    for (const route of ['/', '/ko', '/labs', '/ko/labs', '/articles/whisper-sample-rate', '/ko/articles/whisper-sample-rate', '/chapter-17/contamination-issues', '/ko/chapter-17/contamination-issues']) {
       const canonical = `${prefix}${route === '/' ? '' : route}/`;
       assert.equal(canonicalContentHref(route, base), canonical);
       assert.equal(canonicalContentHref(`${route}?source=book#ref-1`, base), `${canonical}?source=book#ref-1`);

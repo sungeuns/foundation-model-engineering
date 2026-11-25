@@ -57,7 +57,7 @@ Then try `uncertain` and `missing`. The [evaluation guide](https://sungeuns.gith
 - [Report a correction](https://github.com/sungeuns/foundation-model-engineering/issues/new/choose): include the page, the claim or behavior, and a source or reproducible example.
 - [Contribute](CONTRIBUTING.md): technical corrections, clearer examples, Korean phrasing, and accessible interactions are welcome.
 
-Seongeun So writes and edits this independent textbook with AI assistance. Gemini helped translate the first Korean edition. [Original translation note](https://github.com/sungeuns/foundation-model-engineering/blob/7c1f561b5992d92ce243f1b7239df77bdf81e23a/README.md#L17)
+Seongeun So maintains this independent textbook. Gemini helped translate the first Korean edition from English. Codex wrote and ran the [Whisper sample-rate experiment](https://sungeuns.github.io/foundation-model-engineering/articles/whisper-sample-rate/) and adapted the results into the short article. [Original translation note](https://github.com/sungeuns/foundation-model-engineering/blob/7c1f561b5992d92ce243f1b7239df77bdf81e23a/README.md#L17)
 
 When revising a lesson, contributors edit the English first, then update the Korean in the same change, including its formulas, code and worked examples. The review log records what was checked for each lesson. [Editing guidelines](CONTRIBUTING.md) · [Lesson review log](docs/editorial_rewrite_worklog.md)
 

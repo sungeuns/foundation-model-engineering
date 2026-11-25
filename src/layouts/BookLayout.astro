@@ -2,12 +2,13 @@
 import type { MarkdownHeading } from 'astro';
 import { chapterHeadingLabel } from '../utils/chapter-heading-label.js';
 import { chapters } from '../data/chapters.js';
-import { authorName, labsTitle, servingGuide, site } from '../data/site.js';
+import { authorName, labsTitle, servingGuide, site, whisperArticlePath } from '../data/site.js';
 import { teachingLabGroups } from '../data/teaching-labs.js';
 import { searchDescriptions } from '../data/search-descriptions.js';
 import { socialCards } from '../data/social-cards.js';
 import modelSnapshot from '../data/commercial-model-snapshot.json';
 import { sharedLocaleFragments } from '../utils/locale-fragments.js';
+import { bookPageRoutes } from '../utils/content-links.js';
 import { getManuscriptRevision } from '../utils/content-dates.js';
 import { chapterCitation } from '../utils/chapter-citation.js';
 import { getBasePath, normalizePathname, stripBasePath, withBasePath, withPagePath } from '../utils/paths.js';
@@ -16,14 +17,6 @@ import '../styles/book.css';
 
 const { title, lang = 'en', description } = Astro.props.frontmatter || Astro.props;
 const basePath = getBasePath();
-const chapterRoutes = chapters.flatMap((chapter) =>
-  chapter.subs.flatMap((sub) => [
-    normalizePathname(sub.path),
-    normalizePathname(`/ko${sub.path}`),
-  ])
-);
-const existingRoutes = new Set(['/', '/ko', '/labs', '/ko/labs', ...chapterRoutes]);
-
 // Helper to check active link
 const currentPath = stripBasePath(Astro.url.pathname, basePath);
 const isActive = (pagePath) => currentPath === normalizePathname(pagePath);
@@ -33,7 +26,7 @@ const isKo = lang === 'ko';
 const siteTitle = site.titles[lang] || site.titles.en;
 const enPath = isKo ? currentPath.replace(/^\/ko/, '') || '/' : currentPath;
 const koPath = isKo ? currentPath : `/ko${currentPath === '/' ? '' : currentPath}`;
-const hasRoute = (pathname) => existingRoutes.has(normalizePathname(pathname));
+const hasRoute = (pathname) => bookPageRoutes.has(normalizePathname(pathname));
 const getLocalePath = (basePath, locale) => {
   if (locale === 'ko') {
     const localizedPath = normalizePathname(`/ko${basePath === '/' ? '' : basePath}`);
@@ -52,6 +45,7 @@ const currentSub = chapters
 const localeFragments = isHomePage
   ? ['serving-guide', 'book-contents']
   : isLabsPage ? teachingLabGroups.flatMap(group => [group.id, ...group.tasks.map(task => task.id)])
+  : enPath === whisperArticlePath ? ['sample-rate-listen']
   : sharedLocaleFragments(currentSub?.path, modelSnapshot.models.map(model => model.id));
 type Section = { label: string; href: string };
 const outline: (Section & { children: Section[] })[] = [];
@@ -194,7 +188,7 @@ if (currentIndex !== -1) {
     <link rel="alternate" hreflang="en" href={enUrl} />
     <link rel="alternate" hreflang="ko" href={koUrl} />
     <link rel="alternate" hreflang="x-default" href={enUrl} />
-    <meta property="og:type" content={currentSub ? 'article' : 'website'} />
+    <meta property="og:type" content={structuredData['@type'] === 'TechArticle' ? 'article' : 'website'} />
     <meta property="og:site_name" content={siteTitle} />
     <meta property="og:title" content={pageTitle} />
     <meta property="og:description" content={pageDescription} />

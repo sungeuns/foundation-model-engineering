@@ -1,6 +1,16 @@
 // Focused previews for independently useful lessons. Other pages keep the book cover.
 // Paths are site-root-relative; the layout applies the deployment base.
 export const socialCards = {
+  '/articles/whisper-sample-rate': {
+    en: {
+      image: '/social/whisper-sample-rate-en.png',
+      alt: 'Both WAV files contain the same 44,100 samples. At 44,100 Hz the two notes play at 441 and 882 Hz for a total of 1 second. At 16,000 Hz they play at 160 and 320 Hz for a total of 2.75625 seconds.',
+    },
+    ko: {
+      image: '/social/whisper-sample-rate-ko.png',
+      alt: '두 WAV 파일에는 같은 샘플 44,100개가 들어 있습니다. 44,100 Hz로 재생하면 441 Hz와 882 Hz의 두 음이 총 1초 동안 들립니다. 16,000 Hz로 재생하면 두 음이 160 Hz와 320 Hz로 낮아지고, 재생 시간이 2.75625초로 늘어납니다.',
+    },
+  },
   '/chapter-3/self-attention-mathematics': {
     en: {
       image: '/social/attention-weights-en.png',

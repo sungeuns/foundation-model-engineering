@@ -1,0 +1,10 @@
+---
+import BookLayout from '../../layouts/BookLayout.astro';
+import SampleRateListening from '../../components/chapter-11/SampleRateListening.astro';
+import { Content, frontmatter } from '../../data/articles/whisper-sample-rate.md';
+---
+<BookLayout lang="en" title={frontmatter.title} description={frontmatter.description}>
+  <h1>{frontmatter.title}</h1>
+  <SampleRateListening lang="en" article />
+  <Content />
+</BookLayout>

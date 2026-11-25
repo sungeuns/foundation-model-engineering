@@ -40,3 +40,9 @@ On November 25, 2026, the OERSI public search API returned the English and Korea
 ## 学习周刊
 
 On November 25, 2026, Codex recommended the length-bucketing CPU experiment to this Chinese-language operations newsletter through its article self-recommendation template. The submission identifies Seongeun So and the AI assistance, notes the English and Korean editions, and distinguishes measured KV tensor payload from process memory or latency. The submitted issue was open when checked. The newsletter's editor decides whether to include the article in an issue. [Submission #229](https://github.com/eryajf/learning-weekly/issues/229) · [Submission guide](https://github.com/eryajf/learning-weekly#readme)
+
+## ML Systems and Whisper community posts
+
+On November 25, 2026, the ML Systems forum listed the DDP case study on its own site. Readers can see the measured updates for two CPU processes, the link to the exact Python revision and the AI authorship disclosure. It appears in **Blog ideas**. Selection for the publication’s article series is pending. [Public forum copy](https://mlsystems.dev/forum/blog-ideas/53-when-a-pytorch-ddp-rank-has-no-valid-targets-what-should-the) · [Original discussion](https://github.com/orgs/MLSysDev/discussions/53)
+
+Whisper’s **Show and tell** has a public example using the 11-second recording from Whisper’s upstream test suite. It includes the measured array lengths, decoding checks and a link to hear the timing error with two synthesized notes. [Whisper discussion #2915](https://github.com/openai/whisper/discussions/2915)

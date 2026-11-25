@@ -11,6 +11,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 import { socialCards } from '../src/data/social-cards.js';
+import { GET as sampleClockWav, getStaticPaths as sampleClockRates } from '../src/pages/labs/audio/sample-clock-[rate].wav.js';
 import { attentionTokens, calculateAttention } from '../src/components/chapter-3/attention-example.mjs';
 import { compareTitles, examples } from '../src/components/chapter-14/lexical-dense.mjs';
 import { denseResults, bm25Results, fuseRanks } from '../src/components/chapter-14/rank-fusion.mjs';
@@ -23,6 +24,19 @@ const text = (value, x, y, size, opts = '') => `<text x="${x}" y="${y}" font-siz
 const ink = '#192a30', teal = '#256257', muted = '#4e5d61';
 
 const copy = {
+  'whisper-sample-rate': {
+    path: '/articles/whisper-sample-rate', render: sampleRateSvg,
+    en: {
+      title: 'How long do 44,100 samples last?',
+      setup: 'The WAV header sets the playback speed of the same two notes.',
+      second: ' s', time: 'Playback time',
+    },
+    ko: {
+      title: '샘플 44,100개를 재생하면 몇 초일까?',
+      setup: '두 WAV 파일에 같은 음을 담고 헤더에 적힌 재생 속도만 바꿨습니다.',
+      second: '초', time: '재생 시간',
+    },
+  },
   'attention-weights': {
     path: '/chapter-3/self-attention-mathematics', number: '3.1', render: attentionWeightsSvg,
     en: {
@@ -229,6 +243,44 @@ if (args.length && (args.length !== 2 || args[0] !== '--only' || !Object.hasOwn(
   throw new Error(`Usage: node scripts/generate-lab-social-cards.mjs [--only ${Object.keys(copy).join('|')}]`);
 }
 const selectedKind = args[1];
+
+async function sampleRateSvg(lesson, lang, card) {
+  const labels = lesson[lang];
+  const pixelsPerSecond = 354;
+  const x = seconds => 64 + pixelsPerSecond * seconds;
+  const rows = [];
+  for (const [index, route] of sampleClockRates().entries()) {
+    const wav = Buffer.from(await sampleClockWav(route).arrayBuffer());
+    const rate = wav.readUInt32LE(24);
+    const frames = wav.readUInt32LE(40) / wav.readUInt16LE(32);
+    const duration = frames / rate;
+    const width = pixelsPerSecond * duration / 2;
+    const top = 243 + index * 152;
+    const notes = [441, 882].map((originalHz, note) => {
+      const start = x(0) + width * note;
+      const hz = originalHz * rate / 44100;
+      return `<rect x="${start}" y="${top}" width="${width}" height="62" fill="${note === 0 ? '#244e63' : '#276f61'}"/>
+      ${text(hz + ' Hz', start + width / 2, top + 43, 32, 'text-anchor="middle" font-weight="700" fill="white"')}`;
+    }).join('\n');
+    const seconds = Number.isInteger(duration) ? duration.toFixed(2) : String(duration);
+    rows.push(`${text(rate.toLocaleString('en-US') + ' Hz', x(0), top - 21, 37, 'font-weight="700"')}
+      ${text(seconds + labels.second, x(duration), top - 21, 36, `text-anchor="end" font-weight="700" fill="${teal}"`)}
+      ${notes}`);
+  }
+  const ticks = [0, 1, 2, 3].map(seconds => `<path d="M${x(seconds)} 478v16" stroke="${ink}" stroke-width="2"/>
+    ${text(seconds + labels.second, x(seconds), 533, 29, 'text-anchor="middle"')}`).join('\n');
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" xml:lang="${lang}" role="img" aria-labelledby="card-title card-description">
+<title id="card-title">${escape(labels.title)}</title><desc id="card-description">${escape(card.alt)}</desc>
+<rect width="1200" height="630" fill="#f5f2eb"/>
+<g font-family="${lang === 'ko' ? 'Noto Sans CJK KR, DejaVu Sans' : 'DejaVu Sans'}, sans-serif" fill="${ink}">
+${text(labels.title, 61, 89, 54, 'font-weight="700"')}
+${text(labels.setup, 64, 143, 29, `fill="${muted}"`)}
+${rows.join('\n')}
+<path d="M${x(0)} 482H${x(3)}" stroke="${ink}" stroke-width="2"/>
+${ticks}
+${text(labels.time, (x(0) + x(3)) / 2, 590, 30, `text-anchor="middle" fill="${muted}"`)}
+</g></svg>\n`;
+}
 
 function attentionWeightsSvg(lesson, lang, card) {
   const labels = lesson[lang];
@@ -563,7 +615,7 @@ for (const [kind, lesson] of Object.entries(copy)) {
   for (const lang of ['en', 'ko']) {
     const c = lesson[lang], card = socialCards[lesson.path][lang];
     if (lesson.render) {
-      const svg = lesson.render(lesson, lang, card);
+      const svg = await lesson.render(lesson, lang, card);
       const imagePath = path.join(root, 'public', card.image);
       const svgDir = lesson.figureDir ? path.join(root, lesson.figureDir) : path.dirname(imagePath);
       await fs.writeFile(path.join(svgDir, path.basename(imagePath, '.png') + '.svg'), svg);

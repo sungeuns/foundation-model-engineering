@@ -1,6 +1,7 @@
 import { chapters } from '../data/chapters.js';
+import { whisperArticlePath } from '../data/site.js';
 
-const pageRoutes = new Set(['/', '/ko', ...chapters.flatMap(chapter =>
+export const bookPageRoutes = new Set(['/', '/ko', '/labs', '/ko/labs', whisperArticlePath, `/ko${whisperArticlePath}`, ...chapters.flatMap(chapter =>
   chapter.subs.flatMap(sub => [sub.path, `/ko${sub.path}`]))]);
 
 // Only rewrite known book pages. Preserve assets, external links, query strings,
@@ -14,7 +15,7 @@ export function canonicalContentHref(href, base = '/') {
     route = path.slice(prefix.length) || '/';
   }
   route = route.replace(/\/+$/, '') || '/';
-  if (!pageRoutes.has(route)) return href;
+  if (!bookPageRoutes.has(route)) return href;
   return `${prefix}${route === '/' ? '' : route}/${suffix}`;
 }
 

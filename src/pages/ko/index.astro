@@ -5,7 +5,7 @@ import BookLayout from '../../layouts/BookLayout.astro';
 
 import modelSnapshot from '../../data/commercial-model-snapshot.json';
 import { chapters } from '../../data/chapters.js';
-import { servingGuide } from '../../data/site.js';
+import { servingGuide, whisperArticlePath } from '../../data/site.js';
 import { withBasePath, withPagePath } from '../../utils/paths.js';
 
 const getPath = (p) => `/ko${p}`;
@@ -13,7 +13,7 @@ const getPath = (p) => `/ko${p}`;
 
 <BookLayout title="홈" lang="ko">
   <h1>파운데이션 모델 엔지니어링</h1>
-  <p>CPU에서 실행하는 PyTorch 예제와 브라우저 실습으로 모델의 학습·서빙·평가를 익히는 무료 한영 교재입니다.</p>
+  <p>CPU에서 실행하는 PyTorch 예제와 브라우저 실습으로 모델의 학습·서빙·평가를 익히는 무료 한영 교재입니다. <a href={withPagePath(getPath(whisperArticlePath))}>Whisper가 11초짜리 녹음을 30초로 받아들인 이유를 직접 들어 보세요.</a></p>
 
   <FeaturedLessons lang="ko" />
 
@@ -27,7 +27,7 @@ const getPath = (p) => `/ko${p}`;
 
   <h2>이 책에 관하여</h2>
   <p id="serving-guide"><a href={servingGuide.downloads.ko} type="application/epub+zip">『LLM 서빙 실전』 전자책 내려받기(EPUB)</a>. KV 메모리 예산 계산, 요청 스케줄링, 스트리밍 지연을 다루는 세 절을 오프라인에서 읽을 수 있습니다.</p>
-  <p>Seongeun So가 AI의 도움을 받아 집필·편집하는 독립 교재입니다. 한 절을 개정할 때는 영문을 먼저 고친 뒤, 코드와 예제 풀이를 포함한 수정 사항을 한국어판에도 함께 반영합니다. <a href="#book-contents">전체 {chapters.reduce((n, chapter) => n + chapter.subs.length, 0)}개 절</a>을 둘러보거나 <a href="https://github.com/sungeuns/foundation-model-engineering">GitHub에서 책을 저장</a>할 수 있습니다. 예제가 설명과 다르게 동작하면 해당 장과 재현 조건을 적어 <a href="https://github.com/sungeuns/foundation-model-engineering/issues/new/choose">수정을 요청해 주세요</a>.</p>
+  <p>Seongeun So가 관리하는 교재입니다. 첫 한국어판은 Gemini의 도움을 받아 영어 원고를 번역했습니다. 최근 실습에는 Codex로 작성한 코드와 직접 실행한 측정값이 들어 있습니다. 절을 개정할 때는 영문을 먼저 고친 뒤 코드와 예제 풀이까지 한국어판에 함께 반영합니다. <a href="#book-contents">전체 {chapters.reduce((n, chapter) => n + chapter.subs.length, 0)}개 절</a>을 둘러보거나 <a href="https://github.com/sungeuns/foundation-model-engineering">GitHub에서 책을 저장</a>할 수 있습니다. 예제가 설명과 다르게 동작하면 해당 장과 재현 조건을 적어 <a href="https://github.com/sungeuns/foundation-model-engineering/issues/new/choose">수정을 요청해 주세요</a>.</p>
   <p class="last-update">최근 업데이트 <time datetime="2026-11-25">2026-11-25</time></p>
 
   <h2 id="book-contents">목차</h2>

@@ -18,7 +18,7 @@ const lessonFragments = {
   '/chapter-4/encoder-only': ['mlm-target-example'],
   '/chapter-4/decoder-only': ['shifted-target-example'],
   '/chapter-4/encoder-decoder': ['cross-attention-example'],
-  '/chapter-4/various-llm-architectures': ['glm-54-layer-reuse', 'glm-54-cache-positions', 'mla-cache-example'],
+  '/chapter-4/various-llm-architectures': ['glm-54-layer-reuse', 'glm-54-cache-positions', 'mla-cache-example', 'variable-loop-checkpoint'],
   '/chapter-4/hybrid-prefix-lm': ['prefix-mask-test'],
   '/chapter-5/sparse-vs-dense-models': ['moe-routing-lab'],
   '/chapter-5/expert-parallelism': ['expert-dispatch-lab'],

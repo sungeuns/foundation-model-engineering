@@ -5,13 +5,13 @@ import BookLayout from '../layouts/BookLayout.astro';
 
 import modelSnapshot from '../data/commercial-model-snapshot.json';
 import { chapters } from '../data/chapters.js';
-import { servingGuide } from '../data/site.js';
+import { servingGuide, whisperArticlePath } from '../data/site.js';
 import { withBasePath, withPagePath } from '../utils/paths.js';
 ---
 
 <BookLayout title="Home" lang="en">
   <h1>Foundation Model Engineering</h1>
-  <p>A free English and Korean textbook on training, serving, and evaluating foundation models, with browser experiments and CPU PyTorch labs.</p>
+  <p>A free English and Korean textbook on training, serving, and evaluating foundation models, with browser experiments and CPU PyTorch labs. <a href={withPagePath(whisperArticlePath)}>Hear why an 11-second recording can look 30 seconds long to Whisper.</a></p>
 
   <FeaturedLessons lang="en" />
 
@@ -25,7 +25,7 @@ import { withBasePath, withPagePath } from '../utils/paths.js';
 
   <h2>About the book</h2>
   <p id="serving-guide"><a href={servingGuide.downloads.en} type="application/epub+zip">Download <em>LLM Serving in Practice</em> (EPUB)</a> to read three lessons offline. Calculate a KV memory budget, schedule requests and trace streaming latency.</p>
-  <p>Seongeun So writes and edits this independent textbook with AI assistance. Contributors revise each lesson in English first, then update the Korean in the same change, including its code and worked examples. Browse <a href="#book-contents">all {chapters.reduce((n, chapter) => n + chapter.subs.length, 0)} lessons</a> or <a href="https://github.com/sungeuns/foundation-model-engineering">bookmark the repository on GitHub</a>. If an example behaves differently from the explanation, <a href="https://github.com/sungeuns/foundation-model-engineering/issues/new/choose">report the chapter and the inputs that reproduce it</a>.</p>
+  <p>Seongeun So maintains the book. The first Korean edition was translated from English with help from Gemini. Recent labs include code and measurements produced with Codex. Each lesson is revised in English first, with its code and worked examples updated in Korean in the same change. Browse <a href="#book-contents">all {chapters.reduce((n, chapter) => n + chapter.subs.length, 0)} lessons</a> or <a href="https://github.com/sungeuns/foundation-model-engineering">bookmark the repository on GitHub</a>. If an example behaves differently from the explanation, <a href="https://github.com/sungeuns/foundation-model-engineering/issues/new/choose">report the chapter and the inputs that reproduce it</a>.</p>
   <p class="last-update">Last update <time datetime="2026-11-25">2026-11-25</time></p>
 
   <h2 id="book-contents">Table of Contents</h2>

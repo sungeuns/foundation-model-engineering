@@ -300,6 +300,34 @@ Z.ai’s architecture guide says the second pass can attend to a first-pass repr
 
 The query sees **five entries at four positions**. If a cache keeps only the latest entry for position 7, the second pass loses access to the earlier representation. This count describes one query’s reads. To budget resident memory you would also need the sizes and lifetimes of the underlying buffers. Compare it with the [dense SmolLM2 cache measurement](/chapter-12/kv-cache-management/#kv-batch-padding), where every layer stores one key and one value for each allocated batch position.
 
+<a id="variable-loop-checkpoint"></a>
+
+### How can 24 decoder layers execute 72 times?
+
+Thinking Machines Lab released the weights of a separate variable-depth research model on November 20. Its checkpoint, `TML-d24-varloop-research`, lets you choose how often the middle of the decoder runs. As of 2026-11-25, the public configuration specifies 24 text layers and a default of three passes. You can inspect the execution order with Python’s standard library by downloading just the configuration. [[44]](#ref-44) [[45]](#ref-45)
+
+```python
+import json
+from urllib.request import urlopen
+
+repo = "thinkingmachines/TML-d24-varloop-research"
+revision = "91a57fe2b779bbd12c0f74d1f518cbd5b84e8d0d"
+url = f"https://huggingface.co/{repo}/resolve/{revision}/config.json"
+with urlopen(url, timeout=15) as response:
+    config = json.load(response)["text_config"]
+
+layers = list(range(config["num_hidden_layers"]))
+loop = config["loop_config"]
+start, end = loop["core_start"], loop["core_end"]
+for passes in (1, loop["num_passes"], 5):
+    schedule = layers[:start] + layers[start:end] * passes + layers[end:]
+    print(passes, len(schedule), len(set(schedule)))
+```
+
+The columns are passes, layer executions per token, and distinct decoder layers. The script prints `1 24 24`, `3 48 24`, and `5 72 24`. Layers 0–5 run once, layers 6–17 repeat, and layers 18–23 run once. At five passes the middle block does 60 executions. Reusing its weights still costs memory during decoding. The Transformers implementation gives each extra pass its own cache entries for those 12 layers. [[46]](#ref-46)
+
+What would a quality comparison at one and five passes tell you? It holds the checkpoint fixed, but training favored three passes. The lab sampled one through five passes in a 1:2:6:2:1 ratio during later midtraining and used three during post-training. A test on the same prompts shows what changing depth buys **on this checkpoint**. A claim about the best depth to train from scratch needs a separate experiment. [[44]](#ref-44)
+
 ## GPT-6.2: Documented Interfaces and Undisclosed Internals
 
 **As of 2026-11-25.** OpenAI released **GPT-6.2 Astra** and **GPT-6.2 Sol** on November 17 through its API, ChatGPT Work and Codex. The weights remain undisclosed. [[42]](#ref-42) Both models accept text or images and return text. The API supports Responses and Chat Completions, with tool calling available through Responses. These interfaces tell us little about the attention layers, expert routing, parameter counts or training mixture. [[39]](#ref-39) [[40]](#ref-40) [[41]](#ref-41)
@@ -408,3 +436,9 @@ For an agent comparison, record whether a result used a single model call or orc
 42. <a id="ref-42"></a>[OpenAI, GPT-6.2 Astra and Sol launch and availability](https://openai.com/index/introducing-gpt-6-2-astra-sol/).
 
 43. <a id="ref-43"></a>[Z.ai, GLM-5.4 architecture guide, hybrid KV cache and shared attention indexing](https://docs.z.ai/guides/llm/glm-5.4). Checked 2026-11-25.
+
+44. <a id="ref-44"></a>[Thinking Machines Lab, research model card and training pass distribution](https://thinkingmachines.ai/model-card/tml-d24-varloop-research/).
+
+45. <a id="ref-45"></a>[Thinking Machines Lab, released checkpoint configuration](https://huggingface.co/thinkingmachines/TML-d24-varloop-research/blob/91a57fe2b779bbd12c0f74d1f518cbd5b84e8d0d/config.json).
+
+46. <a id="ref-46"></a>[Hugging Face Transformers, decoder passes and cache allocation](https://github.com/huggingface/transformers/blob/fa9c04ea60c5e1d2ecc38064442973fa1ddccc72/src/transformers/models/inkling2_loop/modeling_inkling2_loop.py#L1354-L1427).

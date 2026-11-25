@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" xml:lang="ko" role="img" aria-labelledby="card-title card-description">
+<title id="card-title">샘플 44,100개를 재생하면 몇 초일까?</title><desc id="card-description">두 WAV 파일에는 같은 샘플 44,100개가 들어 있습니다. 44,100 Hz로 재생하면 441 Hz와 882 Hz의 두 음이 총 1초 동안 들립니다. 16,000 Hz로 재생하면 두 음이 160 Hz와 320 Hz로 낮아지고, 재생 시간이 2.75625초로 늘어납니다.</desc>
+<rect width="1200" height="630" fill="#f5f2eb"/>
+<g font-family="Noto Sans CJK KR, DejaVu Sans, sans-serif" fill="#192a30">
+<text x="61" y="89" font-size="54" font-weight="700">샘플 44,100개를 재생하면 몇 초일까?</text>
+<text x="64" y="143" font-size="29" fill="#4e5d61">두 WAV 파일에 같은 음을 담고 헤더에 적힌 재생 속도만 바꿨습니다.</text>
+<text x="64" y="222" font-size="37" font-weight="700">44,100 Hz</text>
+      <text x="418" y="222" font-size="36" text-anchor="end" font-weight="700" fill="#256257">1.00초</text>
+      <rect x="64" y="243" width="177" height="62" fill="#244e63"/>
+      <text x="152.5" y="286" font-size="32" text-anchor="middle" font-weight="700" fill="white">441 Hz</text>
+<rect x="241" y="243" width="177" height="62" fill="#276f61"/>
+      <text x="329.5" y="286" font-size="32" text-anchor="middle" font-weight="700" fill="white">882 Hz</text>
+<text x="64" y="374" font-size="37" font-weight="700">16,000 Hz</text>
+      <text x="1039.7125" y="374" font-size="36" text-anchor="end" font-weight="700" fill="#256257">2.75625초</text>
+      <rect x="64" y="395" width="487.85625" height="62" fill="#244e63"/>
+      <text x="307.928125" y="438" font-size="32" text-anchor="middle" font-weight="700" fill="white">160 Hz</text>
+<rect x="551.85625" y="395" width="487.85625" height="62" fill="#276f61"/>
+      <text x="795.7843750000001" y="438" font-size="32" text-anchor="middle" font-weight="700" fill="white">320 Hz</text>
+<path d="M64 482H1126" stroke="#192a30" stroke-width="2"/>
+<path d="M64 478v16" stroke="#192a30" stroke-width="2"/>
+    <text x="64" y="533" font-size="29" text-anchor="middle">0초</text>
+<path d="M418 478v16" stroke="#192a30" stroke-width="2"/>
+    <text x="418" y="533" font-size="29" text-anchor="middle">1초</text>
+<path d="M772 478v16" stroke="#192a30" stroke-width="2"/>
+    <text x="772" y="533" font-size="29" text-anchor="middle">2초</text>
+<path d="M1126 478v16" stroke="#192a30" stroke-width="2"/>
+    <text x="1126" y="533" font-size="29" text-anchor="middle">3초</text>
+<text x="595" y="590" font-size="30" text-anchor="middle" fill="#4e5d61">재생 시간</text>
+</g></svg>

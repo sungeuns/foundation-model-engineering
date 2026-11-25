@@ -5,12 +5,18 @@ import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { pathToFileURL } from 'node:url';
 import { chapters } from '../src/data/chapters.js';
-import { site } from '../src/data/site.js';
+import { site, whisperArticlePath } from '../src/data/site.js';
 
 const base = new URL('/foundation-model-engineering/', site.url);
 const endpoint = 'https://api.indexnow.org/indexnow';
 const catalogRoutes = ['labs/', 'ko/labs/'];
+const article = whisperArticlePath.slice(1) + '/';
+const koArticle = 'ko/' + article;
+const speechChapter = 'chapter-11/audio-and-speech-integration/';
 const sharedRoutes = new Map([
+  ['src/data/articles/whisper-sample-rate.md', [article]],
+  ['src/data/articles/whisper-sample-rate.ko.md', [koArticle]],
+  ['src/components/chapter-11/SampleRateListening.astro', [article, koArticle, speechChapter, 'ko/' + speechChapter]],
   ['src/components/FeaturedLessons.astro', ['', 'ko/']],
   ['src/components/TeachingLabs.astro', catalogRoutes],
   ['src/data/teaching-labs.js', catalogRoutes],
@@ -20,6 +26,8 @@ const sharedRoutes = new Map([
   ['scripts/verify-dp-ddp-gradients.py', catalogRoutes],
 ]);
 const sourceRoutes = new Map([
+  [`src/pages${whisperArticlePath}.astro`, article],
+  [`src/pages/ko${whisperArticlePath}.astro`, koArticle],
   ['src/pages/index.astro', ''],
   ['src/pages/ko/index.astro', 'ko/'],
   ['src/pages/labs/index.astro', catalogRoutes[0]],

@@ -1,15 +1,17 @@
 import { chapters } from '../data/chapters.js';
-import { site } from '../data/site.js';
+import { site, whisperArticlePath } from '../data/site.js';
 import { getBasePath, withBasePath } from '../utils/paths.js';
 import { getContentDates } from '../utils/content-dates.js';
 
 const pages = [
   { path: '/', source: 'src/pages/index.astro' },
   { path: '/ko', source: 'src/pages/ko/index.astro' },
-  // The catalog combines page, component and data sources. The page-only
-  // revision map cannot establish a reliable last-modified date for it.
+  // These pages combine Markdown, data and components. Their route wrappers
+  // alone cannot establish when the reader-facing content last changed.
   { path: '/labs' },
   { path: '/ko/labs' },
+  { path: whisperArticlePath },
+  { path: `/ko${whisperArticlePath}` },
   ...chapters.flatMap((chapter) =>
     chapter.subs.flatMap((sub) => [
       { path: sub.path, source: `src/pages${sub.path}.mdx` },

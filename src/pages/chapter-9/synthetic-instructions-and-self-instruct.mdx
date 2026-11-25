@@ -28,32 +28,26 @@ Magpie-style synthesis is model-specific. Do not paste literal `<|user|>` marker
 
 Query generation must have a **stop token** boundary at the next role or end-of-turn marker. Otherwise the teacher may continue into an assistant turn and the pipeline may mislabel part of an answer as the user query. Then render the completed user message again with `add_generation_prompt=True` to generate the answer.
 
-The sketch below is deliberately framework-neutral and requires adapter code for the exact inference backend. It illustrates the contract, not a production-ready loop.
+**Pseudocode.** The first call ends where the user's first word would go. A template that closes an empty user message would put the model on the wrong side of that boundary. For example, in the Llama-2-chat format shown by the Magpie authors, the query goes between `[INST]` and `[/INST]`. Supply the open prefix from the pinned native template and verify its token IDs before generating anything. The code leaves that step and the generation, stopping and decoding functions to your inference backend. It assumes single-token stop markers. If a marker spans several IDs, match the whole sequence. [[3]](#ref-3)
 
 ```python
-def render_query_prefix(tokenizer):
-    # Template-specific support is required for a truly empty user turn.
-    return tokenizer.apply_chat_template(
-        [{"role": "user", "content": ""}],
-        tokenize=True,
-        add_generation_prompt=False,
-    )
-
 def render_answer_prefix(tokenizer, query):
     return tokenizer.apply_chat_template(
         [{"role": "user", "content": query}],
         tokenize=True,
         add_generation_prompt=True,
-    )
+        return_dict=True,
+    )["input_ids"]
 
 # Resolve these IDs from the pinned generator tokenizer/template.
+query_prefix_ids = verified_open_user_prefix_ids(generator_tokenizer)
 query_stop_token_ids = resolve_next_role_or_eot_ids(generator_tokenizer)
 query_ids = generate(
-    render_query_prefix(generator_tokenizer),
+    query_prefix_ids,
     stop_token_ids=query_stop_token_ids,
     max_new_tokens=512,
 )
-query = decode_generated_span_only(generator_tokenizer, query_ids)
+query = decode_generated_span_only(generator_tokenizer, query_ids)  # Exclude the stop marker.
 answer_ids = generate(
     render_answer_prefix(generator_tokenizer, query),
     stop_token_ids=[generator_tokenizer.eos_token_id],

@@ -59,7 +59,7 @@ python public/labs/paired_release.py --scenario missing
 - [기여 안내](CONTRIBUTING.md)를 참고해 영문·한국어 설명, 실행 예제, 접근성을 개선할 수 있습니다.
 - 도움이 된 설명이 있었다면 [GitHub Star](https://github.com/sungeuns/foundation-model-engineering)로 책을 저장하거나, 같은 문제를 겪는 동료에게 해당 절을 공유해주세요.
 
-Seongeun So가 AI의 도움을 받아 집필·편집하는 독립 교재입니다. 처음 공개한 한국어판은 Gemini의 도움을 받아 번역했습니다. [초기 한국어판 번역 안내](https://github.com/sungeuns/foundation-model-engineering/blob/7c1f561b5992d92ce243f1b7239df77bdf81e23a/README.md#L17)
+Seongeun So가 관리하는 독립 교재입니다. 첫 한국어판은 Gemini의 도움을 받아 영어 원고를 번역했습니다. 최근 추가한 [Whisper 샘플링 속도 실험](https://sungeuns.github.io/foundation-model-engineering/ko/articles/whisper-sample-rate/)은 Codex가 코드를 작성하고 실행한 뒤, 그 결과를 짧은 글로 정리한 사례입니다. [초기 한국어판 번역 안내](https://github.com/sungeuns/foundation-model-engineering/blob/7c1f561b5992d92ce243f1b7239df77bdf81e23a/README.md#L17)
 
 지금은 한 절을 개정할 때 영문을 먼저 고친 뒤, 수식과 코드, 예제 풀이를 포함한 수정 사항을 한국어판에도 함께 반영합니다. 각 절에서 어떤 내용을 확인했는지는 검토 기록에서 볼 수 있습니다. [편집 지침](CONTRIBUTING.md) · [절별 검토 기록](docs/editorial_rewrite_worklog.md)
 

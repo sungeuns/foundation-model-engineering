@@ -163,8 +163,8 @@ export const searchDescriptions = {
     ko: '비전–언어 모델은 사진을 어떻게 읽을까요? CLIP 검색, 패치 투영, 교차 어텐션을 비교하고 영수증의 합계 줄을 지웠을 때 SmolVLM이 내놓은 답을 확인합니다.',
   },
   '/chapter-11/audio-and-speech-integration': {
-    en: 'Follow neural audio codecs in AudioLM and VALL-E, then trace how Scribe v3 Live captions settle before their speaker labels do.',
-    ko: 'AudioLM과 VALL-E의 오디오 코덱을 살펴보고, Scribe v3 Live에서 확정된 자막에 화자 정보가 뒤늦게 붙고 정정되는 과정을 따라갑니다.',
+    en: 'Hear the same samples at two rates, inspect a Whisper transcription error, and follow audio codes in AudioLM and VALL-E and speaker labels in Scribe v3 Live.',
+    ko: '같은 파형을 두 속도로 들어 보고 Whisper의 전사 오류를 확인합니다. AudioLM·VALL-E의 오디오 코덱과 Scribe v3 Live의 실시간 화자 정정도 살펴봅니다.',
   },
   '/chapter-11/unified-multimodal-any-to-any': {
     en: 'Explore any-to-any multimodal models through shared token spaces, diffusion and flow, cross-modal transfer, and disaggregated serving.',

@@ -78,22 +78,24 @@ test('the selected feed imports a complete, runnable article under its original 
   assert.deepEqual(output.trim().split('\n'), expected);
 });
 
-test('the listening article opens the original section and plays both WAVs outside the book', () => {
+test('the listening feed links to the standalone article and preserves its original GUID', () => {
   const chapter = 'chapter-11/audio-and-speech-integration/';
-  const permalink = base + chapter + '#whisper-sample-rate';
+  const guid = base + chapter + '#whisper-sample-rate';
+  const article = base + 'articles/whisper-sample-rate/';
   const source = readFileSync('src/data/articles/whisper-sample-rate.md', 'utf8');
   const meta = load(source.match(/^---\n([\s\S]*?)\n---\n/)[1]);
-  assert.equal(meta.canonical_url, base + chapter);
+  assert.equal(meta.canonical_url, article);
   assert.equal(meta.published, false);
   assert.equal(meta.ai_disclosure_level, 'fully_autonomous');
   const [, , items] = readSelectedFeed();
-  const item = items.find(post => post.link === permalink);
-  assert.equal(item?.guid, permalink);
+  const item = items.find(post => post.link === article);
+  assert.equal(item?.guid, guid);
   assert.equal(item.pubDate, new Date(meta.firstPublished).toUTCString());
   assert.equal(new Set(items.map(post => post.guid)).size, items.length);
   const chapterHtml = readFileSync(join(dist, chapter, 'index.html'), 'utf8');
   assert.ok(chapterHtml.includes('id="whisper-sample-rate"'));
   const body = item['{http://purl.org/rss/1.0/modules/content/}encoded'];
+  assert.ok(body.includes('href="' + guid + '"'));
   for (const rate of [44100, 16000]) {
     const path = 'labs/audio/sample-clock-' + rate + '.wav';
     assert.ok(body.includes('href="' + base + path + '"'));
@@ -101,6 +103,38 @@ test('the listening article opens the original section and plays both WAVs outsi
   }
   const [, checkPcm] = source.match(/^```python\n([\s\S]*?)\n```$/m);
   execFileSync('python3', ['-c', checkPcm], { cwd: join(dist, 'labs/audio') });
+});
+
+test('both editions of the listening article can be read and played without JavaScript', () => {
+  const nodes = root => [root, ...(root.childNodes ?? []).flatMap(nodes)];
+  const attr = (node, name) => node.attrs?.find(a => a.name === name)?.value;
+  const text = node => node.value ?? (node.childNodes ?? []).map(text).join('');
+  for (const [lang, prefix, suffix] of [['en', '', ''], ['ko', 'ko/', '.ko']]) {
+    const source = readFileSync('src/data/articles/whisper-sample-rate' + suffix + '.md', 'utf8');
+    const metadata = load(source.match(/^---\n([\s\S]*?)\n---\n/)[1]);
+    const html = readFileSync(join(dist, prefix, 'articles/whisper-sample-rate/index.html'), 'utf8');
+    const all = nodes(parseFragment(html));
+    const main = nodes(all.find(node => node.tagName === 'main'));
+    assert.deepEqual(main.filter(node => /^h[1-6]$/.test(node.tagName)).map(node => node.tagName), ['h1', 'h2', 'h2']);
+    assert.equal(text(main.find(node => node.tagName === 'h1')), metadata.title);
+    const players = main.filter(node => node.tagName === 'audio');
+    assert.equal(players.length, 2);
+    const sourceLinks = main.filter(node => node.tagName === 'a').map(node => attr(node, 'href'));
+    for (const [index, rate] of [44100, 16000].entries()) {
+      const file = base + 'labs/audio/sample-clock-' + rate + '.wav';
+      assert.equal(new URL(attr(players[index], 'src'), base).href, file);
+      assert.equal(attr(players[index], 'preload'), 'none');
+      assert.equal(attr(players[index], 'autoplay'), undefined);
+      assert.equal(attr(players[index], 'controls'), '');
+      const downloads = main.filter(node => node.tagName === 'a' && new URL(attr(node, 'href'), base).href === file);
+      assert.equal(downloads.length, 1);
+      assert.equal(attr(downloads[0], 'download'), 'sample-clock-' + rate + '.wav');
+    }
+    assert.ok(sourceLinks.includes(base + prefix + 'chapter-11/audio-and-speech-integration/#whisper-sample-rate'), lang);
+    assert.ok(text(main.find(node => node.tagName === 'pre')).includes('assert samples('));
+    assert.ok(text(main[0]).includes('30.31875'));
+    assert.ok(text(main[0]).includes('[1, 80, 3000]'));
+  }
 });
 
 test('readers can discover each edition’s feeds from the homepage or an article', () => {
