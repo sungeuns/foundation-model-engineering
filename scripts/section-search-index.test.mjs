@@ -5,6 +5,7 @@ import test from 'node:test';
 import { parse } from 'parse5';
 import { chapters } from '../src/data/chapters.js';
 import { normalizePathname, withPagePath } from '../src/utils/paths.js';
+import { findSections, readSectionIndex } from '../src/utils/section-search.js';
 
 const output = process.env.SEARCH_DIST_DIR || 'dist';
 const inventory = chapters.flatMap(chapter => chapter.subs);
@@ -72,10 +73,23 @@ for (const lang of ['en', 'ko']) {
     const base = normalizePathname(new URL(canonical[1]).pathname);
     const localized = inventory.map(sub => lang === 'en' ? sub.path : `/ko${sub.path}`);
     const index = JSON.parse(readFileSync(join(output, 'search', `${lang}.json`), 'utf8'));
-    assert.deepEqual(Object.keys(index).sort(), ['chapters', 'lang', 'version']);
+    assert.deepEqual(Object.keys(index).sort(), ['catalog', 'chapters', 'lang', 'version']);
     assert.equal(index.version, 1);
     assert.equal(index.lang, lang);
     assert.deepEqual(index.chapters.map(chapter => chapter.path), localized.map(path => withPagePath(path, base)));
+
+    const hub = lang === 'ko' ? '/ko/labs' : '/labs';
+    const hubPath = withPagePath(hub, base);
+    const { elementsById: labElements } = renderedTargets(readFileSync(join(output, hub, 'index.html'), 'utf8'));
+    const entries = readSectionIndex(index, lang, new Set(index.chapters.map(chapter => chapter.path)), hubPath);
+    for (const [, id] of index.catalog.sections) assert.equal(labElements.get(id)?.tagName, 'li', id);
+    for (const [query, id] of [
+      [lang === 'en' ? 'worksheet' : '활동지', 'attention-weight-example'],
+      [lang === 'en' ? 'spreadsheet' : '엑셀', 'mixed-request-budget'],
+      [lang === 'en' ? 'KV notebook' : 'KV 노트북', 'kv-payload-notebook'],
+    ]) {
+      assert.ok(findSections(entries, query).matches.some(row => row.href === hubPath + '#' + id), query);
+    }
 
     inventory.forEach((sub, i) => {
       const entry = index.chapters[i];

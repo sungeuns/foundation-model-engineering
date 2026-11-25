@@ -1,0 +1,54 @@
+---
+import { labFileLabels, teachingLabGroups } from '../data/teaching-labs.js';
+import { withBasePath, withPagePath } from '../utils/paths.js';
+import ddpCheck from '../../scripts/verify-dp-ddp-gradients.py?url&no-inline';
+
+interface Props { lang?: 'en' | 'ko' }
+const { lang = 'en' } = Astro.props;
+const localePrefix = lang === 'ko' ? '/ko' : '';
+---
+<div class="teaching-labs">
+  {teachingLabGroups.map(group => (
+    <section aria-labelledby={group.id}>
+      <h2 id={group.id}>{group.title[lang]}</h2>
+      <ul role="list">
+        {group.tasks.map(task => (
+          <li id={task.id}>
+            <a class="task-link" href={withPagePath(localePrefix + task.chapter) + '#' + task.anchor}>{task.title[lang]}</a>
+            <div class="files">
+              {task.files.map(file => {
+                const path = typeof file.path === 'string' ? file.path : file.path[lang];
+                const url = path === '/scripts/verify-dp-ddp-gradients.py' ? ddpCheck : withBasePath(path);
+                const label = labFileLabels[file.kind][lang];
+                return <a href={url} download={path.split('/').pop()} aria-label={label + ' — ' + task.title[lang]}>{label}</a>;
+              })}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
+  ))}
+</div>
+<style>
+  .teaching-labs section { margin-block: 2rem; }
+  .teaching-labs h2 { margin-block-end: .5rem; }
+  .teaching-labs ul { list-style: none; margin: 0; padding: 0; }
+  .teaching-labs li {
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    align-items: baseline;
+    gap: .5rem 1.5rem;
+    padding: .75rem 0;
+    margin: 0;
+    border-block-end: 1px solid #bbc8d7;
+    scroll-margin-top: 4rem;
+  }
+  .task-link { font-weight: 600; }
+  .teaching-labs li:target { border-inline-start: 3px solid #32679b; padding-inline-start: .7rem; }
+  .files { display: flex; flex-wrap: wrap; column-gap: 1.15rem; row-gap: .25rem; }
+  .files a { padding-block: .15rem; font-size: .95rem; }
+  .teaching-labs a:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+  @media (max-width: 700px) {
+    .teaching-labs li { grid-template-columns: minmax(0, 1fr); gap: .2rem; }
+  }
+</style>

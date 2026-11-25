@@ -12,7 +12,7 @@ import { getContentDates, getContentRevisions } from '../src/utils/content-dates
 
 const base = 'https://sungeuns.github.io/foundation-model-engineering';
 const outputDir = process.env.SEARCH_DIST_DIR || 'dist';
-const routes = ['/', '/ko', ...chapters.flatMap(c => c.subs.flatMap(s => [s.path, `/ko${s.path}`]))];
+const routes = ['/', '/ko', '/labs', '/ko/labs', ...chapters.flatMap(c => c.subs.flatMap(s => [s.path, `/ko${s.path}`]))];
 const escape = text => text.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 
 test('search descriptions have real routes and equivalent language coverage', () => {
@@ -87,14 +87,17 @@ test('every built page has canonical, reciprocal language links, and a local soc
     assert.ok(head.includes('max-image-preview:large'), route);
     assert.doesNotMatch(head, /content="[^"]*\bnoindex\b/);
     const schemas = [...head.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/g)].map(m => JSON.parse(m[1]));
+    const pageType = en === '/' ? 'Book' : en === '/labs' ? 'CollectionPage' : 'TechArticle';
+    assert.equal(schemas[0]['@type'], pageType, route);
+    assert.ok(head.includes(`property="og:type" content="${pageType === 'TechArticle' ? 'article' : 'website'}"`), route);
     const metaTags = parseFragment(head).childNodes.filter(node => node.tagName === 'meta');
     const citation = {};
     for (const tag of metaTags) {
       const { name, content } = Object.fromEntries(tag.attrs.map(attr => [attr.name, attr.value]));
       if (name?.startsWith('citation_')) citation[name] = content;
     }
-    if (en === '/') {
-      assert.deepEqual(citation, {}, `${route}: the homepage represents the whole book`);
+    if (pageType !== 'TechArticle') {
+      assert.deepEqual(citation, {}, `${route}: citations describe individual chapters`);
     } else {
       assert.ok(citation.citation_title, route);
       assert.equal(citation.citation_book_title, schemas[0].isPartOf.name, route);
@@ -336,6 +339,10 @@ test('sitemap preserves canonical route order and uses only available content da
   const dates = getContentDates();
   for (const [index, entry] of entries.entries()) {
     const route = routes[index];
+    if (route === '/labs' || route === '/ko/labs') {
+      assert.doesNotMatch(entry, /<lastmod>/, `${route}: the shared catalog has multiple content sources`);
+      continue;
+    }
     const source = route === '/' ? 'src/pages/index.astro' : route === '/ko' ? 'src/pages/ko/index.astro' : `src/pages${route}.mdx`;
     assert.equal(entry.match(/<lastmod>(.*?)<\/lastmod>/)?.[1], dates.get(source), route);
   }

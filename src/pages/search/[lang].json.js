@@ -1,5 +1,7 @@
 import { chapterHeadingLabel } from '../../utils/chapter-heading-label.js';
 import { chapters } from '../../data/chapters.js';
+import { labsTitle } from '../../data/site.js';
+import { labFileLabels, teachingLabGroups } from '../../data/teaching-labs.js';
 import { kvCalculatorTitle, releaseLabTitle } from '../../data/lab-titles.js';
 import modelSnapshot from '../../data/commercial-model-snapshot.json';
 import { getBasePath, withPagePath } from '../../utils/paths.js';
@@ -44,5 +46,13 @@ export async function GET({ params: { lang } }) {
     }
     return { path: withPagePath(page, basePath), title: sub.title[lang], sections };
   }));
-  return Response.json({ version: 1, lang, chapters: index });
+  const catalog = {
+    path: withPagePath(lang === 'ko' ? '/ko/labs' : '/labs', basePath),
+    title: labsTitle[lang],
+    sections: teachingLabGroups.flatMap(group => group.tasks.map(task => {
+      const formats = task.files.map(file => labFileLabels[file.kind][lang]);
+      return [`${task.title[lang]} · ${formats.join(', ')}`, task.id];
+    })),
+  };
+  return Response.json({ version: 1, lang, chapters: index, catalog });
 }

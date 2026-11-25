@@ -4,6 +4,8 @@ title: 11.2 Audio & Speech Integration
 lang: ko
 ---
 
+import { withBasePath } from '../../../utils/paths.js';
+
 # 11.2 오디오와 음성 통합
 
 음성에는 단어뿐 아니라 시간·화자 특성·운율·배경음이 담깁니다. 전사는 유용한 표현이지만 텍스트만 넘기는 인터페이스는 명시적으로 담지 않은 정보를 보통 잃습니다. 그렇다고 모든 cascade가 비언어적 정보를 전부 버려야 하는 것은 아닙니다. 타임스탬프·화자 라벨·별도 음향 특징을 보존할 수 있습니다.
@@ -15,6 +17,28 @@ lang: ko
 16 kHz 단일 채널 파형에는 초당 16,000개의 샘플이 있습니다. 저장 dtype은 별도의 선택입니다. 인코더는 이를 더 낮은 속도의 프레임으로 바꾸고, 신경 코덱은 프레임을 이산 인덱스로 바꿀 수 있습니다. 음향 프레임 속도와 직렬화한 토큰 속도는 다릅니다.
 
 초당 프레임 수 $F$, 코드북 수 $Q$에서 단순 직렬 예측은 초당 $FQ$번의 토큰 결정을 요구합니다. 인덱스마다 $N$개 후보가 있다면 고정 길이 인덱스의 이상적 payload는 초당 $FQ\log_2N$비트입니다. 프레이밍·엔트로피 코딩은 제외합니다. $F=50$, $Q=8$, $N=1024$이면 초당 인덱스 400개, 4,000비트입니다. 지연 배치나 병렬 코드북 예측은 이 명목 payload를 유지하면서 직렬 단계를 바꿀 수 있습니다.
+
+<a id="whisper-sample-rate"></a>
+
+### Whisper는 왜 11초짜리 녹음을 30초로 받아들일까요?
+
+OpenAI는 존 F. 케네디의 취임 연설 일부로 Whisper를 테스트합니다. 원본은 44,100 Hz로 녹음된 11초짜리 스테레오 파일입니다. 같은 모델과 디코더에 이 파일을 두 번 넣어 봅시다. 첫 번째는 FFmpeg로 두 채널을 모노로 합치고 Whisper가 요구하는 16,000 Hz로 리샘플링합니다. 두 번째는 모노로만 합쳐 44,100 Hz 파형을 그대로 두고, 특징 추출기를 호출할 때 `sampling_rate=16000`을 넘깁니다. 이 인수는 배열을 어느 속도로 읽을지 알려 줍니다. 샘플만 받아서는 원래 녹음 속도를 알 수 없습니다. [[18]](#ref-18) [[19]](#ref-19)
+
+| 같은 녹음으로 측정한 항목 | 16 kHz로 리샘플링 | 44.1 kHz를 16 kHz로 표기 |
+| --- | --- | --- |
+| 패딩하거나 자르기 전 샘플 수 | 176,000개 | 485,100개 |
+| 지정한 속도로 계산한 길이 | 11초 | 30.31875초 |
+| 30초짜리 입력 창에 맞춰 더하거나 뺀 샘플 | 304,000개 추가 | 5,100개 제거 |
+| 어텐션 마스크가 유효하다고 표시한 멜 프레임 | 3,000개 중 1,100개 | 3,000개 중 3,000개 |
+| 전사문의 첫 다섯 단어 | “And so my fellow Americans” | “Ah, oh, oh, oh, oh,” |
+| 공백으로 나눈 전사문의 단어 수 | 22개 | 32개 |
+| OpenAI 테스트의 세 구절 가운데 전사문에서 찾은 수 | 3개 | 0개 |
+
+두 특징 텐서의 모양은 모두 `[1, 80, 3000]`입니다. 두 번째 파형은 실제보다 $44{,}100/16{,}000$배 길게 해석됩니다. 특징 추출기는 이를 입력 창 하나에 맞추면서 끝에서 샘플 5,100개를 잘라 냅니다. 마스크는 입력 파형에서 얻은 프레임과 패딩을 구분합니다. 애초에 그 파형의 1초를 몇 개의 샘플로 읽었는지는 판별할 수 없습니다.
+
+전사 서비스에 새 녹음 형식을 연결할 때는 리샘플링 직후, 패딩하기 전에 샘플을 세어 보세요. 이 파일이라면 `len(mono_16k) / 16000`이 `ffprobe`로 원본에서 읽은 11초와 일치해야 합니다. 세 구절을 찾는 테스트만으로도 이 녹음에서 문제가 드러납니다. 서비스의 단어 오류율을 구하려면 실제 사용 환경을 대표하는 여러 녹음과 정답 전사문이 필요합니다.
+
+**CPU 실험 재현 (2026-11-25).** 스크립트는 OpenAI가 공개한 녹음과 영어 전용 `openai/whisper-tiny.en` 가중치를 내려받아 각각의 체크섬을 검증합니다. 두 입력 모두 CPU 스레드 하나에서 FP32로 처리하고 같은 기준으로 어텐션 마스크를 만듭니다. 디코더는 타임스탬프 없이 매 단계 가장 확률이 높은 토큰을 고르며 새 토큰은 최대 64개까지 생성합니다. 결과 JSON에는 전사문 일부와 전체 전사문의 해시가 들어 있습니다. `--show-transcripts`를 붙이면 전체 문장을 로컬에서 확인할 수 있습니다. <a href={withBasePath('/labs/whisper_sample_rate.py')} download>파이썬 스크립트와 설치 명령</a> · <a href={withBasePath('/labs/2026-11/whisper-sample-rate.json')} download>측정 결과 (JSON)</a>.
 
 ## 2. 잔차 벡터 양자화
 
@@ -163,8 +187,8 @@ CALM은 consistency 기반 다음 프레임 생성기와 자기회귀 연속 오
 </details>
 
 <details>
-<summary>Quiz 2: RVQ 순전파 예제가 학습 가능한 음성 코덱을 보여 주나요?</summary>
-*아닙니다. 무작위 특징의 lookup 모양을 보여 줍니다. 코덱에는 학습한 encoder/decoder와 적절한 학습·마스킹·동기화 의미가 필요합니다.*
+<summary>Quiz 2: 11초짜리 녹음을 두 방식으로 처리했더니 모두 멜 프레임 3,000개가 나왔습니다. 모델을 바꾸기 전에 무엇부터 확인할까요?</summary>
+*원본의 샘플링 속도와 재생 시간을 확인한 뒤, 패딩 전 모노 파형의 샘플을 셉니다. 16 kHz에서 11초라면 176,000개여야 합니다. 두 입력 모두 같은 크기의 창을 채우지만, 올바르게 리샘플링한 쪽에서만 유효한 프레임이 1,100개입니다.*
 </details>
 
 <details>
@@ -206,3 +230,5 @@ CALM은 consistency 기반 다음 프레임 생성기와 자기회귀 연속 오
 15. <a id="ref-15"></a>QwenCloud. *Qwen-Audio-Live: task delegation and tools*. Verified 2026-11-24. [Guide](https://docs.qwencloud.com/developer-guides/speech/qwen-audio-live).
 16. <a id="ref-16"></a>ElevenLabs (2026-11-10). [Scribe v3와 Scribe v3 Live 발표](https://elevenlabs.io/blog/scribe-v3).
 17. <a id="ref-17"></a>ElevenLabs. [실시간 전사·화자 구분·화자 병합 이벤트 명세](https://elevenlabs.io/docs/eleven-api/guides/how-to/speech-to-text/realtime/event-reference).
+18. <a id="ref-18"></a>OpenAI. [영어 전용 Whisper Tiny 모델 카드](https://huggingface.co/openai/whisper-tiny.en/blob/87c7102498dcde7456f24cfd30239ca606ed9063/README.md)와 [공식 오디오 로더](https://github.com/openai/whisper/blob/31243bad24cc746f07d4c8bfdd2d974872cb1803/whisper/audio.py).
+19. <a id="ref-19"></a>OpenAI. [Whisper 전사 회귀 테스트와 구절 검증](https://github.com/openai/whisper/blob/31243bad24cc746f07d4c8bfdd2d974872cb1803/tests/test_transcribe.py), [테스트에 사용한 케네디 연설 녹음](https://github.com/openai/whisper/blob/31243bad24cc746f07d4c8bfdd2d974872cb1803/tests/jfk.flac).

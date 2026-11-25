@@ -2,7 +2,8 @@
 import type { MarkdownHeading } from 'astro';
 import { chapterHeadingLabel } from '../utils/chapter-heading-label.js';
 import { chapters } from '../data/chapters.js';
-import { authorName, servingGuide, site } from '../data/site.js';
+import { authorName, labsTitle, servingGuide, site } from '../data/site.js';
+import { teachingLabGroups } from '../data/teaching-labs.js';
 import { searchDescriptions } from '../data/search-descriptions.js';
 import { socialCards } from '../data/social-cards.js';
 import modelSnapshot from '../data/commercial-model-snapshot.json';
@@ -21,12 +22,13 @@ const chapterRoutes = chapters.flatMap((chapter) =>
     normalizePathname(`/ko${sub.path}`),
   ])
 );
-const existingRoutes = new Set(['/', '/ko', ...chapterRoutes]);
+const existingRoutes = new Set(['/', '/ko', '/labs', '/ko/labs', ...chapterRoutes]);
 
 // Helper to check active link
 const currentPath = stripBasePath(Astro.url.pathname, basePath);
 const isActive = (pagePath) => currentPath === normalizePathname(pagePath);
 const isHomePage = currentPath === '/' || currentPath === '/ko';
+const isLabsPage = currentPath === '/labs' || currentPath === '/ko/labs';
 const isKo = lang === 'ko';
 const siteTitle = site.titles[lang] || site.titles.en;
 const enPath = isKo ? currentPath.replace(/^\/ko/, '') || '/' : currentPath;
@@ -49,6 +51,7 @@ const currentSub = chapters
   .find((sub) => currentPath === normalizePathname(getLocalePath(sub.path, lang)));
 const localeFragments = isHomePage
   ? ['serving-guide', 'book-contents']
+  : isLabsPage ? teachingLabGroups.flatMap(group => [group.id, ...group.tasks.map(task => task.id)])
   : sharedLocaleFragments(currentSub?.path, modelSnapshot.models.map(model => model.id));
 type Section = { label: string; href: string };
 const outline: (Section & { children: Section[] })[] = [];
@@ -112,7 +115,7 @@ const socialImageAlt = socialCard?.alt || (isKo
   : 'Foundation Model Engineering — From Theory to Production, an English and Korean online textbook');
 const structuredData = {
   '@context': 'https://schema.org',
-  '@type': isHomePage ? 'Book' : 'TechArticle',
+  '@type': isHomePage ? 'Book' : isLabsPage ? 'CollectionPage' : 'TechArticle',
   name: pageTitle,
   headline: pageTitle,
   description: pageDescription,
@@ -190,7 +193,7 @@ if (currentIndex !== -1) {
     <link rel="alternate" hreflang="en" href={enUrl} />
     <link rel="alternate" hreflang="ko" href={koUrl} />
     <link rel="alternate" hreflang="x-default" href={enUrl} />
-    <meta property="og:type" content={isHomePage ? 'website' : 'article'} />
+    <meta property="og:type" content={currentSub ? 'article' : 'website'} />
     <meta property="og:site_name" content={siteTitle} />
     <meta property="og:title" content={pageTitle} />
     <meta property="og:description" content={pageDescription} />
@@ -221,6 +224,7 @@ if (currentIndex !== -1) {
     <nav class="sidebar" id="sidebar" aria-label={isKo ? '책 목차' : 'Book contents'}>
       <div class="contents-panel" data-nosnippet>
       <div class="sidebar-title"><a href={toHref(homePath)} style="text-decoration: none; color: inherit;">{isKo ? '목차' : 'Table of Contents'}</a></div>
+      <a id="labsLink" class:list={['sidebar-labs', {active: isLabsPage}]} href={toHref(getLocalePath('/labs', lang))} aria-current={isLabsPage ? 'page' : undefined}>{labsTitle[lang]}</a>
       <div id="contentsSearch" hidden>
         <label class="chapter-search-label" for="chapterSearch">{isKo ? '장·절 찾기' : 'Find chapters and sections'}</label>
         <input id="chapterSearch" data-index-url={withBasePath(`/search/${lang}.json`, basePath)} type="search" placeholder={isKo ? '예: GLM-5.4, 첫 토큰 지연' : 'e.g. GLM-5.4, first token'} autocomplete="off" />

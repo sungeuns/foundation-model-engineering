@@ -1,10 +1,16 @@
 // The sidebar supplies the canonical URLs of the current translation.
-export function readSectionIndex(data, lang, paths) {
+export function readSectionIndex(data, lang, paths, catalogPath) {
   if (data?.version !== 1 || data.lang !== lang || !Array.isArray(data.chapters)
       || data.chapters.length !== paths.size) throw new Error('Unexpected section index');
   const remaining = new Set(paths);
+  const pages = [...data.chapters];
+  if (catalogPath && data.catalog) {
+    if (data.catalog.path !== catalogPath || remaining.has(catalogPath)) throw new Error('Unexpected labs URL');
+    pages.push(data.catalog);
+    remaining.add(catalogPath);
+  }
   const entries = [];
-  for (const chapter of data.chapters) {
+  for (const chapter of pages) {
     if (!chapter || !remaining.delete(chapter.path) || typeof chapter.title !== 'string'
         || !chapter.title.trim() || !Array.isArray(chapter.sections)) throw new Error('Unknown chapter');
     for (const item of chapter.sections) {

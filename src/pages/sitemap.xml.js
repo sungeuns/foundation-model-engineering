@@ -4,12 +4,16 @@ import { getBasePath, withBasePath } from '../utils/paths.js';
 import { getContentDates } from '../utils/content-dates.js';
 
 const pages = [
-  '/',
-  '/ko',
+  { path: '/', source: 'src/pages/index.astro' },
+  { path: '/ko', source: 'src/pages/ko/index.astro' },
+  // The catalog combines page, component and data sources. The page-only
+  // revision map cannot establish a reliable last-modified date for it.
+  { path: '/labs' },
+  { path: '/ko/labs' },
   ...chapters.flatMap((chapter) =>
     chapter.subs.flatMap((sub) => [
-      sub.path,
-      `/ko${sub.path}`,
+      { path: sub.path, source: `src/pages${sub.path}.mdx` },
+      { path: `/ko${sub.path}`, source: `src/pages/ko${sub.path}.mdx` },
     ])
   ),
 ];
@@ -35,11 +39,8 @@ export function GET({ site: astroSite }) {
   const origin = astroSite || site.url;
   const basePath = getBasePath();
   const urls = pages
-    .map((path) => {
+    .map(({ path, source }) => {
       const loc = toAbsoluteUrl(path, basePath, origin);
-      const source = path === '/' ? 'src/pages/index.astro'
-        : path === '/ko' ? 'src/pages/ko/index.astro'
-        : `src/pages${path}.mdx`;
       const lastmod = contentDates.get(source);
       return [
         '  <url>',

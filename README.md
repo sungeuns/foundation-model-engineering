@@ -2,7 +2,7 @@
 
 **[Read the book in English](https://sungeuns.github.io/foundation-model-engineering/)** · [한국어판](https://sungeuns.github.io/foundation-model-engineering/ko/) · [한국어 README](README.ko.md) · [Download the serving guide (EPUB)](https://github.com/sungeuns/foundation-model-engineering/releases/download/serving-guide-2026-11/llm-serving-en-r2.epub)
 
-A free textbook on training, serving, and evaluating foundation models. Work through browser experiments and PyTorch examples you can run on a CPU.
+A free textbook on training, serving, and evaluating foundation models. [Browse the labs and teaching materials](https://sungeuns.github.io/foundation-model-engineering/labs/) for worked examples, CPU notebooks, and printable worksheets.
 
 **[Try the 24 GiB KV-cache calculator](https://sungeuns.github.io/foundation-model-engineering/chapter-12/kv-cache-management/?kv=1&batch=9&sequence=8192&generated=2048&layers=80&heads=8&dimension=128&precision=2&budget=24#kv-calculator).** In this example, nine prompts take 22.5 GiB. If each request generates another 2,048 tokens, how many full-length caches can the pool hold at once?
 

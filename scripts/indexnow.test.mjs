@@ -6,13 +6,35 @@ const lesson = 'chapter-17/commercial-model-benchmarks';
 const proof = 'fixture';
 const base = 'https://sungeuns.github.io/foundation-model-engineering/';
 
-test('only tracked homepage and inventoried lesson sources contribute canonical routes', () => {
+test('homepages and inventoried lesson sources contribute canonical routes', () => {
   const unrelated = ['README.md', 'src/pages/feed.xml.js', 'src/pages/chapter-17/unknown.mdx'];
   assert.deepEqual(changedRoutes(unrelated), []);
   assert.deepEqual(changedRoutes([
     ...unrelated, 'src/pages/index.astro', 'src/pages/ko/index.astro',
     `src/pages/${lesson}.mdx`, `src/pages/ko/${lesson}.mdx`, `src/pages/${lesson}.mdx`,
   ]), ['', 'ko/', `${lesson}/`, `ko/${lesson}/`]);
+});
+
+test('edition-specific catalog edits select one URL and shared inputs select both', () => {
+  assert.deepEqual(changedRoutes(['src/pages/labs/index.astro']), ['labs/']);
+  assert.deepEqual(changedRoutes(['src/pages/ko/labs/index.astro']), ['ko/labs/']);
+  for (const shared of [
+    'src/components/TeachingLabs.astro', 'src/data/teaching-labs.js',
+    'src/data/lab-datasets.js', 'src/data/site.js', 'scripts/verify-dp-ddp-gradients.py',
+  ]) {
+    assert.deepEqual(changedRoutes([shared, 'src/pages/labs/index.astro', shared]), ['labs/', 'ko/labs/']);
+  }
+  assert.deepEqual(changedRoutes(['src/pages/labs/2026-11/other.csv.js', 'public/labs/unlisted.py']), []);
+});
+
+test('one push that changes featured links, the catalog and a bilingual lesson selects six pages', () => {
+  const featured = 'src/components/FeaturedLessons.astro';
+  assert.deepEqual(changedRoutes([featured]), ['', 'ko/']);
+  const audio = 'chapter-11/audio-and-speech-integration';
+  assert.deepEqual(changedRoutes([
+    featured, 'src/pages/index.astro', 'src/data/teaching-labs.js', 'src/pages/ko/labs/index.astro',
+    `src/pages/${audio}.mdx`, `src/pages/ko/${audio}.mdx`, 'src/layouts/BookLayout.astro',
+  ]), ['', 'ko/', 'labs/', 'ko/labs/', `${audio}/`, `ko/${audio}/`]);
 });
 
 test('retrying the proof read results in one POST with project-scoped canonical URLs', async () => {
@@ -23,8 +45,8 @@ test('retrying the proof read results in one POST with project-scoped canonical 
     if (calls.length === 2) return new Response(proof);
     return new Response(null, { status: 202 });
   };
-  const urls = [base, `${base}ko/${lesson}/`];
-  const routes = ['', `ko/${lesson}/`, ''];
+  const urls = [base, `${base}ko/${lesson}/`, `${base}labs/`, `${base}ko/labs/`];
+  const routes = ['', `ko/${lesson}/`, 'labs/', 'ko/labs/', ''];
   assert.deepEqual(await submit(routes, proof, fetchRequest, async () => {}), { status: 202, urlList: urls });
   assert.equal(calls.length, 3);
   const keyLocation = `${base}${proof}.txt`;

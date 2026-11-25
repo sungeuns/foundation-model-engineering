@@ -2,7 +2,7 @@
 
 **[한국어 책 읽기](https://sungeuns.github.io/foundation-model-engineering/ko/)** · [English edition](https://sungeuns.github.io/foundation-model-engineering/) · [English README](README.md) · [서빙 세 절을 전자책으로 읽기(EPUB)](https://github.com/sungeuns/foundation-model-engineering/releases/download/serving-guide-2026-11/llm-serving-ko-r2.epub)
 
-모델 학습부터 서빙과 평가까지 다루는 무료 한영 교재입니다. 브라우저 실습과 CPU에서 실행할 수 있는 PyTorch 예제를 제공합니다.
+모델 학습부터 서빙과 평가까지 다루는 무료 한영 교재입니다. [실습과 수업 자료](https://sungeuns.github.io/foundation-model-engineering/ko/labs/)에서 예제 풀이, CPU용 노트북, 인쇄용 활동지를 골라 보세요.
 
 **[24 GiB KV 캐시 계산기 열기](https://sungeuns.github.io/foundation-model-engineering/ko/chapter-12/kv-cache-management/?kv=1&batch=9&sequence=8192&generated=2048&layers=80&heads=8&dimension=128&precision=2&budget=24#kv-calculator)**. 예제의 프롬프트 9개는 22.5 GiB를 차지합니다. 요청마다 2,048토큰을 더 생성한다면, 최대 길이의 캐시를 몇 개까지 동시에 담을 수 있을까요?
 

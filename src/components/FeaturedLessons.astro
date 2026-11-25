@@ -22,13 +22,14 @@ const i = ko ? 1 : 0;
       </a></li>
     ))}
   </ul>
+  <p><a href={withPagePath(ko ? '/ko/labs' : '/labs')}>{ko ? '실습 파일과 수업용 활동지 전체 보기' : 'Browse all lab files and teaching worksheets'}</a></p>
 </section>
 <style>
   .featured-lessons { margin: 2.25rem 0; }
   ul { padding: 0; list-style: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
   li { margin: 0; }
-  a { display: flex; flex-direction: column; height: 100%; box-sizing: border-box; gap: .65rem; border: 1px solid #cbd5e1; border-top: 3px solid #2563eb; border-radius: .5rem; padding: 1.2rem; text-decoration: none; color: #172554; background: #f8fafc; }
-  a:hover { background: #eff6ff; border-color: #2563eb; }
+  li a { display: flex; flex-direction: column; height: 100%; box-sizing: border-box; gap: .65rem; border: 1px solid #cbd5e1; border-top: 3px solid #2563eb; border-radius: .5rem; padding: 1.2rem; text-decoration: none; color: #172554; background: #f8fafc; }
+  li a:hover { background: #eff6ff; border-color: #2563eb; }
   a:focus-visible { outline: 3px solid #2563eb; outline-offset: 3px; }
   strong { color: #163e81; font-size: 1.14rem; line-height: 1.45; text-decoration: underline; text-underline-offset: .16em; }
   .detail { color: #475569; font-size: .95rem; line-height: 1.6; }

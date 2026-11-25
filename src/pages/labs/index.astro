@@ -1,0 +1,10 @@
+---
+import BookLayout from '../../layouts/BookLayout.astro';
+import TeachingLabs from '../../components/TeachingLabs.astro';
+import { labsTitle } from '../../data/site.js';
+---
+<BookLayout lang="en" title={labsTitle.en} description="Download an attention worksheet, size a KV cache in a spreadsheet, or run a CPU notebook. Each experiment links to the lesson that explains its results.">
+  <h1>{labsTitle.en}</h1>
+  <p>Choose a question for your class or your next experiment. Open the lesson for the worked example, or download the files to try it yourself.</p>
+  <TeachingLabs lang="en" />
+</BookLayout>

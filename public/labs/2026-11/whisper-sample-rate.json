@@ -1,0 +1,80 @@
+{
+  "model": "openai/whisper-tiny.en",
+  "revision": "87c7102498dcde7456f24cfd30239ca606ed9063",
+  "model_safetensors_sha256": "db59695928ded6043adaef491a53ef4e12da9611184d77c53baa691a60b958ad",
+  "audio": {
+    "source": "https://raw.githubusercontent.com/openai/whisper/31243bad24cc746f07d4c8bfdd2d974872cb1803/tests/jfk.flac",
+    "sha256": "63a4b1e4c1dc655ac70961ffbf518acd249df237e5a0152faae9a4a836949715",
+    "sample_rate_hz": 44100,
+    "channels": 2,
+    "duration_ts": 485100,
+    "time_base": "1/44100"
+  },
+  "runtime": {
+    "python": "3.12.14",
+    "torch": "2.15.0+cpu",
+    "transformers": "5.24.1",
+    "ffmpeg": "8.0.1-3ubuntu2",
+    "device": "cpu",
+    "dtype": "float32",
+    "attention": "eager",
+    "threads": 1
+  },
+  "decoder": {
+    "do_sample": false,
+    "num_beams": 1,
+    "return_timestamps": false,
+    "max_new_tokens": 64
+  },
+  "fixture_phrases": [
+    "my fellow americans",
+    "your country",
+    "do for you"
+  ],
+  "cases": [
+    {
+      "name": "resampled",
+      "waveform_rate_hz": 16000,
+      "declared_rate_hz": 16000,
+      "input_samples": 176000,
+      "apparent_seconds_before_truncation": 11.0,
+      "padded_samples": 304000,
+      "truncated_samples": 0,
+      "input_features_shape": [
+        1,
+        80,
+        3000
+      ],
+      "valid_mel_frames": 1100,
+      "returned_token_ids_count": 24,
+      "word_count": 22,
+      "first_five_words": "And so my fellow Americans",
+      "fixture_phrases_found": [
+        "my fellow americans",
+        "your country",
+        "do for you"
+      ],
+      "transcript_sha256": "dfe1af694958a82c9d89d31bf0378075a10d40f715e670b6e5169042c8680cec"
+    },
+    {
+      "name": "mislabeled",
+      "waveform_rate_hz": 44100,
+      "declared_rate_hz": 16000,
+      "input_samples": 485100,
+      "apparent_seconds_before_truncation": 30.31875,
+      "padded_samples": 0,
+      "truncated_samples": 5100,
+      "input_features_shape": [
+        1,
+        80,
+        3000
+      ],
+      "valid_mel_frames": 3000,
+      "returned_token_ids_count": 64,
+      "word_count": 32,
+      "first_five_words": "Ah, oh, oh, oh, oh,",
+      "fixture_phrases_found": [],
+      "transcript_sha256": "ad8e9637fcd5bdc3762bd9258120bbc68bc5d34eddd92e176aabab4cdf1709c9"
+    }
+  ]
+}

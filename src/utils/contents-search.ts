@@ -14,6 +14,7 @@ export function setupContentsSearch(sidebar: HTMLElement, closeDrawer: () => voi
     })),
   }));
   const paths = new Set(groups.flatMap(({ links }) => links.map(({ link }) => link.pathname)));
+  const catalogPath = sidebar.querySelector<HTMLAnchorElement>('#labsLink')?.pathname;
   const lang = document.documentElement.lang;
   const ko = lang === 'ko';
   let index: ReturnType<typeof readSectionIndex> | undefined;
@@ -65,7 +66,7 @@ export function setupContentsSearch(sidebar: HTMLElement, closeDrawer: () => voi
     try {
       const response = await fetch(input.dataset.indexUrl!);
       if (!response.ok) throw new Error('Index unavailable');
-      index = readSectionIndex(await response.json(), lang, paths);
+      index = readSectionIndex(await response.json(), lang, paths, catalogPath);
     } catch {
       failed = true;
     } finally {

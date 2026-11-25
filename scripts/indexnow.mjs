@@ -9,9 +9,21 @@ import { site } from '../src/data/site.js';
 
 const base = new URL('/foundation-model-engineering/', site.url);
 const endpoint = 'https://api.indexnow.org/indexnow';
+const catalogRoutes = ['labs/', 'ko/labs/'];
+const sharedRoutes = new Map([
+  ['src/components/FeaturedLessons.astro', ['', 'ko/']],
+  ['src/components/TeachingLabs.astro', catalogRoutes],
+  ['src/data/teaching-labs.js', catalogRoutes],
+  ['src/data/lab-datasets.js', catalogRoutes],
+  ['src/data/site.js', catalogRoutes], // Both catalog titles come from this module.
+  // The catalog includes a bundled link whose URL contains the script's hash.
+  ['scripts/verify-dp-ddp-gradients.py', catalogRoutes],
+]);
 const sourceRoutes = new Map([
   ['src/pages/index.astro', ''],
   ['src/pages/ko/index.astro', 'ko/'],
+  ['src/pages/labs/index.astro', catalogRoutes[0]],
+  ['src/pages/ko/labs/index.astro', catalogRoutes[1]],
 ]);
 for (const chapter of chapters) {
   for (const { path } of chapter.subs) {
@@ -22,7 +34,15 @@ for (const chapter of chapters) {
 }
 
 export function changedRoutes(files) {
-  return [...new Set(files.filter((file) => sourceRoutes.has(file)).map((file) => sourceRoutes.get(file)))];
+  const routes = new Set();
+  for (const file of files) {
+    if (sharedRoutes.has(file)) {
+      for (const route of sharedRoutes.get(file)) routes.add(route);
+    } else if (sourceRoutes.has(file)) {
+      routes.add(sourceRoutes.get(file));
+    }
+  }
+  return [...routes];
 }
 
 function readProof(file) {
@@ -44,7 +64,7 @@ function prepare(file) {
   const after = process.env.GITHUB_SHA;
   if (![before, after].every((sha) => /^[0-9a-f]{40}$/.test(sha))) throw new Error('Invalid push range');
   const files = execFileSync('git', [
-    'diff', '--no-renames', '--name-only', '--diff-filter=AM', '-z', before, after, '--', 'src/pages',
+    'diff', '--no-renames', '--name-only', '--diff-filter=AM', '-z', before, after, '--', 'src/pages', ...sharedRoutes.keys(),
   ], { encoding: 'utf8' }).split('\0');
   const routes = changedRoutes(files);
   if (routes.length) appendFileSync(process.env.GITHUB_OUTPUT, `routes=${JSON.stringify(routes)}\n`);

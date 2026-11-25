@@ -86,3 +86,15 @@ test('reject index responses for the wrong deployment, locale, version, or malfo
     assert.throws(() => readSectionIndex(changed, 'en', paths));
   }
 });
+
+test('the optional labs index requires the catalog path rendered in this edition', () => {
+  const path = '/book/labs/';
+  const catalog = {path, title: 'Teaching labs', sections: [['Attention worksheet (PDF)', 'attention']]};
+  const updated = { ...index, catalog };
+  const rows = readSectionIndex(updated, 'en', paths, path);
+  assert.equal(findSections(rows, 'worksheet').matches[0].href, path + '#attention');
+  assert.throws(() => readSectionIndex(updated, 'en', paths, '/ko/labs/'));
+  const legacy = readSectionIndex(index, 'en', paths);
+  assert.deepEqual(readSectionIndex(index, 'en', paths, path), legacy);
+  assert.deepEqual(readSectionIndex(updated, 'en', paths), legacy);
+});

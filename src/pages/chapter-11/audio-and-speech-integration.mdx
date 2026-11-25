@@ -4,6 +4,8 @@ title: 11.2 Audio & Speech Integration
 lang: en
 ---
 
+import { withBasePath } from '../../utils/paths.js';
+
 # 11.2 Audio and Speech Integration
 
 Speech carries words, timing, speaker characteristics, prosody, and background sound. A transcript is a useful representation, but a text-only interface usually discards information not explicitly represented in it. A cascade can retain timestamps, speaker labels, or separate acoustic features; transcription does not force every system to discard all paralinguistic information.
@@ -15,6 +17,28 @@ The engineering choice is where to compress the signal and where to preserve tem
 A mono waveform sampled at 16 kHz contains 16,000 samples per second; its stored dtype is a separate choice. An encoder converts it into lower-rate frames. A neural codec can then map each frame to discrete indices. Sound frame rate and serialized token rate are different quantities.
 
 With $F$ frames per second and $Q$ codebooks, naive serial prediction uses $FQ$ token decisions per second. If each index has $N$ possibilities, the ideal fixed-rate index payload is $FQ\log_2N$ bits/s, excluding framing and entropy coding. At $F=50$, $Q=8$, and $N=1024$, this is 400 indices/s and 4,000 bits/s. A delayed or parallel multi-codebook schedule changes serial steps without changing this nominal payload.
+
+<a id="whisper-sample-rate"></a>
+
+### Why does Whisper hear 30 seconds in an 11-second recording?
+
+OpenAI tests Whisper with an excerpt from John F. Kennedy’s inaugural address. The file contains 11 seconds of stereo audio at 44,100 Hz. Keep the checkpoint and decoder fixed. On the first pass, ask FFmpeg to mix the channels to mono and resample to 16,000 Hz, the rate Whisper expects. On the second, mix to mono at the original rate and pass the samples to the same feature extractor with `sampling_rate=16000`. That argument tells the extractor how to interpret the array. It cannot recover the source rate from the samples. [[18]](#ref-18) [[19]](#ref-19)
+
+| Measured on the same clip | Resampled to 16 kHz | 44.1 kHz labeled as 16 kHz |
+| --- | --- | --- |
+| Samples before padding or trimming | 176,000 | 485,100 |
+| Duration implied by the declared rate | 11 s | 30.31875 s |
+| Samples added or removed to fill one 30 s window | 304,000 added | 5,100 removed |
+| Mel frames marked valid in the attention mask | 1,100 of 3,000 | 3,000 of 3,000 |
+| First five decoded words | “And so my fellow Americans” | “Ah, oh, oh, oh, oh,” |
+| Words in the output (split on whitespace) | 22 | 32 |
+| Phrases found from the three in OpenAI’s test | 3 of 3 | 0 of 3 |
+
+Both feature tensors have shape `[1, 80, 3000]`. The wrong rate stretches the apparent duration by $44{,}100/16{,}000$. The extractor then discards the final 5,100 samples to fit the single window. Its mask correctly reports which frames came from the supplied waveform. It has no way to tell whether a second of that waveform contains the right number of samples.
+
+When a transcription service accepts a new recording format, check the *unpadded* sample count immediately after resampling. For this file, `len(mono_16k) / 16000` should agree with the 11 seconds independently reported by `ffprobe`. The three phrase checks catch the effect on this recording. Measuring a speech recognizer’s word error rate requires reference transcripts across the target recordings.
+
+**Reproduce the CPU run (2026-11-25).** The script downloads and checksums the upstream recording and the English-only `openai/whisper-tiny.en` weights. Both passes use FP32, one CPU thread, the same attention mask convention and greedy decoding without timestamps, capped at 64 new tokens. The JSON records short excerpts and hashes of the full decodes. Pass `--show-transcripts` to inspect the full text locally. <a href={withBasePath('/labs/whisper_sample_rate.py')} download>Python script and setup commands</a> · <a href={withBasePath('/labs/2026-11/whisper-sample-rate.json')} download>Measured results (JSON)</a>.
 
 ## 2. Residual Vector Quantization
 
@@ -163,8 +187,8 @@ Audio integration is a joint representation and state-management problem. The fo
 </details>
 
 <details>
-<summary>Quiz 2: Does the RVQ forward example demonstrate a trainable speech codec?</summary>
-*No. It demonstrates lookup shapes on random features. A codec needs trained encoders/decoders and appropriate learning, masking, and synchronization semantics.*
+<summary>Quiz 2: Whisper produces 3,000 Mel frames from both versions of an 11-second clip. What would you check before changing the model?</summary>
+*Probe the recording’s rate and duration, then count the mono samples before padding. At 16 kHz, 11 seconds should yield 176,000 samples. Both inputs fill the same feature window, but only the correctly resampled one has 1,100 valid frames.*
 </details>
 
 <details>
@@ -206,3 +230,5 @@ Audio integration is a joint representation and state-management problem. The fo
 15. <a id="ref-15"></a>QwenCloud. *Qwen-Audio-Live: task delegation and tools*. Verified 2026-11-24. [Guide](https://docs.qwencloud.com/developer-guides/speech/qwen-audio-live).
 16. <a id="ref-16"></a>ElevenLabs (2026-11-10). [Scribe v3 and Scribe v3 Live release](https://elevenlabs.io/blog/scribe-v3).
 17. <a id="ref-17"></a>ElevenLabs. [Realtime transcription event reference, including speaker attribution and merges](https://elevenlabs.io/docs/eleven-api/guides/how-to/speech-to-text/realtime/event-reference).
+18. <a id="ref-18"></a>OpenAI. [English-only Whisper Tiny model card](https://huggingface.co/openai/whisper-tiny.en/blob/87c7102498dcde7456f24cfd30239ca606ed9063/README.md) and [reference audio loader](https://github.com/openai/whisper/blob/31243bad24cc746f07d4c8bfdd2d974872cb1803/whisper/audio.py).
+19. <a id="ref-19"></a>OpenAI. [Whisper transcription regression test and its phrase checks](https://github.com/openai/whisper/blob/31243bad24cc746f07d4c8bfdd2d974872cb1803/tests/test_transcribe.py) and [the upstream JFK recording](https://github.com/openai/whisper/blob/31243bad24cc746f07d4c8bfdd2d974872cb1803/tests/jfk.flac).

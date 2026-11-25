@@ -1,0 +1,10 @@
+---
+import BookLayout from '../../../layouts/BookLayout.astro';
+import TeachingLabs from '../../../components/TeachingLabs.astro';
+import { labsTitle } from '../../../data/site.js';
+---
+<BookLayout lang="ko" title={labsTitle.ko} description="어텐션 활동지로 가중치를 계산하고, 엑셀로 KV 캐시 용량을 가늠하고, CPU에서 노트북을 실행해 보세요. 실험 결과를 설명하는 본문과 실습 파일을 함께 제공합니다.">
+  <h1>{labsTitle.ko}</h1>
+  <p>수업에서 다루거나 직접 실험해 보고 싶은 질문을 골라 보세요. 제목을 누르면 풀이를 읽을 수 있고, 아래 파일을 내려받으면 같은 조건에서 실험할 수 있습니다.</p>
+  <TeachingLabs lang="ko" />
+</BookLayout>
